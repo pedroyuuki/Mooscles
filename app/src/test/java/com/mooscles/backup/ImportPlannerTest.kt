@@ -191,11 +191,46 @@ class ImportPlannerTest {
 
         val plan = ImportPlanner.plan(file, local)
 
+        // Routine positions are global on the phone: every inserted routine continues after the local
+        // maximum, ordered by (file position, file index), whatever folder it lands in.
         val positions = plan.entities.routines.associate { it.id to it.position }
         assertEquals(2, positions["x"])
-        assertEquals(3, positions["y"])
-        // "upper" has no local routines, so the file's position stays.
-        assertEquals(0, positions["push"])
+        assertEquals(3, positions["push"])
+        assertEquals(4, positions["y"])
+    }
+
+    @Test
+    fun importedRoutinesInSeveralFoldersGetUniquePositionsAfterGlobalMax() {
+        val legs = RoutineFolder("legs", "Legs", 2)
+        val local = LocalState(
+            fresh.data.copy(
+                routineFolders = listOf(defaultFolder, upper, legs),
+                routines = listOf(Routine("a", "A", 0, "legs"), Routine("b", "B", 1, "legs"), Routine("c", "C", 2, "legs")),
+            ),
+            emptyList(),
+        )
+        val file = fileWith(
+            sample.copy(
+                routines = listOf(Routine("z", "Z", 0, RoutineFolder.DEFAULT_ID), push.copy(position = 1), Routine("x", "X", 0, "upper")),
+                routineExercises = emptyList(), routineSets = emptyList(),
+            ),
+        )
+
+        val plan = ImportPlanner.plan(file, local)
+
+        val positions = plan.entities.routines.map { it.position }
+        assertEquals(positions.size, positions.toSet().size)
+        assertEquals(listOf("z" to 3, "push" to 5, "x" to 4), plan.entities.routines.map { it.id to it.position })
+        assertEquals(listOf(RoutineFolder.DEFAULT_ID, "upper", "upper"), plan.entities.routines.map { it.folderId })
+    }
+
+    @Test
+    fun routinePositionsKeptWhenPhoneHasNoRoutines() {
+        val file = fileWith(sample.copy(routines = listOf(push.copy(position = 7), Routine("x", "X", 3, RoutineFolder.DEFAULT_ID))))
+
+        val plan = ImportPlanner.plan(file, fresh)
+
+        assertEquals(listOf(7, 3), plan.entities.routines.map { it.position })
     }
 
     @Test

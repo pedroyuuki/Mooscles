@@ -21,6 +21,16 @@ internal object EditRules {
         require(count in 1..MAX_ROUTINE_SETS) { "Planned sets must be between 1 and 50." }
     }
 
+    /** [count] is the number of planned sets an exercise has once the change is applied. */
+    fun routineSetCount(count: Int) {
+        require(count <= MAX_ROUTINE_SETS) { "A maximum of 50 planned sets is supported per exercise." }
+    }
+
+    /** [count] is the number of sets a workout exercise has once the change is applied. */
+    fun workoutSetCount(count: Int) {
+        require(count <= MAX_WORKOUT_SETS) { "A maximum of 100 sets is supported per exercise." }
+    }
+
     fun rest(seconds: Int?) {
         require(seconds == null || seconds in 0..RestDuration.MAX_SECONDS) { "Rest must be between 0:00 and 5:00." }
     }

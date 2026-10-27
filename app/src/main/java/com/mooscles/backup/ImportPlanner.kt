@@ -71,13 +71,14 @@ object ImportPlanner {
         validate(entities, knownExercises = localExercises + entities.exercises.idSet { it.id })
 
         val folderIds = localFolders + entities.routineFolders.idSet { it.id }
-        val folderMax = phone.routineFolders.maxOfOrNull { it.position }
-        val folders = appendAfterLocal(entities.routineFolders, { Unit }, folderMax?.let { mapOf(Unit to it) }.orEmpty(),
-            { it.position }) { item, position -> item.copy(position = position) }
-        val routineMax = phone.routines.groupBy { it.folderId }.mapValues { (_, items) -> items.maxOf { it.position } }
+        val folders = appendAfterLocal(entities.routineFolders, phone.routineFolders.maxOfOrNull { it.position }, { it.position }) {
+            item, position -> item.copy(position = position)
+        }
+        // Routine positions are global across folders on the phone (unique, 0..N-1), so inserted routines
+        // continue after the largest local position whatever folder they land in.
         val placedRoutines = appendAfterLocal(
             entities.routines.map { if (it.folderId in folderIds) it else it.copy(folderId = RoutineFolder.DEFAULT_ID) },
-            { it.folderId }, routineMax, { it.position },
+            phone.routines.maxOfOrNull { it.position }, { it.position },
         ) { item, position -> item.copy(position = position) }
 
         val restoresPreferences = phone.workouts.isEmpty() && phone.routines.isEmpty()
@@ -163,7 +164,7 @@ object ImportPlanner {
                 EditRules.plannedSets(it.plannedSets)
                 EditRules.target(it.targetReps, it.targetWeightKg)
                 EditRules.rest(it.restSeconds)
-                require((plannedSetsByItem[it.id] ?: 0) <= EditRules.MAX_ROUTINE_SETS) { "A maximum of 50 planned sets is supported per exercise." }
+                EditRules.routineSetCount(plannedSetsByItem[it.id] ?: 0)
             }
         }
         entities.routineSets.forEach {
@@ -196,7 +197,7 @@ object ImportPlanner {
                 edit(record) {
                     EditRules.name(it.name)
                     EditRules.rest(it.restSeconds)
-                    require((setsByItem[it.id] ?: 0) <= EditRules.MAX_WORKOUT_SETS) { "A maximum of 100 sets is supported per exercise." }
+                    EditRules.workoutSetCount(setsByItem[it.id] ?: 0)
                 }
             }
         }
@@ -231,19 +232,15 @@ object ImportPlanner {
     }
 
     /**
-     * Within each [group], inserted items go after the largest local position, in the file's relative
-     * order (position, then list order). A group with nothing local keeps the file's positions, so a
-     * round trip into an empty phone stays exact. The returned list keeps the file's list order.
+     * Inserted items go after [localMax], contiguous, in the file's relative order (position, then list
+     * order). With nothing local ([localMax] null) the file's positions are kept, so a round trip into an
+     * empty phone stays exact. The returned list keeps the file's list order.
      */
-    private fun <T, K> appendAfterLocal(
-        items: List<T>, group: (T) -> K, localMax: Map<K, Int>, position: (T) -> Int, place: (T, Int) -> T,
-    ): List<T> {
+    private fun <T> appendAfterLocal(items: List<T>, localMax: Int?, position: (T) -> Int, place: (T, Int) -> T): List<T> {
+        if (localMax == null) return items
         val placed = items.toMutableList()
-        items.indices.groupBy { group(items[it]) }.forEach { (key, indices) ->
-            val max = localMax[key] ?: return@forEach
-            indices.sortedWith(compareBy({ position(items[it]) }, { it }))
-                .forEachIndexed { rank, index -> placed[index] = place(items[index], max + 1 + rank) }
-        }
+        items.indices.sortedWith(compareBy({ position(items[it]) }, { it }))
+            .forEachIndexed { rank, index -> placed[index] = place(items[index], localMax + 1 + rank) }
         return placed
     }
 

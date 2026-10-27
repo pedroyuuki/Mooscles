@@ -251,7 +251,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     suspend fun addRoutineSet(entryId: String): String = db.withTransaction {
         val plan = requireNotNull(dao.routineExercise(entryId)) { "Routine exercise not found." }
         val rows = ensurePlannedSets(plan)
-        require(rows.size < EditRules.MAX_ROUTINE_SETS) { "A maximum of 50 planned sets is supported per exercise." }
+        EditRules.routineSetCount(rows.size + 1)
         val row = inheritedSet(plan, rows.size)
         dao.insertRoutineSet(row)
         mirrorPlan(entryId)
@@ -435,7 +435,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     suspend fun addSet(workoutExerciseId: String): String = db.withTransaction {
         val exercise = requireNotNull(dao.workoutExercise(workoutExerciseId)) { "Workout exercise not found." }
         val sets = dao.exerciseSets(workoutExerciseId)
-        require(sets.size < EditRules.MAX_WORKOUT_SETS) { "A maximum of 100 sets is supported per exercise." }
+        EditRules.workoutSetCount(sets.size + 1)
         val last = sets.lastOrNull()
         val item = WorkoutSet(workoutExerciseId = workoutExerciseId, position = sets.size,
             weightKg = last?.weightKg ?: 0.0,

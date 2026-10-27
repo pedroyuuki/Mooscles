@@ -32,6 +32,16 @@ class EditRulesTest {
         assertEquals("Planned sets must be between 1 and 50.", message { EditRules.plannedSets(51) })
     }
 
+    @Test fun routineSetCountBounds() {
+        EditRules.routineSetCount(EditRules.MAX_ROUTINE_SETS)
+        assertEquals("A maximum of 50 planned sets is supported per exercise.", message { EditRules.routineSetCount(51) })
+    }
+
+    @Test fun workoutSetCountBounds() {
+        EditRules.workoutSetCount(EditRules.MAX_WORKOUT_SETS)
+        assertEquals("A maximum of 100 sets is supported per exercise.", message { EditRules.workoutSetCount(101) })
+    }
+
     @Test fun restBounds() {
         EditRules.rest(null)
         EditRules.rest(0)
