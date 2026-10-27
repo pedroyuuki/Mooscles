@@ -15,7 +15,7 @@ class BackupCodecTest {
         formatVersion = BackupCodec.FORMAT_VERSION,
         exportedAt = "2026-10-27T12:00:00Z",
         app = BackupApp("1.4.5", 16, "android"),
-        preferences = BackupPreferences(false, "SYSTEM", true, 90, "default"),
+        preferences = BackupPreferences(false, "system", true, 90, "default"),
         data = BackupData(
             exercises = listOf(ExerciseRow("e1", "Bench press", muscle, "BARBELL", "TOTAL_LOAD", true)),
             routineFolders = listOf(RoutineFolderRow("default", "My routines", 0)),

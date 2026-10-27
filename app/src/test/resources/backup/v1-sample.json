@@ -3,7 +3,7 @@
     "formatVersion": 1,
     "exportedAt": "2026-10-27T12:00:00Z",
     "app": {"versionName": "1.4.5", "versionCode": 16, "platform": "android"},
-    "preferences": {"pounds": false, "theme": "SYSTEM", "autoRest": true, "defaultRestSeconds": 90, "selectedRoutineFolderId": "default"},
+    "preferences": {"pounds": false, "theme": "system", "autoRest": true, "defaultRestSeconds": 90, "selectedRoutineFolderId": "default"},
     "data": {
         "exercises": [{"id": "e1", "name": "Bench press", "muscle": "CHEST", "equipment": "BARBELL", "convention": "TOTAL_LOAD", "custom": true}],
         "routineFolders": [{"id": "default", "name": "My routines", "position": 0}],
