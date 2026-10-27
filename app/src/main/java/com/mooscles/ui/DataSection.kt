@@ -11,17 +11,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -42,10 +46,7 @@ fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, m
     Card(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Your data", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Backups contain your full workout history without encryption. Keep the file somewhere private.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text("Save a copy of your workouts, routines and settings to a file, or restore one.", style = MaterialTheme.typography.bodyMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { exportLauncher.launch(suggestedBackupFileName(LocalDate.now())) },
@@ -59,22 +60,49 @@ fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, m
             if (workoutActive) {
                 Text("Finish or discard the active workout to import", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("data-progress").semantics { contentDescription = "Working…" })
-            state.message?.let { message ->
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text(message, Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = actions::clearBackupMessage, modifier = Modifier.testTag("data-message-dismiss")) { Text("Dismiss") }
+            if (state.busy) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    state.working?.let { Text(it, Modifier.testTag("data-working"), style = MaterialTheme.typography.bodyMedium) }
+                    LinearProgressIndicator(Modifier.fillMaxWidth().testTag("data-progress"))
                 }
             }
+            state.message?.let { message ->
+                val color = if (state.messageIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                Column(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            if (state.messageIsError) Icons.Outlined.ErrorOutline else Icons.Outlined.CheckCircle,
+                            contentDescription = null, tint = if (state.messageIsError) color else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag(if (state.messageIsError) "data-message-error" else "data-message-success"),
+                        )
+                        Text(message, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = color)
+                    }
+                    TextButton(onClick = actions::clearBackupMessage, modifier = Modifier.align(Alignment.End).testTag("data-message-dismiss")) { Text("Dismiss") }
+                }
+            }
+            Text(
+                "Backups contain your full workout history without encryption. Keep the file somewhere private.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
-    state.pendingImport?.let { summary ->
-        AlertDialog(
-            onDismissRequest = actions::cancelImport,
-            title = { Text("Import backup?") },
-            text = { Text(BackupTexts.summary(summary)) },
-            confirmButton = { TextButton(onClick = actions::confirmImport) { Text("Import") } },
-            dismissButton = { TextButton(onClick = actions::cancelImport) { Text("Cancel") } },
-        )
+    // The dialog closes as soon as the import starts; the card shows the progress.
+    state.pendingImport?.takeIf { !state.busy }?.let { summary ->
+        if (BackupTexts.isNothingNew(summary)) {
+            AlertDialog(
+                onDismissRequest = actions::cancelImport,
+                title = { Text("Import backup?") },
+                text = { Text(BackupTexts.NOTHING_NEW) },
+                confirmButton = { TextButton(onClick = actions::cancelImport) { Text("OK") } },
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = actions::cancelImport,
+                title = { Text("Import backup?") },
+                text = { Text(BackupTexts.summary(summary)) },
+                confirmButton = { TextButton(onClick = actions::confirmImport) { Text("Import") } },
+                dismissButton = { TextButton(onClick = actions::cancelImport) { Text("Cancel") } },
+            )
+        }
     }
 }

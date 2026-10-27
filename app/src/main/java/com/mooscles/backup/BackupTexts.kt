@@ -28,4 +28,13 @@ object BackupTexts {
     /** Shown instead of a raw I/O message when the document cannot be written or read. */
     const val EXPORT_FILE_FAILED = "Couldn't save the backup. Try another location."
     const val IMPORT_FILE_FAILED = "Couldn't open the file. Try again or pick another file."
+
+    const val NOTHING_NEW = "Everything in this backup is already on this phone."
+    const val WORKING_EXPORT = "Exporting…"
+    const val WORKING_CHECK = "Checking backup…"
+    const val WORKING_IMPORT = "Importing…"
+
+    /** True when importing would change nothing, so the dialog offers only OK. */
+    fun isNothingNew(summary: ImportSummary) =
+        summary.workoutsAdded == 0 && summary.routinesAdded == 0 && summary.customExercisesAdded == 0 && !summary.restoresPreferences
 }

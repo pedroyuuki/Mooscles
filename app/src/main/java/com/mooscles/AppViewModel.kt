@@ -81,17 +81,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
     /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
-    private fun backupAct(fileFailure: String, block: suspend () -> Unit) = act { backupWork(fileFailure, block) }
+    private fun backupAct(fileFailure: String, working: String, block: suspend () -> Unit) = act { backupWork(fileFailure, working, block) }
     /** [fileFailure] replaces the raw message of file-access errors (IOException, SecurityException...). */
-    private suspend fun backupWork(fileFailure: String? = null, block: suspend () -> Unit) {
-        backup.update { it.copy(busy = true, message = null) }
+    private suspend fun backupWork(fileFailure: String?, working: String, block: suspend () -> Unit) {
+        backup.update { it.copy(busy = true, working = working, message = null, messageIsError = false) }
         try { block() } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             // Only file-access failures get the friendly copy; a database error must not read as "try another location".
             val fileAccess = e is java.io.IOException || e is SecurityException
-            backup.update { it.copy(message = if (fileAccess && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED) }
+            backup.update { it.copy(message = if (fileAccess && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED, messageIsError = true) }
         }
-        finally { backup.update { it.copy(busy = false) } }
+        finally { backup.update { it.copy(busy = false, working = null) } }
     }
     override fun clearError() { error.value = null; app.preferences.clearError(); app.timer.clearError() }
     override fun createRoutine(name: String) = act {
@@ -224,7 +224,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     override fun downloadUpdate() = act { app.updates.enqueueDownload(manual = true) }
     override fun cancelUpdate() = act { app.updates.cancelDownload() }
     override fun installUpdate() = act { app.updates.requestInstall()?.let { installLaunches.send(it) } }
-    override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED) {
+    override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED, BackupTexts.WORKING_EXPORT) {
         val preferences = app.preferences.snapshot().toBackup()
         val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
         val file = repo.exportBackup(preferences, about, Instant.now().toString())
@@ -234,7 +234,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
     }
     /** Reads and plans only; nothing is written until [confirmImport]. */
-    override fun prepareImport(uri: String) = backupAct(BackupTexts.IMPORT_FILE_FAILED) {
+    override fun prepareImport(uri: String) = backupAct(BackupTexts.IMPORT_FILE_FAILED, BackupTexts.WORKING_CHECK) {
         pendingImportFile = null
         backup.update { it.copy(pendingImport = null) }
         val text = BackupDocuments.read(app, uri)
@@ -249,7 +249,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     override fun confirmImport() = act {
         // A repeated confirm finds nothing pending and must leave the previous outcome on screen.
         val file = pendingImportFile ?: return@act
-        backupWork {
+        backupWork(null, BackupTexts.WORKING_IMPORT) {
+            // Close the dialog now; the private file stays until the import ran so the work below still has it.
+            backup.update { it.copy(pendingImport = null) }
             try {
                 // The phone may have changed since the preview: the repository plans again inside its transaction.
                 // Preferences are restored under the same lock so no install can start between the two writes.

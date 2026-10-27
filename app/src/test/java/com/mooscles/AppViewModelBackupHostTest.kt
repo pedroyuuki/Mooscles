@@ -103,6 +103,7 @@ class AppViewModelBackupHostTest {
 
         awaitUi(model) { !it.backup.busy && it.backup.message != null }
         assertEquals(BackupTexts.EXPORT_FILE_FAILED, model.contentUi.value.backup.message)
+        assertTrue(model.contentUi.value.backup.messageIsError)
         assertEquals("Couldn't save the backup. Try another location.", BackupTexts.EXPORT_FILE_FAILED)
         assertNull(model.contentUi.value.error)
         assertFalse(File(folder.root, "missing-dir").exists())
@@ -150,6 +151,8 @@ class AppViewModelBackupHostTest {
         awaitUi(model) { !it.backup.busy && it.backup.message != null }
         val state = model.contentUi.value
         assertEquals("Imported 1 workout, 1 routine and 1 custom exercise", state.backup.message)
+        assertFalse(state.backup.messageIsError)
+        assertNull(state.backup.working)
         assertNull(state.backup.pendingImport)
         assertNull(state.error)
         val saved = snapshot()
@@ -158,6 +161,23 @@ class AppViewModelBackupHostTest {
         assertTrue(saved.exercises.any { it.custom && it.name == "Imported landmine press" })
         assertEquals(filePreferences, preferences())
         awaitUi(model) { it.preferences.pounds && it.preferences.theme == "dark" && it.history.size == 1 }
+    }
+
+    @Test fun cancelQueuedAfterConfirmIsNoOp() {
+        val source = otherInstallBackup()
+        val model = newModel()
+        awaitUi(model) { !it.loading }
+        model.prepareImport(source)
+        awaitUi(model) { it.backup.pendingImport != null }
+
+        model.confirmImport()
+        model.cancelImport()
+        model.setDefaultRest(95)
+
+        awaitUi(model) { it.preferences.defaultRestSeconds == 95 && !it.backup.busy }
+        assertEquals("Imported 1 workout, 1 routine and 1 custom exercise", model.contentUi.value.backup.message)
+        assertNull(model.contentUi.value.backup.pendingImport)
+        assertEquals(1, snapshot().workouts.size)
     }
 
     @Test fun confirmImportTwiceKeepsDoneMessage() {

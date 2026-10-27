@@ -79,8 +79,14 @@ data class UiState(
     val backup: BackupUi = BackupUi(),
 )
 
-/** [pendingImport] is the summary of a read file waiting for confirmation; [message] reports the last outcome. */
-data class BackupUi(val busy: Boolean = false, val pendingImport: ImportSummary? = null, val message: String? = null)
+/**
+ * [pendingImport] is the summary of a read file waiting for confirmation; [message] reports the last outcome
+ * ([messageIsError] tells failures from successes); [working] names the running operation while [busy].
+ */
+data class BackupUi(
+    val busy: Boolean = false, val pendingImport: ImportSummary? = null, val message: String? = null,
+    val messageIsError: Boolean = false, val working: String? = null,
+)
 
 /** Document URIs travel as strings so this contract stays free of android.*. */
 interface DataActions {
