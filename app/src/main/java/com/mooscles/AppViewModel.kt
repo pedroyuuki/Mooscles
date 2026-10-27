@@ -3,7 +3,9 @@ package com.mooscles
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import android.os.Looper
 import android.os.Trace
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mooscles.backup.BackupApp
@@ -25,6 +27,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
 
 class AppViewModel(application: Application) : AndroidViewModel(application), MoosclesActions {
     private val app = application as MoosclesApplication
@@ -45,12 +48,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
     private val source = repo.data.catch { error.value = "Unable to open local data: ${it.message}"; emit(AppData()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppData())
-    // Collected by contentUi in viewModelScope: prepare card details on the UI thread.
+    /** Host-test probe: presentations finished, and how many of them ran on the main thread. */
+    @VisibleForTesting internal val presentedCount = AtomicInteger()
+    @VisibleForTesting internal val presentedOnMainThread = AtomicInteger()
+    /**
+     * Presentation leaves the main thread: a large history takes seconds to present on a debug build.
+     * One-at-a-time confinement keeps [presenter]'s caches sequential without locks; never run it in composition.
+     */
+    private val presentationDispatcher = Dispatchers.Default.limitedParallelism(1)
+    // Pairs that arrive while a slow present() runs are conflated: only the latest one is worth presenting.
     private val presentation = combine(source, app.preferences.flow) { data, prefs -> data to prefs }
+        .conflate()
         .map { (data, prefs) ->
             Trace.beginSection("Mooscles:present")
-            try { presenter.present(data, prefs) } finally { Trace.endSection() }
+            val state = try { presenter.present(data, prefs) } finally { Trace.endSection() }
+            if (Looper.myLooper() == Looper.getMainLooper()) presentedOnMainThread.incrementAndGet()
+            presentedCount.incrementAndGet()
+            state
         }
+        .flowOn(presentationDispatcher)
     private val problems = combine(error, app.preferences.error, app.timer.error) { action, prefs, timer -> action ?: prefs ?: timer }
     private val baseUi = combine(presentation, problems, initialized, app.updates.ui, startingWorkout) { base, problem, ready, updates, starting ->
         base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)

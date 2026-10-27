@@ -27,7 +27,7 @@ Fluxo de dados, todo unidirecional:
 
 - `WorkoutRepository.data` lê **todas** as tabelas numa única transação a cada invalidação e reaproveita listas iguais, para preservar identidade. Não otimize isso lendo só a tabela que mudou: o comentário no código explica a corrida.
 - `AppViewModel` (implementa `MoosclesActions`, de `ui/UiContract.kt`) serializa toda escrita num `Channel` de comandos (`act { … }`). Erros viram `UiState.error`, não exceções.
-- `WorkoutPresentation.present()` converte `AppData` + preferências em `UiState` com caches internos. Roda no fluxo sequencial do ViewModel, na thread de UI, e nunca dentro de composição.
+- `WorkoutPresentation.present()` converte `AppData` + preferências em `UiState` com caches internos. Roda no fluxo sequencial do ViewModel, num executor de fundo de uma thread só (`limitedParallelism(1)`), nunca dentro de composição.
 - As telas recebem `contentUi`. Só o dock do timer coleta `timerUi`, para que os ticks da contagem não recomponham as telas.
 - `ui/MoosclesApp.kt` define o `NavHost` com rotas em string (`routines`, `routine/{id}`, `workout`, `history`, `workoutDetail/{id}?summary=`, `library`, `exercise/{id}`, `records`, `settings`).
 
