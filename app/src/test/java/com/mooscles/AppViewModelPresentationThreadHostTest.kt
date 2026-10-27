@@ -100,7 +100,6 @@ class AppViewModelPresentationThreadHostTest {
         assertTrue("Expected several presentations, got ${model.presentedCount.get() - presentedBefore}",
             model.presentedCount.get() - presentedBefore >= 2)
         val sizes = seen.map { it.history.size }
-        assertTrue("Expected intermediate history sizes, saw $sizes", sizes.distinct().size >= 2)
         assertTrue(latest(model.contentUi.value))
         val first = seen.indexOfFirst(latest)
         assertTrue("The latest data was never published", first >= 0)

@@ -148,21 +148,50 @@ object WorkoutCalculations {
         val key get() = Key(exercise.exerciseId, exercise.convention)
     }
 
-    private fun comparable(first: RepsCandidate, second: RepsCandidate): Boolean =
-        first.key == second.key && first.assistance == second.assistance &&
-            sameLoad(first.set.weightKg, second.set.weightKg)
+    /** Candidates of one exercise, convention and assistance mode; only these can share a repetition slot. */
+    private data class RepsGroup(val key: Key, val assistance: Boolean)
+
+    private val RepsCandidate.group get() = RepsGroup(key, assistance)
+
+    /**
+     * Two candidates are comparable when they share a [RepsGroup] and [sameLoad]. Every slot list below holds a
+     * single group, so inside it only the load is compared: each list is exactly that group's subsequence of one flat
+     * list searched from the front, with the same first comparable slot and the same replacements.
+     */
+    private fun sameSlot(slot: RepsCandidate, candidate: RepsCandidate): Boolean =
+        sameLoad(slot.set.weightKg, candidate.set.weightKg)
+
+    private inline fun forEachRepetition(index: SnapshotIndex, entries: List<WorkoutExercise>, action: (RepsCandidate) -> Unit) =
+        entries.forEach { exercise ->
+            index.sets(exercise.id).forEach { set -> if (repetitionSet(set)) action(RepsCandidate(exercise, set)) }
+        }
 
     /** The first comparable candidate keeps its slot; it is replaced only by strictly more reps. */
-    private fun offerRepetition(best: MutableList<RepsCandidate>, candidate: RepsCandidate) {
-        val index = best.indexOfFirst { comparable(it, candidate) }
-        if (index < 0) best += candidate
-        else if (candidate.set.reps > best[index].set.reps) best[index] = candidate
+    private fun offerRepetition(group: MutableList<RepsCandidate>, candidate: RepsCandidate) {
+        val index = group.indexOfFirst { sameSlot(it, candidate) }
+        if (index < 0) group += candidate
+        else if (candidate.set.reps > group[index].set.reps) group[index] = candidate
     }
 
+    /** Folds [entries], in the given order, into [baseline], one slot list per [RepsGroup]. */
+    private fun foldRepetitions(index: SnapshotIndex, entries: List<WorkoutExercise>,
+        baseline: MutableMap<RepsGroup, MutableList<RepsCandidate>>) =
+        forEachRepetition(index, entries) { candidate -> offerRepetition(baseline.getOrPut(candidate.group) { mutableListOf() }, candidate) }
+
+    private fun previousReps(baseline: Map<RepsGroup, List<RepsCandidate>>, candidate: RepsCandidate): Int? =
+        baseline[candidate.group]?.firstOrNull { sameSlot(it, candidate) }?.set?.reps
+
+    /** One workout's best set per comparable slot, in first-seen order; each group's slots are searched alone. */
     private fun bestRepetitionSets(index: SnapshotIndex, entries: List<WorkoutExercise>): List<RepsCandidate> {
         val best = mutableListOf<RepsCandidate>()
-        entries.forEach { exercise ->
-            index.sets(exercise.id).filter(::repetitionSet).forEach { set -> offerRepetition(best, RepsCandidate(exercise, set)) }
+        val slots = mutableMapOf<RepsGroup, MutableList<Int>>()
+        forEachRepetition(index, entries) { candidate ->
+            val group = slots.getOrPut(candidate.group) { mutableListOf() }
+            val slot = group.firstOrNull { sameSlot(best[it], candidate) }
+            if (slot == null) {
+                group += best.size
+                best += candidate
+            } else if (candidate.set.reps > best[slot].set.reps) best[slot] = candidate
         }
         return best
     }
@@ -208,8 +237,9 @@ object WorkoutCalculations {
         val data = index.data
         val target = data.workouts.firstOrNull { it.id == workoutId } ?: return emptyList()
         val earlier = earlierWorkoutIds(data, target)
-        val baseline = bestRepetitionSets(index, data.workoutExercises.filter { it.workoutId in earlier })
-        return repsPrs(index, workoutId) { candidate -> baseline.firstOrNull { comparable(it, candidate) }?.set?.reps }
+        val baseline = mutableMapOf<RepsGroup, MutableList<RepsCandidate>>()
+        foldRepetitions(index, data.workoutExercises.filter { it.workoutId in earlier }, baseline)
+        return repsPrs(index, workoutId) { candidate -> previousReps(baseline, candidate) }
     }
 
     private fun repsPrs(index: SnapshotIndex, workoutId: String, previousReps: (RepsCandidate) -> Int?): List<RepsPr> =
@@ -220,15 +250,13 @@ object WorkoutCalculations {
                 candidate.set.weightKg, candidate.assistance, previous, candidate.set.reps, previous == null)
         }
 
-    /** Candidates are comparable only within one group, so a baseline split by group keeps each group's order. */
-    private data class RepsGroup(val key: Key, val assistance: Boolean)
-
-    private val RepsCandidate.group get() = RepsGroup(key, assistance)
-
     /** Shared by both record passes, so [historyRecords] indexes the snapshot once. */
     private class HistoryPass(data: AppData) {
         val index = SnapshotIndex(data)
-        /** Stored order, which the per-workout baseline folds earlier entries in. */
+        /**
+         * Each workout's entries in stored order. The per-workout baseline folds all earlier entries in global stored
+         * order instead, so the reps pass matches it only where fold order cannot matter (see [repsPrsByWorkout]).
+         */
         val storedEntries = data.workoutExercises.groupBy { it.workoutId }
         val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }.sortedWith(chronology)
     }
@@ -247,7 +275,11 @@ object WorkoutCalculations {
 
     /**
      * [repsPrsForWorkout] for every finished workout in one chronological pass. Earlier workouts are folded into the
-     * baseline with the same rule as [bestRepetitionSets], each one's entries in their stored order.
+     * baseline with the same rule ([foldRepetitions]), but workout by workout in chronological order, each one's
+     * entries in stored order. The result equals [repsPrsForWorkout] exactly when distinct nominal loads are at least
+     * 0.25 kg apart with at most ±1 ulp noise: [sameLoad] is then an equivalence, each slot ends with its cluster's
+     * most reps whatever the fold order, and only those reps are read. A chain of loads a few ulp apart could make
+     * the first comparable slot, and so the previous reps shown, depend on that order.
      */
     fun repsPrsByWorkout(data: AppData): Map<String, List<RepsPr>> = repsByWorkout(HistoryPass(data))
 
@@ -265,15 +297,8 @@ object WorkoutCalculations {
         val baseline = mutableMapOf<RepsGroup, MutableList<RepsCandidate>>()
         val result = LinkedHashMap<String, List<RepsPr>>()
         pass.finished.forEach { workout ->
-            result[workout.id] = repsPrs(pass.index, workout.id) { candidate ->
-                baseline[candidate.group]?.firstOrNull { comparable(it, candidate) }?.set?.reps
-            }
-            pass.storedEntries[workout.id].orEmpty().forEach { exercise ->
-                pass.index.sets(exercise.id).filter(::repetitionSet).forEach { set ->
-                    val candidate = RepsCandidate(exercise, set)
-                    offerRepetition(baseline.getOrPut(candidate.group) { mutableListOf() }, candidate)
-                }
-            }
+            result[workout.id] = repsPrs(pass.index, workout.id) { candidate -> previousReps(baseline, candidate) }
+            foldRepetitions(pass.index, pass.storedEntries[workout.id].orEmpty(), baseline)
         }
         return result
     }
