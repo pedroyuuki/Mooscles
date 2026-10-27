@@ -1,10 +1,15 @@
 package com.mooscles
 
 import com.mooscles.data.*
+import com.mooscles.domain.WorkoutCalculations
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.ui.RecordKind
+import com.mooscles.ui.RecordUi
+import com.mooscles.ui.UiState
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.random.Random
+import kotlin.system.measureTimeMillis
 
 /** Plain JVM tests: presentation caches must invalidate by saved values, never just row counts. */
 class WorkoutPresentationTest {
@@ -151,5 +156,128 @@ class WorkoutPresentationTest {
         val back = presenter.present(data, PreferencesUi())
         assertEquals("22 kg × 6", back.active!!.exercises[0].previous)
         assertEquals(22.0, data.sets.first { it.id == "a1" }.weightKg, 0.0)
+    }
+
+    @Test fun largeHistoryPresentsQuickly() {
+        val data = LargeHistoryFixture.appData()
+        assertEquals(LargeHistoryFixture.SETS, data.sets.size)
+        val presenter = WorkoutPresentation()
+        lateinit var first: UiState
+        val firstMs = measureTimeMillis { first = presenter.present(data, PreferencesUi()) }
+        lateinit var second: UiState
+        val secondMs = measureTimeMillis { second = presenter.present(data.copy(), PreferencesUi()) }
+        println("present=${firstMs}ms cached=${secondMs}ms")
+        assertEquals(LargeHistoryFixture.WORKOUTS, first.history.size)
+        assertTrue(first.history.any { it.records.isNotEmpty() })
+        assertSame(first.history, second.history)
+        assertTrue("present took ${firstMs}ms", firstMs < 3000)
+        assertTrue("cached present took ${secondMs}ms", secondMs < 200)
+    }
+
+    private val assisted = Exercise(id = "assisted-dip", name = "Assisted dip", muscle = MuscleGroup.TRICEPS,
+        equipment = Equipment.SELECTORIZED_MACHINE, convention = LoadConvention.ASSISTANCE)
+
+    /** 30 workouts (one active) with repeated loads, assistance and warm-ups, so every record path appears. */
+    private fun generatedHistory(random: Random): AppData {
+        val movements = listOf(bench, pull, assisted)
+        val workouts = List(30) { index ->
+            val start = 10_000L + index * 1_000L
+            if (index == 17) Workout("w-$index", "Active", startedAt = start)
+            else Workout("w-$index", "Session $index", startedAt = start, endedAt = start + 500, status = WorkoutStatus.FINISHED)
+        }
+        val entries = mutableListOf<WorkoutExercise>()
+        val sets = mutableListOf<WorkoutSet>()
+        workouts.forEach { workout ->
+            repeat(random.nextInt(1, 4)) { position ->
+                val e = entry("${workout.id}-e$position", workout.id, movements.random(random), position)
+                entries += e
+                repeat(random.nextInt(1, 5)) { index ->
+                    sets += WorkoutSet("${e.id}-s$index", e.id, position = index, reps = random.nextInt(1, 10),
+                        weightKg = random.nextInt(0, 9) * 2.5, completed = random.nextInt(5) != 0,
+                        warmup = random.nextInt(6) == 0, assistance = random.nextInt(8) == 0)
+                }
+            }
+        }
+        return AppData(exercises = movements, workouts = workouts.shuffled(random),
+            workoutExercises = entries.shuffled(random), sets = sets.shuffled(random))
+    }
+
+    private data class RecordFacts(val exerciseId: String, val convention: String, val kind: RecordKind, val weightKg: Double,
+        val reps: Int, val previousKg: Double?, val previousReps: Int?, val assistance: Boolean, val workoutId: String, val date: Long)
+
+    private fun RecordUi.facts() = RecordFacts(exercise.id, exercise.convention, kind, weightKg, reps, previousKg, previousReps,
+        assistance, workoutId, date)
+
+    @Test fun historyRecordsUnchangedByBatch() {
+        val random = Random(2026)
+        var beaten = 0
+        var first = 0
+        var reps = 0
+        repeat(20) { round ->
+            val data = generatedHistory(random)
+            val ui = WorkoutPresentation().present(data, PreferencesUi())
+            val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }
+            assertEquals(finished.sortedByDescending { it.startedAt }.map { it.id }, ui.history.map { it.id })
+            ui.history.forEach { workout ->
+                val w = finished.single { it.id == workout.id }
+                val date = w.endedAt ?: w.startedAt
+                val weightPrs = WorkoutCalculations.prsForWorkout(data, w.id)
+                val repsPrs = WorkoutCalculations.repsPrsForWorkout(data, w.id)
+                val expected = weightPrs.map {
+                    RecordFacts(it.exerciseId, it.convention.label, RecordKind.WEIGHT, it.newWeightKg, it.reps,
+                        it.previousWeightKg, null, false, w.id, date)
+                } + repsPrs.map {
+                    RecordFacts(it.exerciseId, it.convention.label, RecordKind.REPS, it.weightKg, it.newReps,
+                        null, it.previousReps, it.assistance, w.id, date)
+                }
+                assertEquals("round $round workout ${w.id}", expected, workout.records.map { it.facts() })
+                workout.exercises.forEach { entry ->
+                    val pr = weightPrs.firstOrNull { it.exerciseId == entry.exercise.id && it.convention.label == entry.exercise.convention }
+                    assertEquals("round $round entry ${entry.id}", pr?.newWeightKg, entry.provisionalRecordKg)
+                    assertEquals("round $round entry ${entry.id}", pr?.firstRecord ?: false, entry.firstRecord)
+                    val own = workout.records.filter { it.exercise.id == entry.exercise.id && it.exercise.convention == entry.exercise.convention }
+                    assertTrue("round $round entry ${entry.id}", own.containsAll(entry.records))
+                }
+                beaten += workout.records.count { !it.firstRecord }
+                first += workout.records.count { it.firstRecord }
+                reps += workout.records.count { it.kind == RecordKind.REPS }
+            }
+        }
+        assertTrue("beaten records: $beaten", beaten > 20)
+        assertTrue("first records: $first", first > 20)
+        assertTrue("reps records: $reps", reps > 20)
+    }
+
+    @Test fun activeWorkoutRecordsStillComputedAgainstHistory() {
+        val data = AppData(
+            exercises = listOf(bench),
+            workouts = listOf(
+                Workout("older", "Older", startedAt = 1000, endedAt = 1500, status = WorkoutStatus.FINISHED),
+                Workout("latest", "Latest", startedAt = 2000, endedAt = 2500, status = WorkoutStatus.FINISHED),
+                Workout("active", "Active", startedAt = 3000)
+            ),
+            workoutExercises = listOf(entry("older-bench", "older", bench, 0), entry("latest-bench", "latest", bench, 0),
+                entry("active-bench", "active", bench, 0)),
+            sets = listOf(
+                WorkoutSet("o1", "older-bench", reps = 5, weightKg = 100.0, completed = true),
+                WorkoutSet("l1", "latest-bench", reps = 5, weightKg = 110.0, completed = true),
+                WorkoutSet("a1", "active-bench", reps = 3, weightKg = 120.0, completed = true)
+            )
+        )
+        val ui = WorkoutPresentation().present(data, PreferencesUi())
+        val active = ui.active!!
+        val record = active.records.single { it.kind == RecordKind.WEIGHT }
+        assertEquals(120.0, record.weightKg, 0.0)
+        assertEquals(3, record.reps)
+        assertEquals(110.0, record.previousKg!!, 0.0)
+        assertFalse(record.firstRecord)
+        assertEquals("active", record.workoutId)
+        assertEquals(120.0, active.exercises.single().provisionalRecordKg!!, 0.0)
+        assertFalse(active.exercises.single().firstRecord)
+        assertEquals(listOf(record), active.exercises.single().records.filter { it.kind == RecordKind.WEIGHT })
+        // The active session must not leak into the history's baseline.
+        val latest = ui.history.single { it.id == "latest" }.records.single { it.kind == RecordKind.WEIGHT }
+        assertEquals(100.0, latest.previousKg!!, 0.0)
+        assertEquals(110.0, ui.records.single { it.kind == RecordKind.WEIGHT }.weightKg, 0.0)
     }
 }

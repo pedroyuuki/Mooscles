@@ -4,6 +4,8 @@ import com.mooscles.data.*
 import com.mooscles.domain.WorkoutCalculations
 import com.mooscles.domain.WeightUnits
 import com.mooscles.domain.ExercisePerformance
+import com.mooscles.domain.RepsPr
+import com.mooscles.domain.WeightPr
 import com.mooscles.ui.*
 import java.util.Locale
 
@@ -44,9 +46,9 @@ internal class WorkoutPresentation {
         if (previousActive?.id != data.activeWorkout?.id) previousDescriptions.clear()
         val allSetsByEntry = data.sets.groupBy { it.workoutExerciseId }.mapValues { (_, rows) -> rows.sortedBy { it.position } }
         fun snapshot(e: WorkoutExercise) = ExerciseUi(e.exerciseId, e.name, e.muscle.label, e.equipment.label, e.convention.label, exercises[e.exerciseId]?.custom ?: false)
-        fun workout(w: Workout, data: AppData): WorkoutUi {
-            val prs = WorkoutCalculations.prsForWorkout(data, w.id)
-            val repsPrs = WorkoutCalculations.repsPrsForWorkout(data, w.id)
+        // History records come from one chronological pass; only the active session is compared on its own.
+        fun workout(w: Workout, data: AppData, prs: List<WeightPr> = WorkoutCalculations.prsForWorkout(data, w.id),
+                    repsPrs: List<RepsPr> = WorkoutCalculations.repsPrsForWorkout(data, w.id)): WorkoutUi {
             val workoutEntries = data.workoutItems(w.id)
             val oldEntries = previousActive?.takeIf { it.id == w.id }?.exercises?.associateBy { it.id }.orEmpty()
             val records = prs.map { p ->
@@ -101,7 +103,10 @@ internal class WorkoutPresentation {
                 RecordUi(snapshot(e).copy(name = exercises[r.exerciseId]?.name ?: r.exerciseName), r.weightKg, r.reps,
                     workoutId = r.workoutId, date = r.achievedAt, kind = RecordKind.REPS, assistance = r.assistance)
             }
-            historyUi = finished.sortedByDescending { it.startedAt }.map { workout(it, historical) }
+            val historyRecords = WorkoutCalculations.historyRecords(historical)
+            historyUi = finished.sortedByDescending { it.startedAt }.map {
+                workout(it, historical, historyRecords.weight.getValue(it.id), historyRecords.reps.getValue(it.id))
+            }
             historySource = historical
             historyPounds = prefs.pounds
         }

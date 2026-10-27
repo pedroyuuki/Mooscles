@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
+import com.mooscles.LargeHistoryFixture
 import com.mooscles.backup.BackupApp
 import com.mooscles.backup.BackupCodec
 import com.mooscles.backup.BackupData
@@ -303,28 +304,11 @@ class BackupRepositoryTest {
     @Test fun largeArchiveExportAndImportStayFast() = runBlocking {
         val exercises = other.snapshot().exercises.filter { !it.custom && it.convention == LoadConvention.TOTAL_LOAD }.take(6)
         val dao = otherDb.dao()
+        val rows = LargeHistoryFixture.rows(exercises)
         otherDb.withTransaction {
-            val workouts = ArrayList<Workout>()
-            val items = ArrayList<WorkoutExercise>()
-            val sets = ArrayList<WorkoutSet>()
-            repeat(208) { day ->
-                val start = 1_700_000_000_000L + day * 86_400_000L
-                val workout = Workout(name = "Session $day", startedAt = start, endedAt = start + 3_600_000L, status = WorkoutStatus.FINISHED)
-                workouts += workout
-                val entries = exercises.mapIndexed { position, exercise ->
-                    WorkoutExercise(workoutId = workout.id, exerciseId = exercise.id, name = exercise.name, muscle = exercise.muscle,
-                        equipment = exercise.equipment, convention = exercise.convention, position = position)
-                }
-                items += entries
-                repeat(61) { index ->
-                    val entry = entries[index % entries.size]
-                    sets += WorkoutSet(workoutExerciseId = entry.id, position = index / entries.size, reps = 5 + index % 8,
-                        weightKg = 20.0 + (day % 40) * 2.5, completed = true, warmup = index % 10 == 0)
-                }
-            }
-            dao.insertWorkouts(workouts)
-            dao.insertWorkoutExercises(items)
-            dao.insertSets(sets)
+            dao.insertWorkouts(rows.workouts)
+            dao.insertWorkoutExercises(rows.entries)
+            dao.insertSets(rows.sets)
         }
         assertEquals(12_688, other.snapshot().sets.size)
 

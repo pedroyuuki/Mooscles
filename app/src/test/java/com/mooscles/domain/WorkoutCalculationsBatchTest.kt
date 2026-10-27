@@ -87,6 +87,7 @@ class WorkoutCalculationsBatchTest {
             val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }
             val weight = WorkoutCalculations.prsByWorkout(data)
             val reps = WorkoutCalculations.repsPrsByWorkout(data)
+            assertEquals("history $history shared pass", HistoryRecords(weight, reps), WorkoutCalculations.historyRecords(data))
             assertEquals("history $history weight keys", finished.map { it.id }.toSet(), weight.keys)
             assertEquals("history $history reps keys", finished.map { it.id }.toSet(), reps.keys)
             finished.forEach { workout ->
@@ -119,7 +120,8 @@ class WorkoutCalculationsBatchTest {
         val doneEntry = activeEntry.copy(id = "done-bench", workoutId = done.id)
         val data = AppData(workouts = listOf(active, done), workoutExercises = listOf(activeEntry, doneEntry),
             sets = listOf(
-                WorkoutSet("a", activeEntry.id, reps = 12, weightKg = 100.0, completed = true),
+                // Same load with more reps: a leak into either baseline would hide the finished first records.
+                WorkoutSet("a", activeEntry.id, reps = 12, weightKg = 60.0, completed = true),
                 WorkoutSet("d", doneEntry.id, reps = 5, weightKg = 60.0, completed = true)))
 
         val weight = WorkoutCalculations.prsByWorkout(data)

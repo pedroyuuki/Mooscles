@@ -93,6 +93,12 @@ data class WorkoutSummary(
         firstRepsRecords.map { it.exerciseId to it.convention }).distinct().size
 }
 
+/** Records of every finished workout, keyed by workout id; a workout without records maps to an empty list. */
+data class HistoryRecords(
+    val weight: Map<String, List<WeightPr>>,
+    val reps: Map<String, List<RepsPr>>
+)
+
 data class ExercisePerformance(
     val workout: Workout,
     val exercise: WorkoutExercise,
@@ -219,40 +225,51 @@ object WorkoutCalculations {
 
     private val RepsCandidate.group get() = RepsGroup(key, assistance)
 
-    private fun finishedInChronology(data: AppData): List<Workout> =
-        data.workouts.filter { it.status == WorkoutStatus.FINISHED }.sortedWith(chronology)
+    /** Shared by both record passes, so [historyRecords] indexes the snapshot once. */
+    private class HistoryPass(data: AppData) {
+        val index = SnapshotIndex(data)
+        /** Stored order, which the per-workout baseline folds earlier entries in. */
+        val storedEntries = data.workoutExercises.groupBy { it.workoutId }
+        val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }.sortedWith(chronology)
+    }
+
+    /** [prsByWorkout] and [repsPrsByWorkout] together, from one index of the snapshot. */
+    fun historyRecords(data: AppData): HistoryRecords {
+        val pass = HistoryPass(data)
+        return HistoryRecords(weightByWorkout(pass), repsByWorkout(pass))
+    }
 
     /**
      * [prsForWorkout] for every finished workout in one chronological pass: each workout is compared with the
      * baseline of the workouts before it, then folded into that baseline. Workouts without records map to an empty list.
      */
-    fun prsByWorkout(data: AppData): Map<String, List<WeightPr>> {
-        val index = SnapshotIndex(data)
-        val storedEntries = data.workoutExercises.groupBy { it.workoutId }
-        val baseline = mutableMapOf<Key, Double>()
-        val result = LinkedHashMap<String, List<WeightPr>>()
-        finishedInChronology(data).forEach { workout ->
-            result[workout.id] = weightPrs(index, workout.id, baseline)
-            storedEntries[workout.id].orEmpty().forEach { addWeightBaseline(index, it, baseline) }
-        }
-        return result
-    }
+    fun prsByWorkout(data: AppData): Map<String, List<WeightPr>> = weightByWorkout(HistoryPass(data))
 
     /**
      * [repsPrsForWorkout] for every finished workout in one chronological pass. Earlier workouts are folded into the
      * baseline with the same rule as [bestRepetitionSets], each one's entries in their stored order.
      */
-    fun repsPrsByWorkout(data: AppData): Map<String, List<RepsPr>> {
-        val index = SnapshotIndex(data)
-        val storedEntries = data.workoutExercises.groupBy { it.workoutId }
+    fun repsPrsByWorkout(data: AppData): Map<String, List<RepsPr>> = repsByWorkout(HistoryPass(data))
+
+    private fun weightByWorkout(pass: HistoryPass): Map<String, List<WeightPr>> {
+        val baseline = mutableMapOf<Key, Double>()
+        val result = LinkedHashMap<String, List<WeightPr>>()
+        pass.finished.forEach { workout ->
+            result[workout.id] = weightPrs(pass.index, workout.id, baseline)
+            pass.storedEntries[workout.id].orEmpty().forEach { addWeightBaseline(pass.index, it, baseline) }
+        }
+        return result
+    }
+
+    private fun repsByWorkout(pass: HistoryPass): Map<String, List<RepsPr>> {
         val baseline = mutableMapOf<RepsGroup, MutableList<RepsCandidate>>()
         val result = LinkedHashMap<String, List<RepsPr>>()
-        finishedInChronology(data).forEach { workout ->
-            result[workout.id] = repsPrs(index, workout.id) { candidate ->
+        pass.finished.forEach { workout ->
+            result[workout.id] = repsPrs(pass.index, workout.id) { candidate ->
                 baseline[candidate.group]?.firstOrNull { comparable(it, candidate) }?.set?.reps
             }
-            storedEntries[workout.id].orEmpty().forEach { exercise ->
-                index.sets(exercise.id).filter(::repetitionSet).forEach { set ->
+            pass.storedEntries[workout.id].orEmpty().forEach { exercise ->
+                pass.index.sets(exercise.id).filter(::repetitionSet).forEach { set ->
                     val candidate = RepsCandidate(exercise, set)
                     offerRepetition(baseline.getOrPut(candidate.group) { mutableListOf() }, candidate)
                 }
