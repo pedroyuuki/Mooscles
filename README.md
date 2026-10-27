@@ -72,6 +72,8 @@ On the development workspace, the local JDK and SDK are installed under ignored 
 .\build.ps1
 ```
 
+The scripts are PowerShell 7 and also run on macOS with `pwsh ./build.ps1` (install `pwsh` from the official `osx-arm64` tarball). CI runs in `.github/workflows/ci.yml`.
+
 After Android Studio's daemon-toolchain migration, `gradle/gradle-daemon-jvm.properties` declares **Adoptium Java 21** for Gradle. Android Studio and command-line builds use these criteria; `build.ps1` also selects the bundled JDK 21 to launch the wrapper. Gradle 8.x cannot run with Java 25.
 
 On a fresh checkout, install Adoptium JDK 21, Android SDK platform 35 and build-tools 35.0.0. Set `JAVA_HOME` and set `sdk.dir` in untracked `local.properties` to your SDK folder. The checked-in wrapper downloads Gradle. Build dependencies require network only during initial resolution.

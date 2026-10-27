@@ -4,7 +4,7 @@ App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de tre
 
 ## Ambiente e comandos
 
-Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`; Gradle 8.x não roda com Java 25), Android SDK platform 35 e build-tools 35.0.0, `sdk.dir` no `local.properties` (ignorado pelo git). Os scripts do repositório são PowerShell e foram escritos para Windows (`gradlew.bat`, `.tooling\`). No macOS, chame o Gradle direto e use `pwsh` só para os scripts de release.
+Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`; Gradle 8.x não roda com Java 25), Android SDK platform 35 e build-tools 35.0.0, `sdk.dir` no `local.properties` (ignorado pelo git). Os scripts do repositório são PowerShell 7 e rodam no Windows e no macOS (`pwsh ./build.ps1`). No macOS o `pwsh` vem do tarball oficial `osx-arm64`, extraído em `~/.local/share/powershell/<versão>` com link em `~/.local/bin/pwsh` (sem sudo), e precisa de `export PATH="$HOME/.local/bin:$PATH"` no shell. O CI roda em `.github/workflows/ci.yml`.
 
 ```sh
 ./gradlew :app:testDebugUnitTest                      # testes de host (JUnit 4 + Robolectric, sdk 35)
