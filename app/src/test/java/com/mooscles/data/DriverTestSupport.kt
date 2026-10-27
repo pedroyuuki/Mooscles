@@ -1,0 +1,73 @@
+package com.mooscles.data
+
+import android.database.Cursor
+import androidx.room.useReaderConnection
+import androidx.sqlite.SQLITE_DATA_BLOB
+import androidx.sqlite.SQLITE_DATA_FLOAT
+import androidx.sqlite.SQLITE_DATA_INTEGER
+import androidx.sqlite.SQLITE_DATA_NULL
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteDriver
+import androidx.sqlite.SQLiteStatement
+import androidx.sqlite.driver.AndroidSQLiteDriver
+
+/*
+ * Helpers for tests that inspect the database through Room's own driver connection, which replaced
+ * `openHelper` (a database with a driver has no SupportSQLite open helper).
+ */
+
+/** `PRAGMA user_version`, read on Room's connection. */
+suspend fun WorkoutDatabase.userVersion(): Int = useReaderConnection { connection ->
+    connection.usePrepared("PRAGMA user_version") { check(it.step()); it.getInt(0) }
+}
+
+/**
+ * Every row of [sql], read on Room's connection, with each value kept as its SQLite storage class
+ * (Long, Double, String, ByteArray as a List or null) so that equality is exact.
+ */
+suspend fun WorkoutDatabase.typedRows(sql: String): List<List<Any?>> = useReaderConnection { connection ->
+    connection.usePrepared(sql) { statement ->
+        buildList { while (statement.step()) add(List(statement.getColumnCount()) { statement.typed(it) }) }
+    }
+}
+
+private fun SQLiteStatement.typed(column: Int): Any? = when (getColumnType(column)) {
+    SQLITE_DATA_NULL -> null
+    SQLITE_DATA_INTEGER -> getLong(column)
+    SQLITE_DATA_FLOAT -> getDouble(column)
+    SQLITE_DATA_BLOB -> getBlob(column).toList()
+    else -> getText(column)
+}
+
+/** The same typed reading on a raw framework cursor, for fixtures written before Room opens. */
+fun Cursor.typedRows(): List<List<Any?>> = buildList {
+    while (moveToNext()) add(List(columnCount) { column ->
+        when (getType(column)) {
+            Cursor.FIELD_TYPE_NULL -> null
+            Cursor.FIELD_TYPE_INTEGER -> getLong(column)
+            Cursor.FIELD_TYPE_FLOAT -> getDouble(column)
+            Cursor.FIELD_TYPE_BLOB -> getBlob(column).toList()
+            else -> getString(column)
+        }
+    })
+}
+
+/**
+ * The production [AndroidSQLiteDriver] with every SQL statement Room prepares reported to
+ * [onPrepare], which replaces Room's query callback (unsupported with a driver). It keeps the
+ * driver's own connection pool, so Room manages connections exactly as in the app.
+ */
+class RecordingDriver(private val onPrepare: (String) -> Unit) : SQLiteDriver {
+    private val delegate = AndroidSQLiteDriver()
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @get:JvmName("hasConnectionPool")
+    override val hasConnectionPool: Boolean get() = delegate.hasConnectionPool
+
+    override fun open(fileName: String): SQLiteConnection {
+        val connection = delegate.open(fileName)
+        return object : SQLiteConnection by connection {
+            override fun prepare(sql: String): SQLiteStatement = connection.prepare(sql).also { onPrepare(sql) }
+        }
+    }
+}

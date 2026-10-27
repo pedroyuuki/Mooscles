@@ -2,6 +2,7 @@ package com.mooscles.data
 
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.domain.WorkoutCalculations
 import kotlinx.coroutines.async
@@ -24,12 +25,26 @@ class RoomPersistenceTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     @Before fun setup() = runBlocking {
-        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         repo = WorkoutRepository(database)
         repo.initialize()
     }
 
     @After fun close() { database.close() }
+
+    @Test fun nestedRepositoryCommandsJoinTheOuterTransactionAndFailAllOrNothing() = runBlocking {
+        val before = repo.snapshot()
+        val error = runCatching {
+            database.writeTransaction {
+                val routine = repo.createRoutine("Inside the outer transaction")
+                // A nested command reads the outer, uncommitted write on the same connection.
+                assertTrue(repo.snapshot().routines.any { it.id == routine })
+                repo.createRoutine("Rejected", folderId = "missing-folder")
+            }
+        }.exceptionOrNull()
+        assertEquals("Folder not found.", error?.message)
+        assertEquals(before, repo.snapshot())
+    }
 
     @Test fun routineEditsPreserveWorkoutSnapshotsAndDuplicateIndependentPlans() = runBlocking {
         val exercise = repo.createCustomExercise("Original press", MuscleGroup.CHEST, Equipment.DUMBBELL, LoadConvention.PER_HAND)
@@ -161,7 +176,7 @@ class RoomPersistenceTest {
 
     @Test fun onDiskReopenRestoresActiveDecimalSetsAndDiscardCascades() = runBlocking {
         val filename = "reopen-${newId()}.db"
-        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
         try {
             val first = WorkoutRepository(disk)
             first.initialize()
@@ -171,7 +186,7 @@ class RoomPersistenceTest {
             first.updateSet(set.copy(reps = 7, weightKg = 42.125, completed = true))
             first.updateWorkoutExerciseRest(exercise, 135)
             disk.close()
-            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
             val second = WorkoutRepository(disk)
             second.initialize()
             val restored = second.snapshot()
@@ -269,7 +284,7 @@ class RoomPersistenceTest {
 
     @Test fun bodyweightZeroLoadCompletesAndSurvivesDiskReopenAndHistory() = runBlocking {
         val filename = "bodyweight-${newId()}.db"
-        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
         try {
             var saved = WorkoutRepository(disk)
             saved.initialize()
@@ -279,7 +294,7 @@ class RoomPersistenceTest {
             val set = saved.snapshot().exerciseSets(entry).first()
             saved.updateSet(set.copy(reps = 12, weightKg = 0.0, completed = true))
             disk.close()
-            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
             saved = WorkoutRepository(disk)
             saved.initialize()
             val restored = saved.snapshot().sets.first { it.id == set.id }

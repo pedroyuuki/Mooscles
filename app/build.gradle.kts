@@ -59,9 +59,13 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.room:room-runtime:2.7.2")
-    implementation("androidx.room:room-ktx:2.7.2")
-    ksp("androidx.room:room-compiler:2.7.2")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+    // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.
+    // sqlite 2.7.x pairs with Room 3 and drops restricted APIs that 2.8.x was compiled with.
+    //noinspection GradleDependency
+    implementation("androidx.sqlite:sqlite-framework:2.6.2")
     implementation("androidx.datastore:datastore-preferences:1.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
@@ -70,7 +74,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("androidx.test:core:1.7.0")
-    testImplementation("androidx.room:room-testing:2.7.2")
+    testImplementation("androidx.room:room-testing:2.8.5")
     testImplementation("androidx.work:work-testing:2.12.0")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
@@ -81,7 +85,7 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    androidTestImplementation("androidx.room:room-testing:2.7.2")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

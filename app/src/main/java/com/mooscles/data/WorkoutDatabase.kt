@@ -11,8 +11,12 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Update
+import androidx.room.immediateTransaction
 import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.room.useWriterConnection
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.driver.AndroidSQLiteDriver
+import androidx.sqlite.execSQL
 import kotlinx.coroutines.flow.Flow
 
 class EnumConverters {
@@ -102,58 +106,86 @@ abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun dao(): WorkoutDao
 
     companion object {
+        // Each migration runs the same SQL, in the same order, as the SupportSQLite migrations
+        // shipped through v1.4.5; MigrationEquivalenceTest compares the result with theirs.
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS `routine_target_checkpoints` (`exerciseId` TEXT NOT NULL, `convention` TEXT NOT NULL, `weightKg` REAL, `reps` INTEGER NOT NULL, PRIMARY KEY(`exerciseId`, `convention`))")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("CREATE TABLE IF NOT EXISTS `routine_target_checkpoints` (`exerciseId` TEXT NOT NULL, `convention` TEXT NOT NULL, `weightKg` REAL, `reps` INTEGER NOT NULL, PRIMARY KEY(`exerciseId`, `convention`))")
             }
         }
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS `routine_sets` (`id` TEXT NOT NULL, `routineExerciseId` TEXT NOT NULL, `position` INTEGER NOT NULL, `targetReps` INTEGER NOT NULL, `targetWeightKg` REAL, `inheritPr` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`routineExerciseId`) REFERENCES `routine_exercises`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_routine_sets_routineExerciseId` ON `routine_sets` (`routineExerciseId`)")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("CREATE TABLE IF NOT EXISTS `routine_sets` (`id` TEXT NOT NULL, `routineExerciseId` TEXT NOT NULL, `position` INTEGER NOT NULL, `targetReps` INTEGER NOT NULL, `targetWeightKg` REAL, `inheritPr` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`routineExerciseId`) REFERENCES `routine_exercises`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS `index_routine_sets_routineExerciseId` ON `routine_sets` (`routineExerciseId`)")
                 // Old shared targets are explicit prescriptions; never guess that they were inherited.
-                db.query("SELECT id, plannedSets, targetReps, targetWeightKg FROM routine_exercises").use { cursor ->
-                    while (cursor.moveToNext()) {
-                        repeat(cursor.getInt(1).coerceAtLeast(0)) { position ->
-                            db.execSQL("INSERT INTO routine_sets (id, routineExerciseId, position, targetReps, targetWeightKg, inheritPr) VALUES (?, ?, ?, ?, ?, 0)",
-                                arrayOf<Any?>(newId(), cursor.getString(0), position, cursor.getInt(2),
-                                    if (cursor.isNull(3)) null else cursor.getDouble(3)))
-                        }
+                // Read every plan first (same order), then insert, so no statement is stepped mid-write.
+                val plans = connection.prepare("SELECT id, plannedSets, targetReps, targetWeightKg FROM routine_exercises").use { query ->
+                    buildList {
+                        while (query.step()) add(LegacyPlan(query.getText(0), query.getInt(1), query.getInt(2),
+                            if (query.isNull(3)) null else query.getDouble(3)))
+                    }
+                }
+                connection.prepare("INSERT INTO routine_sets (id, routineExerciseId, position, targetReps, targetWeightKg, inheritPr) VALUES (?, ?, ?, ?, ?, 0)").use { insert ->
+                    for (plan in plans) repeat(plan.plannedSets.coerceAtLeast(0)) { position ->
+                        insert.bindText(1, newId())
+                        insert.bindText(2, plan.id)
+                        insert.bindLong(3, position.toLong())
+                        insert.bindLong(4, plan.targetReps.toLong())
+                        plan.targetWeightKg?.let { insert.bindDouble(5, it) } ?: insert.bindNull(5)
+                        insert.step()
+                        insert.reset()
+                        insert.clearBindings()
                     }
                 }
             }
         }
 
         val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // Legacy names are not reliable identities. Leave their source unknown instead of
                 // matching routines by name or position, and keep history independent of deletions.
-                db.execSQL("ALTER TABLE `workouts` ADD COLUMN `sourceRoutineId` TEXT")
+                connection.execSQL("ALTER TABLE `workouts` ADD COLUMN `sourceRoutineId` TEXT")
             }
         }
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                createDefaultFolder(db)
+            override fun migrate(connection: SQLiteConnection) {
+                createDefaultFolder(connection)
                 // SQLite fills every existing routine with the default without changing its ID,
                 // order, targets or history association, and without touching cascading children.
-                db.execSQL("ALTER TABLE `routines` ADD COLUMN `folderId` TEXT NOT NULL DEFAULT 'default'")
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_routines_folderId` ON `routines` (`folderId`)")
+                connection.execSQL("ALTER TABLE `routines` ADD COLUMN `folderId` TEXT NOT NULL DEFAULT 'default'")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS `index_routines_folderId` ON `routines` (`folderId`)")
             }
         }
 
-        private fun createDefaultFolder(db: SupportSQLiteDatabase) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS `routine_folders` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`id`))")
-            db.execSQL("INSERT OR IGNORE INTO `routine_folders` (`id`, `name`, `position`) VALUES (?, ?, 0)",
-                arrayOf(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME))
+        private class LegacyPlan(val id: String, val plannedSets: Int, val targetReps: Int, val targetWeightKg: Double?)
+
+        private fun createDefaultFolder(connection: SQLiteConnection) {
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `routine_folders` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.prepare("INSERT OR IGNORE INTO `routine_folders` (`id`, `name`, `position`) VALUES (?, ?, 0)").use { insert ->
+                insert.bindText(1, RoutineFolder.DEFAULT_ID)
+                insert.bindText(2, RoutineFolder.DEFAULT_NAME)
+                insert.step()
+            }
         }
 
+        /** The system SQLite through Room's driver API; same file, migrations and creation callback. */
         fun open(context: Context): WorkoutDatabase = Room.databaseBuilder(
             context.applicationContext, WorkoutDatabase::class.java, "mooscles.db"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        ).setDriver(AndroidSQLiteDriver())
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .addCallback(object : Callback() {
-                override fun onCreate(db: SupportSQLiteDatabase) = createDefaultFolder(db)
+                override fun onCreate(connection: SQLiteConnection) = createDefaultFolder(connection)
             }).build()
     }
 }
+
+/**
+ * All or nothing on Room's single writer connection, as `withTransaction` was before the driver
+ * (which has no SupportSQLite helper for it). A call made inside another one, and every DAO call in
+ * [block], reuses the connection confined to this coroutine and joins the outer transaction: reads
+ * see the outer writes, and an exception anywhere rolls everything back.
+ */
+suspend fun <R> WorkoutDatabase.writeTransaction(block: suspend () -> R): R =
+    useWriterConnection { connection -> connection.immediateTransaction { block() } }

@@ -25,10 +25,11 @@ import org.robolectric.annotation.Config
  * through the production [WorkoutDatabase.open], and compares a full dump (file header journal
  * mode, user_version, sqlite_master and every row of every table, typed) with a reference.
  *
- * The references in `src/test/resources/migration-equivalence/` were generated once by this test
- * against the SupportSQLite migrations (Room 2.7.2, commit 19c9a32), before the switch, by running
- * it with `MOOSCLES_WRITE_MIGRATION_REFERENCE=<that directory>`. They must never be regenerated
- * from the driver code: they are the old behavior the new code is checked against.
+ * The references in `src/test/resources/migration-equivalence/` were generated once, before the
+ * switch, against the SupportSQLite migrations (Room 2.7.2): commit 3eed409 added this test with a
+ * `MOOSCLES_WRITE_MIGRATION_REFERENCE=<directory>` switch that wrote the dumps, and they were
+ * committed with it. The switch was then removed: the references are the old behavior the driver
+ * code is checked against and must never be regenerated from it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -80,11 +81,6 @@ class MigrationEquivalenceTest {
     }
 
     private fun assertMatchesReference(name: String, actual: String) {
-        val output = System.getenv("MOOSCLES_WRITE_MIGRATION_REFERENCE")
-        if (output != null) {
-            File(output, name).apply { parentFile!!.mkdirs() }.writeText(actual)
-            return
-        }
         val expected = javaClass.classLoader!!.getResourceAsStream("migration-equivalence/$name")
             ?.bufferedReader()?.use { it.readText() } ?: error("Missing reference $name")
         assertEquals("Database produced by $name differs from the pre-driver reference", expected, actual)
