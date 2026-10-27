@@ -33,7 +33,7 @@ O projeto falhou, mesmo que "funcione", se acontecer alguma destas coisas:
 - **Arquitetura e dados:** sólidos. Fluxo unidirecional, migrações aditivas testadas contra bancos reais e 363 testes de host. Detalhes no [relatório de arquitetura](reports/2026-10-27-arquitetura-android-ios.md).
 - **Riscos abertos:**
   - não existe export nem backup (`allowBackup=false`);
-  - travamento na abertura por causa do cálculo de PR na thread principal;
+  - travamento na abertura por causa do cálculo de PR na thread principal (resolvido na branch `fix/pr-off-main-thread`, ainda sem release);
   - a chave de assinatura só existe numa máquina;
   - os scripts rodam só no Windows;
   - não há CI.
@@ -76,9 +76,9 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 
 **Entregas:**
 
-- Export/import de todos os dados em JSON com versão, pelo seletor de arquivos do sistema ([spec](specs/2026-10-27-export-import-design.md)). **Concluído (2026-10-27)** na branch `feat/export-import`, ainda sem release: [plano](plans/2026-10-27-export-import.md), [verificação no emulador](reports/2026-10-27-export-import-verificacao.md). Com a base grande, o import dispara o travamento já conhecido do cálculo de PR na thread principal, e um toque durante o travamento abre o diálogo de ANR. Decisão de 2026-10-27: isso não é corrigido nesta branch, e sim pelo item abaixo. O relatório traz os números.
+- Export/import de todos os dados em JSON com versão, pelo seletor de arquivos do sistema ([spec](specs/2026-10-27-export-import-design.md)). **Concluído (2026-10-27)** na branch `feat/export-import`, ainda sem release: [plano](plans/2026-10-27-export-import.md), [verificação no emulador](reports/2026-10-27-export-import-verificacao.md). Com a base grande, o import dispara o travamento já conhecido do cálculo de PR na thread principal, e um toque durante o travamento abre o diálogo de ANR. Decisão de 2026-10-27: isso não é corrigido nesta branch, e sim pelo item abaixo. O relatório traz os números. **Resolvido** pelo item abaixo (ver a [verificação](reports/2026-10-27-pr-off-main-thread-verificacao.md)).
 - Cópia de segurança da chave de assinatura, guardada fora da máquina, no 1Password. **Pendente (2026-10-27):** a chave das releases está com o dono do repositório original (`ReiTut/Mooscles`), não no Mac deste fork. O trabalho segue em branches e o assunto é resolvido na release final, quando o PR for aberto para o repositório original. Até lá, builds feitos aqui servem só para emulador e testes.
-- Cálculo de PR fora da thread principal, com recordes materializados, para acabar com o travamento na abertura e depois de um import. **Próximo trabalho (decisão de 2026-10-27); bloqueia a release da v1.5.**
+- Cálculo de PR fora da thread principal, com recordes materializados, para acabar com o travamento na abertura e depois de um import. **Concluído (2026-10-27)** na branch `fix/pr-off-main-thread`, ainda sem release: [spec](specs/2026-10-27-pr-off-main-thread-design.md), [plano](plans/2026-10-27-pr-off-main-thread.md), [verificação no emulador](reports/2026-10-27-pr-off-main-thread-verificacao.md). Os recordes saem de uma passada só e a apresentação roda numa thread de fundo. Com a base grande, o APK debug não trava nem dá ANR na abertura, no import, na troca kg/lb e ao finalizar um treino. **Meta não cumprida:** na abertura a frio do debug, o histórico aparece 15 a 20 s depois do primeiro quadro (a spec pede 3 s); a tela mostra o carregamento e continua respondendo. No build R8 foram 2,3 e 3,1 s. A decisão sobre isso fica com o controlador.
 - Build e release rodando no macOS.
 - CI no GitHub Actions com testes de host e lint.
 

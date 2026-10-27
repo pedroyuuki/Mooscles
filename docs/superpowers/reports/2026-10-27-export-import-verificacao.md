@@ -12,6 +12,8 @@ O fluxo funciona de ponta a ponta no emulador, pelo seletor de arquivos do siste
 
 **O problema encontrado:** com a base grande (208 treinos, 12.688 séries), o import termina de gravar em poucos segundos, mas em seguida a thread principal fica travada por **~142 s no build debug** e **~25 s no build R8**. A causa não está no código de backup. É o recálculo de PR do histórico em `WorkoutPresentation.present()`, na thread principal, que já trava a abertura do app e a troca de unidade com a mesma base (a fase 0 do ROADMAP já prevê tirar esse cálculo da thread principal). O import dispara esse recálculo uma ou duas vezes. Na prática, isso viola o anti-objetivo da spec "o export ou o import travar a UI" para a base grande. Com qualquer toque durante o travamento, o Android mostra o diálogo **"Mooscles isn't responding" (ANR)**. Isso foi reproduzido na segunda rodada, depois do import, e também aconteceu numa abertura a frio. **Decisão:** o travamento não é corrigido nesta branch. A correção é o item "Cálculo de PR fora da thread principal", que passa a ser o próximo trabalho da fase 0 e bloqueia a release da v1.5 (ver [Decisão](#decisão) e a nota de 2026-10-27 na spec). Até lá, quem tiver um histórico grande e usar o APK debug distribuído vai ver esse diálogo depois de importar, e possivelmente ao abrir o app.
 
+> **Atualização de 2026-10-27:** o travamento e o ANR depois do import foram resolvidos no branch `fix/pr-off-main-thread` ([verificação](2026-10-27-pr-off-main-thread-verificacao.md)). No mesmo emulador, com a mesma base e o APK debug, o recálculo agora roda fora da thread principal: o `present()` leva ~1,1 s depois do import, o histórico é apresentado ~6–7 s depois do toque em Import, o maior quadro da thread principal fica abaixo de 300 ms e nenhum ANR apareceu com 93 a 127 toques durante o import. A troca lb ↔ kg também deixou de travar. Os números abaixo continuam como registro do "antes". Uma meta daquele branch não foi cumprida: na abertura a frio do debug, o histórico ainda leva 15 a 20 s para aparecer, mas com a tela respondendo (detalhes no relatório).
+
 ## Ambiente
 
 - Emulador `Mooscles_Pixel8_API35` (`emulator-5554`), Android 15, 1080×2400, imagem `sdk_gphone64_arm64-userdebug`, 4 núcleos e **2,5 GB de RAM** com swap em uso. Host: Mac com Apple M4. Durante as medições a carga média do emulador ficou entre 4 e 6, e um `screencap` levava de 2 a 5 s, então o emulador estava lento.
@@ -136,6 +138,8 @@ Feita com a skill `critique-screen` sobre os prints da primeira rodada (card "Yo
 **Avaliação geral:** a dimensão mais forte é a composição. O card segue o padrão dos cards de Configurações, a ação segura (Export) é o botão cheio e o import é o contorno, e o bloqueio do treino ativo fica explicado no lugar certo. A mais fraca é a visibilidade de estado (affordance e cor): o diálogo fica aberto durante a gravação, erro e sucesso têm a mesma aparência e o caso "nada a acrescentar" pede uma confirmação sem efeito.
 
 ## Decisão
+
+**Resolvido em 2026-10-27** pelo branch `fix/pr-off-main-thread`: ver a [verificação](2026-10-27-pr-off-main-thread-verificacao.md). O texto abaixo é a decisão original.
 
 Decisão do controlador em 2026-10-27, registrada na nota de desempenho da [spec](../specs/2026-10-27-export-import-design.md#notas-de-implementação):
 
