@@ -99,14 +99,14 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 - Kotlin 2.4, AGP 9, Room 2.8 com o driver SQLite embutido e migrações reescritas na API nova.
 - Módulo `:shared` com Room (e `schemas/`), DataStore no **mesmo caminho de arquivo**, domínio, repositório e ViewModels.
 - `:androidApp` com as telas atuais.
-- Esqueleto do app iOS rodando uma tela de teste num iPhone real, para medir cedo os riscos do Compose Multiplatform (teclado, insets, gesto de voltar).
+- ~~Esqueleto do app iOS rodando uma tela de teste num iPhone real~~ — trocado em 2026-10-27, porque não há iPhone nem Xcode local: o `:shared` compila para iOS e roda `commonTest` no simulador num job macOS do CI. O app iOS e o teste de teclado, insets e gesto de voltar ficam para quando houver um aparelho. Spec: [fase 1](specs/2026-10-27-phase1-shared-base-design.md), em duas etapas (1A ferramentas e Room KMP-ready; 1B módulo `:shared`).
 
 **Pronto quando:**
 
 - o `compat-reviewer` dá `SEGURO`;
 - um banco e as preferências da v1.5 abrem intactos;
 - o comportamento é idêntico ao da v1.5;
-- o relatório do teste no iPhone está em `reports/`.
+- o job iOS do CI (compilação do `:shared` e `commonTest` no simulador) está verde, e os relatórios das etapas 1A e 1B estão em `reports/`.
 
 ### Fase 2 — Identidade visual e design system · v1.7 · 3–5 semanas
 
@@ -249,7 +249,7 @@ Só entram com motivo claro, cada uma com sua própria spec:
 ## Perguntas em aberto
 
 - Qual é o modelo exato do aparelho Android do dono, que será o aparelho de referência para desempenho? Os testes automatizados também usam um emulador no Mac.
-- Haverá um iPhone físico para testes antes da fase 1 terminar? O simulador não mede bem teclado, vibração e desempenho.
+- ~~Haverá um iPhone físico para testes antes da fase 1 terminar?~~ Respondida em 2026-10-27: não há iPhone. O iOS fica restrito ao simulador do CI até haver um aparelho; teclado, vibração e desempenho reais no iPhone continuam sem verificação.
 
 Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Decisões).
 
