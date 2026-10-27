@@ -1,0 +1,213 @@
+# Host tests, lint and a debug build, plus a check that the release script still
+# works on Linux and Windows. Nothing here is publishable: the CI APK is signed
+# with a throwaway debug key generated on the runner, never the Mooscles key,
+# and no job has secrets, creates tags or publishes releases.
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    name: Host tests, lint and debug build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # gradle/gradle-daemon-jvm.properties asks for an Adoptium 21 daemon;
+      # providing it here avoids a toolchain download on every run.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Android SDK packages
+        shell: pwsh
+        run: |
+          $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager'
+          @('y') * 10 | & $sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' | Select-Object -Last 3
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # Open-source (MIT) provider on top of the GitHub Actions cache.
+          cache-provider: basic
+          # Pushes to any branch may save the cache; pull requests only read it.
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      # Robolectric downloads its android-all jars outside the Gradle cache.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-${{ hashFiles('app/build.gradle.kts') }}
+          restore-keys: robolectric-${{ runner.os }}-
+
+      # No test retry: a flaky test must fail the job so it gets looked at.
+      - name: Test, lint and assemble
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --console=plain --continue
+
+      - name: Summarize host tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -Path 'app/build/test-results/testDebugUnitTest' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          foreach ($file in $files) {
+              $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
+              $tests += [int]$suite.tests; $failures += [int]$suite.failures
+              $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
+              foreach ($case in @($suite.testcase)) {
+                  if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+              }
+          }
+          $lines = @(
+              '### Host tests',
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped."
+          ) + ($failed | ForEach-Object { "- ``$_``" })
+          $lines | Write-Host
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload test and lint reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: host-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # For inspection and for the release-script job only. It is signed with the
+      # runner's throwaway debug key, so installed Mooscles builds reject it.
+      - name: Upload debug APK
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 7
+
+  release-script:
+    name: Release script (${{ matrix.os }})
+    needs: host
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      APK: app/build/outputs/apk/debug/app-debug.apk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug
+
+      # apksigner and sdkmanager need a recent JDK on PATH.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install build-tools 35.0.0
+        run: |
+          $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager'
+          if ($IsWindows) { $sdkmanager += '.bat' }
+          @('y') * 10 | & $sdkmanager --install 'build-tools;35.0.0' | Select-Object -Last 3
+          Write-Host "PowerShell $($PSVersionTable.PSVersion), ANDROID_HOME=$env:ANDROID_HOME"
+
+      - name: Read the CI signing certificate
+        id: signer
+        run: |
+          $apksigner = Join-Path (Join-Path $env:ANDROID_HOME 'build-tools/35.0.0') ($IsWindows ? 'apksigner.bat' : 'apksigner')
+          $certs = @(& $apksigner verify --print-certs $env:APK 2>&1 | ForEach-Object { "$_" })
+          if ($LASTEXITCODE -ne 0) { throw "apksigner failed:`n$($certs -join "`n")" }
+          $digests = @($certs | ForEach-Object {
+              if ($_ -match '^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$') { $Matches[1].ToLowerInvariant() }
+          })
+          if ($digests.Count -ne 1) { throw "Expected exactly one signer:`n$($certs -join "`n")" }
+          # The script's default is the original Mooscles key; read it from the script itself.
+          $script = [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path 'tools/prepare-release.ps1').Path, [ref]$null, [ref]$null)
+          $default = ($script.ParamBlock.Parameters |
+              Where-Object { $_.Name.VariablePath.UserPath -eq 'ExpectedSignerSha256' }).DefaultValue.Value
+          if ($default -notmatch '^[0-9a-f]{64}$') { throw 'Could not read the default ExpectedSignerSha256 from prepare-release.ps1.' }
+          if ($digests[0] -eq $default) { throw 'The CI APK is signed with the original Mooscles key. CI must never have that key.' }
+          Write-Host "CI signer:       $($digests[0])"
+          Write-Host "Original signer: $default"
+          "sha256=$($digests[0])" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: prepare-release accepts the CI key when told to
+        env:
+          CI_SIGNER_SHA256: ${{ steps.signer.outputs.sha256 }}
+        run: |
+          $result = & ./tools/prepare-release.ps1 -ApkPath $env:APK -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15
+          $result | Format-List | Out-String | Write-Host
+          $metadata = Get-Content -LiteralPath $result.MetadataPath -Raw | ConvertFrom-Json
+          $expected = @('applicationId', 'versionCode', 'versionName', 'minSdk', 'apkFileName', 'apkSize', 'sha256')
+          $names = @($metadata.PSObject.Properties.Name)
+          if (($names -join ',') -ne ($expected -join ',')) { throw "update.json fields are [$($names -join ', ')], expected [$($expected -join ', ')]." }
+          foreach ($name in $expected) { if ("$($metadata.$name)" -eq '') { throw "update.json field $name is empty." } }
+          if ($metadata.applicationId -ne 'com.mooscles') { throw "Unexpected applicationId $($metadata.applicationId)." }
+          if ([long]$metadata.versionCode -le 15) { throw "versionCode $($metadata.versionCode) is not above 15." }
+          $releaseApk = Join-Path (Split-Path -Parent $result.MetadataPath) $metadata.apkFileName
+          $releaseSha = (Get-FileHash -LiteralPath $releaseApk -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sourceSha = (Get-FileHash -LiteralPath $env:APK -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($metadata.sha256 -ne $releaseSha -or $releaseSha -ne $sourceSha) {
+              throw "sha256 mismatch: update.json $($metadata.sha256), release copy $releaseSha, built APK $sourceSha."
+          }
+          if ([long]$metadata.apkSize -ne (Get-Item -LiteralPath $releaseApk).Length) { throw 'apkSize does not match the release copy.' }
+          $checksum = (Get-Content -LiteralPath $result.ChecksumPath -Raw).Trim()
+          if ($checksum -ne "$releaseSha  $($metadata.apkFileName)") { throw "Unexpected .sha256 content: $checksum" }
+          if ($result.SignerSha256 -ne $env:CI_SIGNER_SHA256) { throw 'prepare-release reported a different signer.' }
+          Get-Content -LiteralPath $result.MetadataPath | Write-Host
+
+      - name: prepare-release refuses the CI key by default
+        env:
+          NO_COLOR: '1'
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $refusedDirectory = 'app/build/outputs/release-default-key'
+          # In-process: the exact error message.
+          $message = $null
+          try {
+              & ./tools/prepare-release.ps1 -ApkPath $env:APK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
+          } catch {
+              $message = $_.Exception.Message
+          }
+          if (-not $message) { throw 'prepare-release accepted an APK that is not signed with the original Mooscles key.' }
+          if ($message -notlike '*Do not create a new key*') { throw "prepare-release failed for another reason: $message" }
+          # As a release operator runs it: a separate process that must exit non-zero.
+          $output = @(& pwsh -NoProfile -NonInteractive -File ./tools/prepare-release.ps1 -ApkPath $env:APK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory 2>&1 | ForEach-Object { "$_" })
+          $exitCode = $LASTEXITCODE
+          $text = $output -join "`n"
+          Write-Host $text
+          if ($exitCode -eq 0) { throw 'prepare-release exited 0 for an APK that is not signed with the original Mooscles key.' }
+          # Undo the error view's line wrapping before matching.
+          $flat = (($text -replace '\x1b\[[0-9;]*m', '') -replace '\s*\|\s*', ' ') -replace '\s+', ' '
+          if ($flat -notlike '*Do not create a new key*') { throw "prepare-release exited $exitCode for another reason." }
+          if (Test-Path -LiteralPath (Join-Path $refusedDirectory 'update.json')) { throw 'prepare-release wrote update.json despite refusing the key.' }
+          Write-Host "Refused as expected (exit $exitCode): $message"
+          exit 0
