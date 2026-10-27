@@ -258,7 +258,7 @@ Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Deci
 
 | Fase | Status | Spec | Plano | Release |
 | --- | --- | --- | --- | --- |
-| 0 | em andamento: export/import concluído (2026-10-27), sem release | [export/import](specs/2026-10-27-export-import-design.md) | [export/import](plans/2026-10-27-export-import.md) · [verificação](reports/2026-10-27-export-import-verificacao.md) | — |
+| 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; faltam build/release no macOS, CI e a chave | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
 | 1 | não iniciada | — | — | — |
 | 2 | não iniciada | — | — | — |
 | 3 | não iniciada | — | — | — |
