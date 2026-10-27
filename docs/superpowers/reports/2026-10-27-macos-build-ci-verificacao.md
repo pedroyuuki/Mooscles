@@ -46,7 +46,7 @@ Job `host` (Temurin 21, SDK platform 35 e build-tools 35.0.0, cache do Gradle e 
 | 40591041005 (tentativa 1) | falhou | — | teste instável `AppViewModelBackupHostTest.invalidFileShowsReasonAndKeepsData:260`; `release-script` não rodou |
 | 40591041005 (tentativa 2) | verde | 3m26s | `7f753b7` + `392f1aa`; os 4 jobs de `release-script` verdes, com os casos novos e o 5.1 |
 
-- 482 testes em 65 classes, 0 falhas, 0 erros, 0 ignorados nas três execuções. Os testes instáveis conhecidos (`DiscardNavigationHostTest`, `AppViewModelFoldersDiscardHostTest:135`) passaram; não há retry configurado.
+- 482 testes em 65 classes, 0 falhas, 0 erros, 0 ignorados nas quatro execuções em que o `host` passou; a quinta (40591041005, tentativa 1) falhou só no teste instável `AppViewModelBackupHostTest.invalidFileShowsReasonAndKeepsData:260`. Os outros testes instáveis conhecidos (`DiscardNavigationHostTest`, `AppViewModelFoldersDiscardHostTest:135`) passaram nas cinco; não há retry configurado. Os dois de `AppViewModel*` foram corrigidos depois, em `test: fix two flaky host tests`.
 - Job `release-script`, na execução 40586360013: matriz ubuntu e windows, cada um com build-tools 35.0.0 isolada e com as build-tools do próprio runner (37.0.0). Os 4 jobs levaram de 30 a 58 s. Cada um verifica o caso positivo (`update.json` com os 7 campos, `applicationId`, `versionCode`, sha256 e tamanho conferidos contra o APK) e o negativo (chave padrão recusada, em processo e em processo filho, sem gerar `update.json`).
 - O fingerprint do CI é lido de forma independente, e o job falha se o APK do CI vier com a chave original.
 - Actions fixadas por SHA; `permissions: contents: read`; sem secrets. actionlint 1.7.12: 0 erros (sem shellcheck nem pyflakes).

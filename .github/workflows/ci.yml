@@ -1,5 +1,7 @@
-# Host tests, lint and a debug build, plus a check that the release script still
-# works on Linux and Windows. Nothing here is publishable: the CI APK is signed
+# Host tests, lint and a debug build on every push and pull request, plus a check
+# that the release script still works on Linux and Windows, run when tools/,
+# build.ps1 or a workflow changes, and on every manual run.
+# Nothing here is publishable: the CI APK is signed
 # with a throwaway debug key generated on the runner, never the Mooscles key,
 # and no job has secrets, creates tags or publishes releases.
 name: CI
@@ -101,9 +103,55 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # Decides whether the release-script matrix is worth running. It fails open:
+  # a manual run, a missing or unknown base commit, a failed diff or a failure
+  # of this job itself all mean "run the release-script checks".
+  changes:
+    name: Detect release tooling changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release-tooling: ${{ steps.diff.outputs.release-tooling }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Compare with the base commit
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          # Pull requests: the PR's own commits since it left the base branch.
+          # Pushes: everything between the previous tip and this one.
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          decide() {
+            echo "release-tooling=$1" >> "$GITHUB_OUTPUT"
+            echo "release-script: $1 ($2)" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          case "$EVENT" in
+            push) range="$BASE..$HEAD_SHA" ;;
+            pull_request) range="$BASE...$HEAD_SHA" ;;
+            *) decide true "$EVENT event always runs it" ;;
+          esac
+          if [ -z "$BASE" ] || [ -z "${BASE//0/}" ]; then decide true "no base commit (new branch or tag)"; fi
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null || ! git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
+            decide true "base $BASE or head $HEAD_SHA is not in the fetched history"
+          fi
+          if ! files=$(git diff --name-only "$range"); then decide true "git diff $range failed"; fi
+          matched=$(printf '%s\n' "$files" | grep -E '^(tools/|build\.ps1$|\.github/workflows/)' || true)
+          if [ -n "$matched" ]; then decide true "release tooling changed in $range: $(echo $matched)"; fi
+          decide false "no file under tools/, build.ps1 or .github/workflows/ changed in $range"
+
   release-script:
     name: Release script (${{ matrix.os }}, ${{ matrix.sdk }})
-    needs: host
+    needs: [host, changes]
+    # Still needs a green host job (it uses its APK). Anything but an explicit
+    # "false" from changes, including an empty output after a failure, runs it.
+    if: ${{ !cancelled() && needs.host.result == 'success' && needs.changes.outputs.release-tooling != 'false' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
