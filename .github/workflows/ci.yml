@@ -251,3 +251,126 @@ jobs:
           if (Test-Path -LiteralPath (Join-Path $refusedDirectory 'update.json')) { throw 'prepare-release wrote update.json despite refusing the key.' }
           Write-Host "Refused as expected (exit $exitCode): $message"
           exit 0
+
+      # Two keys made here, in the runner's temp directory, only for this check;
+      # they are not secrets and never leave the runner.
+      - name: Sign two-signer and rotated APKs with throwaway keys
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $work = Join-Path $env:RUNNER_TEMP 'signer-cases'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          $apksigner = Join-Path (Join-Path $env:RELEASE_SDK 'build-tools/35.0.0') ($IsWindows ? 'apksigner.bat' : 'apksigner')
+          $keytool = Join-Path $env:JAVA_HOME ($IsWindows ? 'bin/keytool.exe' : 'bin/keytool')
+          function Invoke-Tool($tool) {
+              $output = @(& $tool @args 2>&1 | ForEach-Object { "$_" })
+              if ($LASTEXITCODE -ne 0) { throw "$(Split-Path -Leaf $tool) exited $($LASTEXITCODE):`n$($output -join "`n")" }
+              $output
+          }
+          $one = Join-Path $work 'one.jks'
+          $two = Join-Path $work 'two.jks'
+          foreach ($key in @(@($one, 'one'), @($two, 'two'))) {
+              Invoke-Tool $keytool -genkeypair -keystore $key[0] -storepass throwaway -keypass throwaway -alias $key[1] `
+                  -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Mooscles CI throwaway $($key[1])" | Out-Null
+          }
+          $twoSigners = Join-Path $work 'two-signers.apk'
+          $lineage = Join-Path $work 'lineage'
+          $rotated = Join-Path $work 'rotated.apk'
+          # v3 accepts several certificates only as a rotation lineage, so the
+          # two-signer APK carries v1/v2 signatures by both keys.
+          Invoke-Tool $apksigner sign --ks $one --ks-pass pass:throwaway --v1-signer-name ONE `
+              --next-signer --ks $two --ks-pass pass:throwaway --v1-signer-name TWO `
+              --v3-signing-enabled false --out $twoSigners $env:APK | Out-Null
+          Invoke-Tool $apksigner rotate --out $lineage `
+              --old-signer --ks $one --ks-pass pass:throwaway `
+              --new-signer --ks $two --ks-pass pass:throwaway | Out-Null
+          Invoke-Tool $apksigner sign --ks $one --ks-pass pass:throwaway `
+              --next-signer --ks $two --ks-pass pass:throwaway `
+              --lineage $lineage --rotation-min-sdk-version 33 --out $rotated $env:APK | Out-Null
+          # Build Tools 35 print "Signer #1 ..." for two signers and "Signer (minSdkVersion=...) ..."
+          # for a rotation; both APKs must name the same two certificates.
+          $digestsOf = {
+              param($apk)
+              @(Invoke-Tool $apksigner verify --print-certs $apk | ForEach-Object {
+                  if ($_ -match '^Signer[^:]* certificate SHA-256 digest: ([0-9a-fA-F]{64})$') { $Matches[1].ToLowerInvariant() }
+              } | Sort-Object -Unique)
+          }
+          $twoDigests = & $digestsOf $twoSigners
+          $rotatedDigests = & $digestsOf $rotated
+          Write-Host "two-signer APK: $($twoDigests -join ', ')"
+          Write-Host "rotated APK:    $($rotatedDigests -join ', ')"
+          if ($twoDigests.Count -ne 2) { throw 'The two-signer APK does not carry two distinct certificates.' }
+          if (($rotatedDigests -join ',') -ne ($twoDigests -join ',')) { throw 'The rotated APK does not carry the same two certificates.' }
+          "TWO_SIGNERS_APK=$twoSigners" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ROTATED_APK=$rotated" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "THROWAWAY_SIGNERS=$($twoDigests -join ',')" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # An APK signed by the expected certificate and any other one must be
+      # refused, even when the expected certificate is one of its signers.
+      - name: prepare-release refuses two signers and a key rotation
+        run: |
+          $sdkArgs = @{}
+          if ($env:SCRIPT_SDK) { $sdkArgs['AndroidSdkDirectory'] = $env:SCRIPT_SDK }
+          $cases = [ordered]@{ 'two-signers' = $env:TWO_SIGNERS_APK; 'rotation' = $env:ROTATED_APK }
+          $index = 0
+          foreach ($case in $cases.Keys) {
+              foreach ($expected in ($env:THROWAWAY_SIGNERS -split ',')) {
+                  $index++
+                  $refusedDirectory = "app/build/outputs/release-$case-$index"
+                  $message = $null
+                  try {
+                      & ./tools/prepare-release.ps1 -ApkPath $cases[$case] @sdkArgs -ExpectedSignerSha256 $expected -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
+                  } catch {
+                      $message = $_.Exception.Message
+                  }
+                  if (-not $message) { throw "prepare-release accepted the $case APK when told to trust $expected." }
+                  if ($message -notlike '*Do not create a new key*') { throw "prepare-release refused the $case APK for another reason: $message" }
+                  if (Test-Path -LiteralPath (Join-Path $refusedDirectory 'update.json')) { throw "prepare-release wrote update.json for the $case APK." }
+                  Write-Host "Refused $case with trusted signer $expected."
+              }
+          }
+
+      # Windows PowerShell 5.1 ships with Windows, so a release operator may run
+      # the script with it instead of PowerShell 7.
+      - name: Windows PowerShell 5.1 runs the release script
+        if: ${{ runner.os == 'Windows' }}
+        env:
+          CI_SIGNER_SHA256: ${{ steps.signer.outputs.sha256 }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $version = (& powershell.exe -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString()' | Out-String).Trim()
+          Write-Host "Windows PowerShell $version"
+          if ($version -notlike '5.1.*') { throw "powershell.exe is $version, not Windows PowerShell 5.1." }
+          $sdkArgList = @()
+          if ($env:SCRIPT_SDK) { $sdkArgList = @('-AndroidSdkDirectory', $env:SCRIPT_SDK) }
+          function Invoke-WindowsPowerShell {
+              $output = @(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/prepare-release.ps1 @args 2>&1 | ForEach-Object { "$_" })
+              Write-Host ($output -join "`n")
+              [pscustomobject]@{ ExitCode = $LASTEXITCODE; Text = ($output -join "`n") }
+          }
+
+          $acceptedDirectory = 'app/build/outputs/release-ps51'
+          $run = Invoke-WindowsPowerShell -ApkPath $env:APK @sdkArgList -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15 -OutputDirectory $acceptedDirectory
+          if ($run.ExitCode -ne 0) { throw "Windows PowerShell 5.1 exited $($run.ExitCode) for the CI key it was told to trust." }
+          $metadata = Get-Content -LiteralPath (Join-Path $acceptedDirectory 'update.json') -Raw | ConvertFrom-Json
+          $expected = @('applicationId', 'versionCode', 'versionName', 'minSdk', 'apkFileName', 'apkSize', 'sha256')
+          $names = @($metadata.PSObject.Properties.Name)
+          if (($names -join ',') -ne ($expected -join ',')) { throw "update.json fields are [$($names -join ', ')], expected [$($expected -join ', ')]." }
+          if ($metadata.applicationId -ne 'com.mooscles') { throw "Unexpected applicationId $($metadata.applicationId)." }
+          $releaseApk = Join-Path $acceptedDirectory $metadata.apkFileName
+          $releaseSha = (Get-FileHash -LiteralPath $releaseApk -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sourceSha = (Get-FileHash -LiteralPath $env:APK -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($metadata.sha256 -ne $releaseSha -or $releaseSha -ne $sourceSha) {
+              throw "sha256 mismatch: update.json $($metadata.sha256), release copy $releaseSha, built APK $sourceSha."
+          }
+          if ([long]$metadata.apkSize -ne (Get-Item -LiteralPath $releaseApk).Length) { throw 'apkSize does not match the release copy.' }
+          $checksum = (Get-Content -LiteralPath (Join-Path $acceptedDirectory "$($metadata.apkFileName).sha256") -Raw).Trim()
+          if ($checksum -ne "$releaseSha  $($metadata.apkFileName)") { throw "Unexpected .sha256 content: $checksum" }
+
+          $refusedDirectory = 'app/build/outputs/release-ps51-default-key'
+          $run = Invoke-WindowsPowerShell -ApkPath $env:APK @sdkArgList -PreviousVersionCode 15 -OutputDirectory $refusedDirectory
+          if ($run.ExitCode -eq 0) { throw 'Windows PowerShell 5.1 exited 0 for an APK that is not signed with the original Mooscles key.' }
+          # Windows PowerShell wraps long error lines; compare without whitespace.
+          if (($run.Text -replace '\s', '') -notlike '*Donotcreateanewkey*') { throw "Windows PowerShell 5.1 exited $($run.ExitCode) for another reason." }
+          if (Test-Path -LiteralPath (Join-Path $refusedDirectory 'update.json')) { throw 'Windows PowerShell 5.1 wrote update.json despite refusing the key.' }
+          Write-Host "Windows PowerShell 5.1 accepted the trusted key and refused the default (exit $($run.ExitCode))."
+          exit 0
