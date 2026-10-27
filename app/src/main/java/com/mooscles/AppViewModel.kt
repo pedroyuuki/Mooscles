@@ -46,8 +46,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     val installIntents = installLaunches.receiveAsFlow()
     fun openUpdateSettings() { settingsRequest.value += 1 }
     private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    /** Null until Room's first snapshot (or its failure): an empty placeholder must never be presented as saved data. */
     private val source = repo.data.catch { error.value = "Unable to open local data: ${it.message}"; emit(AppData()) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, AppData())
+        .stateIn<AppData?>(viewModelScope, SharingStarted.Eagerly, null)
     /** Host-test probe: presentations finished, and how many of them ran on the main thread. */
     @VisibleForTesting internal val presentedCount = AtomicInteger()
     @VisibleForTesting internal val presentedOnMainThread = AtomicInteger()
@@ -57,7 +58,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
      */
     private val presentationDispatcher = Dispatchers.Default.limitedParallelism(1)
     // Pairs that arrive while a slow present() runs are conflated: only the latest one is worth presenting.
-    private val presentation = combine(source, app.preferences.flow) { data, prefs -> data to prefs }
+    private val presentation = combine(source.filterNotNull(), app.preferences.flow) { data, prefs -> data to prefs }
         .conflate()
         .map { (data, prefs) ->
             Trace.beginSection("Mooscles:present")
@@ -68,6 +69,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         }
         .flowOn(presentationDispatcher)
     private val problems = combine(error, app.preferences.error, app.timer.error) { action, prefs, timer -> action ?: prefs ?: timer }
+    // Ready needs both: initialization finished and a presentation of Room's data (combine waits for the first one).
     private val baseUi = combine(presentation, problems, initialized, app.updates.ui, startingWorkout) { base, problem, ready, updates, starting ->
         base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)
     }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}")) }

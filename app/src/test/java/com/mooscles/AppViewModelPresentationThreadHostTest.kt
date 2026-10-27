@@ -66,11 +66,13 @@ class AppViewModelPresentationThreadHostTest {
         awaitUi(model) { !it.loading && it.exercises.any { e -> e.id == exerciseId } }
         val seen = CopyOnWriteArrayList<UiState>()
         model.viewModelScope.launch(Dispatchers.Unconfined) { model.contentUi.collect { seen += it } }
+        val presentedBefore = model.presentedCount.get()
 
-        // Back-to-back writes, without waiting for any of them to be presented.
-        val finished = runBlocking(Dispatchers.IO) {
-            val repo = app.repository
-            (1..3).map { round ->
+        // Successive writes: after each one the main looper runs, so Room's snapshot reaches the
+        // ViewModel's source, but nobody waits for that snapshot to be presented.
+        val finished = (1..3).map { round ->
+            val id = runBlocking(Dispatchers.IO) {
+                val repo = app.repository
                 val id = repo.startEmpty(name = "Quick $round", now = round * 10_000L)
                 val entry = repo.addWorkoutExercise(id, exerciseId)
                 val set = repo.snapshot().exerciseSets(entry).first()
@@ -78,6 +80,11 @@ class AppViewModelPresentationThreadHostTest {
                 repo.finishWorkout(id, now = round * 10_000L + 5_000L)
                 id
             }
+            repeat(3) {
+                shadowOf(Looper.getMainLooper()).idle()
+                Thread.sleep(5)
+            }
+            id
         }
         val latest: (UiState) -> Boolean = { state ->
             state.active == null && state.history.map { it.id }.toSet() == finished.toSet()
@@ -89,31 +96,43 @@ class AppViewModelPresentationThreadHostTest {
             Thread.sleep(10)
         }
 
+        // The scenario really produced successive inputs, not one snapshot holding every write.
+        assertTrue("Expected several presentations, got ${model.presentedCount.get() - presentedBefore}",
+            model.presentedCount.get() - presentedBefore >= 2)
+        val sizes = seen.map { it.history.size }
+        assertTrue("Expected intermediate history sizes, saw $sizes", sizes.distinct().size >= 2)
         assertTrue(latest(model.contentUi.value))
         val first = seen.indexOfFirst(latest)
         assertTrue("The latest data was never published", first >= 0)
         assertTrue("No earlier state may be published after the latest one", seen.drop(first).all(latest))
-        val sizes = seen.map { it.history.size }
         assertEquals("History must only grow while the writes are presented in order", sizes.sorted(), sizes)
     }
 
     @Test fun firstStateStillLoadingUntilPresented() {
-        val routineId = runBlocking(Dispatchers.IO) {
-            app.repository.initialize()
-            app.repository.createRoutine("Shown after presentation")
+        // A large saved history takes a while to present, which is when an empty ready state could slip out.
+        val seeded = runBlocking(Dispatchers.IO) {
+            val repo = app.repository
+            repo.initialize()
+            val rows = LargeHistoryFixture.rows(LargeHistoryFixture.defaultExercises)
+            app.database.dao().insertWorkouts(rows.workouts)
+            app.database.dao().insertWorkoutExercises(rows.entries)
+            app.database.dao().insertSets(rows.sets)
+            repo.createRoutine("Shown after presentation") to rows.workouts.last().id
+        }
+        val (routineId, workoutId) = seeded
+        val hasSavedData: (UiState) -> Boolean = { state ->
+            state.routines.any { it.id == routineId } && state.history.any { it.id == workoutId }
         }
         val model = newModel()
-        // Every state with the number of presentations finished when it reached the collector.
-        val seen = CopyOnWriteArrayList<Pair<UiState, Int>>()
-        model.viewModelScope.launch(Dispatchers.Unconfined) {
-            model.contentUi.collect { seen += it to model.presentedCount.get() }
-        }
+        val seen = CopyOnWriteArrayList<UiState>()
+        model.viewModelScope.launch(Dispatchers.Unconfined) { model.contentUi.collect { seen += it } }
         assertTrue("A new model starts loading", model.contentUi.value.loading)
-        awaitUi(model) { !it.loading && it.routines.any { routine -> routine.id == routineId } }
+        awaitUi(model) { !it.loading && hasSavedData(it) }
 
-        assertTrue("The first published state is the loading one", seen.first().first.loading)
-        val early = seen.filter { (state, presented) -> !state.loading && presented == 0 }
-        assertTrue("No ready state may be published before the first presentation: $early", early.isEmpty())
+        assertTrue("The first published state is the loading one", seen.first().loading)
+        val early = seen.filter { !it.loading && !hasSavedData(it) }
+            .map { "routines=${it.routines.size} history=${it.history.size}" }
+        assertTrue("Every ready state must already show the saved data: $early", early.isEmpty())
     }
 
     private fun newModel() = AppViewModel(app).also { models += it }
