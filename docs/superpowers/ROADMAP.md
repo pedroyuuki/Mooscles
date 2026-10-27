@@ -76,9 +76,9 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 
 **Entregas:**
 
-- Export/import de todos os dados em JSON com versão, pelo seletor de arquivos do sistema ([spec](specs/2026-10-27-export-import-design.md)). **Concluído (2026-10-27)** na branch `feat/export-import`, ainda sem release: [plano](plans/2026-10-27-export-import.md), [verificação no emulador](reports/2026-10-27-export-import-verificacao.md). Com a base grande, o import dispara o travamento já conhecido do cálculo de PR na thread principal (item abaixo); o relatório traz os números.
+- Export/import de todos os dados em JSON com versão, pelo seletor de arquivos do sistema ([spec](specs/2026-10-27-export-import-design.md)). **Concluído (2026-10-27)** na branch `feat/export-import`, ainda sem release: [plano](plans/2026-10-27-export-import.md), [verificação no emulador](reports/2026-10-27-export-import-verificacao.md). Com a base grande, o import dispara o travamento já conhecido do cálculo de PR na thread principal, e um toque durante o travamento abre o diálogo de ANR. Decisão de 2026-10-27: isso não é corrigido nesta branch, e sim pelo item abaixo. O relatório traz os números.
 - Cópia de segurança da chave de assinatura, guardada fora da máquina, no 1Password. **Pendente (2026-10-27):** a chave das releases está com o dono do repositório original (`ReiTut/Mooscles`), não no Mac deste fork. O trabalho segue em branches e o assunto é resolvido na release final, quando o PR for aberto para o repositório original. Até lá, builds feitos aqui servem só para emulador e testes.
-- Cálculo de PR fora da thread principal, com recordes materializados, para acabar com o travamento na abertura.
+- Cálculo de PR fora da thread principal, com recordes materializados, para acabar com o travamento na abertura e depois de um import. **Próximo trabalho (decisão de 2026-10-27); bloqueia a release da v1.5.**
 - Build e release rodando no macOS.
 - CI no GitHub Actions com testes de host e lint.
 
