@@ -1,7 +1,11 @@
 param([string]$SourcePath = '')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-if (-not $SourcePath) { $SourcePath = Join-Path $projectRoot 'artwork\arm-dumbbell-source.jpg' }
+# System.Drawing (GDI+) is Windows-only in current .NET; fail clearly elsewhere instead of mid-render.
+if ($IsLinux -or $IsMacOS) {
+    throw 'generate-launcher.ps1 requires Windows: System.Drawing is not supported on this platform. The generated icons are committed; regenerate them on Windows.'
+}
+if (-not $SourcePath) { $SourcePath = Join-Path (Join-Path $projectRoot 'artwork') 'arm-dumbbell-source.jpg' }
 Add-Type -AssemblyName System.Drawing
 $drawingReferences = @('System.Drawing.Common', 'System.Drawing.Primitives', 'System.Collections', 'System.Runtime', 'System.Runtime.InteropServices') + @(Get-ChildItem -LiteralPath $PSHOME -Filter 'System.Private.Windows.*.dll' -File | Select-Object -ExpandProperty FullName)
 Add-Type -ReferencedAssemblies $drawingReferences -TypeDefinition @'
