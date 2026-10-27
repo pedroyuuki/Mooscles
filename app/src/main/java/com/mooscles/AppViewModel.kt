@@ -260,8 +260,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
             backup.update { it.copy(pendingImport = null) }
             try {
                 // The phone may have changed since the preview: the repository plans again inside its transaction.
-                // Preferences are restored as the transaction's last step: data and settings commit together, or
-                // neither does, and no install can start in between.
+                // Preferences are restored as the transaction's last step, so a failed restore rolls the data back
+                // and no install can start in between. DataStore is not part of the Room transaction: a commit
+                // failure after the restore would still leave the settings applied.
                 val plan = app.trainingGate.withLock {
                     app.updates.assertTrainingMayStart()
                     repo.importBackup(file) { plan -> plan.preferences?.let { app.preferences.restore(it) } }
