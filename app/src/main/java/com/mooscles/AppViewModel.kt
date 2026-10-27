@@ -18,6 +18,8 @@ import com.mooscles.backup.ImportPlanner
 import com.mooscles.data.*
 import com.mooscles.ui.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -93,11 +95,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
             try { repo.initialize() } catch (e: CancellationException) { throw e }
             catch (e: Exception) { error.value = "Unable to initialize local data: ${e.message}" }
             initialized.value = true
-            for (command in commands) try { command() } catch (e: CancellationException) { throw e }
+            for (command in commands) try { command() }
+            catch (e: CancellationException) {
+                // Only a cleared ViewModel ends the loop. A timed-out wait or a cancelled child is one failed
+                // command: rethrowing it would silently drop every later command. Its message is not user copy.
+                currentCoroutineContext().ensureActive()
+                error.value = SAVE_FAILED
+            }
             catch (e: Exception) { error.value = e.message ?: SAVE_FAILED }
         }
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
+    /** Host-test seam: queues [block] behind the screen's own commands. */
+    @VisibleForTesting internal fun enqueueCommandForTest(block: suspend () -> Unit) = act(block)
+    /** How long a command waits for saved data to reach the screen; host tests shorten it. */
+    @VisibleForTesting internal var screenWaitMillis = 30_000L
     /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
     private fun backupAct(fileFailure: String, working: String, block: suspend () -> Unit) = act { backupWork(fileFailure, working, block) }
     /** [fileFailure] replaces the raw message of file-access errors (IOException, SecurityException...). */
@@ -170,7 +182,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
                 }
                 // Keep loading visible until saved data reaches the editor, also on resume.
                 try {
-                    withTimeout(30_000) { contentUi.first { it.active?.id == id } }
+                    withTimeout(screenWaitMillis) { contentUi.first { it.active?.id == id } }
                 } catch (failure: TimeoutCancellationException) {
                     throw IllegalStateException("Your workout was saved, but the screen could not open. Return to Workout to resume it.", failure)
                 }
@@ -216,7 +228,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
                     app.timer.clearForSessionEnd()
                 }
                 // Cards and navigation must observe the durable deletion together.
-                withTimeout(30_000) { contentUi.first { it.active == null } }
+                try {
+                    withTimeout(screenWaitMillis) { contentUi.first { it.active == null } }
+                } catch (failure: TimeoutCancellationException) {
+                    throw IllegalStateException("The workout was discarded, but the screen could not update. Open History or Workout to refresh it.", failure)
+                }
                 discardNavigationRequest.value += 1
             } finally {
                 discardingWorkout.value = false
