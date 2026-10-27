@@ -1,5 +1,6 @@
 package com.mooscles.ui
 
+import com.mooscles.backup.ImportSummary
 import com.mooscles.domain.RestDuration
 
 /** Presentation snapshots use kg internally; only text entry and display use the selected unit. */
@@ -75,10 +76,23 @@ data class UiState(
     val startingWorkout: Boolean = false,
     val discardingWorkout: Boolean = false, val discardNavigationRequest: Long = 0,
     val routineFolders: List<RoutineFolderUi> = listOf(RoutineFolderUi("default", "My routines")),
+    val backup: BackupUi = BackupUi(),
 )
 
+/** [pendingImport] is the summary of a read file waiting for confirmation; [message] reports the last outcome. */
+data class BackupUi(val busy: Boolean = false, val pendingImport: ImportSummary? = null, val message: String? = null)
+
+/** Document URIs travel as strings so this contract stays free of android.*. */
+interface DataActions {
+    fun exportData(uri: String)
+    fun prepareImport(uri: String)
+    fun confirmImport()
+    fun cancelImport()
+    fun clearBackupMessage()
+}
+
 /** All changes are persisted by the implementation. move* takes -1 or +1. */
-interface MoosclesActions : UpdateActions {
+interface MoosclesActions : UpdateActions, DataActions {
     fun clearError()
     fun createRoutine(name: String)
     fun renameRoutine(id: String, name: String)

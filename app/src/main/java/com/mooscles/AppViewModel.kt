@@ -6,15 +6,24 @@ import android.os.Build
 import android.os.Trace
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mooscles.backup.BackupApp
+import com.mooscles.backup.BackupCodec
+import com.mooscles.backup.BackupDocuments
+import com.mooscles.backup.BackupFile
+import com.mooscles.backup.BackupTexts
+import com.mooscles.backup.ImportPlanner
 import com.mooscles.data.*
 import com.mooscles.ui.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import java.time.Instant
 
 class AppViewModel(application: Application) : AndroidViewModel(application), MoosclesActions {
     private val app = application as MoosclesApplication
@@ -24,6 +33,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     private val startingWorkout = MutableStateFlow(false)
     private val discardingWorkout = MutableStateFlow(false)
     private val discardNavigationRequest = MutableStateFlow(0L)
+    private val backup = MutableStateFlow(BackupUi())
+    /** The file read by [prepareImport], kept until it is confirmed or cancelled. Only touched inside commands. */
+    private var pendingImportFile: BackupFile? = null
     private val presenter = WorkoutPresentation()
     private val settingsRequest = MutableStateFlow(0L)
     private val installLaunches = Channel<Intent>(Channel.BUFFERED)
@@ -43,8 +55,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)
     }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}")) }
     /** Screens do not observe countdown ticks. Only the dock collects [timerUi]. */
-    val contentUi = combine(baseUi, settingsRequest, discardingWorkout, discardNavigationRequest) { base, request, discarding, discarded ->
-        base.copy(updateSettingsRequest = request, discardingWorkout = discarding, discardNavigationRequest = discarded)
+    val contentUi = combine(baseUi, settingsRequest, discardingWorkout, discardNavigationRequest, backup) { base, request, discarding, discarded, backup ->
+        base.copy(updateSettingsRequest = request, discardingWorkout = discarding, discardNavigationRequest = discarded, backup = backup)
     }
         .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
     val timerUi = app.timer.ui
@@ -63,10 +75,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
             catch (e: Exception) { error.value = "Unable to initialize local data: ${e.message}" }
             initialized.value = true
             for (command in commands) try { command() } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error.value = e.message ?: "Could not save this change. Please try again." }
+            catch (e: Exception) { error.value = e.message ?: SAVE_FAILED }
         }
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
+    /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
+    private fun backupAct(block: suspend () -> Unit) = act {
+        backup.update { it.copy(busy = true, message = null) }
+        try { block() } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { backup.update { it.copy(message = e.message ?: SAVE_FAILED) } }
+        finally { backup.update { it.copy(busy = false) } }
+    }
     override fun clearError() { error.value = null; app.preferences.clearError(); app.timer.clearError() }
     override fun createRoutine(name: String) = act {
         val savedFolder = app.preferences.snapshot().selectedRoutineFolderId
@@ -198,5 +217,50 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     override fun downloadUpdate() = act { app.updates.enqueueDownload(manual = true) }
     override fun cancelUpdate() = act { app.updates.cancelDownload() }
     override fun installUpdate() = act { app.updates.requestInstall()?.let { installLaunches.send(it) } }
+    override fun exportData(uri: String) = backupAct {
+        val preferences = app.preferences.snapshot().toBackup()
+        val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
+        val file = repo.exportBackup(preferences, about, Instant.now().toString())
+        val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
+        BackupDocuments.write(app, uri, text)
+        val data = file.data
+        backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
+    }
+    /** Reads and plans only; nothing is written until [confirmImport]. */
+    override fun prepareImport(uri: String) = backupAct {
+        pendingImportFile = null
+        backup.update { it.copy(pendingImport = null) }
+        val text = BackupDocuments.read(app, uri)
+        val local = repo.localState()
+        val (file, plan) = withContext(Dispatchers.Default) {
+            val file = BackupCodec.decode(text)
+            file to ImportPlanner.plan(file, local)
+        }
+        pendingImportFile = file
+        backup.update { it.copy(pendingImport = plan.summary) }
+    }
+    override fun confirmImport() = backupAct {
+        val file = pendingImportFile ?: return@backupAct
+        try {
+            // The phone may have changed since the preview: the repository plans again inside its transaction.
+            val plan = app.trainingGate.withLock {
+                app.updates.assertTrainingMayStart()
+                repo.importBackup(file)
+            }
+            plan.preferences?.let { app.preferences.restore(it) }
+            backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
+        } finally {
+            pendingImportFile = null
+            backup.update { it.copy(pendingImport = null) }
+        }
+    }
+    override fun cancelImport() = act {
+        pendingImportFile = null
+        backup.update { it.copy(pendingImport = null) }
+    }
+    override fun clearBackupMessage() = act { backup.update { it.copy(message = null) } }
 
+    private companion object {
+        const val SAVE_FAILED = "Could not save this change. Please try again."
+    }
 }
