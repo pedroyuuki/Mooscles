@@ -1,6 +1,7 @@
 # Host tests, lint and a debug build on every push and pull request, plus a check
 # that the release script still works on Linux and Windows, run when tools/,
-# build.ps1 or a workflow changes, and on every manual run.
+# build.ps1, app/build.gradle.kts (version and signing inputs) or a workflow
+# changes, and on every manual run.
 # Nothing here is publishable: the CI APK is signed
 # with a throwaway debug key generated on the runner, never the Mooscles key,
 # and no job has secrets, creates tags or publishes releases.
@@ -142,9 +143,9 @@ jobs:
             decide true "base $BASE or head $HEAD_SHA is not in the fetched history"
           fi
           if ! files=$(git diff --name-only "$range"); then decide true "git diff $range failed"; fi
-          matched=$(printf '%s\n' "$files" | grep -E '^(tools/|build\.ps1$|\.github/workflows/)' || true)
+          matched=$(printf '%s\n' "$files" | grep -E '^(tools/|build\.ps1$|app/build\.gradle\.kts$|\.github/workflows/)' || true)
           if [ -n "$matched" ]; then decide true "release tooling changed in $range: $(echo $matched)"; fi
-          decide false "no file under tools/, build.ps1 or .github/workflows/ changed in $range"
+          decide false "no file under tools/, build.ps1, app/build.gradle.kts or .github/workflows/ changed in $range"
 
   release-script:
     name: Release script (${{ matrix.os }}, ${{ matrix.sdk }})
