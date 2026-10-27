@@ -76,8 +76,8 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 
 **Entregas:**
 
-- Export/import de todos os dados em JSON com versão, pelo menu de compartilhamento e pelo seletor de arquivos.
-- Cópia de segurança da chave de assinatura, guardada fora da máquina, no 1Password.
+- Export/import de todos os dados em JSON com versão, pelo seletor de arquivos do sistema ([spec](specs/2026-10-27-export-import-design.md)).
+- Cópia de segurança da chave de assinatura, guardada fora da máquina, no 1Password. **Pendente (2026-10-27):** a chave das releases está com o dono do repositório original (`ReiTut/Mooscles`), não no Mac deste fork. O trabalho segue em branches e o assunto é resolvido na release final, quando o PR for aberto para o repositório original. Até lá, builds feitos aqui servem só para emulador e testes.
 - Cálculo de PR fora da thread principal, com recordes materializados, para acabar com o travamento na abertura.
 - Build e release rodando no macOS.
 - CI no GitHub Actions com testes de host e lint.
