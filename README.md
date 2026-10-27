@@ -72,7 +72,9 @@ On the development workspace, the local JDK and SDK are installed under ignored 
 .\build.ps1
 ```
 
-The scripts are PowerShell 7 and also run on macOS with `pwsh ./build.ps1` (install `pwsh` from the official `osx-arm64` tarball). CI runs in `.github/workflows/ci.yml`.
+The scripts run on Windows PowerShell 5.1 or PowerShell 7 on Windows, and on PowerShell 7 (`pwsh ./build.ps1`) on macOS and Linux. On macOS, install `pwsh` from the official tarball: `osx-arm64` for Apple Silicon, `osx-x64` for Intel Macs. CI runs in `.github/workflows/ci.yml`.
+
+On any machine without the original signing key, `build.ps1` ends with exit code 1 at the `prepare-release` step ("Do not create a new key as an update workaround.") after tests, lint and the build have passed. That is the protection working: the release script accepts only an APK signed solely by the original key. To exercise the script with another key, run `tools/prepare-release.ps1` directly with `-ExpectedSignerSha256` set to that key's SHA-256 certificate fingerprint (from `apksigner verify --print-certs`). Never change the parameter's default value.
 
 After Android Studio's daemon-toolchain migration, `gradle/gradle-daemon-jvm.properties` declares **Adoptium Java 21** for Gradle. Android Studio and command-line builds use these criteria; `build.ps1` also selects the bundled JDK 21 to launch the wrapper. Gradle 8.x cannot run with Java 25.
 

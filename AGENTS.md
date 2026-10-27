@@ -4,7 +4,7 @@ App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de tre
 
 ## Ambiente e comandos
 
-Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`; Gradle 8.x não roda com Java 25), Android SDK platform 35 e build-tools 35.0.0, `sdk.dir` no `local.properties` (ignorado pelo git). Os scripts do repositório são PowerShell 7 e rodam no Windows e no macOS (`pwsh ./build.ps1`). No macOS o `pwsh` vem do tarball oficial `osx-arm64`, extraído em `~/.local/share/powershell/<versão>` com link em `~/.local/bin/pwsh` (sem sudo), e precisa de `export PATH="$HOME/.local/bin:$PATH"` no shell. O CI roda em `.github/workflows/ci.yml`.
+Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`; Gradle 8.x não roda com Java 25), Android SDK platform 35 e build-tools 35.0.0, `sdk.dir` no `local.properties` (ignorado pelo git). Os scripts do repositório são PowerShell: no Windows rodam no Windows PowerShell 5.1 ou no PowerShell 7, e no macOS ou no Linux, no `pwsh` 7 (`pwsh ./build.ps1`). No macOS o `pwsh` vem do tarball oficial `osx-arm64` (Apple Silicon; em Mac Intel use o `osx-x64`), extraído em `~/.local/share/powershell/<versão>` com link em `~/.local/bin/pwsh` (sem sudo), e precisa de `export PATH="$HOME/.local/bin:$PATH"` no shell. O CI roda em `.github/workflows/ci.yml`.
 
 ```sh
 ./gradlew :app:testDebugUnitTest                      # testes de host (JUnit 4 + Robolectric, sdk 35)
@@ -18,6 +18,8 @@ Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`;
 ```
 
 `build.ps1` roda o conjunto padrão (testes, lint, debug, androidTest) e, depois do `assembleDebug`, chama `tools/prepare-release.ps1` para gerar o APK versionado, o `update.json` e o `.sha256`. Os relatórios ficam em `app/build/reports/`.
+
+Fora da máquina que tem a chave original de assinatura, o `build.ps1` termina com exit 1 no `prepare-release` ("Do not create a new key as an update workaround."), depois de testes, lint e build passarem. Isso é a proteção funcionando: o script só aceita um APK assinado apenas pela chave original. Para testar o script em outra máquina, chame `tools/prepare-release.ps1` com `-ExpectedSignerSha256` igual à impressão digital SHA-256 da chave local (`apksigner verify --print-certs`). Nunca mude o valor padrão desse parâmetro.
 
 ## Arquitetura
 
