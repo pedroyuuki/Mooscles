@@ -121,6 +121,12 @@ Eles vêm antes da primeira seção `Mooscles:present`, então não são causado
 - O indicador de carregamento aparece no tema claro e, quando o estado chega, a tela passa para o tema escuro restaurado ([print 01](2026-10-27-pr-off-main-thread-verificacao/01-cold-start-loading.png)). Isso acontece porque o tema vem do mesmo estado apresentado. Não comparei com o comportamento anterior, mas agora o carregamento dura mais tempo visível no debug.
 - No debug, os quadros da animação do indicador ficaram entre 100 e 300 ms durante o `present()`: a animação gira aos trancos, mas responde.
 
+## Riscos conhecidos
+
+- **Start e Discard esperam a apresentação por até 30 s.** Depois de gravar, o `AppViewModel` espera o estado apresentado com `withTimeout(30_000) { contentUi.first { … } }` (Start em `AppViewModel.kt:173`, Discard em `:219`). Como um `present()` a frio no debug leva de 12 a 24 s, um Start logo depois de uma troca kg/lb ou de um import pode chegar perto desse limite. Se o Start estourar o tempo, o treino já está salvo e aparece a mensagem "Your workout was saved, but the screen could not open. Return to Workout to resume it." Nenhum dos dois casos foi provocado no emulador. Pela leitura do código, e também sem teste, o estouro no Discard sai como `TimeoutCancellationException`, que o laço de comandos repassa como cancelamento, e não como mensagem de erro.
+- **Hipótese do revisor para a espera de ~8–9 s antes do `present()` com 48 exercícios, não confirmada:** o executor de transações do Room é serial, então o `snapshot()` de `repo.data` espera o `repo.initialize()`, que lê `workout_exercises` duas vezes. Com 9.984 linhas de exercício, isso caberia na espera. Para confirmar, é preciso um perfil no aparelho com seções de `Trace` em `initialize()` e `snapshot()` (ver o acompanhamento no [ROADMAP](../ROADMAP.md)).
+- **Depois desta verificação** (2026-10-27, revisão final), a linha de base de repetições do treino ativo passou a ser agrupada por exercício, convenção e assistência (`WorkoutCalculations.repsPrsForWorkout`). No host, com 48 exercícios, o cálculo de um treino ativo caiu de ~81–97 ms para ~11–24 ms, com o mesmo resultado. Isso ainda não foi medido no emulador: os 0,85–1,2 s de `present()` do treino acima são de antes da mudança.
+
 ## O que **não** foi verificado
 
 - **Celular físico.** Nada foi testado em aparelho real. Os APKs deste Mac usam a chave debug local, que não atualiza o app instalado com a chave das releases.

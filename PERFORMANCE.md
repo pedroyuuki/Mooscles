@@ -1,6 +1,26 @@
 # Workout responsiveness verification
 
-## Current implementation: UI-thread preparation and preference filtering
+> **Note (2026-10-27):** the 23 October thread placement below is superseded by
+> `fix/pr-off-main-thread`. See the
+> [spec](docs/superpowers/specs/2026-10-27-pr-off-main-thread-design.md) and the
+> [emulator verification](docs/superpowers/reports/2026-10-27-pr-off-main-thread-verificacao.md).
+
+## Current implementation: background presentation and preference filtering
+
+Since 27 October 2026, `WorkoutPresentation.present()` runs on a single-threaded
+background dispatcher (`Dispatchers.Default.limitedParallelism(1)` applied with
+`flowOn`), never on the main thread and never in composition. One thread at a time
+keeps the presenter's caches sequential without locks, and `conflate()` presents
+only the latest data/preferences pair when several arrive during a slow pass. The
+history's records come from one chronological pass instead of a per-workout scan
+of all earlier workouts. The preference filtering described below
+(`distinctUntilChanged()` in `AppPreferences.flow`) is unchanged, so timer writes
+still do not trigger a presentation. Thread placement was reversed because the
+quadratic record cost made main-thread presentation a source of ANRs on large
+histories; the redundant passes that motivated the 23 October decision remain
+prevented by that filtering and by conflation.
+
+## 23 October 2026: UI-thread preparation and preference filtering (superseded)
 
 On 23 October 2026, workout/card presentation was moved from
 `withContext(Dispatchers.Default)` back into the flow collected by
@@ -170,7 +190,8 @@ that a query runs on the main thread.
 ## Original optimization changes
 
 - The original optimization moved presentation to `Dispatchers.Default`; the
-  current local change above restores it to the main thread.
+  23 October change above restored it to the main thread, and the 27 October
+  change moved it back to a single-threaded background dispatcher.
   Finished-history/record presentation is reused across active-set
   edits; changes to completed data, catalog or units invalidate the appropriate
   cache. Unchanged active exercise/set UI objects retain their identities.
