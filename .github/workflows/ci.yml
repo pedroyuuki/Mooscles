@@ -102,7 +102,7 @@ jobs:
           retention-days: 7
 
   release-script:
-    name: Release script (${{ matrix.os }})
+    name: Release script (${{ matrix.os }}, ${{ matrix.sdk }})
     needs: host
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -110,11 +110,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        # build-tools-35: an SDK holding only the project's build-tools 35.0.0.
+        # runner-sdk: the runner's own SDK, where the script picks the newest
+        # build-tools (37.x today), whose apksigner prints a different format.
+        sdk: [build-tools-35, runner-sdk]
     defaults:
       run:
         shell: pwsh
     env:
       APK: app/build/outputs/apk/debug/app-debug.apk
+      SDK_VARIANT: ${{ matrix.sdk }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -131,10 +136,9 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # prepare-release.ps1 uses the newest build-tools it finds, and the runners
-      # also carry newer ones (37.x) whose apksigner prints "V2 Signer: ..." instead
-      # of "Signer #1 ...", which the script does not parse. Give it an SDK with
-      # only the project's build-tools 35.0.0, as on a release machine.
+      # prepare-release.ps1 uses the newest build-tools in the SDK it finds. The
+      # build-tools-35 variant gives it an SDK with only 35.0.0, as on a release
+      # machine; the runner-sdk variant lets it pick from the runner's SDK.
       - name: Install build-tools 35.0.0
         run: |
           $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager'
@@ -150,8 +154,21 @@ jobs:
               & cp -a $source (Join-Path $releaseSdk 'build-tools/35.0.0')
           }
           "RELEASE_SDK=$releaseSdk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "PowerShell $($PSVersionTable.PSVersion), ANDROID_HOME=$env:ANDROID_HOME, release SDK=$releaseSdk"
-          Get-ChildItem -Name (Join-Path $env:ANDROID_HOME 'build-tools') | ForEach-Object { "installed build-tools: $_" }
+          $scriptSdk = if ($env:SDK_VARIANT -eq 'build-tools-35') { $releaseSdk } else { '' }
+          "SCRIPT_SDK=$scriptSdk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "PowerShell $($PSVersionTable.PSVersion), ANDROID_HOME=$env:ANDROID_HOME, ANDROID_SDK_ROOT=$env:ANDROID_SDK_ROOT"
+          Get-ChildItem -Name (Join-Path $env:ANDROID_HOME 'build-tools') | ForEach-Object { "runner build-tools: $_" }
+          # Same choice the script makes, to show which apksigner this variant exercises.
+          $aapt = if ($IsWindows) { 'aapt.exe' } else { 'aapt' }
+          $signerTool = if ($IsWindows) { 'apksigner.bat' } else { 'apksigner' }
+          $sdkUsed = if ($scriptSdk) { $scriptSdk } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { $env:ANDROID_HOME }
+          $picked = Get-ChildItem -LiteralPath (Join-Path $sdkUsed 'build-tools') -Directory |
+              Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } | Sort-Object { [version]$_.Name } -Descending |
+              Where-Object { (Test-Path (Join-Path $_.FullName $aapt)) -and (Test-Path (Join-Path $_.FullName $signerTool)) } |
+              Select-Object -First 1
+          $line = "prepare-release ($env:SDK_VARIANT) uses build-tools $($picked.Name) from $sdkUsed"
+          Write-Host $line
+          $line | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
       - name: Read the CI signing certificate
         id: signer
@@ -178,7 +195,9 @@ jobs:
         env:
           CI_SIGNER_SHA256: ${{ steps.signer.outputs.sha256 }}
         run: |
-          $result = & ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15
+          $sdkArgs = @{}
+          if ($env:SCRIPT_SDK) { $sdkArgs['AndroidSdkDirectory'] = $env:SCRIPT_SDK }
+          $result = & ./tools/prepare-release.ps1 -ApkPath $env:APK @sdkArgs -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15
           $result | Format-List | Out-String | Write-Host
           $metadata = Get-Content -LiteralPath $result.MetadataPath -Raw | ConvertFrom-Json
           $expected = @('applicationId', 'versionCode', 'versionName', 'minSdk', 'apkFileName', 'apkSize', 'sha256')
@@ -205,17 +224,23 @@ jobs:
         run: |
           $PSNativeCommandUseErrorActionPreference = $false
           $refusedDirectory = 'app/build/outputs/release-default-key'
+          $sdkArgs = @{}
+          $sdkArgList = @()
+          if ($env:SCRIPT_SDK) {
+              $sdkArgs['AndroidSdkDirectory'] = $env:SCRIPT_SDK
+              $sdkArgList = @('-AndroidSdkDirectory', $env:SCRIPT_SDK)
+          }
           # In-process: the exact error message.
           $message = $null
           try {
-              & ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
+              & ./tools/prepare-release.ps1 -ApkPath $env:APK @sdkArgs -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
           } catch {
               $message = $_.Exception.Message
           }
           if (-not $message) { throw 'prepare-release accepted an APK that is not signed with the original Mooscles key.' }
           if ($message -notlike '*Do not create a new key*') { throw "prepare-release failed for another reason: $message" }
           # As a release operator runs it: a separate process that must exit non-zero.
-          $output = @(& pwsh -NoProfile -NonInteractive -File ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory 2>&1 | ForEach-Object { "$_" })
+          $output = @(& pwsh -NoProfile -NonInteractive -File ./tools/prepare-release.ps1 -ApkPath $env:APK @sdkArgList -PreviousVersionCode 15 -OutputDirectory $refusedDirectory 2>&1 | ForEach-Object { "$_" })
           $exitCode = $LASTEXITCODE
           $text = $output -join "`n"
           Write-Host $text

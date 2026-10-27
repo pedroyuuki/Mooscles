@@ -63,9 +63,14 @@ $debugBuild = [bool]($badging | Where-Object { $_ -eq 'application-debuggable' }
 
 $signature = @(& (Join-Path $buildTools.FullName $apksignerName) verify --verbose --print-certs $apkFullPath 2>&1)
 if ($LASTEXITCODE -ne 0) { throw "APK signature verification failed: $($signature -join [Environment]::NewLine)" }
+# Build Tools 35 print "Signer #1 certificate SHA-256 digest: ..."; 37 and later print
+# "V2 Signer: certificate SHA-256 digest: ..." per scheme. The same certificate can appear
+# once per scheme, so compare distinct digests; source stamp lines are not signers.
 $signerHashes = @($signature | ForEach-Object {
-    if ($_ -match '^Signer #[0-9]+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$') { $Matches[1].ToLowerInvariant() }
-})
+    if ("$_" -match '^(?:Signer #[0-9]+|V[0-9]+(?:\.[0-9]+)? Signer(?: #[0-9]+)?(?: \([^)]*\))?):? certificate SHA-256 digest: ([0-9a-fA-F]{64})$') {
+        $Matches[1].ToLowerInvariant()
+    }
+} | Select-Object -Unique)
 $expectedSigner = ($ExpectedSignerSha256 -replace ':', '').ToLowerInvariant()
 if ($expectedSigner -notmatch '^[0-9a-f]{64}$') { throw 'ExpectedSignerSha256 must be the trusted existing signing certificate fingerprint.' }
 if ($signerHashes.Count -ne 1 -or $signerHashes[0] -ne $expectedSigner) {
