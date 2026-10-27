@@ -131,17 +131,32 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # prepare-release.ps1 uses the newest build-tools it finds, and the runners
+      # also carry newer ones (37.x) whose apksigner prints "V2 Signer: ..." instead
+      # of "Signer #1 ...", which the script does not parse. Give it an SDK with
+      # only the project's build-tools 35.0.0, as on a release machine.
       - name: Install build-tools 35.0.0
         run: |
           $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager'
           if ($IsWindows) { $sdkmanager += '.bat' }
           @('y') * 10 | & $sdkmanager --install 'build-tools;35.0.0' | Select-Object -Last 3
-          Write-Host "PowerShell $($PSVersionTable.PSVersion), ANDROID_HOME=$env:ANDROID_HOME"
+          if ($LASTEXITCODE -ne 0) { throw "sdkmanager exited $LASTEXITCODE." }
+          $releaseSdk = Join-Path $env:RUNNER_TEMP 'release-sdk'
+          $source = Join-Path $env:ANDROID_HOME 'build-tools/35.0.0'
+          New-Item -ItemType Directory -Force -Path (Join-Path $releaseSdk 'build-tools') | Out-Null
+          if ($IsWindows) {
+              Copy-Item -Recurse -LiteralPath $source -Destination (Join-Path $releaseSdk 'build-tools/35.0.0')
+          } else {
+              & cp -a $source (Join-Path $releaseSdk 'build-tools/35.0.0')
+          }
+          "RELEASE_SDK=$releaseSdk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "PowerShell $($PSVersionTable.PSVersion), ANDROID_HOME=$env:ANDROID_HOME, release SDK=$releaseSdk"
+          Get-ChildItem -Name (Join-Path $env:ANDROID_HOME 'build-tools') | ForEach-Object { "installed build-tools: $_" }
 
       - name: Read the CI signing certificate
         id: signer
         run: |
-          $apksigner = Join-Path (Join-Path $env:ANDROID_HOME 'build-tools/35.0.0') ($IsWindows ? 'apksigner.bat' : 'apksigner')
+          $apksigner = Join-Path (Join-Path $env:RELEASE_SDK 'build-tools/35.0.0') ($IsWindows ? 'apksigner.bat' : 'apksigner')
           $certs = @(& $apksigner verify --print-certs $env:APK 2>&1 | ForEach-Object { "$_" })
           if ($LASTEXITCODE -ne 0) { throw "apksigner failed:`n$($certs -join "`n")" }
           $digests = @($certs | ForEach-Object {
@@ -163,7 +178,7 @@ jobs:
         env:
           CI_SIGNER_SHA256: ${{ steps.signer.outputs.sha256 }}
         run: |
-          $result = & ./tools/prepare-release.ps1 -ApkPath $env:APK -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15
+          $result = & ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -ExpectedSignerSha256 $env:CI_SIGNER_SHA256 -PreviousVersionCode 15
           $result | Format-List | Out-String | Write-Host
           $metadata = Get-Content -LiteralPath $result.MetadataPath -Raw | ConvertFrom-Json
           $expected = @('applicationId', 'versionCode', 'versionName', 'minSdk', 'apkFileName', 'apkSize', 'sha256')
@@ -193,14 +208,14 @@ jobs:
           # In-process: the exact error message.
           $message = $null
           try {
-              & ./tools/prepare-release.ps1 -ApkPath $env:APK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
+              & ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory | Out-Null
           } catch {
               $message = $_.Exception.Message
           }
           if (-not $message) { throw 'prepare-release accepted an APK that is not signed with the original Mooscles key.' }
           if ($message -notlike '*Do not create a new key*') { throw "prepare-release failed for another reason: $message" }
           # As a release operator runs it: a separate process that must exit non-zero.
-          $output = @(& pwsh -NoProfile -NonInteractive -File ./tools/prepare-release.ps1 -ApkPath $env:APK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory 2>&1 | ForEach-Object { "$_" })
+          $output = @(& pwsh -NoProfile -NonInteractive -File ./tools/prepare-release.ps1 -ApkPath $env:APK -AndroidSdkDirectory $env:RELEASE_SDK -PreviousVersionCode 15 -OutputDirectory $refusedDirectory 2>&1 | ForEach-Object { "$_" })
           $exitCode = $LASTEXITCODE
           $text = $output -join "`n"
           Write-Host $text
