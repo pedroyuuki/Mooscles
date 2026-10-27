@@ -53,9 +53,16 @@ class BackupCodecTest {
     fun decodeIgnoresUnknownFields() {
         val text = BackupCodec.encode(sample())
             .replaceFirst("{", "{\"extra\": 1,")
-            .replaceFirst("\"name\": \"Bench press\"", "\"name\": \"Bench press\", \"extra\": 1")
-        assertTrue(text.contains("\"extra\""))
+            .replaceFirst("\"name\":\"Bench press\"", "\"name\":\"Bench press\",\"extra\":1")
+        assertTrue(text.contains("\"Bench press\",\"extra\":1"))
         assertEquals(sample(), BackupCodec.decode(text))
+    }
+
+    @Test
+    fun encodeIsCompact() {
+        val text = BackupCodec.encode(sample())
+        assertTrue(text.startsWith("{\"format\":\"mooscles-backup\",\"formatVersion\":1,"))
+        assertTrue("compact output has no line breaks", '\n' !in text)
     }
 
     @Test

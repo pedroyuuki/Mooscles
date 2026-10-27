@@ -2,6 +2,11 @@ package com.mooscles.backup
 
 import kotlinx.serialization.Serializable
 
+/*
+ * Format contract. Adding an enum constant (muscle, equipment, convention, status, theme) or a required field
+ * requires bumping BackupCodec.FORMAT_VERSION: an older app then reports "made by a newer version" instead of
+ * "invalid data". Optional fields with defaults and unknown keys are ignored by older apps and need no bump.
+ */
 @Serializable
 data class BackupFile(
     val format: String,

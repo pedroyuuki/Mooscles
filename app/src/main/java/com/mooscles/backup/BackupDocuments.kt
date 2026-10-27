@@ -2,6 +2,8 @@ package com.mooscles.backup
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
+import java.io.FileNotFoundException
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -15,10 +17,28 @@ import kotlinx.coroutines.withContext
 /** The only Android-aware file of this package: reads and writes documents the user picked. */
 object BackupDocuments {
     suspend fun write(context: Context, uri: String, text: String) = withContext(Dispatchers.IO) {
-        // "wt" truncates, so replacing a longer file leaves no trailing bytes behind.
-        val output = context.contentResolver.openOutputStream(Uri.parse(uri), "wt")
-            ?: throw IOException("Could not open the selected file.")
+        val document = Uri.parse(uri)
+        // "wt" truncates, so replacing a longer file leaves no trailing bytes behind. Some providers reject
+        // that mode; the document was just created by the picker, so plain "w" leaves nothing behind either.
+        val output = try {
+            context.contentResolver.openOutputStream(document, "wt")
+        } catch (e: IllegalArgumentException) {
+            context.contentResolver.openOutputStream(document, "w")
+        } catch (e: FileNotFoundException) {
+            context.contentResolver.openOutputStream(document, "w")
+        } catch (e: UnsupportedOperationException) {
+            context.contentResolver.openOutputStream(document, "w")
+        } ?: throw IOException("Could not open the selected file.")
         output.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+    }
+
+    /** Best effort after a failed export: removes the empty or partial document the picker created. */
+    suspend fun discard(context: Context, uri: String) = withContext(Dispatchers.IO) {
+        try {
+            DocumentsContract.deleteDocument(context.contentResolver, Uri.parse(uri))
+        } catch (e: Exception) {
+            // Not a deletable document, or the provider refused: the failure message already went out.
+        }
     }
 
     suspend fun read(context: Context, uri: String, maxBytes: Long = 64L * 1024 * 1024): String = withContext(Dispatchers.IO) {

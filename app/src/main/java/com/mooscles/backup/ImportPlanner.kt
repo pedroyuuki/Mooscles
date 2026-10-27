@@ -15,6 +15,8 @@ data class ImportSummary(
     val routinesKept: Int,
     val customExercisesAdded: Int,
     val restoresPreferences: Boolean,
+    /** True when the plan inserts no row of any kind and applies no preferences, so importing changes nothing. */
+    val nothingToAdd: Boolean,
 )
 
 /** [entities] holds only what will be inserted; [preferences] is set only when they will be applied. */
@@ -88,6 +90,12 @@ object ImportPlanner {
             if (it.selectedRoutineFolderId in folderIds) it else it.copy(selectedRoutineFolderId = RoutineFolder.DEFAULT_ID)
         }
 
+        val nothingToAdd = preferences == null && with(entities) {
+            exercises.isEmpty() && routineFolders.isEmpty() && routines.isEmpty() && routineExercises.isEmpty() &&
+                routineSets.isEmpty() && workouts.isEmpty() && workoutExercises.isEmpty() && workoutSets.isEmpty() &&
+                checkpoints.isEmpty()
+        }
+
         return ImportPlan(
             entities = entities.copy(routineFolders = folders, routines = placedRoutines),
             preferences = preferences,
@@ -98,6 +106,7 @@ object ImportPlanner {
                 routinesKept = rows.routines.size - entities.routines.size,
                 customExercisesAdded = entities.exercises.count { it.custom },
                 restoresPreferences = restoresPreferences,
+                nothingToAdd = nothingToAdd,
             ),
         )
     }

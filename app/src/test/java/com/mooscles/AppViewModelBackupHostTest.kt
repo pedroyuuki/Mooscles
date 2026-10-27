@@ -1,8 +1,13 @@
 package com.mooscles
 
 import android.Manifest
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.database.Cursor
 import android.net.Uri
+import android.os.Bundle
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -22,6 +27,7 @@ import com.mooscles.data.WorkoutRepository
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.ui.UiState
 import java.io.File
+import java.io.FileNotFoundException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
@@ -32,6 +38,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -109,6 +116,19 @@ class AppViewModelBackupHostTest {
         assertFalse(File(folder.root, "missing-dir").exists())
     }
 
+    @Test fun failedExportDeletesTheDocumentThePickerCreated() {
+        val provider = Robolectric.buildContentProvider(UnwritableDocumentProvider::class.java).create("com.mooscles.test.unwritable").get()
+        val model = newModel()
+        awaitUi(model) { !it.loading }
+
+        model.exportData("content://com.mooscles.test.unwritable/document/export.json")
+
+        awaitUi(model) { !it.backup.busy && it.backup.message != null }
+        assertEquals(BackupTexts.EXPORT_FILE_FAILED, model.contentUi.value.backup.message)
+        // DocumentsContract.deleteDocument reaches the provider as this (hidden) call method.
+        assertEquals(listOf("android:deleteDocument"), provider.calls)
+    }
+
     @Test fun prepareImportOfUnopenableDocumentReportsFriendlyFailure() {
         val model = newModel()
         awaitUi(model) { !it.loading }
@@ -133,7 +153,7 @@ class AppViewModelBackupHostTest {
         model.prepareImport(source)
 
         awaitUi(model) { !it.backup.busy && it.backup.pendingImport != null }
-        assertEquals(ImportSummary(1, 0, 1, 0, 1, restoresPreferences = true), model.contentUi.value.backup.pendingImport)
+        assertEquals(ImportSummary(1, 0, 1, 0, 1, restoresPreferences = true, nothingToAdd = false), model.contentUi.value.backup.pendingImport)
         assertNull(model.contentUi.value.backup.message)
         assertEquals(before, snapshot())
         assertEquals(defaults, preferences())
@@ -316,5 +336,23 @@ class AppViewModelBackupHostTest {
             Thread.sleep(10)
         }
         assertTrue("Expected state was not published: ${model.ui.value.backup} ${model.ui.value.error}", predicate(model.ui.value))
+    }
+
+    /** A document the picker created but that cannot be written; records the calls it receives. */
+    class UnwritableDocumentProvider : ContentProvider() {
+        val calls = mutableListOf<String>()
+
+        override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor = throw FileNotFoundException("read-only document")
+        override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
+            calls += method
+            return null
+        }
+
+        override fun onCreate() = true
+        override fun query(uri: Uri, projection: Array<out String>?, selection: String?, args: Array<out String>?, sort: String?): Cursor? = null
+        override fun getType(uri: Uri): String = "application/json"
+        override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+        override fun delete(uri: Uri, selection: String?, args: Array<out String>?) = 0
+        override fun update(uri: Uri, values: ContentValues?, selection: String?, args: Array<out String>?) = 0
     }
 }

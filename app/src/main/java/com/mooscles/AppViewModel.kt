@@ -227,9 +227,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED, BackupTexts.WORKING_EXPORT) {
         val preferences = app.preferences.snapshot().toBackup()
         val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
-        val file = repo.exportBackup(preferences, about, Instant.now().toString())
-        val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
-        BackupDocuments.write(app, uri, text)
+        val file = try {
+            val file = repo.exportBackup(preferences, about, Instant.now().toString())
+            val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
+            BackupDocuments.write(app, uri, text)
+            file
+        } catch (e: Exception) {
+            // The picker already created the document: do not leave an empty or partial backup behind.
+            if (e !is CancellationException) BackupDocuments.discard(app, uri)
+            throw e
+        }
         val data = file.data
         backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
     }
@@ -238,11 +245,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         pendingImportFile = null
         backup.update { it.copy(pendingImport = null) }
         val text = BackupDocuments.read(app, uri)
+        // Decode before reading the phone, so a file that is not a backup never pays for a full database read.
+        val file = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
         val local = repo.localState()
-        val (file, plan) = withContext(Dispatchers.Default) {
-            val file = BackupCodec.decode(text)
-            file to ImportPlanner.plan(file, local)
-        }
+        val plan = withContext(Dispatchers.Default) { ImportPlanner.plan(file, local) }
         pendingImportFile = file
         backup.update { it.copy(pendingImport = plan.summary) }
     }
@@ -254,12 +260,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
             backup.update { it.copy(pendingImport = null) }
             try {
                 // The phone may have changed since the preview: the repository plans again inside its transaction.
-                // Preferences are restored under the same lock so no install can start between the two writes.
+                // Preferences are restored as the transaction's last step: data and settings commit together, or
+                // neither does, and no install can start in between.
                 val plan = app.trainingGate.withLock {
                     app.updates.assertTrainingMayStart()
-                    val imported = repo.importBackup(file)
-                    imported.preferences?.let { app.preferences.restore(it) }
-                    imported
+                    repo.importBackup(file) { plan -> plan.preferences?.let { app.preferences.restore(it) } }
                 }
                 backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
             } finally {

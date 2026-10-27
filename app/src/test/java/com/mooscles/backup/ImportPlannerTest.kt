@@ -98,7 +98,7 @@ class ImportPlannerTest {
         assertEquals(listOf(finishedBench, activeCurl), plan.entities.workoutExercises)
         assertEquals(workoutSets, plan.entities.workoutSets)
         assertEquals(listOf(checkpoint), plan.entities.checkpoints)
-        assertEquals(ImportSummary(workoutsAdded = 2, workoutsKept = 0, routinesAdded = 1, routinesKept = 0, customExercisesAdded = 1, restoresPreferences = true), plan.summary)
+        assertEquals(ImportSummary(workoutsAdded = 2, workoutsKept = 0, routinesAdded = 1, routinesKept = 0, customExercisesAdded = 1, restoresPreferences = true, nothingToAdd = false), plan.summary)
         assertEquals(preferences, plan.preferences)
     }
 
@@ -156,7 +156,25 @@ class ImportPlannerTest {
 
         assertNothingInserted(plan.entities)
         assertNull(plan.preferences)
-        assertEquals(ImportSummary(0, 2, 0, 1, 0, restoresPreferences = false), plan.summary)
+        assertEquals(ImportSummary(0, 2, 0, 1, 0, restoresPreferences = false, nothingToAdd = true), plan.summary)
+    }
+
+    @Test
+    fun fileAddingOnlyAFolderOrCatalogExerciseHasSomethingToAdd() {
+        val local = LocalState(sample, listOf(checkpoint))
+        val legs = RoutineFolder("legs", "Legs", 2)
+
+        val folderOnly = ImportPlanner.plan(fileWith(sample.copy(routineFolders = sample.routineFolders + legs)), local)
+
+        assertEquals(listOf("legs"), folderOnly.entities.routineFolders.map { it.id })
+        assertEquals(ImportSummary(0, 2, 0, 1, 0, restoresPreferences = false, nothingToAdd = false), folderOnly.summary)
+
+        val squat = Exercise("squat", "Back squat", MuscleGroup.QUADRICEPS, Equipment.BARBELL, LoadConvention.TOTAL_LOAD, custom = false)
+        val catalogOnly = ImportPlanner.plan(fileWith(sample.copy(exercises = sample.exercises + squat)), local)
+
+        assertEquals(listOf(squat), catalogOnly.entities.exercises)
+        assertEquals(0, catalogOnly.summary.customExercisesAdded)
+        assertFalse(catalogOnly.summary.nothingToAdd)
     }
 
     @Test

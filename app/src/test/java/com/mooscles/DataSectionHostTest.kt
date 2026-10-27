@@ -65,7 +65,7 @@ class DataSectionHostTest {
     @Test
     fun summaryDialogShowsCountsAndConfirmCallsAction() {
         val actions = CapturedDataActions()
-        show(BackupUi(pendingImport = ImportSummary(180, 28, 4, 0, 3, false)), actions)
+        show(BackupUi(pendingImport = ImportSummary(180, 28, 4, 0, 3, false, nothingToAdd = false)), actions)
         compose.onNodeWithText("Import backup?").assertIsDisplayed()
         compose.onNodeWithText("Add 180 workouts, 4 routines and 3 custom exercises. 28 workouts are already on this phone and will be kept as they are.").assertIsDisplayed()
         compose.onNodeWithText("Import").performClick()
@@ -75,14 +75,14 @@ class DataSectionHostTest {
     @Test
     fun dismissingSummaryDialogCancelsImport() {
         val actions = CapturedDataActions()
-        show(BackupUi(pendingImport = ImportSummary(1, 0, 0, 0, 0, false)), actions)
+        show(BackupUi(pendingImport = ImportSummary(1, 0, 0, 0, 0, false, nothingToAdd = false)), actions)
         compose.onNodeWithText("Cancel").performClick()
         compose.runOnIdle { assertEquals(listOf("cancel"), actions.calls) }
     }
 
     @Test
     fun singularCountsUseSingularNouns() {
-        show(BackupUi(pendingImport = ImportSummary(1, 1, 1, 0, 1, true)))
+        show(BackupUi(pendingImport = ImportSummary(1, 1, 1, 0, 1, true, nothingToAdd = false)))
         compose.onNodeWithText(
             "Add 1 workout, 1 routine and 1 custom exercise. 1 workout is already on this phone and will be kept as it is. Your units, theme and rest settings will also be restored.",
         ).assertIsDisplayed()
@@ -120,7 +120,7 @@ class DataSectionHostTest {
 
     @Test
     fun dialogIsGoneWhileImportRuns() {
-        show(BackupUi(busy = true, working = "Importing…", pendingImport = ImportSummary(1, 0, 0, 0, 0, false)))
+        show(BackupUi(busy = true, working = "Importing…", pendingImport = ImportSummary(1, 0, 0, 0, 0, false, nothingToAdd = false)))
         compose.onNodeWithText("Import backup?").assertDoesNotExist()
         compose.onNodeWithText("Importing…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("data-progress").performScrollTo().assertIsDisplayed()
@@ -139,7 +139,7 @@ class DataSectionHostTest {
     @Test
     fun nothingNewDialogOffersOnlyOk() {
         val actions = CapturedDataActions()
-        show(BackupUi(pendingImport = ImportSummary(0, 5, 0, 2, 0, false)), actions)
+        show(BackupUi(pendingImport = ImportSummary(0, 5, 0, 2, 0, false, nothingToAdd = true)), actions)
         compose.onNodeWithText("Everything in this backup is already on this phone.").assertIsDisplayed()
         compose.onNodeWithText("Import").assertDoesNotExist()
         compose.onNodeWithText("Cancel").assertDoesNotExist()
@@ -149,7 +149,7 @@ class DataSectionHostTest {
 
     @Test
     fun preferencesOnlyBackupIsNotNothingNew() {
-        show(BackupUi(pendingImport = ImportSummary(0, 5, 0, 0, 0, true)))
+        show(BackupUi(pendingImport = ImportSummary(0, 5, 0, 0, 0, true, nothingToAdd = false)))
         compose.onNodeWithText("Import").assertIsDisplayed()
     }
 
@@ -175,7 +175,6 @@ class DataSectionHostTest {
                 val fg = MaterialTheme.colorScheme.onSurfaceVariant
                 val bg = androidx.compose.material3.CardDefaults.cardColors().containerColor
                 ratio = contrast(fg, bg)
-                println("CONTRAST fg=${fg} bg=${bg} ratio=$ratio")
             }
         }
         compose.runOnIdle { org.junit.Assert.assertTrue("ratio $ratio", ratio >= 4.5) }

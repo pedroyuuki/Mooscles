@@ -196,7 +196,7 @@ fun SettingsScreen(state: UiState, actions: MoosclesActions) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary)
                 Text("Just you and your progress", style = MaterialTheme.typography.titleMedium)
-                Text("Your routines, workout history, and records stay on this device. Training works offline. App connections check and download updates from GitHub. Sharing creates a workout image on your device and opens the app you choose, where you select the recipient and confirm sending. Workout data is excluded from automatic cloud backups.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Your routines, workout history, and records stay on this device. Training works offline. App connections check and download updates from GitHub. Sharing creates a workout image on your device and opens the app you choose, where you select the recipient and confirm sending. Workout data is excluded from automatic cloud backups. Use Export data above to keep your own copy.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

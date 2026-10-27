@@ -10,6 +10,7 @@ import com.mooscles.backup.BackupData
 import com.mooscles.backup.BackupException
 import com.mooscles.backup.BackupFile
 import com.mooscles.backup.BackupPreferences
+import com.mooscles.backup.ImportPlan
 import com.mooscles.backup.WorkoutExerciseRow
 import com.mooscles.backup.WorkoutRow
 import com.mooscles.backup.WorkoutSetRow
@@ -229,6 +230,49 @@ class BackupRepositoryTest {
         assertTrue("expected IllegalStateException, got $error", error is IllegalStateException)
         assertEquals("Finish or discard the active workout to import", error?.message)
         assertUntouched(before, beforeCheckpoints)
+    }
+
+    @Test fun beforeCommitRunsLastInsideTheImportTransaction() = runBlocking {
+        otherInstallData()
+        val file = exportedFile(other)
+        var seen: ImportPlan? = null
+        var workoutsVisible = -1
+
+        val plan = phone.importBackup(file) { planned ->
+            seen = planned
+            workoutsVisible = phone.snapshot().workouts.size
+        }
+
+        assertSame(plan, seen)
+        assertEquals(1, workoutsVisible)
+    }
+
+    @Test fun beforeCommitFailureLeavesDatabaseUntouched() = runBlocking {
+        otherInstallData()
+        val file = exportedFile(other)
+        val before = phone.snapshot()
+        val beforeCheckpoints = checkpoints(phoneDb)
+
+        val error = runCatching {
+            phone.importBackup(file) { throw IllegalStateException("preferences could not be saved") }
+        }.exceptionOrNull()
+
+        assertEquals("preferences could not be saved", error?.message)
+        assertUntouched(before, beforeCheckpoints)
+    }
+
+    @Test fun activeWorkoutInFileBecomesTheSession() = runBlocking {
+        otherInstallData()
+        val open = other.startEmpty("Open on tablet", now = 6_000_000)
+        other.addWorkoutExercise(open, catalogExercise(other).id)
+        assertNull(phone.activeWorkout())
+
+        phone.importBackup(exportedFile(other))
+
+        assertEquals(other.snapshot().workouts.single { it.id == open }, phone.activeWorkout())
+        assertEquals(other.snapshot().workoutItems(open), phone.snapshot().workoutItems(open))
+        // Starting a routine now resumes the imported session instead of opening a second one.
+        assertEquals(open, phone.startRoutine(phone.snapshot().routines.single().id))
     }
 
     @Test fun inheritedTargetsFollowImportedRecord() = runBlocking {

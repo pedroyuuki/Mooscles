@@ -106,9 +106,10 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     /**
      * Adds what [file] has and the phone does not, all or nothing. The only existing rows it changes are
      * inherited routine targets (with their mirrored plan columns) and PR checkpoints, which follow the
-     * merged history. Preferences are the caller's to apply.
+     * merged history. [beforeCommit] runs last, inside the transaction, so the caller can apply the
+     * preferences in the same all-or-nothing step: if it throws, nothing is imported.
      */
-    suspend fun importBackup(file: BackupFile): ImportPlan = db.withTransaction {
+    suspend fun importBackup(file: BackupFile, beforeCommit: suspend (ImportPlan) -> Unit = {}): ImportPlan = db.withTransaction {
         check(dao.activeWorkout() == null) { "Finish or discard the active workout to import" }
         val plan = ImportPlanner.plan(file, localState())
         with(plan.entities) {
@@ -123,6 +124,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
             dao.insertTargetCheckpoints(checkpoints)
         }
         synchronizeRoutineTargets()
+        beforeCommit(plan)
         plan
     }
 

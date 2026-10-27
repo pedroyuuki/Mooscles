@@ -34,7 +34,6 @@ object BackupTexts {
     const val WORKING_CHECK = "Checking backup…"
     const val WORKING_IMPORT = "Importing…"
 
-    /** True when importing would change nothing, so the dialog offers only OK. */
-    fun isNothingNew(summary: ImportSummary) =
-        summary.workoutsAdded == 0 && summary.routinesAdded == 0 && summary.customExercisesAdded == 0 && !summary.restoresPreferences
+    /** True when importing would change nothing, so the dialog offers only OK. The planner decides. */
+    fun isNothingNew(summary: ImportSummary) = summary.nothingToAdd
 }
