@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import com.mooscles.backup.BackupPreferences
 import com.mooscles.timer.RestTimerPersistence
 import com.mooscles.ui.PreferencesUi
 import java.nio.file.Files
@@ -128,6 +129,49 @@ class AppPreferencesTest {
         val stored = context.moosclesStore.data.first()
         assertEquals(300, stored[rest])
         assertEquals(123456L, stored[timerDeadline])
+    }
+
+    /** The production store is process-wide: put the defaults back so later test classes start fresh. */
+    private fun withRestoredDefaults(block: suspend (Context, AppPreferences) -> Unit) = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = AppPreferences(context)
+        try { block(context, preferences) } finally { preferences.restore(PreferencesUi().toBackup()) }
+    }
+
+    @Test fun restoreWritesAllFiveValues() = withRestoredDefaults { context, preferences ->
+        preferences.restore(BackupPreferences(pounds = false, theme = "system", autoRest = true, defaultRestSeconds = 120, selectedRoutineFolderId = "default"))
+        val restored = BackupPreferences(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 75, selectedRoutineFolderId = "upper")
+
+        preferences.restore(restored)
+
+        val expected = PreferencesUi(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 75, selectedRoutineFolderId = "upper")
+        assertEquals(expected, AppPreferences(context).snapshot())
+        assertEquals(expected, AppPreferences(context).flow.first())
+        assertEquals(restored, expected.toBackup())
+    }
+
+    @Test fun restoreRejectsInvalidTheme() = withRestoredDefaults { _, preferences ->
+        val saved = BackupPreferences(pounds = true, theme = "light", autoRest = false, defaultRestSeconds = 90, selectedRoutineFolderId = "upper")
+        preferences.restore(saved)
+
+        for (theme in listOf("DARK", "neon", "")) {
+            try { preferences.restore(saved.copy(pounds = false, theme = theme, defaultRestSeconds = 30)); fail("Theme must be known") }
+            catch (_: IllegalArgumentException) { }
+        }
+
+        assertEquals(saved, preferences.snapshot().toBackup())
+    }
+
+    @Test fun restoreRejectsOutOfRangeRest() = withRestoredDefaults { _, preferences ->
+        val saved = BackupPreferences(pounds = true, theme = "dark", autoRest = true, defaultRestSeconds = 300, selectedRoutineFolderId = "default")
+        preferences.restore(saved)
+
+        for (seconds in listOf(-1, 301)) {
+            try { preferences.restore(saved.copy(pounds = false, defaultRestSeconds = seconds)); fail("Duration must be bounded") }
+            catch (_: IllegalArgumentException) { }
+        }
+
+        assertEquals(saved, preferences.snapshot().toBackup())
     }
 
     @Test fun invalidDefaultRestCannotOverwriteSavedMaximum() = runBlocking {

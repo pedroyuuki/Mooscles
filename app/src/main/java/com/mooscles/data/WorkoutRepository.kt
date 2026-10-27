@@ -1,6 +1,15 @@
 package com.mooscles.data
 
 import androidx.room.withTransaction
+import com.mooscles.backup.BackupApp
+import com.mooscles.backup.BackupCodec
+import com.mooscles.backup.BackupData
+import com.mooscles.backup.BackupFile
+import com.mooscles.backup.BackupPreferences
+import com.mooscles.backup.ImportPlan
+import com.mooscles.backup.ImportPlanner
+import com.mooscles.backup.LocalState
+import com.mooscles.backup.from
 import com.mooscles.domain.RestDuration
 import com.mooscles.domain.RoutineTargetRecords
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +83,44 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
 
     suspend fun snapshot(): AppData = db.withTransaction {
         AppData(dao.exercises(), dao.routines(), dao.routineExercises(), dao.workouts(), dao.workoutExercises(), dao.sets(), dao.routineSets(), dao.routineFolders())
+    }
+
+    /** Everything a backup holds, read atomically. Call after [initialize] so the default folder exists. */
+    suspend fun localState(): LocalState = db.withTransaction { LocalState(snapshot(), dao.targetCheckpoints()) }
+
+    suspend fun exportBackup(preferences: BackupPreferences, app: BackupApp, exportedAt: String): BackupFile {
+        val state = localState()
+        return BackupFile(
+            format = BackupCodec.FORMAT,
+            formatVersion = BackupCodec.FORMAT_VERSION,
+            exportedAt = exportedAt,
+            app = app,
+            preferences = preferences,
+            data = BackupData.from(state.data, state.checkpoints),
+        )
+    }
+
+    /**
+     * Adds what [file] has and the phone does not, all or nothing. The only existing rows it changes are
+     * inherited routine targets (with their mirrored plan columns) and PR checkpoints, which follow the
+     * merged history. Preferences are the caller's to apply.
+     */
+    suspend fun importBackup(file: BackupFile): ImportPlan = db.withTransaction {
+        check(dao.activeWorkout() == null) { "Finish or discard the active workout to import" }
+        val plan = ImportPlanner.plan(file, localState())
+        with(plan.entities) {
+            dao.insertRoutineFolders(routineFolders)
+            dao.insertExercises(exercises)
+            dao.insertRoutines(routines)
+            dao.insertRoutineExercises(routineExercises)
+            dao.insertRoutineSets(routineSets)
+            dao.insertWorkouts(workouts)
+            dao.insertWorkoutExercises(workoutExercises)
+            dao.insertSets(workoutSets)
+            dao.insertTargetCheckpoints(checkpoints)
+        }
+        synchronizeRoutineTargets()
+        plan
     }
 
     // Commands that edit one row should not load the full workout archive to locate that row.

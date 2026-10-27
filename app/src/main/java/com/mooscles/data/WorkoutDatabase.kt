@@ -79,6 +79,13 @@ interface WorkoutDao {
     @Insert suspend fun insertSet(item: WorkoutSet)
     @Insert suspend fun insertSets(items: List<WorkoutSet>)
     @Update suspend fun updateSet(item: WorkoutSet)
+    // Backup import: the default ABORT strategy makes an unexpected id collision undo the whole import.
+    @Insert suspend fun insertRoutineFolders(items: List<RoutineFolder>)
+    @Insert suspend fun insertExercises(items: List<Exercise>)
+    @Insert suspend fun insertRoutines(items: List<Routine>)
+    @Insert suspend fun insertRoutineExercises(items: List<RoutineExercise>)
+    @Insert suspend fun insertWorkouts(items: List<Workout>)
+    @Insert suspend fun insertTargetCheckpoints(items: List<RoutineTargetCheckpoint>)
     @Query("DELETE FROM routines WHERE id = :id") suspend fun deleteRoutine(id: String)
     @Query("DELETE FROM routine_exercises WHERE id = :id") suspend fun deleteRoutineExercise(id: String)
     @Query("DELETE FROM routine_sets WHERE id = :id") suspend fun deleteRoutineSet(id: String)

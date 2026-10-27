@@ -3,6 +3,7 @@ package com.mooscles
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.mooscles.backup.BackupPreferences
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.domain.RestDuration
 import kotlinx.coroutines.CancellationException
@@ -55,12 +56,30 @@ class AppPreferences(context: Context) {
             }
         }
     }.distinctUntilChanged()
+    private fun requireTheme(value: String) = require(value in listOf("light", "dark", "system"))
+    private fun requireRest(value: Int) = require(value in 0..RestDuration.MAX_SECONDS)
+    private fun requireFolder(id: String) = require(id.isNotBlank()) { "Choose a routine folder." }
     suspend fun pounds(value: Boolean) { store.edit { it[pounds] = value } }
-    suspend fun theme(value: String) { require(value in listOf("light", "dark", "system")); store.edit { it[theme] = value } }
+    suspend fun theme(value: String) { requireTheme(value); store.edit { it[theme] = value } }
     suspend fun autoRest(value: Boolean) { store.edit { it[autoRest] = value } }
-    suspend fun defaultRest(value: Int) { require(value in 0..RestDuration.MAX_SECONDS); store.edit { it[defaultRest] = value } }
+    suspend fun defaultRest(value: Int) { requireRest(value); store.edit { it[defaultRest] = value } }
     suspend fun selectRoutineFolder(id: String) {
-        require(id.isNotBlank()) { "Choose a routine folder." }
+        requireFolder(id)
         store.edit { it[routineFolder] = id }
     }
+    /** Validates everything first, then writes all five values in one edit, so a bad file changes nothing. */
+    suspend fun restore(value: BackupPreferences) {
+        requireTheme(value.theme)
+        requireRest(value.defaultRestSeconds)
+        requireFolder(value.selectedRoutineFolderId)
+        store.edit {
+            it[pounds] = value.pounds
+            it[theme] = value.theme
+            it[autoRest] = value.autoRest
+            it[defaultRest] = value.defaultRestSeconds
+            it[routineFolder] = value.selectedRoutineFolderId
+        }
+    }
 }
+
+fun PreferencesUi.toBackup() = BackupPreferences(pounds, theme, autoRest, defaultRestSeconds, selectedRoutineFolderId)
