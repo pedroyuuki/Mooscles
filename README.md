@@ -16,6 +16,10 @@ Version 1.4.5 / Build 16 prepares workout/card details on the UI thread while da
 
 `build.ps1 -Tasks ':app:assemblePerformance'` creates an R8-optimized, non-debuggable, profileable APK using the existing package and signing identity. [PERFORMANCE.md](PERFORMANCE.md) records the earlier thread-placement comparison. That change passed 14 focused host tests and debug lint; debug, instrumentation and optimized APKs built. Six alternating optimized emulator trials confirmed three worker presentation passes became one UI-thread pass per Start, and a separate timer-reset check eliminated preparation entirely. Startup and scrolling measurements were mixed, with no consistent smoothness improvement demonstrated. Physical-phone performance remains unverified. Earlier instrumented repository/timer results and the incomplete full UI test are documented separately.
 
+## Your data
+
+**Settings → Your data** exports everything (workouts, routines and folders, custom exercises, PR checkpoints and preferences) to one versioned JSON file, saved wherever you choose through the Android file picker. **Import data** reads and validates the whole file before writing anything, shows what will be added, and only adds: workouts and routines already on the phone are kept as they are, and importing the same file again changes nothing. Preferences are restored only on a phone with no workouts or routines yet. Import is unavailable during an active workout. The file is not encrypted, so keep it somewhere private. This feature is not in a published release yet. With a very large history, the app can still freeze after an import while it recalculates records, the same startup freeze noted above; see the [verification report](docs/superpowers/reports/2026-10-27-export-import-verificacao.md).
+
 ## Download
 
 The current release is **1.4.5 / Build 16**, with saved routine folders, reliable discard navigation, and keyboard-aware timer placement.
