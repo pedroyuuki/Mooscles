@@ -10,6 +10,7 @@ import com.mooscles.backup.BackupApp
 import com.mooscles.backup.BackupCodec
 import com.mooscles.backup.BackupDocuments
 import com.mooscles.backup.BackupPreferences
+import com.mooscles.backup.BackupTexts
 import com.mooscles.backup.ImportSummary
 import com.mooscles.data.AppData
 import com.mooscles.data.Equipment
@@ -95,17 +96,31 @@ class AppViewModelBackupHostTest {
         val model = newModel()
         awaitUi(model) { !it.loading }
         val target = uri(File(folder.root, "missing-dir/export.json"))
-        // The generic rule: the exception's own message, or the act{} fallback when it has none.
         val failure = runCatching { runBlocking(Dispatchers.IO) { BackupDocuments.write(app, target, "{}") } }.exceptionOrNull()
         assertNotNull("The test URI must not be writable", failure)
-        val expected = failure!!.message ?: "Could not save this change. Please try again."
 
         model.exportData(target)
 
         awaitUi(model) { !it.backup.busy && it.backup.message != null }
-        assertEquals(expected, model.contentUi.value.backup.message)
+        assertEquals(BackupTexts.EXPORT_FILE_FAILED, model.contentUi.value.backup.message)
+        assertEquals("Couldn't save the backup. Try another location.", BackupTexts.EXPORT_FILE_FAILED)
         assertNull(model.contentUi.value.error)
         assertFalse(File(folder.root, "missing-dir").exists())
+    }
+
+    @Test fun prepareImportOfUnopenableDocumentReportsFriendlyFailure() {
+        val model = newModel()
+        awaitUi(model) { !it.loading }
+        val target = uri(File(folder.root, "does-not-exist.json"))
+        val failure = runCatching { runBlocking(Dispatchers.IO) { BackupDocuments.read(app, target) } }.exceptionOrNull()
+        assertNotNull("The test URI must not be readable", failure)
+
+        model.prepareImport(target)
+
+        awaitUi(model) { !it.backup.busy && it.backup.message != null }
+        assertEquals("Couldn't open the file. Try again or pick another file.", model.contentUi.value.backup.message)
+        assertNull(model.contentUi.value.backup.pendingImport)
+        assertNull(model.contentUi.value.error)
     }
 
     @Test fun prepareImportShowsSummaryWithoutWriting() {

@@ -191,6 +191,7 @@ fun SettingsScreen(state: UiState, actions: MoosclesActions) {
                 }
             }
         }
+        item { DataSection(state.backup, workoutActive = state.active != null, actions = actions) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary)

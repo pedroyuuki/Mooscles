@@ -7,6 +7,7 @@ import android.os.Trace
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mooscles.backup.BackupApp
+import com.mooscles.backup.BackupException
 import com.mooscles.backup.BackupCodec
 import com.mooscles.backup.BackupDocuments
 import com.mooscles.backup.BackupFile
@@ -80,11 +81,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
     /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
-    private fun backupAct(block: suspend () -> Unit) = act { backupWork(block) }
-    private suspend fun backupWork(block: suspend () -> Unit) {
+    private fun backupAct(fileFailure: String, block: suspend () -> Unit) = act { backupWork(fileFailure, block) }
+    /** [fileFailure] replaces the raw message of file-access errors (IOException, SecurityException...). */
+    private suspend fun backupWork(fileFailure: String? = null, block: suspend () -> Unit) {
         backup.update { it.copy(busy = true, message = null) }
         try { block() } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { backup.update { it.copy(message = e.message ?: SAVE_FAILED) } }
+        catch (e: Exception) {
+            val ours = e is BackupException || e is IllegalStateException || e is IllegalArgumentException
+            backup.update { it.copy(message = if (!ours && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED) }
+        }
         finally { backup.update { it.copy(busy = false) } }
     }
     override fun clearError() { error.value = null; app.preferences.clearError(); app.timer.clearError() }
@@ -218,7 +223,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     override fun downloadUpdate() = act { app.updates.enqueueDownload(manual = true) }
     override fun cancelUpdate() = act { app.updates.cancelDownload() }
     override fun installUpdate() = act { app.updates.requestInstall()?.let { installLaunches.send(it) } }
-    override fun exportData(uri: String) = backupAct {
+    override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED) {
         val preferences = app.preferences.snapshot().toBackup()
         val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
         val file = repo.exportBackup(preferences, about, Instant.now().toString())
@@ -228,7 +233,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
     }
     /** Reads and plans only; nothing is written until [confirmImport]. */
-    override fun prepareImport(uri: String) = backupAct {
+    override fun prepareImport(uri: String) = backupAct(BackupTexts.IMPORT_FILE_FAILED) {
         pendingImportFile = null
         backup.update { it.copy(pendingImport = null) }
         val text = BackupDocuments.read(app, uri)
