@@ -25,8 +25,8 @@ class WorkoutCalculationsBatchTest {
         }
     }
 
-    private fun randomHistory(random: Random): AppData {
-        val exerciseIds = List(random.nextInt(1, 5)) { "movement-$it" }
+    private fun randomHistory(random: Random, exerciseCount: Int? = null): AppData {
+        val exerciseIds = List(exerciseCount ?: random.nextInt(1, 5)) { "movement-$it" }
         val workoutCount = random.nextInt(1, 41)
         // Ids are shuffled so the id tie-breaker disagrees with creation order.
         val idNumbers = (0 until workoutCount).shuffled(random)
@@ -110,6 +110,70 @@ class WorkoutCalculationsBatchTest {
         assertTrue("first reps records: $firstReps", firstReps > 50)
         assertTrue("repeated startedAt: $repeatedStarts", repeatedStarts > 50)
         assertTrue("histories with an active workout: $activeHistories", activeHistories > 10)
+    }
+
+    @Test fun performanceHistoriesMatchPerExerciseHistories() {
+        val random = Random(7)
+        var compared = 0
+        var varied = 0
+        repeat(60) { history ->
+            val data = randomHistory(random, exerciseCount = 40)
+            val all = WorkoutCalculations.performanceHistories(data)
+            val keys = data.workoutExercises.map { it.exerciseId to it.convention }.distinct()
+            assertTrue("history $history keys", keys.containsAll(all.keys))
+            keys.forEach { (exerciseId, convention) ->
+                val expected = WorkoutCalculations.performanceHistory(data, exerciseId, convention)
+                assertEquals("history $history $exerciseId $convention", expected, all[exerciseId to convention].orEmpty())
+                if (expected.size > 1) compared++
+            }
+            if (all.keys.map { it.first }.distinct().size >= 30) varied++
+        }
+        assertTrue("keys with several performances: $compared", compared > 100)
+        assertTrue("histories with at least 30 distinct exercises: $varied", varied >= 5)
+    }
+
+    /** The linear scan [WorkoutCalculations.repsRecords] used before its per-group slots, kept as an oracle. */
+    private fun linearRepsRecords(data: AppData): List<ExerciseRepsRecord> {
+        fun sameLoad(a: Double, b: Double) = kotlin.math.abs(a - b) <= maxOf(Math.ulp(a), Math.ulp(b)) * 4
+        val chronology = compareBy<Workout> { it.startedAt }.thenBy { it.endedAt ?: Long.MAX_VALUE }.thenBy { it.id }
+        val setsByEntry = data.sets.groupBy { it.workoutExerciseId }.mapValues { (_, rows) -> rows.sortedBy { it.position } }
+        val result = mutableListOf<ExerciseRepsRecord>()
+        data.workouts.filter { it.status == WorkoutStatus.FINISHED }.sortedWith(chronology).forEach { workout ->
+            val best = mutableListOf<Pair<WorkoutExercise, WorkoutSet>>()
+            fun assisted(c: Pair<WorkoutExercise, WorkoutSet>) = c.second.assistance || c.first.convention == LoadConvention.ASSISTANCE
+            data.workoutItems(workout.id).forEach { exercise ->
+                setsByEntry[exercise.id].orEmpty().filter { WorkoutCalculations.validCompleted(it) && !it.warmup }.forEach { set ->
+                    val candidate = exercise to set
+                    val index = best.indexOfFirst { it.first.exerciseId == exercise.exerciseId && it.first.convention == exercise.convention &&
+                        assisted(it) == assisted(candidate) && sameLoad(it.second.weightKg, set.weightKg) }
+                    if (index < 0) best += candidate else if (set.reps > best[index].second.reps) best[index] = candidate
+                }
+            }
+            best.forEach { candidate ->
+                val (exercise, set) = candidate
+                val index = result.indexOfFirst { it.exerciseId == exercise.exerciseId && it.convention == exercise.convention &&
+                    it.assistance == assisted(candidate) && sameLoad(it.weightKg, set.weightKg) }
+                if (index < 0 || set.reps > result[index].reps) {
+                    val record = ExerciseRepsRecord(exercise.exerciseId, exercise.name, exercise.convention, set.weightKg,
+                        assisted(candidate), set.reps, workout.id, workout.endedAt ?: workout.startedAt)
+                    if (index < 0) result += record else result[index] = record
+                }
+            }
+        }
+        return result.sortedWith(compareBy<ExerciseRepsRecord> { it.exerciseName }.thenBy { it.convention.name }
+            .thenBy { it.assistance }.thenBy { it.weightKg })
+    }
+
+    @Test fun repsRecordsMatchLinearScan() {
+        val random = Random(99)
+        var records = 0
+        repeat(200) { history ->
+            val data = randomHistory(random, exerciseCount = if (history % 2 == 0) null else 12)
+            val expected = linearRepsRecords(data)
+            assertEquals("history $history", expected, WorkoutCalculations.repsRecords(data))
+            records += expected.size
+        }
+        assertTrue("reps records: $records", records > 500)
     }
 
     @Test fun batchIgnoresActiveWorkoutsAsBaseline() {

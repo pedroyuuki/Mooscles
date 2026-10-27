@@ -21,6 +21,10 @@ internal object LargeHistoryFixture {
     val defaultExercises: List<Exercise>
         get() = ExerciseCatalog.exercises.filter { !it.custom && it.convention == LoadConvention.TOTAL_LOAD }.take(6)
 
+    /** A user who logs many movements: [count] distinct built-in exercises of every load convention. */
+    fun variedExercises(count: Int): List<Exercise> = ExerciseCatalog.exercises.filter { !it.custom }.take(count)
+        .also { require(it.size == count) { "catalog has only ${it.size} exercises" } }
+
     fun rows(exercises: List<Exercise>): Rows {
         val workouts = ArrayList<Workout>()
         val items = ArrayList<WorkoutExercise>()

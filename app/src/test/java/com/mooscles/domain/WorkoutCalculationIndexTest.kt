@@ -44,6 +44,8 @@ class WorkoutCalculationIndexTest {
         checkSinglePass { WorkoutCalculations.records(data) }
         checkSinglePass { WorkoutCalculations.repsRecords(data) }
         checkSinglePass { WorkoutCalculations.performanceHistory(data, "movement-0") }
+        checkSinglePass { WorkoutCalculations.performanceHistories(data) }
+        checkSinglePass { WorkoutCalculations.historyRecords(data) }
         checkSinglePass { WorkoutCalculations.summary(data, target) }
 
         val summary = WorkoutCalculations.summary(data, target)!!

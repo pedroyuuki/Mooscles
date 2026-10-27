@@ -158,20 +158,33 @@ class WorkoutPresentationTest {
         assertEquals(22.0, data.sets.first { it.id == "a1" }.weightKg, 0.0)
     }
 
-    @Test fun largeHistoryPresentsQuickly() {
-        val data = LargeHistoryFixture.appData()
-        assertEquals(LargeHistoryFixture.SETS, data.sets.size)
+    /** Cold first present, then a cached one with equal data; the 1000 ms ceiling fails the per-workout passes. */
+    private fun assertPresentsQuickly(data: AppData, label: String): UiState {
         val presenter = WorkoutPresentation()
         lateinit var first: UiState
         val firstMs = measureTimeMillis { first = presenter.present(data, PreferencesUi()) }
         lateinit var second: UiState
         val secondMs = measureTimeMillis { second = presenter.present(data.copy(), PreferencesUi()) }
-        println("present=${firstMs}ms cached=${secondMs}ms")
+        println("$label present=${firstMs}ms cached=${secondMs}ms")
         assertEquals(LargeHistoryFixture.WORKOUTS, first.history.size)
         assertTrue(first.history.any { it.records.isNotEmpty() })
         assertSame(first.history, second.history)
-        assertTrue("present took ${firstMs}ms", firstMs < 3000)
-        assertTrue("cached present took ${secondMs}ms", secondMs < 200)
+        assertTrue("$label present took ${firstMs}ms", firstMs < 1000)
+        assertTrue("$label cached present took ${secondMs}ms", secondMs < 200)
+        return first
+    }
+
+    @Test fun largeHistoryPresentsQuickly() {
+        val data = LargeHistoryFixture.appData()
+        assertEquals(LargeHistoryFixture.SETS, data.sets.size)
+        assertPresentsQuickly(data, "six exercises")
+    }
+
+    @Test fun largeHistoryWithManyExercisesPresentsQuickly() {
+        val data = LargeHistoryFixture.appData(LargeHistoryFixture.variedExercises(48))
+        assertEquals(48, data.workoutExercises.map { it.exerciseId to it.convention }.distinct().size)
+        val ui = assertPresentsQuickly(data, "48 exercises")
+        assertTrue(ui.history.first().exercises.any { it.previous != null })
     }
 
     private val assisted = Exercise(id = "assisted-dip", name = "Assisted dip", muscle = MuscleGroup.TRICEPS,

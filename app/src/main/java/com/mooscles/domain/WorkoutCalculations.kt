@@ -320,16 +320,21 @@ object WorkoutCalculations {
     fun repsRecords(data: AppData): List<ExerciseRepsRecord> {
         val snapshot = SnapshotIndex(data)
         val result = mutableListOf<ExerciseRepsRecord>()
+        // Only a record of the same exercise, convention and assistance mode can match, so each group keeps its
+        // own slots in [result], in insertion order: the first matching slot is the one a scan of [result] finds.
+        val slots = mutableMapOf<RepsGroup, MutableList<Int>>()
         data.workouts.filter { it.status == WorkoutStatus.FINISHED }.sortedWith(chronology).forEach { workout ->
             bestRepetitionSets(snapshot, snapshot.entries(workout.id)).forEach { candidate ->
-                val index = result.indexOfFirst { it.exerciseId == candidate.exercise.exerciseId &&
-                    it.convention == candidate.exercise.convention && it.assistance == candidate.assistance &&
-                    sameLoad(it.weightKg, candidate.set.weightKg) }
+                val group = slots.getOrPut(candidate.group) { mutableListOf() }
+                val index = group.firstOrNull { sameLoad(result[it].weightKg, candidate.set.weightKg) } ?: -1
                 if (index < 0 || candidate.set.reps > result[index].reps) {
                     val record = ExerciseRepsRecord(candidate.exercise.exerciseId, candidate.exercise.name,
                         candidate.exercise.convention, candidate.set.weightKg, candidate.assistance,
                         candidate.set.reps, workout.id, workout.endedAt ?: workout.startedAt)
-                    if (index < 0) result += record else result[index] = record
+                    if (index < 0) {
+                        group += result.size
+                        result += record
+                    } else result[index] = record
                 }
             }
         }
@@ -338,12 +343,30 @@ object WorkoutCalculations {
     }
 
     fun performanceHistory(data: AppData, exerciseId: String, convention: LoadConvention? = null): List<ExercisePerformance> {
+        val finished = finishedById(data)
+        return performances(SnapshotIndex(data), finished, data.workoutExercises.filter {
+            it.exerciseId == exerciseId && it.workoutId in finished && (convention == null || convention == it.convention)
+        })
+    }
+
+    /**
+     * [performanceHistory] for every exercise and convention in the finished history, from one index of the snapshot.
+     * A key absent from the map has no finished entries, so its history is empty.
+     */
+    fun performanceHistories(data: AppData): Map<Pair<String, LoadConvention>, List<ExercisePerformance>> {
         val index = SnapshotIndex(data)
-        val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }.associateBy { it.id }
-        return data.workoutExercises.filter { it.exerciseId == exerciseId && it.workoutId in finished &&
-            (convention == null || convention == it.convention) }.map { exercise ->
+        val finished = finishedById(data)
+        // groupBy keeps the stored order inside each key, which the stable sort in [performances] relies on.
+        return data.workoutExercises.filter { it.workoutId in finished }.groupBy { it.exerciseId to it.convention }
+            .mapValues { (_, entries) -> performances(index, finished, entries) }
+    }
+
+    private fun finishedById(data: AppData): Map<String, Workout> =
+        data.workouts.filter { it.status == WorkoutStatus.FINISHED }.associateBy { it.id }
+
+    private fun performances(index: SnapshotIndex, finished: Map<String, Workout>, entries: List<WorkoutExercise>) =
+        entries.map { exercise ->
             val sets = index.sets(exercise.id).filter(::validCompleted)
             ExercisePerformance(finished.getValue(exercise.workoutId), exercise, sets, sets.sumOf { volume(it, exercise.convention) })
         }.filter { it.sets.isNotEmpty() }.sortedWith(compareByDescending<ExercisePerformance> { it.workout.startedAt }.thenBy { it.exercise.position })
-    }
 }
