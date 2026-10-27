@@ -51,3 +51,10 @@ A causa está em `WorkoutPresentation.present`. Ao montar o histórico, ele cham
 - Os nomes das funções novas e a estrutura interna da passada (mapas por `Key`, ordem de atualização das linhas de base).
 - Se `workoutItems`, que filtra a lista inteira, também precisa de índice dentro de `present()`, decidido pela medição.
 - O teto exato do teste de desempenho no host.
+
+## Notas de implementação
+
+- **2026-10-27, resultado no emulador** ([verificação](../reports/2026-10-27-pr-off-main-thread-verificacao.md)):
+  - **Metas cumpridas:** nenhum ANR e nenhum bloqueio da thread principal acima de 700 ms causado pela apresentação. A abertura a frio, que travava 48–52 s, agora deixa a tela responsiva com o indicador de carregamento. Depois do import, o maior quadro fica entre 202 e 283 ms (antes eram 47–77 s congelados). Na troca kg/lb, o maior quadro fica entre 79 e 542 ms (antes eram 61,7 s).
+  - **Meta não cumprida:** a de "histórico em até 3 s depois do primeiro quadro". No APK de debug, que é o distribuído, o histórico leva 15–20 s para aparecer na abertura a frio. No build com R8 leva 2,3–3,1 s.
+  - **Por que fica assim:** a diferença vem do processo debuggable recém-aberto, onde o `present()` leva 12–24 s; com o processo já aquecido, leva 1–7 s. Há ainda uma espera de cerca de 8–9 s antes do `present()` começar quando a base tem 48 exercícios, que não foi investigada. Decidi encerrar a branch assim: o travamento e o ANR, que eram o problema do usuário, acabaram. O tempo até o histórico aparecer no debug fica registrado como pendência, junto com duas saídas possíveis: investigar esse custo no aparelho, ou distribuir um build não debuggable assinado com a chave original, assunto que já depende da chave pendente no ROADMAP.
