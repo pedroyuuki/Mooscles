@@ -7,7 +7,7 @@ App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de tre
 Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`; Gradle 8.x não roda com Java 25), Android SDK platform 35 e build-tools 35.0.0, `sdk.dir` no `local.properties` (ignorado pelo git). Os scripts do repositório são PowerShell: no Windows rodam no Windows PowerShell 5.1 ou no PowerShell 7, e no macOS ou no Linux, no `pwsh` 7 (`pwsh ./build.ps1`). No macOS o `pwsh` vem do tarball oficial `osx-arm64` (Apple Silicon; em Mac Intel use o `osx-x64`), extraído em `~/.local/share/powershell/<versão>` com link em `~/.local/bin/pwsh` (sem sudo), e precisa de `export PATH="$HOME/.local/bin:$PATH"` no shell. O CI roda em `.github/workflows/ci.yml`.
 
 ```sh
-./gradlew :app:testDebugUnitTest                      # testes de host (JUnit 4 + Robolectric, sdk 35)
+./gradlew :app:testDebugUnitTest                      # testes de host (JUnit 4 + Robolectric, sdk 35), em até 4 forks paralelos (metade dos núcleos) com 1 GiB cada
 ./gradlew :app:testDebugUnitTest --tests "com.mooscles.data.RoutineTargetMigrationTest"
 ./gradlew :app:testDebugUnitTest --tests "*FolderPersistence*.schemaFour*"   # um método
 ./gradlew :app:lintDebug

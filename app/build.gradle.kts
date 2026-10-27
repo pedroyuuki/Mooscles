@@ -33,7 +33,18 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Host test classes run in parallel JVMs. Each fork is its own process, so
+            // process-wide singletons (Robolectric sandbox, the cached DataStore) never
+            // cross forks. Gradle also caps forks at org.gradle.workers.max (4 here).
+            it.maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+            // Gradle's default test heap is 512 MiB; leave room so GC pauses do not
+            // eat into wall-clock waits such as Compose's 60 s idle timeout.
+            it.maxHeapSize = "1g"
+        }
+    }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
