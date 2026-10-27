@@ -35,8 +35,7 @@ O projeto falhou, mesmo que "funcione", se acontecer alguma destas coisas:
   - não existe export nem backup (`allowBackup=false`);
   - travamento na abertura por causa do cálculo de PR na thread principal (resolvido na branch `fix/pr-off-main-thread`, ainda sem release);
   - a chave de assinatura só existe numa máquina;
-  - os scripts rodam só no Windows;
-  - não há CI.
+  - ~~os scripts rodam só no Windows~~ e ~~não há CI~~: resolvidos em 2026-10-27 (ver a fase 0).
 - **Design system:** inexistente.
   - O tema é apenas um esquema de cores Material 3 (verde e laranja) com a fonte padrão do sistema.
   - Não há escala de espaçamento nem de formas: são 233 medidas soltas em `dp` com 35 valores diferentes e 9 raios de borda distintos.
@@ -82,8 +81,8 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
   - medir no aparelho o caminho a frio do build debuggable, com seções de `Trace` em `repo.initialize()` e `snapshot()`, para testar a hipótese de que a espera de ~8–9 s antes do `present()` vem da serialização das transações do Room;
   - distribuir um build não debuggable assinado com a chave original (depende do item da chave acima);
   - trocar só a unidade (kg/lb) refaz as passadas de recordes e de histórico, que não dependem dela; dá para reaproveitar esses resultados.
-- Build e release rodando no macOS.
-- CI no GitHub Actions com testes de host e lint.
+- Build e release rodando no macOS. **Concluído (2026-10-27)**: [plano](plans/2026-10-27-macos-build-ci.md), [verificação](reports/2026-10-27-macos-build-ci-verificacao.md). Os scripts PowerShell rodam no `pwsh` 7 do macOS; o `prepare-release.ps1` também passou a ler a saída do apksigner das build-tools 37 ou mais novas. Não verificado: Windows real e a publicação de release (ver o relatório).
+- CI no GitHub Actions com testes de host e lint. **Concluído (2026-10-27)**: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [plano](plans/2026-10-27-macos-build-ci.md), [verificação](reports/2026-10-27-macos-build-ci-verificacao.md), primeira execução verde com cache quente: [run 40586360013](https://github.com/pedroyuuki/Mooscles/actions/runs/40586360013) (482 testes, host em 4m43s).
 
 **Pronto quando:**
 
@@ -258,7 +257,7 @@ Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Deci
 
 | Fase | Status | Spec | Plano | Release |
 | --- | --- | --- | --- | --- |
-| 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; faltam build/release no macOS, CI e a chave | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
+| 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; build/release no macOS e CI concluídos (2026-10-27); falta só a chave de assinatura, pendente com o dono do repositório original | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) · [build no macOS e CI](plans/2026-10-27-macos-build-ci.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
 | 1 | não iniciada | — | — | — |
 | 2 | não iniciada | — | — | — |
 | 3 | não iniciada | — | — | — |
