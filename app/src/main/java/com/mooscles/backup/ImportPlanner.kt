@@ -27,6 +27,8 @@ data class ImportPlan(val entities: BackupEntities, val preferences: BackupPrefe
  */
 object ImportPlanner {
     fun plan(file: BackupFile, local: LocalState): ImportPlan {
+        // Preferences are checked even when they will not be applied: an invalid file is refused whole.
+        validatePreferences(file.preferences)
         val rows = file.data
         requireUniqueIds(rows)
         if (rows.workouts.count { it.status == WorkoutStatus.ACTIVE.name } > 1) invalid("the backup has more than one active workout")
@@ -98,6 +100,15 @@ object ImportPlanner {
                 restoresPreferences = restoresPreferences,
             ),
         )
+    }
+
+    private fun validatePreferences(preferences: BackupPreferences) {
+        if (!PreferenceRules.validTheme(preferences.theme)) {
+            invalid("preference theme \"${preferences.theme}\" is not one of ${PreferenceRules.THEMES.joinToString()}")
+        }
+        if (!PreferenceRules.validRest(preferences.defaultRestSeconds)) {
+            invalid("preference defaultRestSeconds ${preferences.defaultRestSeconds} is outside ${PreferenceRules.REST_SECONDS}")
+        }
     }
 
     private fun requireUniqueIds(rows: BackupData) {

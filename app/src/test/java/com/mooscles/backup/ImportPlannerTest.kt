@@ -57,7 +57,7 @@ class ImportPlannerTest {
         routineSets = pushSets,
         routineFolders = listOf(defaultFolder, upper),
     )
-    private val preferences = BackupPreferences(pounds = true, theme = "DARK", autoRest = false, defaultRestSeconds = 90, selectedRoutineFolderId = "upper")
+    private val preferences = BackupPreferences(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 90, selectedRoutineFolderId = "upper")
 
     /** A fresh install: the seeded default folder and the catalog, nothing the user made. */
     private val fresh = LocalState(AppData(exercises = listOf(bench), routineFolders = listOf(defaultFolder)), emptyList())
@@ -314,6 +314,29 @@ class ImportPlannerTest {
         )
 
         assertInvalid("we1") { ImportPlanner.plan(fileWith(), local) }
+    }
+
+    /** Checked even when the phone keeps its own preferences, so an invalid file is always refused whole. */
+    private val withData = LocalState(fresh.data.copy(workouts = listOf(Workout("old", "Old", 10L, 20L, WorkoutStatus.FINISHED))), emptyList())
+
+    @Test
+    fun invalidThemeIsInvalid() {
+        for (theme in listOf("neon", "DARK", "")) {
+            for (local in listOf(fresh, withData)) {
+                assertInvalid("theme", "\"$theme\"") { ImportPlanner.plan(fileWith(prefs = preferences.copy(theme = theme)), local) }
+            }
+        }
+    }
+
+    @Test
+    fun outOfRangeRestIsInvalid() {
+        for (seconds in listOf(-1, 301, 900)) {
+            for (local in listOf(fresh, withData)) {
+                assertInvalid("defaultRestSeconds", "$seconds") {
+                    ImportPlanner.plan(fileWith(prefs = preferences.copy(defaultRestSeconds = seconds)), local)
+                }
+            }
+        }
     }
 
     @Test

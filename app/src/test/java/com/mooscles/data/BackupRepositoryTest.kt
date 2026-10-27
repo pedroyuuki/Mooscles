@@ -204,6 +204,19 @@ class BackupRepositoryTest {
         }
     }
 
+    @Test fun invalidPreferencesLeaveFreshInstallUntouched() = runBlocking {
+        otherInstallData()
+        val valid = exportedFile(other)
+        val before = phone.snapshot()
+        val beforeCheckpoints = checkpoints(phoneDb)
+
+        for (prefs in listOf(preferences.copy(theme = "neon"), preferences.copy(defaultRestSeconds = 900))) {
+            val error = runCatching { phone.importBackup(valid.copy(preferences = prefs)) }.exceptionOrNull()
+            assertTrue("expected Invalid, got $error", error is BackupException.Invalid)
+            assertUntouched(before, beforeCheckpoints)
+        }
+    }
+
     @Test fun importRefusedWhileWorkoutActive() = runBlocking {
         otherInstallData()
         val file = exportedFile(other)

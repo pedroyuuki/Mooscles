@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 
 /** Small atomic commands shared by active tracking, routine editing, and history editing. */
 class WorkoutRepository(private val db: WorkoutDatabase) {
@@ -90,13 +91,15 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
 
     suspend fun exportBackup(preferences: BackupPreferences, app: BackupApp, exportedAt: String): BackupFile {
         val state = localState()
+        // Commands run on the main thread; mapping a large archive must not.
+        val rows = withContext(Dispatchers.Default) { BackupData.from(state.data, state.checkpoints) }
         return BackupFile(
             format = BackupCodec.FORMAT,
             formatVersion = BackupCodec.FORMAT_VERSION,
             exportedAt = exportedAt,
             app = app,
             preferences = preferences,
-            data = BackupData.from(state.data, state.checkpoints),
+            data = rows,
         )
     }
 

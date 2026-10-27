@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.mooscles.backup.BackupPreferences
 import com.mooscles.timer.RestTimerPersistence
 import com.mooscles.ui.PreferencesUi
+import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,6 +33,33 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class AppPreferencesTest {
+    private val isolatedJob = SupervisorJob()
+    private lateinit var storeDirectory: File
+    private lateinit var restorePreviousStore: () -> Unit
+
+    /**
+     * The production delegate caches one store process-wide, so writes here would reach later test
+     * classes. Give every test its own file and put the previous instance back afterwards.
+     */
+    @Before fun isolateStore() {
+        storeDirectory = Files.createTempDirectory("mooscles-preferences-test-").toFile()
+        val store = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(isolatedJob + Dispatchers.IO), produceFile = { storeDirectory.resolve("test.preferences_pb") })
+        val delegate = Class.forName("com.mooscles.AppPreferencesKt")
+            .getDeclaredField("moosclesStore\$delegate").apply { isAccessible = true }.get(null)
+        val instance = delegate.javaClass.getDeclaredField("INSTANCE").apply { isAccessible = true }
+        val previous = instance.get(delegate)
+        instance.set(delegate, store)
+        restorePreviousStore = { instance.set(delegate, previous) }
+    }
+
+    @After fun restoreStore() = runBlocking {
+        isolatedJob.cancelAndJoin()
+        restorePreviousStore()
+        storeDirectory.deleteRecursively()
+        Unit
+    }
+
     @Test fun timerAndUnrelatedWritesDoNotEmitDisplayPreferencesWhileSettingsStillPersist() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val directory = Files.createTempDirectory("mooscles-display-preferences-").toFile()
@@ -131,14 +161,9 @@ class AppPreferencesTest {
         assertEquals(123456L, stored[timerDeadline])
     }
 
-    /** The production store is process-wide: put the defaults back so later test classes start fresh. */
-    private fun withRestoredDefaults(block: suspend (Context, AppPreferences) -> Unit) = runBlocking {
+    @Test fun restoreWritesAllFiveValues() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val preferences = AppPreferences(context)
-        try { block(context, preferences) } finally { preferences.restore(PreferencesUi().toBackup()) }
-    }
-
-    @Test fun restoreWritesAllFiveValues() = withRestoredDefaults { context, preferences ->
         preferences.restore(BackupPreferences(pounds = false, theme = "system", autoRest = true, defaultRestSeconds = 120, selectedRoutineFolderId = "default"))
         val restored = BackupPreferences(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 75, selectedRoutineFolderId = "upper")
 
@@ -150,7 +175,8 @@ class AppPreferencesTest {
         assertEquals(restored, expected.toBackup())
     }
 
-    @Test fun restoreRejectsInvalidTheme() = withRestoredDefaults { _, preferences ->
+    @Test fun restoreRejectsInvalidTheme() = runBlocking {
+        val preferences = AppPreferences(ApplicationProvider.getApplicationContext())
         val saved = BackupPreferences(pounds = true, theme = "light", autoRest = false, defaultRestSeconds = 90, selectedRoutineFolderId = "upper")
         preferences.restore(saved)
 
@@ -162,7 +188,8 @@ class AppPreferencesTest {
         assertEquals(saved, preferences.snapshot().toBackup())
     }
 
-    @Test fun restoreRejectsOutOfRangeRest() = withRestoredDefaults { _, preferences ->
+    @Test fun restoreRejectsOutOfRangeRest() = runBlocking {
+        val preferences = AppPreferences(ApplicationProvider.getApplicationContext())
         val saved = BackupPreferences(pounds = true, theme = "dark", autoRest = true, defaultRestSeconds = 300, selectedRoutineFolderId = "default")
         preferences.restore(saved)
 

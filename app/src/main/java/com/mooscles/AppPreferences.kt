@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.mooscles.backup.BackupPreferences
+import com.mooscles.backup.PreferenceRules
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.domain.RestDuration
 import kotlinx.coroutines.CancellationException
@@ -56,8 +57,8 @@ class AppPreferences(context: Context) {
             }
         }
     }.distinctUntilChanged()
-    private fun requireTheme(value: String) = require(value in listOf("light", "dark", "system"))
-    private fun requireRest(value: Int) = require(value in 0..RestDuration.MAX_SECONDS)
+    private fun requireTheme(value: String) = require(PreferenceRules.validTheme(value))
+    private fun requireRest(value: Int) = require(PreferenceRules.validRest(value))
     private fun requireFolder(id: String) = require(id.isNotBlank()) { "Choose a routine folder." }
     suspend fun pounds(value: Boolean) { store.edit { it[pounds] = value } }
     suspend fun theme(value: String) { requireTheme(value); store.edit { it[theme] = value } }
