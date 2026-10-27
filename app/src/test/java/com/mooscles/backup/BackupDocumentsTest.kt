@@ -58,6 +58,23 @@ class BackupDocumentsTest {
             fail("Invalid UTF-8 must be refused")
         } catch (expected: BackupException.Corrupted) {
         }
+        val truncated = File(folder.root, "truncated.json").apply { writeBytes(byteArrayOf('{'.code.toByte(), 0xC3.toByte())) }
+        try {
+            BackupDocuments.read(context, uri(truncated))
+            fail("A sequence cut at the end of the file must be refused")
+        } catch (expected: BackupException.Corrupted) {
+        }
+    }
+
+    @Test fun readRejectsBinaryDocument() = runBlocking {
+        // A PNG header followed by 4 MiB of 0xFF: refused on the first bytes, not after buffering everything.
+        val png = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(), 0x0D, 0x0A, 0x1A, 0x0A)
+        val file = File(folder.root, "photo.png").apply { writeBytes(png + ByteArray(4 * 1024 * 1024) { 0xFF.toByte() }) }
+        try {
+            BackupDocuments.read(context, uri(file))
+            fail("A binary document must be refused")
+        } catch (expected: BackupException.Corrupted) {
+        }
     }
 
     @Test fun suggestedNameUsesLocalDate() {

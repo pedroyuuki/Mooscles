@@ -80,7 +80,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
     /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
-    private fun backupAct(block: suspend () -> Unit) = act {
+    private fun backupAct(block: suspend () -> Unit) = act { backupWork(block) }
+    private suspend fun backupWork(block: suspend () -> Unit) {
         backup.update { it.copy(busy = true, message = null) }
         try { block() } catch (e: CancellationException) { throw e }
         catch (e: Exception) { backup.update { it.copy(message = e.message ?: SAVE_FAILED) } }
@@ -239,19 +240,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         pendingImportFile = file
         backup.update { it.copy(pendingImport = plan.summary) }
     }
-    override fun confirmImport() = backupAct {
-        val file = pendingImportFile ?: return@backupAct
-        try {
-            // The phone may have changed since the preview: the repository plans again inside its transaction.
-            val plan = app.trainingGate.withLock {
-                app.updates.assertTrainingMayStart()
-                repo.importBackup(file)
+    override fun confirmImport() = act {
+        // A repeated confirm finds nothing pending and must leave the previous outcome on screen.
+        val file = pendingImportFile ?: return@act
+        backupWork {
+            try {
+                // The phone may have changed since the preview: the repository plans again inside its transaction.
+                // Preferences are restored under the same lock so no install can start between the two writes.
+                val plan = app.trainingGate.withLock {
+                    app.updates.assertTrainingMayStart()
+                    val imported = repo.importBackup(file)
+                    imported.preferences?.let { app.preferences.restore(it) }
+                    imported
+                }
+                backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
+            } finally {
+                pendingImportFile = null
+                backup.update { it.copy(pendingImport = null) }
             }
-            plan.preferences?.let { app.preferences.restore(it) }
-            backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
-        } finally {
-            pendingImportFile = null
-            backup.update { it.copy(pendingImport = null) }
         }
     }
     override fun cancelImport() = act {

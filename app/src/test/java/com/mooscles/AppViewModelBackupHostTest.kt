@@ -8,6 +8,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.backup.BackupApp
 import com.mooscles.backup.BackupCodec
+import com.mooscles.backup.BackupDocuments
 import com.mooscles.backup.BackupPreferences
 import com.mooscles.backup.ImportSummary
 import com.mooscles.data.AppData
@@ -90,6 +91,23 @@ class AppViewModelBackupHostTest {
         awaitUi(model) { it.backup.message == null }
     }
 
+    @Test fun exportToUnopenableDocumentReportsFailureInBackupSection() {
+        val model = newModel()
+        awaitUi(model) { !it.loading }
+        val target = uri(File(folder.root, "missing-dir/export.json"))
+        // The generic rule: the exception's own message, or the act{} fallback when it has none.
+        val failure = runCatching { runBlocking(Dispatchers.IO) { BackupDocuments.write(app, target, "{}") } }.exceptionOrNull()
+        assertNotNull("The test URI must not be writable", failure)
+        val expected = failure!!.message ?: "Could not save this change. Please try again."
+
+        model.exportData(target)
+
+        awaitUi(model) { !it.backup.busy && it.backup.message != null }
+        assertEquals(expected, model.contentUi.value.backup.message)
+        assertNull(model.contentUi.value.error)
+        assertFalse(File(folder.root, "missing-dir").exists())
+    }
+
     @Test fun prepareImportShowsSummaryWithoutWriting() {
         val source = otherInstallBackup()
         val model = newModel()
@@ -125,6 +143,23 @@ class AppViewModelBackupHostTest {
         assertTrue(saved.exercises.any { it.custom && it.name == "Imported landmine press" })
         assertEquals(filePreferences, preferences())
         awaitUi(model) { it.preferences.pounds && it.preferences.theme == "dark" && it.history.size == 1 }
+    }
+
+    @Test fun confirmImportTwiceKeepsDoneMessage() {
+        val source = otherInstallBackup()
+        val model = newModel()
+        awaitUi(model) { !it.loading }
+        model.prepareImport(source)
+        awaitUi(model) { it.backup.pendingImport != null }
+
+        model.confirmImport()
+        model.confirmImport()
+        // Commands run in order and this one does not touch backup state: once it shows, both confirms ran.
+        model.setDefaultRest(95)
+
+        awaitUi(model) { it.preferences.defaultRestSeconds == 95 && !it.backup.busy }
+        assertEquals("Imported 1 workout, 1 routine and 1 custom exercise", model.contentUi.value.backup.message)
+        assertEquals(1, snapshot().workouts.size)
     }
 
     @Test fun confirmImportRefusesWhenWorkoutStartedAfterPreview() {

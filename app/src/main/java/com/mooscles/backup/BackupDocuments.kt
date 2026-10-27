@@ -2,9 +2,10 @@ package com.mooscles.backup
 
 import android.content.Context
 import android.net.Uri
-import java.io.ByteArrayOutputStream
+import java.io.FilterInputStream
 import java.io.IOException
-import java.nio.ByteBuffer
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.time.LocalDate
@@ -23,26 +24,38 @@ object BackupDocuments {
     suspend fun read(context: Context, uri: String, maxBytes: Long = 64L * 1024 * 1024): String = withContext(Dispatchers.IO) {
         val input = context.contentResolver.openInputStream(Uri.parse(uri))
             ?: throw IOException("Could not open the selected file.")
-        val bytes = input.use {
-            val out = ByteArrayOutputStream()
-            val buffer = ByteArray(64 * 1024)
-            var total = 0L
-            while (true) {
-                val read = it.read(buffer)
-                if (read < 0) break
-                total += read
-                if (total > maxBytes) throw BackupException.Corrupted("document is larger than $maxBytes bytes")
-                out.write(buffer, 0, read)
-            }
-            out.toByteArray()
-        }
+        // Decode while reading: a binary file fails on its first bad bytes and a huge one at maxBytes,
+        // without buffering the whole document first.
         val decoder = Charsets.UTF_8.newDecoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT)
-        try {
-            decoder.decode(ByteBuffer.wrap(bytes)).toString()
-        } catch (e: CharacterCodingException) {
-            throw BackupException.Corrupted("document is not valid UTF-8")
+        InputStreamReader(LimitedInputStream(input, maxBytes), decoder).use { reader ->
+            val text = StringBuilder()
+            val buffer = CharArray(16 * 1024)
+            try {
+                while (true) {
+                    val read = reader.read(buffer)
+                    if (read < 0) break
+                    text.append(buffer, 0, read)
+                }
+            } catch (e: CharacterCodingException) {
+                throw BackupException.Corrupted("document is not valid UTF-8")
+            }
+            text.toString()
+        }
+    }
+
+    /** Throws [BackupException.Corrupted] as soon as more than [maxBytes] bytes have been read. */
+    private class LimitedInputStream(input: InputStream, private val maxBytes: Long) : FilterInputStream(input) {
+        private var total = 0L
+
+        override fun read(): Int = super.read().also { if (it >= 0) count(1) }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) count(it) }
+
+        private fun count(bytes: Int) {
+            total += bytes
+            if (total > maxBytes) throw BackupException.Corrupted("document is larger than $maxBytes bytes")
         }
     }
 }
