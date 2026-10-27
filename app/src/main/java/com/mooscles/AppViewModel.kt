@@ -87,8 +87,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         backup.update { it.copy(busy = true, message = null) }
         try { block() } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            val ours = e is BackupException || e is IllegalStateException || e is IllegalArgumentException
-            backup.update { it.copy(message = if (!ours && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED) }
+            // Only file-access failures get the friendly copy; a database error must not read as "try another location".
+            val fileAccess = e is java.io.IOException || e is SecurityException
+            backup.update { it.copy(message = if (fileAccess && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED) }
         }
         finally { backup.update { it.copy(busy = false) } }
     }

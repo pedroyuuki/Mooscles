@@ -1,6 +1,8 @@
 package com.mooscles
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +97,24 @@ class DataSectionHostTest {
         compose.runOnIdle { assertEquals(listOf("clear"), actions.calls) }
         compose.runOnIdle { state.value = BackupUi() }
         compose.onNodeWithText("Exported 2 workouts, 1 routine and 0 custom exercises").assertDoesNotExist()
+    }
+
+    @Test
+    fun buttonsStayVisibleAtLargeFontScaleOnNarrowWidth() {
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
+            ) {
+                MaterialTheme {
+                    Column(Modifier.width(320.dp).verticalScroll(rememberScrollState())) {
+                        DataSection(BackupUi(), false, CapturedDataActions())
+                    }
+                }
+            }
+        }
+        compose.onNodeWithTag("data-export").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("data-import").performScrollTo().assertIsDisplayed()
     }
 
     private fun show(state: BackupUi, actions: DataActions = CapturedDataActions(), workoutActive: Boolean = false) {
