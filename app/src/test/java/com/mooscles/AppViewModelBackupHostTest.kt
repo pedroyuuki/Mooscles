@@ -254,7 +254,10 @@ class AppViewModelBackupHostTest {
         assertEquals("This file is not a Mooscles backup.", model.contentUi.value.backup.message)
         assertNull(model.contentUi.value.backup.pendingImport)
 
+        // Commands are queued: until the clear is published, the previous message is still on screen
+        // with busy false, so waiting for "a message" could match it before the second import runs.
         model.clearBackupMessage()
+        awaitUi(model) { it.backup.message == null }
         model.prepareImport(uri(badPreferences))
         awaitUi(model) { !it.backup.busy && it.backup.message != null }
         assertTrue(model.contentUi.value.backup.message!!.startsWith("This backup contains invalid data:"))

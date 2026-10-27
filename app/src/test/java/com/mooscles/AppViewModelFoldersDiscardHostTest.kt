@@ -132,7 +132,12 @@ class AppViewModelFoldersDiscardHostTest {
             assertEquals(1, snapshot().workouts.size)
             model.startTimer("Discard cycle $cycle", 120)
             awaitUi(model) { it.timer.running && it.timer.exerciseName == "Discard cycle $cycle" }
-            assertEquals(1, shadowOf(alarms).scheduledAlarms.size)
+            // The timer UI reads DataStore, which shows "running" before RestTimerController.schedule()
+            // registers the alarm, and the session observer cancels then sets it again. So wait for
+            // exactly one alarm (bounded) instead of counting at the first running state.
+            awaitCondition({ "Expected one rest alarm, saw ${shadowOf(alarms).scheduledAlarms.size}" }) {
+                shadowOf(alarms).scheduledAlarms.size == 1
+            }
             notifications.notify(1, Notification.Builder(app, "rest")
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("Rest complete").build())
             assertEquals(1, shadowOf(notifications).allNotifications.size)
@@ -209,11 +214,16 @@ class AppViewModelFoldersDiscardHostTest {
     }
 
     private fun awaitUi(model: AppViewModel, predicate: (UiState) -> Boolean) {
+        awaitCondition({ "Expected state was not published: ${model.ui.value.error}" }) { predicate(model.ui.value) }
+    }
+
+    /** Polls a condition other threads make true, bounded so a real failure still fails. */
+    private fun awaitCondition(message: () -> String, condition: () -> Boolean) {
         val deadline = System.nanoTime() + 15_000_000_000L
-        while (!predicate(model.ui.value) && System.nanoTime() < deadline) {
+        while (!condition() && System.nanoTime() < deadline) {
             shadowOf(Looper.getMainLooper()).idle()
             Thread.sleep(10)
         }
-        assertTrue("Expected state was not published: ${model.ui.value.error}", predicate(model.ui.value))
+        assertTrue(message(), condition())
     }
 }
