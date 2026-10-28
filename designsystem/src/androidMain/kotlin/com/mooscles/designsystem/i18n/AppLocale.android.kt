@@ -9,9 +9,10 @@ import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
 
 actual object LocalAppLocale {
-    // Captured when the first override is applied and cleared when it is undone.
+    // Captured when the first override is applied and cleared when it is undone. Only the locale
+    // is saved: restore() puts it back on the current configuration, so an orientation, uiMode or
+    // font scale change made while overriding is kept.
     private var savedLocale: Locale? = null
-    private var savedConfiguration: Configuration? = null
     private var resources: Resources? = null
 
     actual val current: String
@@ -27,7 +28,6 @@ actual object LocalAppLocale {
         val res = LocalContext.current.resources
         if (savedLocale == null) {
             savedLocale = Locale.getDefault()
-            savedConfiguration = Configuration(configuration)
             resources = res
         }
         val new = Locale.forLanguageTag(value)
@@ -41,10 +41,12 @@ actual object LocalAppLocale {
     actual fun restore(): Boolean {
         val locale = savedLocale ?: return false
         Locale.setDefault(locale)
-        @Suppress("DEPRECATION")
-        resources?.updateConfiguration(savedConfiguration, resources?.displayMetrics)
+        resources?.let { res ->
+            val restored = Configuration(res.configuration).apply { setLocale(locale) }
+            @Suppress("DEPRECATION")
+            res.updateConfiguration(restored, res.displayMetrics)
+        }
         savedLocale = null
-        savedConfiguration = null
         resources = null
         return true
     }
