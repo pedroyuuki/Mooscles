@@ -95,14 +95,18 @@ class SettingsTextsHostTest {
         )
     }
 
+    /** Boundary at 1 MiB, and half-up rounding around 1.05 MB (1_101_004.8 bytes). */
+    @androidx.compose.runtime.Composable
+    private fun sizes() = listOf(13_107_200L, 524_288L, 1_048_576L, 1_048_575L, 1_101_005L, 1_101_004L).map { updateSizeText(it) }
+
     @Test
     fun englishUpdateSizesKeepTheDot() {
-        assertEquals(listOf("12.5 MB", "512 KB"), render("en") { listOf(updateSizeText(13_107_200L), updateSizeText(524_288L)) })
+        assertEquals(listOf("12.5 MB", "512 KB", "1.0 MB", "1023 KB", "1.1 MB", "1.0 MB"), render("en") { sizes() })
     }
 
     @Test
     fun portugueseUpdateSizesUseTheComma() {
-        assertEquals(listOf("12,5 MB", "512 KB"), render("pt-BR") { listOf(updateSizeText(13_107_200L), updateSizeText(524_288L)) })
+        assertEquals(listOf("12,5 MB", "512 KB", "1,0 MB", "1023 KB", "1,1 MB", "1,0 MB"), render("pt-BR") { sizes() })
     }
 
     @Ignore("Enabled in Task 15")

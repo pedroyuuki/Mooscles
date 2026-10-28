@@ -28,7 +28,7 @@
     <string name="settings_export">Exportar dados</string>
     <string name="settings_import">Importar dados</string>
     <string name="settings_import_blocked">Conclua ou descarte o treino em andamento para importar</string>
-    <string name="settings_data_dismiss">Dispensar</string>
+    <string name="settings_data_dismiss">Fechar</string>
     <string name="settings_data_footer">Os backups trazem todo o seu histórico de treinos sem criptografia. Guarde o arquivo em um lugar privado.</string>
     <string name="settings_import_title">Importar backup?</string>
     <string name="settings_import_nothing_new">Tudo o que está neste backup já está neste celular.</string>
@@ -65,7 +65,7 @@
     <string name="settings_updates_wifi_only_desc">Espera o Wi-Fi antes de baixar um APK</string>
     <string name="settings_updates_prereleases">Incluir pré-lançamentos</string>
     <string name="settings_updates_prereleases_desc">Recebe versões de teste e de depuração, além das estáveis</string>
-    <string name="settings_updates_channel_prerelease">Canal: estável + pré-lançamento. As versões de teste podem ter sido menos testadas.</string>
+    <string name="settings_updates_channel_prerelease">Canal: estável + pré-lançamento. As versões de teste podem ser menos testadas.</string>
     <string name="settings_updates_channel_stable">Canal: estável. Rascunhos e pré-lançamentos ficam de fora.</string>
     <string name="settings_updates_last_checked">Última verificação</string>
     <string name="settings_updates_not_checked">Ainda não verificado</string>
@@ -89,9 +89,9 @@
     <string name="settings_updates_status_cancelled">Atualização cancelada</string>
     <string name="settings_updates_idle_note">As atualizações publicadas vêm de ReiTut/Mooscles no GitHub.</string>
     <string name="settings_updates_download">Baixar atualização</string>
-    <string name="settings_updates_wifi_note">O download começa quando houver Wi-Fi. Você pode mudar a preferência de Wi-Fi acima.</string>
+    <string name="settings_updates_wifi_note">A atualização começa a ser baixada quando houver Wi-Fi. Você pode mudar a preferência de Wi-Fi acima.</string>
     <string name="settings_updates_install">Instalar atualização</string>
-    <string name="settings_updates_deferred_note">O download está seguro. A instalação espera o treino ser salvo e o descanso terminar.</string>
+    <string name="settings_updates_deferred_note">O arquivo baixado está seguro. A instalação espera o treino ser salvo e o descanso terminar.</string>
     <string name="settings_updates_permission_note">O Android exige permissão para instalar um APK do Mooscles. Ative “Permitir desta fonte” na próxima tela e volte aqui. A permissão só é pedida na hora de instalar.</string>
     <string name="settings_updates_allow_source">Permitir desta fonte</string>
     <string name="settings_updates_approval_note_short">O Android precisa da sua aprovação. Abra a confirmação do sistema quando estiver pronto.</string>
@@ -100,7 +100,7 @@
     <string name="settings_updates_retry">Tentar de novo</string>
     <string name="settings_updates_download_again">Baixar de novo</string>
     <string name="settings_updates_succeeded_note">A versão instalada está pronta. Seus dados de treino continuam neste aparelho.</string>
-    <string name="settings_updates_cancel">Cancelar download</string>
+    <string name="settings_updates_cancel">Parar de baixar</string>
     <string name="settings_updates_release_notes">Notas da versão</string>
     <string name="settings_updates_show_less">Mostrar menos</string>
     <string name="settings_updates_read_all">Ler todas as notas</string>
