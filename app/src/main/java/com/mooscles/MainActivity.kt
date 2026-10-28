@@ -20,7 +20,7 @@ import com.mooscles.updates.UpdateNotifications
 import com.mooscles.ui.MoosclesApp
 
 class MainActivity : ComponentActivity() {
-    private val vm: AppViewModel by viewModels()
+    private val vm: AppViewModel by viewModels { AppViewModel.Factory }
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private val updateApproval = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         lifecycleScope.launch { runCatching { (application as MoosclesApplication).updates.approvalReturned(result.resultCode == RESULT_CANCELED) } }

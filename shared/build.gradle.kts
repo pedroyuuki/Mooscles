@@ -35,6 +35,11 @@ kotlin {
             // AppPreferences and RestTimerPersistence take the store ready-made; the Android
             // preferencesDataStore delegate (datastore-preferences, same 1.3.0) stays in :app.
             api("androidx.datastore:datastore-preferences-core:1.3.0")
+            // MoosclesViewModel extends the multiplatform ViewModel; same version as the :app lifecycle libraries.
+            api("androidx.lifecycle:lifecycle-viewmodel:2.11.0")
+            // @VisibleForTesting on the view model's test seams. 1.11.0: the latest stable release on 2026-10-28,
+            // with iosArm64 and iosSimulatorArm64 artifacts.
+            implementation("androidx.annotation:annotation:1.11.0")
         }
         androidMain.dependencies {
             // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.

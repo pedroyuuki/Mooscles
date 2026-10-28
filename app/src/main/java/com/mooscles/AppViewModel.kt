@@ -2,319 +2,36 @@ package com.mooscles
 
 import android.app.Application
 import android.content.Intent
-import android.os.Build
-import android.os.Looper
-import android.os.Trace
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.mooscles.backup.BackupApp
-import com.mooscles.backup.BackupException
-import com.mooscles.backup.BackupCodec
-import com.mooscles.backup.BackupDocuments
-import com.mooscles.backup.BackupFile
-import com.mooscles.backup.BackupTexts
-import com.mooscles.backup.ImportPlanner
-import com.mooscles.data.*
-import com.mooscles.domain.currentIsoInstant
-import com.mooscles.ui.*
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.flow.receiveAsFlow
 
-class AppViewModel(application: Application) : AndroidViewModel(application), MoosclesActions {
-    private val app = application as MoosclesApplication
-    private val repo = app.repository
-    private val error = MutableStateFlow<String?>(null)
-    private val initialized = MutableStateFlow(false)
-    private val startingWorkout = MutableStateFlow(false)
-    private val discardingWorkout = MutableStateFlow(false)
-    private val discardNavigationRequest = MutableStateFlow(0L)
-    private val backup = MutableStateFlow(BackupUi())
-    /** The file read by [prepareImport], kept until it is confirmed or cancelled. Only touched inside commands. */
-    private var pendingImportFile: BackupFile? = null
-    private val presenter = WorkoutPresentation()
-    private val settingsRequest = MutableStateFlow(0L)
+/** The Android view model: [MoosclesViewModel] with the app's services, plus the installer intents. */
+class AppViewModel private constructor(
+    private val app: MoosclesApplication,
+    platform: AndroidViewModelPlatform,
+) : MoosclesViewModel(app.services, platform) {
+    constructor(application: Application) : this(application as MoosclesApplication, AndroidViewModelPlatform())
+
     private val installLaunches = Channel<Intent>(Channel.BUFFERED)
     val installIntents = installLaunches.receiveAsFlow()
-    fun openUpdateSettings() { settingsRequest.value += 1 }
-    private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
-    /** Null until Room's first snapshot (or its failure): an empty placeholder must never be presented as saved data. */
-    private val source = repo.data.catch { error.value = "Unable to open local data: ${it.message}"; emit(AppData()) }
-        .stateIn<AppData?>(viewModelScope, SharingStarted.Eagerly, null)
     /** Host-test probe: presentations finished, and how many of them ran on the main thread. */
-    @VisibleForTesting internal val presentedCount = AtomicInteger()
-    @VisibleForTesting internal val presentedOnMainThread = AtomicInteger()
-    /**
-     * Presentation leaves the main thread: a large history takes seconds to present on a debug build.
-     * One-at-a-time confinement keeps [presenter]'s caches sequential without locks; never run it in composition.
-     */
-    private val presentationDispatcher = Dispatchers.Default.limitedParallelism(1)
-    // Pairs that arrive while a slow present() runs are conflated: only the latest one is worth presenting.
-    private val presentation = combine(source.filterNotNull(), app.preferences.flow) { data, prefs -> data to prefs }
-        .conflate()
-        .map { (data, prefs) ->
-            Trace.beginSection("Mooscles:present")
-            val state = try { presenter.present(data, prefs) } finally { Trace.endSection() }
-            if (Looper.myLooper() == Looper.getMainLooper()) presentedOnMainThread.incrementAndGet()
-            presentedCount.incrementAndGet()
-            state
-        }
-        .flowOn(presentationDispatcher)
-    private val problems = combine(error, app.preferences.error, app.timer.error) { action, prefs, timer -> action ?: prefs ?: timer }
-    // Ready needs both: initialization finished and a presentation of Room's data (combine waits for the first one).
-    private val baseUi = combine(presentation, problems, initialized, app.updates.ui, startingWorkout) { base, problem, ready, updates, starting ->
-        base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)
-    }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}")) }
-    /** Screens do not observe countdown ticks. Only the dock collects [timerUi]. */
-    val contentUi = combine(baseUi, settingsRequest, discardingWorkout, discardNavigationRequest, backup) { base, request, discarding, discarded, backup ->
-        base.copy(updateSettingsRequest = request, discardingWorkout = discarding, discardNavigationRequest = discarded, backup = backup)
-    }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
-    val timerUi = app.timer.ui
-    // Retained for consumers needing a complete snapshot; the Activity uses contentUi instead.
-    val ui = combine(contentUi, timerUi) { base, timer -> base.copy(timer = timer) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
+    @VisibleForTesting internal val presentedCount = platform.presentedCount
+    @VisibleForTesting internal val presentedOnMainThread = platform.presentedOnMainThread
 
-    init {
-        viewModelScope.launch {
-            app.timer.ui.map { it.running || it.paused }.distinctUntilChanged().collect { busy ->
-                if (!busy) runCatching { app.updates.onTrainingChanged() }
-            }
-        }
-        viewModelScope.launch {
-            try { repo.initialize() } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error.value = "Unable to initialize local data: ${e.message}" }
-            initialized.value = true
-            for (command in commands) try { command() }
-            catch (e: CancellationException) {
-                // Only a cleared ViewModel ends the loop. A timed-out wait or a cancelled child is one failed
-                // command: rethrowing it would silently drop every later command. Its message is not user copy.
-                currentCoroutineContext().ensureActive()
-                error.value = SAVE_FAILED
-            }
-            catch (e: Exception) { error.value = e.message ?: SAVE_FAILED }
-        }
-    }
-    private fun act(block: suspend () -> Unit) { commands.trySend(block) }
-    /** Host-test seam: queues [block] behind the screen's own commands. */
-    @VisibleForTesting internal fun enqueueCommandForTest(block: suspend () -> Unit) = act(block)
-    /** How long a command waits for saved data to reach the screen; host tests shorten it. */
-    @VisibleForTesting internal var screenWaitMillis = 30_000L
-    /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
-    private fun backupAct(fileFailure: String, working: String, block: suspend () -> Unit) = act { backupWork(fileFailure, working, block) }
-    /** [fileFailure] replaces the raw message of file-access errors (IOException, SecurityException...). */
-    private suspend fun backupWork(fileFailure: String?, working: String, block: suspend () -> Unit) {
-        backup.update { it.copy(busy = true, working = working, message = null, messageIsError = false) }
-        try { block() } catch (e: CancellationException) { throw e }
-        catch (e: Exception) {
-            // Only file-access failures get the friendly copy; a database error must not read as "try another location".
-            val fileAccess = e is java.io.IOException || e is SecurityException
-            backup.update { it.copy(message = if (fileAccess && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED, messageIsError = true) }
-        }
-        finally { backup.update { it.copy(busy = false, working = null) } }
-    }
-    override fun clearError() { error.value = null; app.preferences.clearError(); app.timer.clearError() }
-    override fun createRoutine(name: String) = act {
-        val savedFolder = app.preferences.snapshot().selectedRoutineFolderId
-        val folderId = repo.routineFolder(savedFolder)?.id ?: RoutineFolder.DEFAULT_ID
-        repo.createRoutine(name, folderId)
-    }
-    override fun renameRoutine(id: String, name: String) = act { repo.renameRoutine(id, name) }
-    override fun duplicateRoutine(id: String) = act { repo.duplicateRoutine(id) }
-    override fun deleteRoutine(id: String) = act { repo.deleteRoutine(id) }
-    override fun moveRoutine(id: String, direction: Int) = act { repo.moveRoutine(id, direction) }
-    override fun createRoutineFolder(name: String) = act {
-        val id = repo.createRoutineFolder(name)
-        app.preferences.selectRoutineFolder(id)
-    }
-    override fun renameRoutineFolder(id: String, name: String) = act { repo.renameRoutineFolder(id, name) }
-    override fun selectRoutineFolder(id: String) = act {
-        requireNotNull(repo.routineFolder(id)) { "Folder unavailable." }
-        app.preferences.selectRoutineFolder(id)
-    }
-    override fun moveRoutineToFolder(routineId: String, folderId: String) = act { repo.moveRoutineToFolder(routineId, folderId) }
-    override fun addRoutineExercise(routineId: String, exerciseId: String) = act { repo.addRoutineExercise(routineId, exerciseId) }
-    override fun replaceRoutineExercise(entryId: String, exerciseId: String) = act { repo.replaceRoutineExercise(entryId, exerciseId) }
-    override fun removeRoutineExercise(entryId: String) = act { repo.removeRoutineExercise(entryId) }
-    override fun moveRoutineExercise(entryId: String, direction: Int) = act { repo.moveRoutineExercise(entryId, direction) }
-    override fun addRoutineSet(entryId: String) = act { repo.addRoutineSet(entryId) }
-    override fun removeRoutineSet(setId: String) = act { repo.removeRoutineSet(setId) }
-    override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = act { repo.updateRoutineSet(setId, reps, weightKg) }
-    override fun inheritRoutineSet(setId: String) = act { repo.inheritRoutineSet(setId) }
-    override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = act { repo.updateRoutineExerciseRest(entryId, seconds) }
-    override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) = act {
-        val item = requireNotNull(repo.routineExercise(entryId)) { "Routine exercise unavailable" }
-        repo.updateRoutineExercise(item.copy(plannedSets = sets, targetReps = reps, targetWeightKg = weightKg, restSeconds = restSeconds))
-    }
-    override fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String) = act {
-        val m = MuscleGroup.entries.firstOrNull { it.label == muscle || it.name == muscle } ?: MuscleGroup.FULL_BODY
-        val e = Equipment.entries.firstOrNull { it.label == equipment || it.name == equipment } ?: Equipment.OTHER
-        val c = LoadConvention.entries.firstOrNull { it.label == convention || it.name == convention } ?: LoadConvention.TOTAL_LOAD
-        if (id == null) repo.createCustomExercise(name, m, e, c)
-        else {
-            val existing = requireNotNull(repo.exercise(id)) { "Exercise unavailable" }
-            repo.saveExercise(existing.copy(name = name, muscle = m, equipment = e, convention = c))
-        }
-    }
-    override fun startWorkout(routineId: String?) {
-        if (!startingWorkout.compareAndSet(false, true)) return
-        error.value = null
-        act {
-            val traceCookie = System.identityHashCode(this)
-            if (Build.VERSION.SDK_INT >= 29) Trace.beginAsyncSection("Mooscles:startSession", traceCookie)
-            try {
-                val id = app.trainingGate.withLock {
-                    app.updates.assertTrainingMayStart()
-                    if (repo.activeWorkout() == null) app.timer.clear()
-                    val prefs = app.preferences.snapshot()
-                    if (routineId == null) repo.startEmpty(defaultRestSeconds = prefs.defaultRestSeconds)
-                    else repo.startRoutine(routineId, prefs.defaultRestSeconds)
-                }
-                // Keep loading visible until saved data reaches the editor, also on resume.
-                try {
-                    withTimeout(screenWaitMillis) { contentUi.first { it.active?.id == id } }
-                } catch (failure: TimeoutCancellationException) {
-                    throw IllegalStateException("Your workout was saved, but the screen could not open. Return to Workout to resume it.", failure)
-                }
-            } finally {
-                startingWorkout.value = false
-                if (Build.VERSION.SDK_INT >= 29) Trace.endAsyncSection("Mooscles:startSession", traceCookie)
-            }
-        }
-    }
-    override fun renameWorkout(id: String, name: String) = act { repo.renameWorkout(id, name) }
-    override fun addWorkoutExercise(workoutId: String, exerciseId: String) = act { repo.addWorkoutExercise(workoutId, exerciseId, app.preferences.snapshot().defaultRestSeconds) }
-    override fun replaceWorkoutExercise(entryId: String, exerciseId: String) = act { repo.replaceWorkoutExercise(entryId, exerciseId) }
-    override fun removeWorkoutExercise(entryId: String) = act { repo.removeWorkoutExercise(entryId) }
-    override fun moveWorkoutExercise(entryId: String, direction: Int) = act { repo.moveWorkoutExercise(entryId, direction) }
-    override fun updateWorkoutExerciseRest(entryId: String, seconds: Int) = act { repo.updateWorkoutExerciseRest(entryId, seconds) }
-    override fun addSet(entryId: String) = act { repo.addSet(entryId) }
-    override fun removeSet(setId: String) = act { repo.removeSet(setId) }
-    override fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean) = act {
-        app.trainingGate.withLock {
-        app.updates.assertTrainingMayStart()
-        val item = requireNotNull(repo.workoutSet(setId)) { "Set unavailable" }
-        repo.updateSet(item.copy(reps = reps, weightKg = weightKg, completed = completed, warmup = warmup, assistance = assistance))
-        if (completed && !item.completed && app.preferences.snapshot().autoRest) {
-            val entry = requireNotNull(repo.workoutExercise(item.workoutExerciseId)) { "Workout exercise unavailable" }
-            if (repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
-                app.timer.start(entry.name, entry.restSeconds, entry.id)
-        }
-        }
-    }
-    override fun finishWorkout() = act {
-        val active = repo.activeWorkout() ?: return@act
-        if (repo.finishWorkout(active.id)) app.timer.clear()
-        app.updates.onTrainingChanged()
-    }
-    override fun discardWorkout() {
-        if (!discardingWorkout.compareAndSet(false, true)) return
-        error.value = null
-        act {
-            try {
-                app.trainingGate.withLock {
-                    repo.activeWorkout()?.let { repo.discardWorkout(it.id) }
-                    // Unlike clear(), this propagates storage failures instead of reporting success.
-                    app.timer.clearForSessionEnd()
-                }
-                // Cards and navigation must observe the durable deletion together.
-                try {
-                    withTimeout(screenWaitMillis) { contentUi.first { it.active == null } }
-                } catch (failure: TimeoutCancellationException) {
-                    throw IllegalStateException("The workout was discarded, but the screen could not update. Open History or Workout to refresh it.", failure)
-                }
-                discardNavigationRequest.value += 1
-            } finally {
-                discardingWorkout.value = false
-            }
-            app.updates.onTrainingChanged()
-        }
-    }
-    override fun deleteWorkout(id: String) = act { repo.deleteWorkout(id) }
-    override fun setPounds(pounds: Boolean) = act { app.preferences.pounds(pounds) }
-    override fun setTheme(theme: String) = act { app.preferences.theme(theme.lowercase()) }
-    override fun setAutoRest(enabled: Boolean) = act { app.preferences.autoRest(enabled) }
-    override fun setDefaultRest(seconds: Int) = act { app.preferences.defaultRest(seconds) }
-    override fun startTimer(exerciseName: String, seconds: Int) = act { app.trainingGate.withLock { app.updates.assertTrainingMayStart(); app.timer.start(exerciseName, seconds) } }
-    override fun pauseTimer() = act { app.timer.pause() }
-    override fun resumeTimer() = act { app.trainingGate.withLock { app.updates.assertTrainingMayStart(); app.timer.resume() } }
-    override fun resetTimer() = act { app.trainingGate.withLock { app.updates.assertTrainingMayStart(); app.timer.reset() } }
-    override fun skipTimer() = act { app.timer.skip(); app.updates.onTrainingChanged() }
-    override fun adjustTimer(seconds: Int) = act { app.trainingGate.withLock { app.updates.assertTrainingMayStart(); app.timer.adjust(seconds) } }
-    override fun checkForUpdates() = act { app.updates.requestCheck(true) }
-    override fun setAutomaticUpdates(enabled: Boolean) = act { app.updates.setAutomatic(enabled) }
-    override fun setUpdateWifiOnly(enabled: Boolean) = act { app.updates.setWifiOnly(enabled) }
-    override fun setIncludePrereleases(enabled: Boolean) = act { app.updates.setPrereleases(enabled) }
-    override fun downloadUpdate() = act { app.updates.enqueueDownload(manual = true) }
-    override fun cancelUpdate() = act { app.updates.cancelDownload() }
-    override fun installUpdate() = act { app.updates.requestInstall()?.let { installLaunches.send(it) } }
-    override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED, BackupTexts.WORKING_EXPORT) {
-        val preferences = app.preferences.snapshot().toBackup()
-        val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
-        val file = try {
-            val file = repo.exportBackup(preferences, about, currentIsoInstant())
-            val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
-            BackupDocuments.write(app, uri, text)
-            file
-        } catch (e: Exception) {
-            // The picker already created the document: do not leave an empty or partial backup behind.
-            if (e !is CancellationException) BackupDocuments.discard(app, uri)
-            throw e
-        }
-        val data = file.data
-        backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
-    }
-    /** Reads and plans only; nothing is written until [confirmImport]. */
-    override fun prepareImport(uri: String) = backupAct(BackupTexts.IMPORT_FILE_FAILED, BackupTexts.WORKING_CHECK) {
-        pendingImportFile = null
-        backup.update { it.copy(pendingImport = null) }
-        val text = BackupDocuments.read(app, uri)
-        // Decode before reading the phone, so a file that is not a backup never pays for a full database read.
-        val file = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
-        val local = repo.localState()
-        val plan = withContext(Dispatchers.Default) { ImportPlanner.plan(file, local) }
-        pendingImportFile = file
-        backup.update { it.copy(pendingImport = plan.summary) }
-    }
-    override fun confirmImport() = act {
-        // A repeated confirm finds nothing pending and must leave the previous outcome on screen.
-        val file = pendingImportFile ?: return@act
-        backupWork(null, BackupTexts.WORKING_IMPORT) {
-            // Close the dialog now; the private file stays until the import ran so the work below still has it.
-            backup.update { it.copy(pendingImport = null) }
-            try {
-                // The phone may have changed since the preview: the repository plans again inside its transaction.
-                // Preferences are restored as the transaction's last step, so a failed restore rolls the data back
-                // and no install can start in between. DataStore is not part of the Room transaction: a commit
-                // failure after the restore would still leave the settings applied.
-                val plan = app.trainingGate.withLock {
-                    app.updates.assertTrainingMayStart()
-                    repo.importBackup(file) { plan -> plan.preferences?.let { app.preferences.restore(it) } }
-                }
-                backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
-            } finally {
-                pendingImportFile = null
-                backup.update { it.copy(pendingImport = null) }
-            }
-        }
-    }
-    override fun cancelImport() = act {
-        pendingImportFile = null
-        backup.update { it.copy(pendingImport = null) }
-    }
-    override fun clearBackupMessage() = act { backup.update { it.copy(message = null) } }
+    /** The application this view model works with, as `AndroidViewModel.getApplication` returned it before. */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Application> getApplication(): T = app as T
 
-    private companion object {
-        const val SAVE_FAILED = "Could not save this change. Please try again."
+    override suspend fun install() { app.updates.requestInstall()?.let { installLaunches.send(it) } }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { AppViewModel(this[APPLICATION_KEY]!!) }
+        }
     }
 }

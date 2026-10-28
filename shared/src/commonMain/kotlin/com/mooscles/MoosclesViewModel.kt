@@ -1,0 +1,308 @@
+package com.mooscles
+
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mooscles.backup.BackupException
+import com.mooscles.backup.BackupCodec
+import com.mooscles.backup.BackupFile
+import com.mooscles.backup.BackupTexts
+import com.mooscles.backup.ImportPlanner
+import com.mooscles.data.*
+import com.mooscles.domain.currentIsoInstant
+import com.mooscles.ui.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+
+/**
+ * The screens' state and commands, shared by every platform. What only a platform can do (the rest timer, the
+ * updater, picked documents, tracing) comes in through [services] and [platform].
+ */
+abstract class MoosclesViewModel(
+    private val services: MoosclesServices,
+    private val platform: ViewModelPlatform = ViewModelPlatform.None,
+) : ViewModel(), MoosclesActions {
+    private val repo = services.repository
+    private val error = MutableStateFlow<String?>(null)
+    private val initialized = MutableStateFlow(false)
+    private val startingWorkout = MutableStateFlow(false)
+    private val discardingWorkout = MutableStateFlow(false)
+    private val discardNavigationRequest = MutableStateFlow(0L)
+    private val backup = MutableStateFlow(BackupUi())
+    /** The file read by [prepareImport], kept until it is confirmed or cancelled. Only touched inside commands. */
+    private var pendingImportFile: BackupFile? = null
+    private val presenter = WorkoutPresentation()
+    private val settingsRequest = MutableStateFlow(0L)
+    fun openUpdateSettings() { settingsRequest.value += 1 }
+    private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    /** Null until Room's first snapshot (or its failure): an empty placeholder must never be presented as saved data. */
+    private val source = repo.data.catch { error.value = "Unable to open local data: ${it.message}"; emit(AppData()) }
+        .stateIn<AppData?>(viewModelScope, SharingStarted.Eagerly, null)
+    /**
+     * Presentation leaves the main thread: a large history takes seconds to present on a debug build.
+     * One-at-a-time confinement keeps [presenter]'s caches sequential without locks; never run it in composition.
+     */
+    private val presentationDispatcher = Dispatchers.Default.limitedParallelism(1)
+    // Pairs that arrive while a slow present() runs are conflated: only the latest one is worth presenting.
+    private val presentation = combine(source.filterNotNull(), services.preferences.flow) { data, prefs -> data to prefs }
+        .conflate()
+        .map { (data, prefs) -> platform.presentation { presenter.present(data, prefs) } }
+        .flowOn(presentationDispatcher)
+    private val problems = combine(error, services.preferences.error, services.timer.error) { action, prefs, timer -> action ?: prefs ?: timer }
+    // Ready needs both: initialization finished and a presentation of Room's data (combine waits for the first one).
+    private val baseUi = combine(presentation, problems, initialized, services.updates.ui, startingWorkout) { base, problem, ready, updates, starting ->
+        base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)
+    }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}")) }
+    /** Screens do not observe countdown ticks. Only the dock collects [timerUi]. */
+    val contentUi = combine(baseUi, settingsRequest, discardingWorkout, discardNavigationRequest, backup) { base, request, discarding, discarded, backup ->
+        base.copy(updateSettingsRequest = request, discardingWorkout = discarding, discardNavigationRequest = discarded, backup = backup)
+    }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
+    val timerUi = services.timer.ui
+    // Retained for consumers needing a complete snapshot; the Activity uses contentUi instead.
+    val ui = combine(contentUi, timerUi) { base, timer -> base.copy(timer = timer) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
+
+    init {
+        viewModelScope.launch {
+            services.timer.ui.map { it.running || it.paused }.distinctUntilChanged().collect { busy ->
+                if (!busy) runCatching { services.updates.onTrainingChanged() }
+            }
+        }
+        viewModelScope.launch {
+            try { repo.initialize() } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { error.value = "Unable to initialize local data: ${e.message}" }
+            initialized.value = true
+            for (command in commands) try { command() }
+            catch (e: CancellationException) {
+                // Only a cleared ViewModel ends the loop. A timed-out wait or a cancelled child is one failed
+                // command: rethrowing it would silently drop every later command. Its message is not user copy.
+                currentCoroutineContext().ensureActive()
+                error.value = SAVE_FAILED
+            }
+            catch (e: Exception) { error.value = e.message ?: SAVE_FAILED }
+        }
+    }
+    private fun act(block: suspend () -> Unit) { commands.trySend(block) }
+    /** Host-test seam: queues [block] behind the screen's own commands. */
+    @VisibleForTesting fun enqueueCommandForTest(block: suspend () -> Unit) = act(block)
+    /** How long a command waits for saved data to reach the screen; host tests shorten it. */
+    @VisibleForTesting var screenWaitMillis = 30_000L
+    /** Backup failures belong to the backup section, not the global error, and always release [BackupUi.busy]. */
+    private fun backupAct(fileFailure: String, working: String, block: suspend () -> Unit) = act { backupWork(fileFailure, working, block) }
+    /** [fileFailure] replaces the raw message of file-access errors (IOException, SecurityException...). */
+    private suspend fun backupWork(fileFailure: String?, working: String, block: suspend () -> Unit) {
+        backup.update { it.copy(busy = true, working = working, message = null, messageIsError = false) }
+        try { block() } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            // Only file-access failures get the friendly copy; a database error must not read as "try another location".
+            val fileAccess = services.documents.isFileAccessFailure(e)
+            backup.update { it.copy(message = if (fileAccess && fileFailure != null) fileFailure else e.message ?: SAVE_FAILED, messageIsError = true) }
+        }
+        finally { backup.update { it.copy(busy = false, working = null) } }
+    }
+    override fun clearError() { error.value = null; services.preferences.clearError(); services.timer.clearError() }
+    override fun createRoutine(name: String) = act {
+        val savedFolder = services.preferences.snapshot().selectedRoutineFolderId
+        val folderId = repo.routineFolder(savedFolder)?.id ?: RoutineFolder.DEFAULT_ID
+        repo.createRoutine(name, folderId)
+    }
+    override fun renameRoutine(id: String, name: String) = act { repo.renameRoutine(id, name) }
+    override fun duplicateRoutine(id: String) = act { repo.duplicateRoutine(id) }
+    override fun deleteRoutine(id: String) = act { repo.deleteRoutine(id) }
+    override fun moveRoutine(id: String, direction: Int) = act { repo.moveRoutine(id, direction) }
+    override fun createRoutineFolder(name: String) = act {
+        val id = repo.createRoutineFolder(name)
+        services.preferences.selectRoutineFolder(id)
+    }
+    override fun renameRoutineFolder(id: String, name: String) = act { repo.renameRoutineFolder(id, name) }
+    override fun selectRoutineFolder(id: String) = act {
+        requireNotNull(repo.routineFolder(id)) { "Folder unavailable." }
+        services.preferences.selectRoutineFolder(id)
+    }
+    override fun moveRoutineToFolder(routineId: String, folderId: String) = act { repo.moveRoutineToFolder(routineId, folderId) }
+    override fun addRoutineExercise(routineId: String, exerciseId: String) = act { repo.addRoutineExercise(routineId, exerciseId) }
+    override fun replaceRoutineExercise(entryId: String, exerciseId: String) = act { repo.replaceRoutineExercise(entryId, exerciseId) }
+    override fun removeRoutineExercise(entryId: String) = act { repo.removeRoutineExercise(entryId) }
+    override fun moveRoutineExercise(entryId: String, direction: Int) = act { repo.moveRoutineExercise(entryId, direction) }
+    override fun addRoutineSet(entryId: String) = act { repo.addRoutineSet(entryId) }
+    override fun removeRoutineSet(setId: String) = act { repo.removeRoutineSet(setId) }
+    override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = act { repo.updateRoutineSet(setId, reps, weightKg) }
+    override fun inheritRoutineSet(setId: String) = act { repo.inheritRoutineSet(setId) }
+    override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = act { repo.updateRoutineExerciseRest(entryId, seconds) }
+    override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) = act {
+        val item = requireNotNull(repo.routineExercise(entryId)) { "Routine exercise unavailable" }
+        repo.updateRoutineExercise(item.copy(plannedSets = sets, targetReps = reps, targetWeightKg = weightKg, restSeconds = restSeconds))
+    }
+    override fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String) = act {
+        val m = MuscleGroup.entries.firstOrNull { it.label == muscle || it.name == muscle } ?: MuscleGroup.FULL_BODY
+        val e = Equipment.entries.firstOrNull { it.label == equipment || it.name == equipment } ?: Equipment.OTHER
+        val c = LoadConvention.entries.firstOrNull { it.label == convention || it.name == convention } ?: LoadConvention.TOTAL_LOAD
+        if (id == null) repo.createCustomExercise(name, m, e, c)
+        else {
+            val existing = requireNotNull(repo.exercise(id)) { "Exercise unavailable" }
+            repo.saveExercise(existing.copy(name = name, muscle = m, equipment = e, convention = c))
+        }
+    }
+    override fun startWorkout(routineId: String?) {
+        if (!startingWorkout.compareAndSet(false, true)) return
+        error.value = null
+        act {
+            platform.startingSession {
+            try {
+                val id = services.trainingGate.withLock {
+                    services.updates.assertTrainingMayStart()
+                    if (repo.activeWorkout() == null) services.timer.clear()
+                    val prefs = services.preferences.snapshot()
+                    if (routineId == null) repo.startEmpty(defaultRestSeconds = prefs.defaultRestSeconds)
+                    else repo.startRoutine(routineId, prefs.defaultRestSeconds)
+                }
+                // Keep loading visible until saved data reaches the editor, also on resume.
+                try {
+                    withTimeout(screenWaitMillis) { contentUi.first { it.active?.id == id } }
+                } catch (failure: TimeoutCancellationException) {
+                    throw IllegalStateException("Your workout was saved, but the screen could not open. Return to Workout to resume it.", failure)
+                }
+            } finally {
+                startingWorkout.value = false
+            }
+            }
+        }
+    }
+    override fun renameWorkout(id: String, name: String) = act { repo.renameWorkout(id, name) }
+    override fun addWorkoutExercise(workoutId: String, exerciseId: String) = act { repo.addWorkoutExercise(workoutId, exerciseId, services.preferences.snapshot().defaultRestSeconds) }
+    override fun replaceWorkoutExercise(entryId: String, exerciseId: String) = act { repo.replaceWorkoutExercise(entryId, exerciseId) }
+    override fun removeWorkoutExercise(entryId: String) = act { repo.removeWorkoutExercise(entryId) }
+    override fun moveWorkoutExercise(entryId: String, direction: Int) = act { repo.moveWorkoutExercise(entryId, direction) }
+    override fun updateWorkoutExerciseRest(entryId: String, seconds: Int) = act { repo.updateWorkoutExerciseRest(entryId, seconds) }
+    override fun addSet(entryId: String) = act { repo.addSet(entryId) }
+    override fun removeSet(setId: String) = act { repo.removeSet(setId) }
+    override fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean) = act {
+        services.trainingGate.withLock {
+        services.updates.assertTrainingMayStart()
+        val item = requireNotNull(repo.workoutSet(setId)) { "Set unavailable" }
+        repo.updateSet(item.copy(reps = reps, weightKg = weightKg, completed = completed, warmup = warmup, assistance = assistance))
+        if (completed && !item.completed && services.preferences.snapshot().autoRest) {
+            val entry = requireNotNull(repo.workoutExercise(item.workoutExerciseId)) { "Workout exercise unavailable" }
+            if (repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
+                services.timer.start(entry.name, entry.restSeconds, entry.id)
+        }
+        }
+    }
+    override fun finishWorkout() = act {
+        val active = repo.activeWorkout() ?: return@act
+        if (repo.finishWorkout(active.id)) services.timer.clear()
+        services.updates.onTrainingChanged()
+    }
+    override fun discardWorkout() {
+        if (!discardingWorkout.compareAndSet(false, true)) return
+        error.value = null
+        act {
+            try {
+                services.trainingGate.withLock {
+                    repo.activeWorkout()?.let { repo.discardWorkout(it.id) }
+                    // Unlike clear(), this propagates storage failures instead of reporting success.
+                    services.timer.clearForSessionEnd()
+                }
+                // Cards and navigation must observe the durable deletion together.
+                try {
+                    withTimeout(screenWaitMillis) { contentUi.first { it.active == null } }
+                } catch (failure: TimeoutCancellationException) {
+                    throw IllegalStateException("The workout was discarded, but the screen could not update. Open History or Workout to refresh it.", failure)
+                }
+                discardNavigationRequest.value += 1
+            } finally {
+                discardingWorkout.value = false
+            }
+            services.updates.onTrainingChanged()
+        }
+    }
+    override fun deleteWorkout(id: String) = act { repo.deleteWorkout(id) }
+    override fun setPounds(pounds: Boolean) = act { services.preferences.pounds(pounds) }
+    override fun setTheme(theme: String) = act { services.preferences.theme(theme.lowercase()) }
+    override fun setAutoRest(enabled: Boolean) = act { services.preferences.autoRest(enabled) }
+    override fun setDefaultRest(seconds: Int) = act { services.preferences.defaultRest(seconds) }
+    override fun startTimer(exerciseName: String, seconds: Int) = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.start(exerciseName, seconds) } }
+    override fun pauseTimer() = act { services.timer.pause() }
+    override fun resumeTimer() = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.resume() } }
+    override fun resetTimer() = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.reset() } }
+    override fun skipTimer() = act { services.timer.skip(); services.updates.onTrainingChanged() }
+    override fun adjustTimer(seconds: Int) = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.adjust(seconds) } }
+    override fun checkForUpdates() = act { services.updates.requestCheck(true) }
+    override fun setAutomaticUpdates(enabled: Boolean) = act { services.updates.setAutomatic(enabled) }
+    override fun setUpdateWifiOnly(enabled: Boolean) = act { services.updates.setWifiOnly(enabled) }
+    override fun setIncludePrereleases(enabled: Boolean) = act { services.updates.setPrereleases(enabled) }
+    override fun downloadUpdate() = act { services.updates.enqueueDownload(manual = true) }
+    override fun cancelUpdate() = act { services.updates.cancelDownload() }
+    override fun installUpdate() = act { install() }
+    override fun exportData(uri: String) = backupAct(BackupTexts.EXPORT_FILE_FAILED, BackupTexts.WORKING_EXPORT) {
+        val preferences = services.preferences.snapshot().toBackup()
+        val about = services.about
+        val file = try {
+            val file = repo.exportBackup(preferences, about, currentIsoInstant())
+            val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
+            services.documents.write(uri, text)
+            file
+        } catch (e: Exception) {
+            // The picker already created the document: do not leave an empty or partial backup behind.
+            if (e !is CancellationException) services.documents.discard(uri)
+            throw e
+        }
+        val data = file.data
+        backup.update { it.copy(message = BackupTexts.exported(data.workouts.size, data.routines.size, data.exercises.count { e -> e.custom })) }
+    }
+    /** Reads and plans only; nothing is written until [confirmImport]. */
+    override fun prepareImport(uri: String) = backupAct(BackupTexts.IMPORT_FILE_FAILED, BackupTexts.WORKING_CHECK) {
+        pendingImportFile = null
+        backup.update { it.copy(pendingImport = null) }
+        val text = services.documents.read(uri)
+        // Decode before reading the phone, so a file that is not a backup never pays for a full database read.
+        val file = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
+        val local = repo.localState()
+        val plan = withContext(Dispatchers.Default) { ImportPlanner.plan(file, local) }
+        pendingImportFile = file
+        backup.update { it.copy(pendingImport = plan.summary) }
+    }
+    override fun confirmImport() = act {
+        // A repeated confirm finds nothing pending and must leave the previous outcome on screen.
+        val file = pendingImportFile ?: return@act
+        backupWork(null, BackupTexts.WORKING_IMPORT) {
+            // Close the dialog now; the private file stays until the import ran so the work below still has it.
+            backup.update { it.copy(pendingImport = null) }
+            try {
+                // The phone may have changed since the preview: the repository plans again inside its transaction.
+                // Preferences are restored as the transaction's last step, so a failed restore rolls the data back
+                // and no install can start in between. DataStore is not part of the Room transaction: a commit
+                // failure after the restore would still leave the settings applied.
+                val plan = services.trainingGate.withLock {
+                    services.updates.assertTrainingMayStart()
+                    repo.importBackup(file) { plan -> plan.preferences?.let { services.preferences.restore(it) } }
+                }
+                backup.update { it.copy(message = BackupTexts.imported(plan.summary)) }
+            } finally {
+                pendingImportFile = null
+                backup.update { it.copy(pendingImport = null) }
+            }
+        }
+    }
+    override fun cancelImport() = act {
+        pendingImportFile = null
+        backup.update { it.copy(pendingImport = null) }
+    }
+    override fun clearBackupMessage() = act { backup.update { it.copy(message = null) } }
+    /** Starts the platform installer for a verified update; runs inside a command, from [installUpdate]. */
+    protected abstract suspend fun install()
+
+    private companion object {
+        const val SAVE_FAILED = "Could not save this change. Please try again."
+    }
+}

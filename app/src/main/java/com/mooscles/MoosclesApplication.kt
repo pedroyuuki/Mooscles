@@ -1,6 +1,8 @@
 package com.mooscles
 
 import android.app.Application
+import com.mooscles.backup.AndroidBackupDocuments
+import com.mooscles.backup.BackupApp
 import com.mooscles.data.WorkoutDatabase
 import com.mooscles.data.WorkoutRepository
 import com.mooscles.data.open
@@ -24,4 +26,9 @@ class MoosclesApplication : Application() {
         repository.activeWorkout() != null || UpdatePolicy.restTimerBusy(
             RestTimerPersistence(moosclesStore).snapshot(), System.currentTimeMillis())
     }) }
+    /** What the view model works with, in the order it used to create them: repository, preferences, timer, updates. */
+    val services by lazy {
+        MoosclesServices(repository, preferences, timer, updates, trainingGate, AndroidBackupDocuments(this),
+            BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android"))
+    }
 }

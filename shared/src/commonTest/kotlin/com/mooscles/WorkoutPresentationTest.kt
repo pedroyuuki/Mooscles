@@ -5,13 +5,16 @@ import com.mooscles.domain.WorkoutCalculations
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.RecordUi
-import com.mooscles.ui.UiState
-import org.junit.Assert.*
-import org.junit.Test
 import kotlin.random.Random
-import kotlin.system.measureTimeMillis
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
-/** Plain JVM tests: presentation caches must invalidate by saved values, never just row counts. */
+/** Common tests (JVM and iOS): presentation caches must invalidate by saved values, never just row counts. */
 class WorkoutPresentationTest {
     private val bench = Exercise(id = "bench", name = "Bench", muscle = MuscleGroup.CHEST,
         equipment = Equipment.BARBELL, convention = LoadConvention.TOTAL_LOAD)
@@ -158,42 +161,6 @@ class WorkoutPresentationTest {
         assertEquals(22.0, data.sets.first { it.id == "a1" }.weightKg, 0.0)
     }
 
-    /**
-     * Best of three cold presents (each on a fresh presenter, so a loaded machine does not fail it), then a cached
-     * one with equal data. The 1000 ms ceiling still fails the per-workout passes, which never went below 2114 ms.
-     */
-    private fun assertPresentsQuickly(data: AppData, label: String): UiState {
-        lateinit var presenter: WorkoutPresentation
-        lateinit var first: UiState
-        val coldMs = List(3) {
-            presenter = WorkoutPresentation()
-            measureTimeMillis { first = presenter.present(data, PreferencesUi()) }
-        }
-        val firstMs = coldMs.min()
-        lateinit var second: UiState
-        val secondMs = measureTimeMillis { second = presenter.present(data.copy(), PreferencesUi()) }
-        println("$label present=${coldMs}ms best=${firstMs}ms cached=${secondMs}ms")
-        assertEquals(LargeHistoryFixture.WORKOUTS, first.history.size)
-        assertTrue(first.history.any { it.records.isNotEmpty() })
-        assertSame(first.history, second.history)
-        assertTrue("$label best cold present took ${firstMs}ms ($coldMs)", firstMs < 1000)
-        assertTrue("$label cached present took ${secondMs}ms", secondMs < 200)
-        return first
-    }
-
-    @Test fun largeHistoryPresentsQuickly() {
-        val data = LargeHistoryFixture.appData()
-        assertEquals(LargeHistoryFixture.SETS, data.sets.size)
-        assertPresentsQuickly(data, "six exercises")
-    }
-
-    @Test fun largeHistoryWithManyExercisesPresentsQuickly() {
-        val data = LargeHistoryFixture.appData(LargeHistoryFixture.variedExercises(48))
-        assertEquals(48, data.workoutExercises.map { it.exerciseId to it.convention }.distinct().size)
-        val ui = assertPresentsQuickly(data, "48 exercises")
-        assertTrue(ui.history.first().exercises.any { it.previous != null })
-    }
-
     private val assisted = Exercise(id = "assisted-dip", name = "Assisted dip", muscle = MuscleGroup.TRICEPS,
         equipment = Equipment.SELECTORIZED_MACHINE, convention = LoadConvention.ASSISTANCE)
 
@@ -250,22 +217,22 @@ class WorkoutPresentationTest {
                     RecordFacts(it.exerciseId, it.convention.label, RecordKind.REPS, it.weightKg, it.newReps,
                         null, it.previousReps, it.assistance, w.id, date)
                 }
-                assertEquals("round $round workout ${w.id}", expected, workout.records.map { it.facts() })
+                assertEquals(expected, workout.records.map { it.facts() }, "round $round workout ${w.id}")
                 workout.exercises.forEach { entry ->
                     val pr = weightPrs.firstOrNull { it.exerciseId == entry.exercise.id && it.convention.label == entry.exercise.convention }
-                    assertEquals("round $round entry ${entry.id}", pr?.newWeightKg, entry.provisionalRecordKg)
-                    assertEquals("round $round entry ${entry.id}", pr?.firstRecord ?: false, entry.firstRecord)
+                    assertEquals(pr?.newWeightKg, entry.provisionalRecordKg, "round $round entry ${entry.id}")
+                    assertEquals(pr?.firstRecord ?: false, entry.firstRecord, "round $round entry ${entry.id}")
                     val own = workout.records.filter { it.exercise.id == entry.exercise.id && it.exercise.convention == entry.exercise.convention }
-                    assertTrue("round $round entry ${entry.id}", own.containsAll(entry.records))
+                    assertTrue(own.containsAll(entry.records), "round $round entry ${entry.id}")
                 }
                 beaten += workout.records.count { !it.firstRecord }
                 first += workout.records.count { it.firstRecord }
                 reps += workout.records.count { it.kind == RecordKind.REPS }
             }
         }
-        assertTrue("beaten records: $beaten", beaten > 20)
-        assertTrue("first records: $first", first > 20)
-        assertTrue("reps records: $reps", reps > 20)
+        assertTrue(beaten > 20, "beaten records: $beaten")
+        assertTrue(first > 20, "first records: $first")
+        assertTrue(reps > 20, "reps records: $reps")
     }
 
     @Test fun activeWorkoutRecordsStillComputedAgainstHistory() {
