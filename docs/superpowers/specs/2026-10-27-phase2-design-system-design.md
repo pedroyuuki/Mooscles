@@ -16,7 +16,7 @@ Hoje o app usa o Material 3 com uma paleta verde genérica (`ui/Theme.kt`), a fo
 
 Um diário de treino que parece equipamento de academia, não painel de dados. O nome resume as três ideias:
 
-- **Ferro:** o chão é grafite de anilha (neutros quase pretos com um toque mínimo do verde da marca), com superfícies grossas e calmas, cantos de 12 e 20 dp e nada de vidro, brilho ou gradiente. O círculo da anilha é o motivo gráfico do sistema: o anel do timer tem as marcas de borda de uma anilha, o check da série é um disco, o selo de recorde é uma anilha com uma seta, e o "OO" do nome vira duas anilhas presas por uma pegada.
+- **Ferro:** o chão é grafite de anilha (neutros quase pretos com um toque mínimo do verde da marca), com superfícies grossas e calmas, cantos de 12 e 20 dp e nada de vidro, brilho ou gradiente. O círculo da anilha é o motivo gráfico do sistema: o anel do timer tem as marcas de borda de uma anilha, o check da série é um disco, o selo de recorde é uma anilha com uma seta. Só a marca foge do círculo: o "OO" do nome são duas anilhas quadradas de canto chanfrado (octógono), lado a lado e alinhadas pela borda, com furo central e uma pegada com colares no vão entre elas, para que o par só possa ser lido como um peso.
 - **Giz:** o texto principal é um branco de giz (não branco puro), e as ilustrações de exercício são de traço grosso, como giz no quadro da academia.
 - **Placar:** os números (carga, reps, timer, recordes) usam Barlow Condensed com algarismos tabulares, como um placar. O texto da interface usa Inter.
 
@@ -489,7 +489,7 @@ Direto, calmo, de quem está do lado na academia, sem torcida e sem culpa. Trata
 
 ## Decisões para o dono revisar
 
-1. **Trocar o ícone do launcher** pela marca nova (duas anilhas verdes formando o "OO", sobre grafite). Recomendo trocar junto com a fase 3, quando o app inteiro muda de cara. É uma mudança visível para todo usuário que atualiza.
+1. **Trocar o ícone do launcher** pela marca nova (duas anilhas quadradas de canto chanfrado, verdes, formando o "OO", sobre grafite). Recomendo trocar junto com a fase 3, quando o app inteiro muda de cara. É uma mudança visível para todo usuário que atualiza.
 2. **Tema padrão:** mantive "Sistema" como padrão, como hoje, e desenhei o escuro como tema de marca. A alternativa é abrir no escuro por padrão.
 3. **Separador decimal por idioma:** em pt-BR, as cargas passam a aparecer com vírgula (`82,5`).
 4. **Produção das ilustrações (fase 4):** encomendar a um ilustrador com licença explícita, seguindo este estilo, ou desenhar internamente um piloto de 20 exercícios. Custo e prazo não foram pesquisados.
@@ -498,10 +498,11 @@ Direto, calmo, de quem está do lado na academia, sem torcida e sem culpa. Trata
 ## Aprovação
 
 - **2026-10-27:** o dono aprovou o design system ("gostei do designe system, ta aprovado"). Nas cinco escolhas em aberto, valem os padrões propostos nesta spec:
-  1. o ícone novo (duas anilhas) entra na fase 3;
+  1. o ícone novo (duas anilhas quadradas de canto chanfrado) entra na fase 3;
   2. o tema padrão continua "Sistema";
   3. as cargas aparecem com vírgula em pt-BR (`82,5`);
   4. as ilustrações começam com um piloto próprio de 20 exercícios;
   5. a vibração segue o ajuste do sistema, sem interruptor por enquanto.
 
   Qualquer uma pode ser revista depois.
+- **2026-10-27:** o dono pediu outra forma para a marca: as anilhas redondas do "OO" lembravam um peito ("os dois OO do nome da app tá parecendo um peito; talvez deixar mais parecido com aqueles pesos mais quadrados com canto chanfrado"). A marca passou a usar anilhas quadradas de canto chanfrado, separadas por uma pegada com colares, no logotipo e nas propostas de ícone. Paleta, tipografia e os motivos redondos funcionais (anel do timer, disco do check, selo de recorde) não mudaram.
