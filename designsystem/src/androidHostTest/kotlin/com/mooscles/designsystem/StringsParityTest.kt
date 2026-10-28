@@ -50,7 +50,7 @@ class StringsParityTest {
 
     @Test
     fun placeholdersMatchPerKey() {
-        val placeholder = Regex("%\\d+\\$[sd]")
+        val placeholder = Regex("%(\\d+\\$)?[sd]")
         val english = en
         val portuguese = pt
         for ((key, e) in english) {
@@ -85,7 +85,7 @@ class StringsParityTest {
                 var i = 0
                 while (i < t.length) {
                     val cp = t.codePointAt(i)
-                    val emoji = cp in 0x1F000..0x1FAFF || cp in 0x2600..0x27BF || cp in 0x2B00..0x2BFF || cp == 0xFE0F
+                    val emoji = cp in 0x1F000..0x1FAFF || cp in 0x2190..0x21FF || cp in 0x2300..0x23FF || cp in 0x2600..0x27BF || cp in 0x2900..0x297F || cp in 0x2B00..0x2BFF || cp == 0xFE0F || cp == 0x200D
                     assertTrue(!emoji, "$label ${e.name} has an emoji")
                     i += Character.charCount(cp)
                 }
