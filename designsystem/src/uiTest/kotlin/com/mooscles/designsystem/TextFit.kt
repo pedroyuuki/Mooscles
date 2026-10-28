@@ -17,7 +17,13 @@ import kotlin.test.assertTrue
 fun assertShownWhole(layout: TextLayoutResult, where: String = "") {
     val text = layout.layoutInput.text.text
     val needed = ceil(layout.multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
-    assertTrue(layout.lineCount == 1 && !layout.multiParagraph.didExceedMaxLines, "$where \"$text\" is not on one line")
+    assertTrue(
+        layout.lineCount == 1 && !layout.multiParagraph.didExceedMaxLines,
+        "$where \"$text\" is not on one line: lines=${layout.lineCount}, " +
+            "exceededMaxLines=${layout.multiParagraph.didExceedMaxLines}, maxLines=${layout.layoutInput.maxLines}, " +
+            "softWrap=${layout.layoutInput.softWrap}, maxWidth=${layout.layoutInput.constraints.maxWidth}, " +
+            "size=${layout.size}, needed=$needed, paragraphWidth=${layout.multiParagraph.width}",
+    )
     assertTrue(needed <= layout.size.width, "$where \"$text\" needs $needed px, has ${layout.size.width}")
     assertTrue(layout.multiParagraph.height <= layout.size.height + 0.5f, "$where \"$text\" is ${layout.multiParagraph.height} px tall, has ${layout.size.height}")
 }
