@@ -9,6 +9,10 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -102,5 +106,21 @@ class StepperTest {
             assertTrue(touch.height >= height - 0.5f, "$tag height ${touch.height} < $height")
             assertTrue(touch.width >= width - 0.5f, "$tag width ${touch.width} < $width")
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun keyboardActivatesTheFocusedButton() = runComposeUiTest {
+        var value by mutableStateOf(0.0)
+        withTheme { Stepper(value, { value = it }, step = 1.0, min = 0.0, display = "$value", decreaseLabel = "Decrease", increaseLabel = "Increase") }
+        waitForIdle()
+        onNodeWithTag(StepperIncreaseTag).requestFocus()
+        waitForIdle()
+        onNodeWithTag(StepperIncreaseTag).performKeyInput { pressKey(Key.Enter) }
+        waitForIdle()
+        assertEquals(1.0, value)
+        onNodeWithTag(StepperIncreaseTag).performKeyInput { pressKey(Key.Spacebar) }
+        waitForIdle()
+        assertEquals(2.0, value)
     }
 }

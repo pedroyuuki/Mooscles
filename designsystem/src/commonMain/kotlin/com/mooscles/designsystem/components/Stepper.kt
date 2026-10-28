@@ -29,6 +29,11 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.theme.MTheme
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -104,6 +109,16 @@ private fun StepperButton(
                 contentDescription = label
                 role = Role.Button
                 if (enabled) onClick { currentStep(); true } else disabled()
+            }
+            .onKeyEvent {
+                // One step per press, on key up; Enter, NumPad Enter and Space.
+                val activates = it.key == Key.Enter || it.key == Key.NumPadEnter || it.key == Key.Spacebar
+                if (enabled && activates && it.type == KeyEventType.KeyUp) {
+                    currentStep()
+                    true
+                } else {
+                    false
+                }
             }
             .focusable(enabled, source)
             .pointerInput(enabled, repeatDelay, repeatInterval) {
