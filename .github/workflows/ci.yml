@@ -65,6 +65,23 @@ jobs:
         # :shared registers no lint report task of its own (AGP 9.3.3 KMP library).
         run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
+      # Spike (branch spike/phase2-tnum only): shapes the digits of the spike fonts with
+      # HarfBuzz, with and without tnum. A host-side indicator, not the device proof.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: ${{ !cancelled() }}
+        with:
+          python-version: '3.13'
+
+      - name: Font check (HarfBuzz)
+        if: ${{ !cancelled() }}
+        # Explicit bash: -o pipefail, so the script's exit code survives tee.
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check fonttools==4.68.0 uharfbuzz==0.57.0
+          python3 -I tools/check_fonts.py fontspike/src/commonMain/composeResources/font/*.ttf \
+            --lock fontspike/fonts.sha256 --require-proportional '*.ttf' --require-tabular '*.ttf' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
       # The exported JSON is a contract with installed databases. Room writes shared/schemas
       # only when a schema changed (otherwise the copy task is NO-SOURCE), so a build that
       # regenerates a different or new file fails here. Against the merge base with main,
@@ -184,7 +201,7 @@ jobs:
           restore-keys: konan-${{ runner.os }}-
 
       - name: Compile for iOS and run the simulator tests
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --console=plain --continue
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :fontspike:iosSimulatorArm64Test --console=plain --continue
 
       # kspIosArm64 and kspIosSimulatorArm64 run only here, so an iOS-only divergence in the
       # exported schema (and its identityHash) is caught here, not in the host job.
@@ -233,6 +250,25 @@ jobs:
           if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
           if ($platform.Count -ne 6) { throw "$($platform.Count) iOS entry point tests ran; exactly 6 are expected (update this number and MIN_IOS_TESTS when adding or removing one)." }
+
+      # Spike: the SPIKE lines of the font measurements, from the test results.
+      - name: Spike measurements (iOS simulator)
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          ls fontspike/build/test-results/iosSimulatorArm64Test/*.xml
+          grep -h -o 'SPIKE [^<]*' fontspike/build/test-results/iosSimulatorArm64Test/*.xml | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload spike results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fontspike-ios-results
+          path: |
+            fontspike/build/test-results/
+            fontspike/build/reports/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload iOS reports
         if: ${{ failure() }}

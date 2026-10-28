@@ -8,3 +8,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Mooscles"
 include(":app", ":shared")
+// Throwaway spike (branch spike/phase2-tnum only): tabular figures and the Inter weight axis.
+include(":fontspike")
