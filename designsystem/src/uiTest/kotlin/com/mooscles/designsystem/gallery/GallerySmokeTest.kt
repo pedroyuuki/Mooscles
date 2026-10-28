@@ -6,8 +6,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.gallery_section_buttons
+import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.resources.gallery_section_icons
+import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,6 +22,9 @@ class GallerySmokeTest {
     private val knownText: Map<GalleryPage, StringResource> = mapOf(
         GalleryPage.Foundations to Res.string.gallery_section_colors,
         GalleryPage.Icons to Res.string.gallery_section_icons,
+        GalleryPage.Buttons to Res.string.gallery_section_buttons,
+        GalleryPage.Chips to Res.string.gallery_section_chip_kinds,
+        GalleryPage.Rows to Res.string.gallery_section_rows,
     )
 
     @OptIn(ExperimentalTestApi::class)
