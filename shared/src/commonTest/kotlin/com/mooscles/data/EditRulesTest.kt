@@ -1,13 +1,13 @@
 package com.mooscles.data
 
 import com.mooscles.domain.RestDuration
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class EditRulesTest {
     private fun message(block: () -> Unit): String? =
-        assertThrows(IllegalArgumentException::class.java) { block() }.message
+        assertFailsWith<IllegalArgumentException> { block() }.message
 
     @Test fun nameTrimsAndAccepts() = assertEquals("Bench", EditRules.name("  Bench  "))
 

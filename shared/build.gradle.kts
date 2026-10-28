@@ -3,13 +3,18 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // Code shared by the Android app and a future iOS app. commonMain stays free of
 // JVM and Android APIs; androidMain and iosMain hold the platform entry points.
 plugins {
-    // Both plugins are already on the build classpath (root buildscript and the
+    // These plugins are already on the build classpath (root buildscript and the
     // root plugins block), so they are applied here by id only.
     id("org.jetbrains.kotlin.multiplatform")
     id("com.android.kotlin.multiplatform.library")
+    id("com.google.devtools.ksp")
+    id("androidx.room")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 kotlin {
+    // Room's @ConstructedBy needs an expect object, which Kotlin still marks as Beta.
+    compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
     android {
         // Not com.mooscles: the app already generates com.mooscles.R.
         namespace = "com.mooscles.shared"
@@ -24,6 +29,15 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            api("androidx.room:room-runtime:2.8.5")
+            api("androidx.sqlite:sqlite:2.6.2")
+            api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+        }
+        androidMain.dependencies {
+            // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.
+            // sqlite 2.7.x pairs with Room 3 and drops restricted APIs that 2.8.x was compiled with.
+            //noinspection GradleDependency
+            api("androidx.sqlite:sqlite-framework:2.6.2")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -35,4 +49,15 @@ kotlin {
             implementation("junit:junit:4.13.2")
         }
     }
+}
+
+// Same exported files as before the move (app/schemas): the plugin writes them only here.
+room { schemaDirectory("$projectDir/schemas") }
+
+// One Room processor per target; never kspCommonMainMetadata, which would generate a second
+// WorkoutDatabase_Impl into the common sources.
+dependencies {
+    add("kspAndroid", "androidx.room:room-compiler:2.8.5")
+    add("kspIosArm64", "androidx.room:room-compiler:2.8.5")
+    add("kspIosSimulatorArm64", "androidx.room:room-compiler:2.8.5")
 }

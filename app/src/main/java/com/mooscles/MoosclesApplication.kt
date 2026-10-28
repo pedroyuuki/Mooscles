@@ -3,6 +3,7 @@ package com.mooscles
 import android.app.Application
 import com.mooscles.data.WorkoutDatabase
 import com.mooscles.data.WorkoutRepository
+import com.mooscles.data.open
 import com.mooscles.timer.RestTimerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

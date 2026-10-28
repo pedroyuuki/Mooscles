@@ -15,12 +15,12 @@ import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutExercise
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ImportPlannerTest {
     private val bench = Exercise("bench", "Bench press", MuscleGroup.CHEST, Equipment.BARBELL, LoadConvention.TOTAL_LOAD, custom = false)
@@ -77,8 +77,8 @@ class ImportPlannerTest {
     )
 
     private fun assertInvalid(vararg mentions: String, block: () -> Unit) {
-        val error = assertThrows(BackupException.Invalid::class.java) { block() }
-        mentions.forEach { assertTrue("\"${error.detail}\" should mention $it", error.detail.contains(it)) }
+        val error = assertFailsWith<BackupException.Invalid> { block() }
+        mentions.forEach { assertTrue(error.detail.contains(it), "\"${error.detail}\" should mention $it") }
     }
 
     private fun assertNothingInserted(entities: BackupEntities) {

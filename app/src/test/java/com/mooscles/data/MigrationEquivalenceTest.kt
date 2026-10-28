@@ -136,10 +136,7 @@ class MigrationEquivalenceTest {
     }
 
     private fun createLegacyDatabase(version: Int) {
-        val schemaPath = "schemas/com.mooscles.data.WorkoutDatabase/$version.json"
-        val schemaFile = listOf(File(schemaPath), File("app/$schemaPath")).firstOrNull { it.isFile }
-            ?: error("Room's exported version $version schema was not found")
-        val schema = JSONObject(schemaFile.readText()).getJSONObject("database")
+        val schema = JSONObject(exportedSchemaFile(version).readText()).getJSONObject("database")
         assertEquals(version, schema.getInt("version"))
         file.parentFile!!.mkdirs()
         SQLiteDatabase.openOrCreateDatabase(file, null).use { raw ->

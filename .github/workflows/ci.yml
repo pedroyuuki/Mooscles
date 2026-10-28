@@ -63,6 +63,19 @@ jobs:
         # :shared registers no lint report task of its own (AGP 9.3.3 KMP library).
         run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
+      # Room rewrites shared/schemas on every build. The exported JSON is a contract with installed
+      # databases, so a build that changes or adds a schema file fails here.
+      - name: Room schemas unchanged
+        if: ${{ !cancelled() }}
+        run: |
+          git diff --exit-code -- shared/schemas
+          status=$(git status --porcelain -- shared/schemas)
+          if [ -n "$status" ]; then
+            echo "Room schema files changed or appeared:"
+            echo "$status"
+            exit 1
+          fi
+
       - name: Summarize host tests
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -169,7 +182,7 @@ jobs:
         env:
           # The common tests in :shared today. Raise it when tests move into
           # commonTest, so a silently skipped class fails the job.
-          MIN_IOS_TESTS: 8
+          MIN_IOS_TESTS: 45
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

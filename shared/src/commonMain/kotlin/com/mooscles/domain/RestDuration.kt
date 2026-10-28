@@ -66,7 +66,7 @@ object RestDuration {
             if (removed.isEmpty() && start == 1 && end == 2) removed = listOf(0)
             removed.forEach { characters[it] = '0' }
             val caret = removed.firstOrNull() ?: start.coerceIn(0, 4)
-            return EditorValue(String(characters), caret, caret)
+            return EditorValue(characters.concatToString(), caret, caret)
         }
 
         val firstSlot = when (start) { 0 -> 0; 1, 2 -> 1; 3 -> 2; else -> return previous }
@@ -74,7 +74,7 @@ object RestDuration {
         if (start == 0 && end == 4) digitPositions.forEach { characters[it] = '0' }
         else digitPositions.filter { it in start until end }.forEach { characters[it] = '0' }
         inserted.forEachIndexed { index, character -> characters[digitPositions[firstSlot + index]] = character }
-        val text = String(characters)
+        val text = characters.concatToString()
         return if (parse(text) != null) selectNext(text, firstSlot + inserted.length) else previous
     }
 
