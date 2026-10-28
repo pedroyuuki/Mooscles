@@ -32,6 +32,9 @@ kotlin {
             api("androidx.room:room-runtime:2.8.5")
             api("androidx.sqlite:sqlite:2.6.2")
             api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+            // AppPreferences and RestTimerPersistence take the store ready-made; the Android
+            // preferencesDataStore delegate (datastore-preferences, same 1.3.0) stays in :app.
+            api("androidx.datastore:datastore-preferences-core:1.3.0")
         }
         androidMain.dependencies {
             // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.

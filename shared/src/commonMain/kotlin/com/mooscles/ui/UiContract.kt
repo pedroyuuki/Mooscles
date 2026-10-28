@@ -88,7 +88,7 @@ data class BackupUi(
     val messageIsError: Boolean = false, val working: String? = null,
 )
 
-/** Document URIs travel as strings so this contract stays free of android.*. */
+/** Document URIs travel as strings so this contract stays free of Android types. */
 interface DataActions {
     fun exportData(uri: String)
     fun prepareImport(uri: String)

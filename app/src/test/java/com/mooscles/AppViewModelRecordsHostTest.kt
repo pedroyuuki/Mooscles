@@ -196,7 +196,7 @@ class AppViewModelRecordsHostTest {
             } == true
         }
         restored.startWorkout(routineId)
-        awaitUi(restored) { it.active?.id != null && it.active.id != active.id }
+        awaitUi(restored) { it.active.let { a -> a?.id != null && a.id != active.id } }
         val future = restored.ui.value.active!!.exercises.single()
         assertEquals(105, future.restSeconds)
         assertEquals(3, future.sets.size)

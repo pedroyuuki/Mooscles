@@ -192,7 +192,7 @@ jobs:
         env:
           # The common tests in :shared today. Raise it when tests move into
           # commonTest, so a silently skipped class fails the job.
-          MIN_IOS_TESTS: 138
+          MIN_IOS_TESTS: 150
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

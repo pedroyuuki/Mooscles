@@ -1,7 +1,8 @@
 package com.mooscles.timer
 
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class RestTimerStateTest {
     @Test fun missingDurationDefaultsToTwoMinutesWhileSavedDurationsRemainExplicit() {
