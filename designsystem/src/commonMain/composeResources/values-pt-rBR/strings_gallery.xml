@@ -72,4 +72,24 @@
     <string name="gallery_toast_action_message">Série removida</string>
     <string name="gallery_toast_action">Desfazer</string>
     <string name="gallery_toast_error_message">Não foi possível salvar o arquivo</string>
+    <string name="gallery_page_workout_inputs">Controles do treino</string>
+    <string name="gallery_page_set_row">Linha de série</string>
+    <string name="gallery_section_workout_inputs">Campo numérico, stepper, check da série e selo de PR</string>
+    <string name="gallery_section_set_rows">Linhas de série em cada estado</string>
+    <string name="gallery_sample_load_name">carga</string>
+    <string name="gallery_sample_load_label">Carga</string>
+    <string name="gallery_sample_reps_label">Repetições</string>
+    <string name="gallery_sample_step">2,5 quilos</string>
+    <string name="gallery_page_timer">Timer de descanso</string>
+    <string name="gallery_page_records">Recordes</string>
+    <string name="gallery_page_exercise_card">Card de exercício</string>
+    <string name="gallery_section_timer">Dock do timer e anel expandido</string>
+    <string name="gallery_section_records">Aviso de recorde</string>
+    <string name="gallery_section_exercise_card">Card de exercício com e sem imagem</string>
+    <string name="gallery_show_pr_toast">Mostrar aviso de recorde</string>
+    <string name="gallery_sample_exercise">Supino reto</string>
+    <string name="gallery_sample_exercise_meta">Barra, peito</string>
+    <string name="gallery_sample_exercise_next">Supino inclinado com halteres</string>
+    <string name="gallery_sample_pr_detail">85 kg × 6</string>
+    <string name="gallery_finish_rest">Terminar descanso</string>
 </resources>

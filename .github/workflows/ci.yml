@@ -293,9 +293,11 @@ jobs:
           # SpaceTokensTest 4, SizesTimingElevationTest 3, MotionTokensTest 3, ReducedMotionTest 1, IconsTest 4,
           # MoosclesNumbersTest 7, PluralCountTest 2, AppLocaleTest 3, HapticsMappingTest 3, MotionPolicyTest 3,
           # FocusRingTest 1, MButtonTest 4, MIconButtonTest 2, MChipTest 2, RowsTest 5, MTextTest 2, MSwitchTest 2, MRadioTest 1,
-          # MTextFieldTest 6, MProgressBarTest 3, FeedbackTest 5, MDialogTest 4, MBottomSheetTest 2, MToastTest 4.
+          # MTextFieldTest 6, MProgressBarTest 3, FeedbackTest 5, MDialogTest 4, MBottomSheetTest 2, MToastTest 4,
+          # NumericInputTest 4, NumericFieldTest 3, StepperTest 6, SetCheckTest 3, SetRowTest 11, PrBadgeTest 1,
+          # RestTimerRingMathTest 3, RestTimerDockTest 8, RestTimerExpandedTest 5, PrToastTest 3, ExerciseCardTest 5.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 105
+          MIN_DS_IOS_TESTS: 157
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
