@@ -28,9 +28,9 @@ object DecimalText {
         if (magnitude >= EXACT_LIMIT) return value.toString()
 
         // a * 100 is not exact, so start just below its floor and settle on the first
-        // cent whose upper tie lies above the magnitude.
+        // cent the magnitude does not round up past. Both loops use the same rule.
         var cents = maxOf(0L, floor(magnitude * 100.0).toLong() - 1)
-        while (cents > 0 && magnitude < tie(cents - 1)) cents--
+        while (cents > 0 && !roundsUpPast(magnitude, cents - 1)) cents--
         while (roundsUpPast(magnitude, cents)) cents++
 
         val fraction = cents % 100

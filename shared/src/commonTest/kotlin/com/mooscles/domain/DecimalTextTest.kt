@@ -1,5 +1,6 @@
 package com.mooscles.domain
 
+import kotlin.math.nextDown
 import kotlin.math.ulp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -67,6 +68,11 @@ class DecimalTextTest {
             45.359237 to 0x3d00000000000000L,
             102.05828325 to 0x3d10000000000000L,
             100000.0 to 0x3db0000000000000L,
+            -100000.0 to 0x3db0000000000000L,
+            1.0.nextDown() to 0x3ca0000000000000L,
+            2.0.nextDown() to 0x3cb0000000000000L,
+            // The largest subnormal, just below Double's smallest normal 2.2250738585072014E-308.
+            Double.fromBits(0x000fffffffffffffL) to 0x1L,
             Double.MAX_VALUE to 0x7ca0000000000000L,
             Double.POSITIVE_INFINITY to 0x7ff0000000000000L,
             Double.NaN to 0x7ff8000000000000L,

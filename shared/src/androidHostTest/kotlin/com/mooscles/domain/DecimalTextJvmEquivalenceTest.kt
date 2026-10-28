@@ -21,9 +21,14 @@ class DecimalTextJvmEquivalenceTest {
         assertFixed2(thousandths(), expectedCount = 2_000_001)
     }
 
+    /**
+     * Every tie up to 4000, every 97th tie up to the heaviest load in pounds (220,462.26), and
+     * the eighth-kilogram loads (x.125, x.375, x.625, x.875, all exact ties) up to 100,000.
+     */
     @Test
     fun fixed2EqualsStringFormatAroundEveryTie() {
-        assertFixed2(ties(), expectedCount = 6 * 400_001)
+        val ks = (0L..400_000L).asSequence() + (0L..22_046_300L step 97).asSequence() + eighthLoadTies()
+        assertFixed2(ties(ks), expectedCount = 6 * (400_001 + 227_282 + 400_000))
     }
 
     /** From 2^43 to 1e13 a double's spacing is 2^-9, so the tie's own double can print as k.xx4. */
@@ -97,6 +102,10 @@ class DecimalTextJvmEquivalenceTest {
             val tie = (2 * k + 1).toDouble() / 200.0
             sequenceOf(tie, tie.nextUp(), tie.nextDown(), -tie, -tie.nextUp(), -tie.nextDown())
         }
+
+        /** The cents k whose tie (2k + 1) / 200 is n.125, n.375, n.625 or n.875, for n below 100,000. */
+        fun eighthLoadTies(): Sequence<Long> =
+            (0L until 100_000L).asSequence().flatMap { n -> sequenceOf(100 * n + 12, 100 * n + 37, 100 * n + 62, 100 * n + 87) }
 
         /** Kilograms shown in pounds, and pound entries stored in kilograms and shown again. */
         fun unitConversions(): Sequence<Double> =

@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Full history and origin/main, for the schema check's merge base.
+          fetch-depth: 0
 
       # gradle/gradle-daemon-jvm.properties asks for an Adoptium 21 daemon;
       # providing it here avoids a toolchain download on every run.
@@ -63,8 +65,10 @@ jobs:
         # :shared registers no lint report task of its own (AGP 9.3.3 KMP library).
         run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
-      # Room rewrites shared/schemas on every build. The exported JSON is a contract with installed
-      # databases, so a build that changes or adds a schema file fails here.
+      # The exported JSON is a contract with installed databases. Room writes shared/schemas
+      # only when a schema changed (otherwise the copy task is NO-SOURCE), so a build that
+      # regenerates a different or new file fails here. Against the merge base with main,
+      # an existing schema file may never change or disappear; only a new N+1 file may appear.
       - name: Room schemas unchanged
         if: ${{ !cancelled() }}
         run: |
@@ -75,6 +79,12 @@ jobs:
             echo "$status"
             exit 1
           fi
+          base=$(git merge-base origin/main HEAD)
+          git diff --exit-code --no-renames --diff-filter=MD "$base" -- shared/schemas
+          # Before :shared the schemas lived in app/schemas: each must still exist, unchanged.
+          for file in $(git ls-tree -r --name-only "$base" -- app/schemas); do
+            git diff --exit-code "$base:$file" "HEAD:shared/${file#app/}"
+          done
 
       - name: Summarize host tests
         if: ${{ !cancelled() }}
