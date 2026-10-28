@@ -26,6 +26,8 @@ class SizesTimingElevationTest {
         assertEquals(60, s.tickCount)
         assertEquals(0.9f, s.sheetMaxFraction)
         assertEquals(0.3f, s.progressIndeterminateFraction)
+        // Not in decision 7: the dialog card width, added in Task 10 (the spec gives none).
+        assertEquals(360.dp, s.dialogMaxWidth)
     }
 
     @Test

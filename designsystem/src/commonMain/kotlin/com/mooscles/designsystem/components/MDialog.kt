@@ -81,8 +81,6 @@ fun MDialog(
     LaunchedEffect(Unit) {
         progress.animateTo(1f, tween(enterMs, easing = if (reduced) motion.easeOut else motion.easeDrawer))
     }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-
     fun close(then: () -> Unit) {
         if (closing) return
         closing = true
@@ -100,6 +98,8 @@ fun MDialog(
             usePlatformDefaultWidth = false,
         ),
     ) {
+        // Inside the Dialog's own composition, so the requester is attached before it is used.
+        LaunchedEffect(Unit) { focus.requestFocus() }
         Box(
             Modifier
                 .fillMaxSize()

@@ -5,6 +5,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -61,6 +62,14 @@ class MDialogTest {
             waitForIdle()
             assertEquals(1, dismissed, "a tap on the scrim dismisses")
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun focusMovesIntoTheDialog() = runComposeUiTest {
+        withTheme { MDialog("Finish?", "Saved.", "Finish", onConfirm = {}, onDismiss = {}) }
+        waitForIdle()
+        onNode(isFocused()).assertExists()
     }
 
     @OptIn(ExperimentalTestApi::class)

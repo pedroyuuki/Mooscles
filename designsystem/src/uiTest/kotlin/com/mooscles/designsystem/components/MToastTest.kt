@@ -3,7 +3,12 @@ package com.mooscles.designsystem.components
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -72,6 +77,13 @@ class MToastTest {
             assertEquals(MToastResult.ActionPerformed, run.result)
             onNodeWithTag(ToastTag).assertDoesNotExist()
         }
+    }
+
+    @Test
+    fun toastIsAPoliteLiveRegionWithTheMessage() = runComposeUiTest {
+        start(Run(), "Saved")
+        onNodeWithTag(ToastTag).assertTextContains("Saved")
+        onNodeWithTag(ToastTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
     @Test

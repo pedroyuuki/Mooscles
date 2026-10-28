@@ -126,8 +126,6 @@ fun MBottomSheet(
             }
         }
     }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-
     Dialog(
         onDismissRequest = { close() },
         properties = DialogProperties(
@@ -136,6 +134,8 @@ fun MBottomSheet(
             usePlatformDefaultWidth = false,
         ),
     ) {
+        // Inside the Dialog's own composition, so the requester is attached before it is used.
+        LaunchedEffect(Unit) { focus.requestFocus() }
         BoxWithConstraints(
             Modifier.fillMaxSize().overlayKeys { close() }.focusRequester(focus).focusable(),
         ) {
@@ -156,7 +156,8 @@ fun MBottomSheet(
                     .testTag(SheetTag)
                     .onSizeChanged { sheetHeight = it.height }
                     .offset {
-                        val y = if (reduced) 0 else if (hidden) sheetHeight else offset.roundToInt()
+                        // Reduced motion only drops the programmatic slide; a finger drag still follows.
+                        val y = if (hidden) (if (reduced) 0 else sheetHeight) else offset.roundToInt()
                         IntOffset(0, y)
                     }
                     .graphicsLayer { alpha = if (reduced) fade.value else if (hidden) 0f else 1f }

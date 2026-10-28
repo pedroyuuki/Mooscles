@@ -139,7 +139,7 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
                 .background(colors.bgInverse, shape)
                 .heightIn(min = MTheme.targets.min)
                 .padding(start = MTheme.space.s4)
-                .semantics { liveRegion = LiveRegionMode.Polite },
+                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
         ) {
