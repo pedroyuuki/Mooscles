@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -33,8 +34,10 @@ import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_close
+import com.mooscles.designsystem.resources.ds_error_prefix
 import com.mooscles.designsystem.theme.LocalMContentColor
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.designsystem.tokens.MoosclesColors
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -48,6 +51,21 @@ enum class MToastResult { Dismissed, ActionPerformed }
 internal const val ToastTag = "toast"
 internal const val ToastActionTag = "toast-action"
 internal const val ToastCloseTag = "toast-close"
+internal const val ToastErrorIconTag = "toast-error-icon"
+
+/** What a toast is drawn with: the surface, the message, the action and the close button. */
+internal data class ToastColors(val surface: Color, val content: Color, val action: Color, val icon: Color?)
+
+/**
+ * An info toast is `bg.inverse` with its action in `accent.inverseText`. An error toast takes the
+ * error surface of [ErrorBanner] instead ([ErrorSurfaceColors]: `danger.subtle`, the alert icon in
+ * `danger.text`, message and action in `text.primary`), so it is told apart by its icon and color, not
+ * only by its words. No `danger.*` token reaches 3:1 on `bg.inverse` (2.44 light, 1.93 dark).
+ */
+internal fun toastColors(kind: MToastKind, colors: MoosclesColors): ToastColors = when (kind) {
+    MToastKind.Info -> ToastColors(colors.bgInverse, colors.textInverse, colors.accentInverseText, icon = null)
+    MToastKind.Error -> ErrorSurfaceColors.of(colors).let { ToastColors(it.surface, it.content, it.content, it.icon) }
+}
 
 @Stable
 internal class MToastData(
@@ -90,7 +108,8 @@ class MToastHostState {
 /**
  * Draws the current toast of [state] at the bottom of its bounds (give it the screen as
  * [modifier]; it passes touches through outside the toast). `bg.inverse` surface, action in
- * `accent.inverseText`, announced politely to screen readers. It enters with `motion.base`
+ * `accent.inverseText`; an error toast is `danger.subtle` with the `CircleAlert` icon, read as
+ * "Error" before the message ([toastColors]). Announced politely to screen readers. It enters with `motion.base`
  * and leaves with `motion.fast`; with reduced motion it only fades.
  */
 @Composable
@@ -123,9 +142,10 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
 
     Box(modifier, contentAlignment = Alignment.BottomCenter) {
         val toast = shown ?: return@Box
-        val colors = MTheme.colors
+        val colors = toastColors(toast.kind, MTheme.colors)
         val shape = RoundedCornerShape(MTheme.radius.md)
         val close = stringResource(Res.string.ds_close)
+        val errorLabel = stringResource(Res.string.ds_error_prefix)
         Row(
             Modifier
                 .padding(MTheme.space.s4)
@@ -136,18 +156,27 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
                     translationY = if (reduced) 0f else (1f - progress.value) * rise.toPx()
                 }
                 .overlayElevation(shape)
-                .background(colors.bgInverse, shape)
+                .background(colors.surface, shape)
                 .heightIn(min = MTheme.targets.min)
-                .padding(start = MTheme.space.s4)
+                .padding(start = if (colors.icon != null) MTheme.space.s3 else MTheme.space.s4)
                 .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
         ) {
-            CompositionLocalProvider(LocalMContentColor provides colors.textInverse) {
+            CompositionLocalProvider(LocalMContentColor provides colors.content) {
+                if (colors.icon != null) {
+                    MIcon(
+                        MIcons.CircleAlert,
+                        contentDescription = errorLabel,
+                        modifier = Modifier.testTag(ToastErrorIconTag),
+                        size = MTheme.sizes.icon20,
+                        tint = colors.icon,
+                    )
+                }
                 MText(
                     toast.message,
                     style = MTheme.type.bodyMd,
-                    color = colors.textInverse,
+                    color = colors.content,
                     modifier = Modifier.weight(1f).padding(vertical = MTheme.space.s3),
                 )
                 if (toast.actionLabel != null) {
@@ -159,7 +188,7 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
                             .padding(horizontal = MTheme.space.s2),
                         contentAlignment = Alignment.Center,
                     ) {
-                        MText(toast.actionLabel, style = MTheme.type.labelLg, color = colors.accentInverseText)
+                        MText(toast.actionLabel, style = MTheme.type.labelLg, color = colors.action)
                     }
                 }
                 if (toast.kind == MToastKind.Error || toast.actionLabel != null) {
@@ -171,7 +200,7 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
                             .clickable(role = Role.Button) { toast.finish(MToastResult.Dismissed) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        MIcon(MIcons.X, contentDescription = null, size = MTheme.sizes.icon20, tint = colors.textInverse)
+                        MIcon(MIcons.X, contentDescription = null, size = MTheme.sizes.icon20, tint = colors.content)
                     }
                 }
             }
