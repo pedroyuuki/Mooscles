@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -46,6 +47,9 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_loading
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
+
+/** The tag of the drawn box of a button (background and outline), inside its touch target. */
+const val ButtonContainerTag = "button-container"
 
 /** The tag of a button's leading icon, present only when [MButton] has one. */
 const val ButtonIconTag = "button-icon"
@@ -115,11 +119,20 @@ fun MButton(
                 enabled = clickable,
                 role = Role.Button,
                 onClick = onClick,
-            ),
+            )
+            // The drawn box gets the button's minimum width (all of it with fillMaxWidth), but not
+            // its minimum height: an S button draws 40 dp, centered in its 48 dp target.
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints.copy(minHeight = 0))
+                val height = maxOf(placeable.height, constraints.minHeight)
+                layout(placeable.width, height) { placeable.place(0, (height - placeable.height) / 2) }
+            },
         contentAlignment = Alignment.Center,
+        propagateMinConstraints = true,
     ) {
         Box(
             Modifier
+                .testTag(ButtonContainerTag)
                 .heightIn(min = drawnHeight)
                 .mFocusRing(shape, source)
                 .background(container, shape)

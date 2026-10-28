@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,7 +55,8 @@ const val TextFieldErrorIconTag = "text-field-error-icon"
  * A text field. The border is `border.strong`, or 2 dp `danger.text` with an error, which is
  * always shown as the `CircleAlert` icon plus the message so color is never the only signal.
  * The label, the help (or error) text and the typed value form one merged accessibility node, and an error is also reported through `error` semantics.
- * The box is at least `numericFieldHeight` tall and grows with the text, so it never clips.
+ * The box is at least `numericFieldHeight` tall and grows with the text, so it never clips, and
+ * it fills the width available to the field (as wide as its modifier allows).
  * [suffix] is a short unit drawn after the value inside the box (such as "min"), in
  * `text.secondary`; it is part of the field's accessible text. [singleLine] keeps the value on
  * one line: Enter (also from a hardware keyboard) runs the IME action instead of a line break.
@@ -107,11 +109,14 @@ fun MTextField(
             interactionSource = source,
             cursorBrush = SolidColor(colors.accentText),
             decorationBox = { inner ->
-                Column(verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
+                // The text field lays out this box with no minimum width: filling the width it may
+                // take makes a field given fillMaxWidth (or a width) draw that wide.
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
                     MText(label, MTheme.type.labelMd, color = if (enabled) colors.textSecondary else colors.textDisabled)
                     Box(
                         Modifier
                             .testTag(TextFieldBoxTag)
+                            .fillMaxWidth()
                             .heightIn(min = MTheme.sizes.numericFieldHeight)
                             .mFocusRing(shape, source)
                             .background(if (enabled) colors.bgSurface else colors.bgInset, shape)
