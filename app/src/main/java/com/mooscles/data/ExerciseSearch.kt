@@ -1,8 +1,5 @@
 package com.mooscles.data
 
-import java.text.Normalizer
-import java.util.Locale
-
 /** Shared offline search for the library and picker; synonyms never create exercise identities. */
 object ExerciseSearch {
     private val aliases = mapOf(
@@ -45,8 +42,6 @@ object ExerciseSearch {
     )
 
     private val catalogNames by lazy { ExerciseCatalog.exercises.associate { it.id to it.name } }
-    private val marks = Regex("\\p{M}+")
-    private val punctuation = Regex("[^a-z0-9]+")
     private val equivalents = listOf(
         Regex("\\bdb\\b") to "dumbbell",
         Regex("\\bbb\\b") to "barbell",
@@ -80,9 +75,7 @@ object ExerciseSearch {
     }
 
     private fun normalize(value: String): String {
-        var normalized = punctuation.replace(
-            marks.replace(Normalizer.normalize(value, Normalizer.Form.NFD), "").lowercase(Locale.ROOT), " "
-        ).trim()
+        var normalized = SearchFolding.fold(value)
         equivalents.forEach { (pattern, replacement) -> normalized = pattern.replace(normalized, replacement) }
         return normalized
     }
