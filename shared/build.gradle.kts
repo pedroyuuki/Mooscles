@@ -39,6 +39,8 @@ kotlin {
             //noinspection GradleDependency
             api("androidx.sqlite:sqlite-framework:2.6.2")
         }
+        // LargeHistoryFixture, shared with the :app host tests (app/build.gradle.kts).
+        commonTest { kotlin.srcDir("src/testFixtures/kotlin") }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")

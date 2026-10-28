@@ -1,7 +1,6 @@
 package com.mooscles.domain
 
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
 
 class RestDurationTest {
     @Test fun `new default is two minutes with a fixed colon and two seconds digits`() {
@@ -21,7 +20,7 @@ class RestDurationTest {
 
     @Test fun `every supported rest duration round trips`() {
         for (seconds in 0..RestDuration.MAX_SECONDS) {
-            assertEquals("Round trip for $seconds", seconds, RestDuration.parse(RestDuration.format(seconds)))
+            assertEquals(seconds, RestDuration.parse(RestDuration.format(seconds)), "Round trip for $seconds")
         }
     }
 
@@ -37,12 +36,12 @@ class RestDurationTest {
         listOf("", " ", "1", "1:", ":30", "1:5", "1:000", "1:60", "0:60", "60:01", "99:59",
             "100:00", "-1:00", "+1:00", " 1:00", "1:00 ", "a:00", "1:aa", "1.30", "1:30 min",
             "5:01", "6:00", "00:05", "02:00")
-            .forEach { assertNull("Must reject '$it'", RestDuration.parse(it)) }
+            .forEach { assertNull(RestDuration.parse(it), "Must reject '$it'") }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun `format rejects negative duration`() {
-        RestDuration.format(-1)
+        assertFailsWith<IllegalArgumentException> { RestDuration.format(-1) }
     }
 
     @Test fun `format preserves durations saved in completed history by earlier versions`() {
@@ -108,7 +107,7 @@ class RestDurationTest {
     @Test fun `invalid typing and pastes preserve valid value and selection`() {
         val previous = RestDuration.editor(120)
         listOf("501", "600", "260", "2003", "5:01", "6:00", "2:003", "1:", "-100", "2.30", "2:60")
-            .forEach { assertEquals("Must reject $it", previous, type(previous, it)) }
+            .forEach { assertEquals(previous, type(previous, it), "Must reject $it") }
         val max = type(previous, "5")
         assertEquals("5:00", max.text)
         assertEquals(max, type(max, "1"))

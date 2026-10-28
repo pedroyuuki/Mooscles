@@ -1,6 +1,5 @@
 package com.mooscles.domain
 
-import com.mooscles.LargeHistoryFixture
 import com.mooscles.data.AppData
 import com.mooscles.data.Equipment
 import com.mooscles.data.LoadConvention
@@ -9,19 +8,22 @@ import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutExercise
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.math.nextDown
+import kotlin.math.nextUp
+import kotlin.math.ulp
 import kotlin.random.Random
+import kotlin.test.*
 
+/** Its two timing limits run on the JVM only, in WorkoutCalculationsBatchTimingTest (androidHostTest). */
 class WorkoutCalculationsBatchTest {
-    private val conventions = listOf(LoadConvention.TOTAL_LOAD, LoadConvention.BODYWEIGHT, LoadConvention.ASSISTANCE)
+    internal val conventions = listOf(LoadConvention.TOTAL_LOAD, LoadConvention.BODYWEIGHT, LoadConvention.ASSISTANCE)
 
     /** Nominal loads are 0.25 kg multiples; noise stays within ±1 ulp so equal loads remain one cluster. */
     private fun noisyLoad(random: Random): Double {
         val nominal = random.nextInt(0, 13) * 0.25 + if (random.nextInt(4) == 0) 100.0 else 0.0
         return when (random.nextInt(4)) {
-            0 -> Math.nextUp(nominal)
-            1 -> Math.nextDown(nominal)
+            0 -> nominal.nextUp()
+            1 -> nominal.nextDown()
             else -> nominal
         }
     }
@@ -88,14 +90,14 @@ class WorkoutCalculationsBatchTest {
             val finished = data.workouts.filter { it.status == WorkoutStatus.FINISHED }
             val weight = WorkoutCalculations.prsByWorkout(data)
             val reps = WorkoutCalculations.repsPrsByWorkout(data)
-            assertEquals("history $history shared pass", HistoryRecords(weight, reps), WorkoutCalculations.historyRecords(data))
-            assertEquals("history $history weight keys", finished.map { it.id }.toSet(), weight.keys)
-            assertEquals("history $history reps keys", finished.map { it.id }.toSet(), reps.keys)
+            assertEquals(HistoryRecords(weight, reps), WorkoutCalculations.historyRecords(data), "history $history shared pass")
+            assertEquals(finished.map { it.id }.toSet(), weight.keys, "history $history weight keys")
+            assertEquals(finished.map { it.id }.toSet(), reps.keys, "history $history reps keys")
             finished.forEach { workout ->
                 val expectedWeight = WorkoutCalculations.prsForWorkout(data, workout.id)
                 val expectedReps = WorkoutCalculations.repsPrsForWorkout(data, workout.id)
-                assertEquals("history $history workout ${workout.id} weight", expectedWeight, weight[workout.id])
-                assertEquals("history $history workout ${workout.id} reps", expectedReps, reps[workout.id])
+                assertEquals(expectedWeight, weight[workout.id], "history $history workout ${workout.id} weight")
+                assertEquals(expectedReps, reps[workout.id], "history $history workout ${workout.id} reps")
                 beatenWeight += expectedWeight.count { !it.firstRecord }
                 firstWeight += expectedWeight.count { it.firstRecord }
                 beatenReps += expectedReps.count { !it.firstRecord }
@@ -105,12 +107,12 @@ class WorkoutCalculationsBatchTest {
             if (data.workouts.any { it.status == WorkoutStatus.ACTIVE }) activeHistories++
         }
         // The generator must exercise the interesting paths, or the equality above proves nothing.
-        assertTrue("beaten weight records: $beatenWeight", beatenWeight > 50)
-        assertTrue("first weight records: $firstWeight", firstWeight > 50)
-        assertTrue("beaten reps records: $beatenReps", beatenReps > 50)
-        assertTrue("first reps records: $firstReps", firstReps > 50)
-        assertTrue("repeated startedAt: $repeatedStarts", repeatedStarts > 50)
-        assertTrue("histories with an active workout: $activeHistories", activeHistories > 10)
+        assertTrue(beatenWeight > 50, "beaten weight records: $beatenWeight")
+        assertTrue(firstWeight > 50, "first weight records: $firstWeight")
+        assertTrue(beatenReps > 50, "beaten reps records: $beatenReps")
+        assertTrue(firstReps > 50, "first reps records: $firstReps")
+        assertTrue(repeatedStarts > 50, "repeated startedAt: $repeatedStarts")
+        assertTrue(activeHistories > 10, "histories with an active workout: $activeHistories")
     }
 
     @Test fun performanceHistoriesMatchPerExerciseHistories() {
@@ -121,21 +123,21 @@ class WorkoutCalculationsBatchTest {
             val data = randomHistory(random, exerciseCount = 40)
             val all = WorkoutCalculations.performanceHistories(data)
             val keys = data.workoutExercises.map { it.exerciseId to it.convention }.distinct()
-            assertTrue("history $history keys", keys.containsAll(all.keys))
+            assertTrue(keys.containsAll(all.keys), "history $history keys")
             keys.forEach { (exerciseId, convention) ->
                 val expected = WorkoutCalculations.performanceHistory(data, exerciseId, convention)
-                assertEquals("history $history $exerciseId $convention", expected, all[exerciseId to convention].orEmpty())
+                assertEquals(expected, all[exerciseId to convention].orEmpty(), "history $history $exerciseId $convention")
                 if (expected.size > 1) compared++
             }
             if (all.keys.map { it.first }.distinct().size >= 30) varied++
         }
-        assertTrue("keys with several performances: $compared", compared > 100)
-        assertTrue("histories with at least 30 distinct exercises: $varied", varied >= 5)
+        assertTrue(compared > 100, "keys with several performances: $compared")
+        assertTrue(varied >= 5, "histories with at least 30 distinct exercises: $varied")
     }
 
     /** The linear scan [WorkoutCalculations.repsRecords] used before its per-group slots, kept as an oracle. */
     private fun linearRepsRecords(data: AppData): List<ExerciseRepsRecord> {
-        fun sameLoad(a: Double, b: Double) = kotlin.math.abs(a - b) <= maxOf(Math.ulp(a), Math.ulp(b)) * 4
+        fun sameLoad(a: Double, b: Double) = kotlin.math.abs(a - b) <= maxOf(a.ulp, b.ulp) * 4
         val chronology = compareBy<Workout> { it.startedAt }.thenBy { it.endedAt ?: Long.MAX_VALUE }.thenBy { it.id }
         val setsByEntry = data.sets.groupBy { it.workoutExerciseId }.mapValues { (_, rows) -> rows.sortedBy { it.position } }
         val result = mutableListOf<ExerciseRepsRecord>()
@@ -171,18 +173,18 @@ class WorkoutCalculationsBatchTest {
         repeat(200) { history ->
             val data = randomHistory(random, exerciseCount = if (history % 2 == 0) null else 12)
             val expected = linearRepsRecords(data)
-            assertEquals("history $history", expected, WorkoutCalculations.repsRecords(data))
+            assertEquals(expected, WorkoutCalculations.repsRecords(data), "history $history")
             records += expected.size
         }
-        assertTrue("reps records: $records", records > 500)
+        assertTrue(records > 500, "reps records: $records")
     }
 
     /**
      * The flat scan [WorkoutCalculations.repsPrsForWorkout] used before its per-group baseline, kept as an oracle:
      * one slot list for every exercise, convention, assistance mode and load, searched from the front.
      */
-    private fun linearRepsPrsForWorkout(data: AppData, workoutId: String): List<RepsPr> {
-        fun sameLoad(a: Double, b: Double) = kotlin.math.abs(a - b) <= maxOf(Math.ulp(a), Math.ulp(b)) * 4
+    internal fun linearRepsPrsForWorkout(data: AppData, workoutId: String): List<RepsPr> {
+        fun sameLoad(a: Double, b: Double) = kotlin.math.abs(a - b) <= maxOf(a.ulp, b.ulp) * 4
         fun assisted(c: Pair<WorkoutExercise, WorkoutSet>) = c.second.assistance || c.first.convention == LoadConvention.ASSISTANCE
         fun comparable(a: Pair<WorkoutExercise, WorkoutSet>, b: Pair<WorkoutExercise, WorkoutSet>) =
             a.first.exerciseId == b.first.exerciseId && a.first.convention == b.first.convention &&
@@ -225,14 +227,14 @@ class WorkoutCalculationsBatchTest {
             data.workouts.forEach { workout ->
                 val expected = linearRepsPrsForWorkout(data, workout.id)
                 val label = "history $history workout ${workout.id}"
-                assertEquals("$label reps", expected, WorkoutCalculations.repsPrsForWorkout(data, workout.id))
+                assertEquals(expected, WorkoutCalculations.repsPrsForWorkout(data, workout.id), "$label reps")
                 val summary = WorkoutCalculations.summary(data, workout.id, now = 0L)!!
-                assertEquals("$label summary beaten", expected.filterNot { it.firstRecord }, summary.repsPrs)
-                assertEquals("$label summary first", expected.filter { it.firstRecord }, summary.firstRepsRecords)
+                assertEquals(expected.filterNot { it.firstRecord }, summary.repsPrs, "$label summary beaten")
+                assertEquals(expected.filter { it.firstRecord }, summary.firstRepsRecords, "$label summary first")
                 summary.exercises.forEach { exercise ->
-                    assertEquals("$label summary ${exercise.exercise.id}", expected.filter {
+                    assertEquals(expected.filter {
                         it.exerciseId == exercise.exercise.exerciseId && it.convention == exercise.exercise.convention
-                    }, exercise.repsPrs)
+                    }, exercise.repsPrs, "$label summary ${exercise.exercise.id}")
                 }
                 compared++
                 if (workout.status == WorkoutStatus.ACTIVE) activeTargets++
@@ -241,41 +243,10 @@ class WorkoutCalculationsBatchTest {
             }
         }
         // The generator must exercise the interesting paths, or the equality above proves nothing.
-        assertTrue("compared workouts: $compared", compared > 1000)
-        assertTrue("active targets: $activeTargets", activeTargets > 30)
-        assertTrue("beaten reps records: $beaten", beaten > 200)
-        assertTrue("first reps records: $first", first > 200)
-    }
-
-    @Test fun activeWorkoutRepsPrsOnLargeHistoryAreFast() {
-        val exercises = LargeHistoryFixture.variedExercises(48)
-        val history = LargeHistoryFixture.appData(exercises)
-        val start = history.workouts.maxOf { it.endedAt!! } + 86_400_000L
-        val active = Workout("active", "Active", startedAt = start)
-        val entries = exercises.mapIndexed { position, exercise ->
-            WorkoutExercise("active-e$position", active.id, exercise.id, exercise.name, exercise.muscle,
-                exercise.equipment, exercise.convention, position = position)
-        }
-        val sets = entries.flatMapIndexed { index, entry ->
-            List(3) { position ->
-                WorkoutSet("${entry.id}-s$position", entry.id, position = position, reps = 6 + position + index % 5,
-                    weightKg = 20.0 + ((index + position) % 40) * 2.5, completed = true)
-            }
-        }
-        val data = history.copy(workouts = history.workouts + active, workoutExercises = history.workoutExercises + entries,
-            sets = history.sets + sets)
-
-        // Checking the result first also warms the JIT, so the timings below measure the algorithm, not class loading.
-        val expected = linearRepsPrsForWorkout(data, active.id)
-        assertTrue(expected.isNotEmpty())
-        assertEquals(expected, WorkoutCalculations.repsPrsForWorkout(data, active.id))
-        val timesMs = List(3) {
-            val started = System.nanoTime()
-            WorkoutCalculations.repsPrsForWorkout(data, active.id)
-            (System.nanoTime() - started) / 1_000_000
-        }
-        println("active reps=${timesMs}ms")
-        assertTrue("active reps took ${timesMs}ms", timesMs.min() < 30)
+        assertTrue(compared > 1000, "compared workouts: $compared")
+        assertTrue(activeTargets > 30, "active targets: $activeTargets")
+        assertTrue(beaten > 200, "beaten reps records: $beaten")
+        assertTrue(first > 200, "first reps records: $first")
     }
 
     @Test fun batchIgnoresActiveWorkoutsAsBaseline() {
@@ -299,37 +270,5 @@ class WorkoutCalculationsBatchTest {
         assertEquals(listOf(RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 60.0, false, null, 5, true)), reps["done"])
         assertEquals(WorkoutCalculations.prsForWorkout(data, "done"), weight["done"])
         assertEquals(WorkoutCalculations.repsPrsForWorkout(data, "done"), reps["done"])
-    }
-
-    @Test fun batchOnLargeHistoryIsFast() {
-        val workouts = List(208) { index ->
-            Workout("workout-$index", "Session", index * 86_400_000L, index * 86_400_000L + 3_600_000L,
-                WorkoutStatus.FINISHED)
-        }
-        val entries = workouts.flatMap { workout ->
-            List(8) { position ->
-                WorkoutExercise("${workout.id}-e$position", workout.id, "movement-$position", "Movement $position",
-                    MuscleGroup.CHEST, Equipment.BARBELL, conventions[position % conventions.size], position = position)
-            }
-        }
-        val sets = workouts.flatMapIndexed { workoutIndex, workout ->
-            List(61) { setIndex ->
-                WorkoutSet("${workout.id}-s$setIndex", "${workout.id}-e${setIndex % 8}", position = setIndex / 8,
-                    reps = 5 + (workoutIndex + setIndex) % 8, weightKg = 20.0 + ((workoutIndex * 3 + setIndex) % 40) * 2.5,
-                    completed = true, warmup = setIndex % 8 == 0 && setIndex < 8)
-            }
-        }
-        val data = AppData(workouts = workouts.reversed(), workoutExercises = entries.sortedBy { it.position },
-            sets = sets.sortedBy { it.position })
-
-        val started = System.nanoTime()
-        val weight = WorkoutCalculations.prsByWorkout(data)
-        val reps = WorkoutCalculations.repsPrsByWorkout(data)
-        val elapsedMs = (System.nanoTime() - started) / 1_000_000
-        println("batch=${elapsedMs}ms")
-
-        assertEquals(208, weight.size)
-        assertEquals(208, reps.size)
-        assertTrue("batch took ${elapsedMs}ms", elapsedMs < 1500)
     }
 }

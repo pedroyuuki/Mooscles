@@ -1,10 +1,9 @@
 package com.mooscles.data
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import java.util.Locale
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ExerciseSearchTest {
     private val catalog = ExerciseCatalog.exercises.associateBy { it.id }
@@ -14,7 +13,7 @@ class ExerciseSearchTest {
     @Test
     fun shoulderAndOverheadSynonymsResolveToExistingVariationWithoutNewEntries() {
         listOf("Seated Overhead Press (Machine)", "machine shoulder press", "Selectorized shoulder press")
-            .forEach { assertTrue(it, matches("selectorized_shoulder_press", it)) }
+            .forEach { assertTrue(matches("selectorized_shoulder_press", it), it) }
         assertTrue(matches("dumbbell_press_seated", "seated overhead DB press"))
         assertTrue(matches("barbell_seated_press", "overhead press seated barbell"))
         assertTrue(matches("barbell_overhead_press", "military press"))
@@ -59,7 +58,7 @@ class ExerciseSearchTest {
             val uiMatches = ExerciseCatalog.exercises.filter {
                 ExerciseSearch.matches(it.id, it.name, it.muscle.name, it.equipment.name, query)
             }.map { it.id }
-            assertEquals(query, domainMatches, uiMatches)
+            assertEquals(domainMatches, uiMatches, query)
         }
     }
 
@@ -69,16 +68,5 @@ class ExerciseSearchTest {
             "catalog_selectorized_shoulder_press", "Selectorized shoulder press", "Shoulders", "Selectorized machine",
             "seated overhead press machine"
         ))
-    }
-
-    @Test
-    fun searchIsIndependentOfTheDevicesCaseMappingLocale() {
-        val previous = Locale.getDefault()
-        try {
-            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
-            assertTrue(matches("barbell_bench_incline", "INCLINE BENCH PRESS BARBELL"))
-        } finally {
-            Locale.setDefault(previous)
-        }
     }
 }

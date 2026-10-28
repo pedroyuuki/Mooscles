@@ -42,6 +42,8 @@ android {
         }
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    // LargeHistoryFixture lives with the :shared common tests, which use it too.
+    sourceSets.getByName("test").kotlin.directories.add("../shared/src/testFixtures/kotlin")
 }
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")

@@ -8,8 +8,8 @@ import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutExercise
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.math.nextUp
+import kotlin.test.*
 
 class RoutineTargetRecordsTest {
     private fun workout(id: String, status: WorkoutStatus = WorkoutStatus.FINISHED) =
@@ -136,7 +136,7 @@ class RoutineTargetRecordsTest {
     }
 
     @Test fun `kg-pound noise permits same-load reps improvement without fabricating a heavier record`() {
-        val roundTrip = Math.nextUp(WeightUnits.lbToKg(WeightUnits.kgToLb(20.0)))
+        val roundTrip = WeightUnits.lbToKg(WeightUnits.kgToLb(20.0)).nextUp()
         val previous = RoutineTargetRecord("bench", LoadConvention.TOTAL_LOAD, 20.0, 7)
         assertFalse(RoutineTargetRecords.improves(previous.copy(weightKg = roundTrip), previous))
         val improved = RoutineTargetRecords.latest(history(newKg = roundTrip, newReps = 9)).single()
@@ -146,7 +146,7 @@ class RoutineTargetRecordsTest {
     }
 
     @Test fun `conversion-equivalent loads retain the actual better repetition set`() {
-        val barelyHigher = Math.nextUp(20.0)
+        val barelyHigher = 20.0.nextUp()
         val record = RoutineTargetRecords.latest(history(newKg = barelyHigher, newReps = 3)).single()
         assertEquals(20.0, record.weightKg!!, 0.0)
         assertEquals(7, record.reps)

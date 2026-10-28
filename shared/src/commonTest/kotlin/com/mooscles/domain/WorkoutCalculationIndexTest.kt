@@ -1,8 +1,7 @@
 package com.mooscles.domain
 
 import com.mooscles.data.*
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
 
 class WorkoutCalculationIndexTest {
     private class CountedRows(val rows: MutableList<WorkoutSet>) : AbstractList<WorkoutSet>() {
@@ -36,7 +35,7 @@ class WorkoutCalculationIndexTest {
         fun checkSinglePass(calculation: () -> Any?) {
             counted.reads = 0
             calculation()
-            assertEquals("Each calculation must visit the raw archive only once", counted.size, counted.reads)
+            assertEquals(counted.size, counted.reads, "Each calculation must visit the raw archive only once")
         }
         val target = workouts.last().id
         checkSinglePass { WorkoutCalculations.prsForWorkout(data, target) }

@@ -1,17 +1,17 @@
 package com.mooscles.data
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CatalogTest {
     @Test
     fun catalogHasUsefulOfflineBreadthAndCollisionFreeIdentities() {
         val catalog = ExerciseCatalog.exercises
-        assertTrue("The offline library must contain at least 150 variations", catalog.size >= 150)
-        assertEquals("Variation IDs must never collide", catalog.size, catalog.map { it.id }.toSet().size)
-        assertEquals("Accidental duplicate names hide variations in search", catalog.size, catalog.map { it.name }.toSet().size)
+        assertTrue(catalog.size >= 150, "The offline library must contain at least 150 variations")
+        assertEquals(catalog.size, catalog.map { it.id }.toSet().size, "Variation IDs must never collide")
+        assertEquals(catalog.size, catalog.map { it.name }.toSet().size, "Accidental duplicate names hide variations in search")
         assertTrue(catalog.all { it.id.matches(Regex("catalog_[a-z0-9_]+")) })
         assertTrue(catalog.all { it.name.isNotBlank() && !it.custom })
         val requiredEquipment = setOf(
@@ -20,10 +20,10 @@ class CatalogTest {
             Equipment.SELECTORIZED_MACHINE, Equipment.PLATE_LOADED_MACHINE
         )
         requiredEquipment.forEach { equipment ->
-            assertTrue("Missing meaningful coverage for $equipment", catalog.count { it.equipment == equipment } >= 10)
+            assertTrue(catalog.count { it.equipment == equipment } >= 10, "Missing meaningful coverage for $equipment")
         }
         MuscleGroup.entries.forEach { muscle ->
-            assertTrue("Missing primary muscle group $muscle", catalog.any { it.muscle == muscle })
+            assertTrue(catalog.any { it.muscle == muscle }, "Missing primary muscle group $muscle")
         }
     }
 
@@ -71,7 +71,7 @@ class CatalogTest {
         )
         additions.forEach { (id, expected) ->
             val exercise = catalog.getValue(id)
-            assertEquals(id, expected, Triple(exercise.equipment, exercise.muscle, exercise.convention))
+            assertEquals(expected, Triple(exercise.equipment, exercise.muscle, exercise.convention), id)
         }
         assertFalse(catalog.getValue("catalog_ez_bar_curl").id == catalog.getValue("catalog_barbell_curl").id)
         assertFalse(catalog.getValue("catalog_trap_bar_deadlift").id == catalog.getValue("catalog_barbell_deadlift_conventional").id)

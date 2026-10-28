@@ -8,8 +8,8 @@ import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutExercise
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.math.nextUp
+import kotlin.test.*
 
 class WorkoutCalculationsTest {
     private fun workout(id: String, time: Long, status: WorkoutStatus = WorkoutStatus.FINISHED) =
@@ -120,7 +120,7 @@ class WorkoutCalculationsTest {
         val restored = WeightUnits.lbToKg(pounds)
         assertEquals(100.0, restored, 0.000000001)
         assertTrue(WorkoutCalculations.prsForWorkout(history(current = restored, currentReps = 20), "new").isEmpty())
-        val oneBitAbove = Math.nextUp(100.0)
+        val oneBitAbove = 100.0.nextUp()
         assertTrue(WorkoutCalculations.prsForWorkout(history(current = oneBitAbove), "new").isEmpty())
     }
 
@@ -337,7 +337,7 @@ class WorkoutCalculationsTest {
     }
 
     @Test fun `repetition load comparison tolerates unit round trips without merging genuine load differences`() {
-        val roundTrip = Math.nextUp(WeightUnits.lbToKg(WeightUnits.kgToLb(100.0)))
+        val roundTrip = WeightUnits.lbToKg(WeightUnits.kgToLb(100.0)).nextUp()
         val equivalent = WorkoutCalculations.repsPrsForWorkout(history(current = roundTrip, currentReps = 11), "new").single()
         assertFalse(equivalent.firstRecord)
         assertEquals(10, equivalent.previousReps)

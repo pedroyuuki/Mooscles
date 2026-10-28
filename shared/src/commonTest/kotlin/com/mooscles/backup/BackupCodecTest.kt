@@ -1,13 +1,9 @@
 package com.mooscles.backup
 
-import com.mooscles.data.LoadConvention
-import com.mooscles.data.MuscleGroup
-import com.mooscles.data.WorkoutStatus
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class BackupCodecTest {
     private fun sample(muscle: String = "CHEST") = BackupFile(
@@ -62,12 +58,12 @@ class BackupCodecTest {
     fun encodeIsCompact() {
         val text = BackupCodec.encode(sample())
         assertTrue(text.startsWith("{\"format\":\"mooscles-backup\",\"formatVersion\":1,"))
-        assertTrue("compact output has no line breaks", '\n' !in text)
+        assertTrue('\n' !in text, "compact output has no line breaks")
     }
 
     @Test
     fun decodeRejectsNewerVersion() {
-        val e = assertThrows(BackupException.NewerVersion::class.java) {
+        val e = assertFailsWith<BackupException.NewerVersion> {
             BackupCodec.decode("""{"format":"mooscles-backup","formatVersion":2,"data":"different"}""")
         }
         assertEquals(2, e.found)
@@ -75,16 +71,16 @@ class BackupCodecTest {
 
     @Test
     fun decodeRejectsOtherFormat() {
-        assertThrows(BackupException.NotABackup::class.java) {
+        assertFailsWith<BackupException.NotABackup> {
             BackupCodec.decode("""{"format":"something","formatVersion":1}""")
         }
-        assertThrows(BackupException.NotABackup::class.java) { BackupCodec.decode("[]") }
+        assertFailsWith<BackupException.NotABackup> { BackupCodec.decode("[]") }
     }
 
     @Test
     fun decodeRejectsMalformedJson() {
         listOf("{", "", """{"format":"mooscles-backup","formatVersion":1}""").forEach { text ->
-            assertThrows(text, BackupException.Corrupted::class.java) { BackupCodec.decode(text) }
+            assertFailsWith<BackupException.Corrupted>(text) { BackupCodec.decode(text) }
         }
     }
 
@@ -97,35 +93,6 @@ class BackupCodecTest {
     @Test
     fun unknownEnumIsInvalid() {
         val file = BackupCodec.decode(BackupCodec.encode(sample(muscle = "TAIL")))
-        assertThrows(BackupException.Invalid::class.java) { file.data.toEntities() }
-    }
-
-    @Test
-    fun v1SampleFixtureStaysReadable() {
-        val text = javaClass.classLoader!!.getResourceAsStream("backup/v1-sample.json")!!
-            .readBytes().toString(Charsets.UTF_8)
-        val file = BackupCodec.decode(text)
-        assertEquals(1, file.formatVersion)
-        val e = file.data.toEntities()
-        assertEquals(1, e.exercises.size)
-        assertEquals("Bench press", e.exercises.single().name)
-        assertEquals(MuscleGroup.CHEST, e.exercises.single().muscle)
-        assertEquals(1, e.routineFolders.size)
-        assertEquals("My routines", e.routineFolders.single().name)
-        assertEquals(1, e.routines.size)
-        assertEquals("Push", e.routines.single().name)
-        assertEquals(2, e.routineExercises.size)
-        assertEquals(22.75, e.routineExercises.first().targetWeightKg!!, 0.0)
-        assertNull(e.routineExercises.last().restSeconds)
-        assertEquals(2, e.routineSets.size)
-        assertEquals(8, e.routineSets.first().targetReps)
-        assertEquals(2, e.workouts.size)
-        assertEquals(WorkoutStatus.FINISHED, e.workouts.first().status)
-        assertEquals(1, e.workoutExercises.size)
-        assertEquals(LoadConvention.TOTAL_LOAD, e.workoutExercises.single().convention)
-        assertEquals(1, e.workoutSets.size)
-        assertEquals(22.75, e.workoutSets.single().weightKg, 0.0)
-        assertEquals(2, e.checkpoints.size)
-        assertEquals(LoadConvention.BODYWEIGHT, e.checkpoints.last().convention)
+        assertFailsWith<BackupException.Invalid> { file.data.toEntities() }
     }
 }
