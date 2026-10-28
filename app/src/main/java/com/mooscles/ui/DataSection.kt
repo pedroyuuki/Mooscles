@@ -89,7 +89,8 @@ fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, m
                 Column(verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     // The operation name comes ready from the ViewModel, in English (plan decision 11).
                     state.working?.let { MText(it, MTheme.type.bodyMd, modifier = Modifier.testTag("data-working")) }
-                    MProgressBar(progress = null, modifier = Modifier.testTag("data-progress"), contentDescription = state.working)
+                    // The text above already names the operation; the bar is read as "Loading".
+                    MProgressBar(progress = null, modifier = Modifier.testTag("data-progress"))
                 }
             }
             state.message?.let { message ->

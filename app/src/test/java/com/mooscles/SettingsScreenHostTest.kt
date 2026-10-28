@@ -9,7 +9,16 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasParent
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.font.FontFamily
+import com.mooscles.designsystem.tokens.MoosclesColors
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -264,10 +273,20 @@ class SettingsScreenHostTest {
             compose.runOnIdle { state.value = state.value.copy(updates = update) }
             reachable(tag, button = true, screenWidth)
         }
+
+        // The import dialogs: "Cancelar" and "Importar", then "Fechar" alone.
+        compose.runOnIdle { state.value = state.value.copy(backup = BackupUi(pendingImport = ImportSummary(180, 28, 4, 0, 3, true, nothingToAdd = false))) }
+        reachable("dialog-dismiss", button = true, screenWidth, inDialog = true)
+        reachable("dialog-confirm", button = true, screenWidth, inDialog = true)
+        compose.runOnIdle { state.value = state.value.copy(backup = BackupUi()) }
+        compose.runOnIdle { state.value = state.value.copy(backup = BackupUi(pendingImport = ImportSummary(0, 5, 0, 2, 0, false, nothingToAdd = true))) }
+        reachable("dialog-confirm", button = true, screenWidth, inDialog = true)
+        compose.onNodeWithTag("dialog-dismiss").assertDoesNotExist()
     }
 
-    private fun reachable(tag: String, button: Boolean, screenWidth: Float) {
-        val node = compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
+    /** [inDialog]: the node is in a dialog window, shown without scrolling. */
+    private fun reachable(tag: String, button: Boolean, screenWidth: Float, inDialog: Boolean = false) {
+        val node = compose.onNodeWithTag(tag).let { if (inDialog) it else it.performScrollTo() }.assertIsDisplayed()
             .assertTouchTargetIsAtLeast48dp()
         val bounds = node.fetchSemanticsNode().boundsInRoot
         assertTrue("$tag $bounds passes the 320 dp screen", bounds.left >= -0.5f && bounds.right <= screenWidth + 0.5f)
@@ -280,6 +299,9 @@ class SettingsScreenHostTest {
             text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
             val layout = layouts.single()
             val label = layout.layoutInput.text.text
+            // Measured with the design system's font, not a platform fallback.
+            val family = layout.layoutInput.style.fontFamily
+            assertTrue("$tag \"$label\" is measured with $family", family != null && family != FontFamily.Default && family !is androidx.compose.ui.text.font.GenericFontFamily)
             assertFalse("$tag \"$label\" exceeds its lines", layout.multiParagraph.didExceedMaxLines)
             // Every word sits on one line and fits the width the label really got: no word is broken.
             Regex("\\S+").findAll(label).forEach { word ->
@@ -351,6 +373,79 @@ class SettingsScreenHostTest {
 
     private fun showSettings(state: UiState) {
         compose.setContent { MoosclesTheme(state.preferences.theme) { SettingsScreen(state, recording(mutableListOf())) } }
+    }
+
+    /** Review I1: each question's radios form one selectable group, read as "1 of 3". */
+    @Test
+    fun radiosAreGroupedForScreenReaders() {
+        showSettings(UiState(loading = false, updates = installed, preferences = PreferencesUi(theme = "dark", pounds = true)))
+        val groups = mapOf("theme-group" to listOf("theme-system", "theme-light", "theme-dark"), "unit-group" to listOf("unit-kg", "unit-lb"))
+        groups.forEach { (group, options) ->
+            compose.onNodeWithTag(group).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
+            options.forEach { option ->
+                compose.onNodeWithTag(option)
+                    .assert(hasParent(hasTestTag(group)))
+                    .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            }
+        }
+        compose.onNodeWithTag("theme-dark").assertIsSelected()
+        listOf("theme-system", "theme-light", "unit-kg").forEach { compose.onNodeWithTag(it).assertIsNotSelected() }
+        compose.onNodeWithTag("unit-lb").assertIsSelected()
+    }
+
+    /**
+     * Review I2: an updater request already handled is not repeated when the composition is
+     * recreated (rotation): the user who went on to the licenses stays there.
+     */
+    @Test
+    fun handledUpdateRequestIsNotRepeatedAfterRecreation() {
+        val state = mutableStateOf(UiState(loading = false, updates = installed))
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MoosclesApp(state.value, recording(mutableListOf())) }
+        compose.runOnIdle { state.value = state.value.copy(updateSettingsRequest = 1) }
+        compose.onNodeWithTag("app-updates").assertIsDisplayed()
+        compose.onNodeWithTag("open-licenses").performScrollTo().performClick()
+        compose.onNode(hasText("Open-source licenses") and isHeading()).assertIsDisplayed()
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNode(hasText("Open-source licenses") and isHeading()).assertIsDisplayed()
+        compose.onNodeWithTag("app-updates").assertDoesNotExist()
+
+        // A new request still lands on the updates.
+        compose.runOnIdle { state.value = state.value.copy(updateSettingsRequest = 2) }
+        compose.onNodeWithTag("app-updates").assertIsDisplayed()
+    }
+
+    /** Review M2: like the field before it, the rest field stays on one line; Enter types nothing. */
+    @Test
+    fun restFieldEnterTypesNoLineBreak() {
+        val calls = mutableListOf<String>()
+        compose.setContent { MoosclesTheme("light") { SettingsScreen(UiState(loading = false, updates = installed), recording(calls)) } }
+        val field = compose.onNodeWithTag("default-rest-duration").performScrollTo()
+        field.performClick()
+        field.performKeyInput { pressKey(Key.Enter) }
+        compose.onNodeWithText("Use 0:00 to 5:00, with seconds from 00 to 59.").assertDoesNotExist()
+        field.assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, androidx.compose.ui.text.AnnotatedString("2:00")))
+        compose.runOnIdle { assertEquals(emptyList<String>(), calls) }
+    }
+
+    /** Review M3: the notes, the status card and the error banner of the screen read at 4.5:1 or more. */
+    @Test
+    fun pilotTextPairsMeetContrastInBothThemes() {
+        for (colors in listOf(MoosclesColors.Light, MoosclesColors.Dark)) {
+            listOf(
+                colors.textSecondary to colors.bgBase, colors.textPrimary to colors.bgBase,
+                colors.textSecondary to colors.bgRaised, colors.textPrimary to colors.bgRaised,
+                colors.textPrimary to colors.dangerSubtle, colors.textSecondary to colors.dangerSubtle,
+                colors.accentText to colors.bgBase,
+            ).forEach { (fg, bg) -> assertTrue("$fg on $bg: ${contrast(fg, bg)}", contrast(fg, bg) >= 4.5) }
+        }
+    }
+
+    private fun contrast(a: Color, b: Color): Double {
+        val la = a.luminance().toDouble()
+        val lb = b.luminance().toDouble()
+        return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
     }
 
     /** The touch area (the bounds plus any minimum touch size padding) is 48 by 48 dp or more. */

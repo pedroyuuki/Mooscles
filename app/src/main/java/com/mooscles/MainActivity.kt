@@ -33,7 +33,10 @@ class MainActivity : ComponentActivity() {
             val timer = vm.timerUi.collectAsStateWithLifecycle()
             MoosclesApp(state.value, vm, timer)
         }
-        if (intent?.action == UpdateNotifications.OPEN_UPDATES) vm.openUpdateSettings()
+        // Only a fresh launch from the notification asks for the updates: a recreated Activity
+        // (rotation, process restore) keeps the same intent, and asking again would navigate
+        // away from wherever the user went since. A new notification tap arrives in onNewIntent.
+        if (savedInstanceState == null && intent?.action == UpdateNotifications.OPEN_UPDATES) vm.openUpdateSettings()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.installIntents.collect { intent ->

@@ -38,6 +38,7 @@ import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_error_prefix
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.designsystem.tokens.MoosclesColors
 import org.jetbrains.compose.resources.stringResource
 
 /** The tag of the field's box, which grows with the text. */
@@ -55,7 +56,9 @@ const val TextFieldErrorIconTag = "text-field-error-icon"
  * The label, the help (or error) text and the typed value form one merged accessibility node, and an error is also reported through `error` semantics.
  * The box is at least `numericFieldHeight` tall and grows with the text, so it never clips.
  * [suffix] is a short unit drawn after the value inside the box (such as "min"), in
- * `text.secondary`; it is part of the field's accessible text.
+ * `text.secondary`; it is part of the field's accessible text. [singleLine] keeps the value on
+ * one line: Enter (also from a hardware keyboard) runs the IME action instead of a line break.
+ * The selection is drawn only while the field has focus (see [textSelectionColors]).
  */
 @Composable
 fun MTextField(
@@ -70,6 +73,7 @@ fun MTextField(
     onFocusChange: (Boolean) -> Unit = {},
     textStyle: TextStyle = MTheme.type.bodyLg,
     suffix: String? = null,
+    singleLine: Boolean = false,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
@@ -91,13 +95,7 @@ fun MTextField(
     // The label and the help or error text are drawn inside the decoration box, so they are
     // descendants of the field's own semantics node and merge into it with the typed value; a
     // validation error is also set as `error` on that node.
-    // The selection is drawn only while the field has focus: a value may keep a selection
-    // (such as a pre-selected part to type over) that must not look selected at rest.
-    val selection = TextSelectionColors(
-        handleColor = colors.accentSolid,
-        backgroundColor = if (focused) colors.accentSubtle else Color.Transparent,
-    )
-    CompositionLocalProvider(LocalTextSelectionColors provides selection) {
+    CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors(colors, focused)) {
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -105,6 +103,7 @@ fun MTextField(
             enabled = enabled,
             textStyle = textStyle.copy(color = if (enabled) colors.textPrimary else colors.textDisabled),
             keyboardOptions = keyboardOptions,
+            singleLine = singleLine,
             interactionSource = source,
             cursorBrush = SolidColor(colors.accentText),
             decorationBox = { inner ->
@@ -153,3 +152,12 @@ fun MTextField(
         )
     }
 }
+
+/**
+ * The selection colors of [MTextField]. Without focus the selection is not drawn: a value may
+ * keep a selection (such as a pre-selected part to type over) that must not look selected at rest.
+ */
+internal fun textSelectionColors(colors: MoosclesColors, focused: Boolean): TextSelectionColors = TextSelectionColors(
+    handleColor = colors.accentSolid,
+    backgroundColor = if (focused) colors.accentSubtle else Color.Transparent,
+)

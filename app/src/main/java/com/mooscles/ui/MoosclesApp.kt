@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.first
 import com.mooscles.designsystem.licenses.LicensesScreen
 
 private data class Destination(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -53,12 +54,22 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                 handledDiscard = state.discardNavigationRequest
             }
         }
+        var handledUpdateRequest by rememberSaveable { mutableLongStateOf(0L) }
         LaunchedEffect(state.updateSettingsRequest) {
-            // Lands on the updates section, also when Settings is already open: that entry is
-            // replaced, since a single-top navigation would keep its old section argument.
-            if (state.updateSettingsRequest > 0) nav.navigate(SettingsRoutes.settings(SettingsRoutes.UPDATES)) {
-                popUpTo(SettingsRoutes.SETTINGS) { inclusive = true }
-                launchSingleTop = true
+            if (state.updateSettingsRequest == 0L) {
+                // A new process starts a new ViewModel request sequence (see handledDiscard).
+                handledUpdateRequest = 0L
+            } else if (state.updateSettingsRequest != handledUpdateRequest) {
+                // Lands on the updates section, also when Settings is already open: that entry is
+                // replaced, since a single-top navigation would keep its old section argument.
+                // A request already handled is not repeated when the composition is recreated.
+                // The effect can run before the NavHost sets its graph: wait for the first entry.
+                nav.currentBackStackEntryFlow.first()
+                nav.navigate(SettingsRoutes.settings(SettingsRoutes.UPDATES)) {
+                    popUpTo(SettingsRoutes.SETTINGS) { inclusive = true }
+                    launchSingleTop = true
+                }
+                handledUpdateRequest = state.updateSettingsRequest
             }
         }
         val snack = remember { SnackbarHostState() }

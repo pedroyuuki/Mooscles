@@ -36,8 +36,9 @@ fun SettingsRestDurationField(
         modifier = modifier.testTag(testTag).onFocusChanged { editor.onFocusChange(it.isFocused) },
         help = stringResource(Res.string.settings_rest_help),
         error = if (editor.rejected) stringResource(Res.string.settings_rest_error) else null,
-        // Done, as the single-line field before it: the key never types a line break.
+        // One line with Done, as the field before it: Enter never types a line break.
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+        singleLine = true,
         suffix = stringResource(Res.string.settings_rest_suffix),
     )
 }
