@@ -3,6 +3,9 @@ package com.mooscles.designsystem.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
@@ -96,5 +99,41 @@ class RestTimerExpandedTest {
                 assertTrue(time.left >= ring.left && time.right <= ring.right, "scale $scale: time outside the ring")
             }
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun discLabelsAreShownWholeAtTwoHundredPercent() = runComposeUiTest {
+        withTheme(fontScale = 2f) {
+            ProvideAppLocale("en") {
+                Box(Modifier.width(360.dp)) { RestTimerExpanded(visual, null, {}, {}, {}) }
+            }
+        }
+        waitForIdle()
+        val disc = with(density) { MoosclesSizes().timerDisc.toPx() }
+        for ((tag, label) in listOf(TimerMinusTag to "\u221215 s", TimerPlusTag to "+15 s")) {
+            val results = mutableListOf<TextLayoutResult>()
+            val node = onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode()
+            val action = node.config[SemanticsActions.GetTextLayoutResult].action
+            assertTrue(action != null && action(results), "no text layout result for $label")
+            assertShownWhole(results.first(), tag)
+            val touch = onNodeWithTag(tag).fetchSemanticsNode().touchBoundsInRoot
+            assertTrue(touch.width >= disc - 0.5f && touch.height >= disc - 0.5f, "$tag ${touch.width} x ${touch.height} smaller than $disc")
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun restFinishedOnlyOnTheTurnToDoneNotWhenShownAlreadyDone() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        var state by mutableStateOf(RestTimerVisual(0, 120, TimerPhase.Done, "Rest"))
+        withTheme(haptics = haptics) { RestTimerExpanded(state, null, {}, {}, {}) }
+        waitForIdle()
+        assertEquals(emptyList(), haptics.events, "shown already done")
+        state = RestTimerVisual(30, 120, TimerPhase.Running, "Rest")
+        waitForIdle()
+        state = RestTimerVisual(0, 120, TimerPhase.Done, "Rest")
+        waitForIdle()
+        assertEquals(listOf(HapticEvent.RestFinished), haptics.events)
     }
 }

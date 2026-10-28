@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -37,7 +36,7 @@ private const val EXPANDED_WIDEST_TIME = "00:00"
 
 /**
  * The full-screen rest timer: a 280 dp plate ring with 60 rim marks, the time in `num.display`,
- * the -15 and +15 buttons as 80 dp discs, the exercise that comes next ([upNext], when there is
+ * the -15 and +15 buttons as 80 dp discs (wider with large text, so the label stays whole), the exercise that comes next ([upNext], when there is
  * one) and "Skip rest". Same phases, haptics and live region as [RestTimerDock]; presentational too.
  * The time stays on one line inside the clear middle of the ring: when the font scale would make it
  * wider, it shrinks to fit, but never below `num.lg`.
@@ -58,7 +57,7 @@ fun RestTimerExpanded(
     val announcement = rememberTimerAnnouncement(visual)
     val status = timerStatus(visual)
     val done = visual.phase == TimerPhase.Done
-    LaunchedEffect(done) { if (done) haptics.perform(HapticEvent.RestFinished) }
+    RestFinishedHaptic(done)
     val minusLabel = stringResource(Res.string.ds_timer_minus15)
     val plusLabel = stringResource(Res.string.ds_timer_plus15)
     val minusShort = stringResource(Res.string.ds_timer_minus15_short)
@@ -112,11 +111,11 @@ fun RestTimerExpanded(
             Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s6), verticalAlignment = Alignment.CenterVertically) {
                 TimerAdjustButton(
                     minusShort, minusLabel, { haptics.perform(HapticEvent.StepperStep); onMinus15() },
-                    Modifier.testTag(TimerMinusTag), shape = MTheme.radius.full, size = disc, square = true,
+                    Modifier.testTag(TimerMinusTag), shape = MTheme.radius.full, size = disc,
                 )
                 TimerAdjustButton(
                     plusShort, plusLabel, { haptics.perform(HapticEvent.StepperStep); onPlus15() },
-                    Modifier.testTag(TimerPlusTag), shape = MTheme.radius.full, size = disc, square = true,
+                    Modifier.testTag(TimerPlusTag), shape = MTheme.radius.full, size = disc,
                 )
             }
             if (upNext != null) {

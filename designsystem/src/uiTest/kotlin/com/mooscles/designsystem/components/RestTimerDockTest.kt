@@ -90,6 +90,26 @@ class RestTimerDockTest {
         assertEquals(listOf(HapticEvent.RestFinished), haptics.events)
     }
 
+    /** Switching between the dock and the expanded timer during the done hold does not buzz again. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun switchingViewsWhileDoneDoesNotRepeatRestFinished() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        var state by mutableStateOf(visual(1))
+        var expanded by mutableStateOf(false)
+        withTheme(haptics = haptics) {
+            if (expanded) RestTimerExpanded(state, null, {}, {}, {}) else RestTimerDock(state, {}, {}, {})
+        }
+        waitForIdle()
+        state = visual(0, TimerPhase.Done)
+        waitForIdle()
+        expanded = true
+        waitForIdle()
+        expanded = false
+        waitForIdle()
+        assertEquals(listOf(HapticEvent.RestFinished), haptics.events)
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun plusAndMinusTick() = runComposeUiTest {

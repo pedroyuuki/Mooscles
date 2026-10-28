@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -145,6 +148,21 @@ internal val TimerAdjustPadding: Dp
     @Composable get() = MTheme.space.s2
 
 /** The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is its label. */
+/**
+ * Gives the `RestFinished` haptic when [done] turns true while this timer view is shown, not when
+ * the view enters the composition already done (switching between the dock and the expanded timer,
+ * or coming back to a screen, during `timing.timerDoneHold`).
+ */
+@Composable
+internal fun RestFinishedHaptic(done: Boolean) {
+    val haptics = MTheme.haptics
+    var wasDone by remember { mutableStateOf(done) }
+    LaunchedEffect(done) {
+        if (done && !wasDone) haptics.perform(HapticEvent.RestFinished)
+        wasDone = done
+    }
+}
+
 @Composable
 internal fun TimerAdjustButton(
     text: String,
@@ -153,13 +171,12 @@ internal fun TimerAdjustButton(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(MTheme.radius.md),
     size: Dp = MTheme.targets.workout,
-    square: Boolean = false,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
     Box(
         modifier
-            .then(if (square) Modifier.size(size) else Modifier.sizeIn(minWidth = size, minHeight = size))
+            .sizeIn(minWidth = size, minHeight = size)
             .mPressScale(source, true)
             .semantics { contentDescription = description }
             .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
@@ -200,7 +217,7 @@ fun RestTimerDock(
     val status = timerStatus(visual)
     val done = visual.phase == TimerPhase.Done
     val paused = visual.phase == TimerPhase.Paused
-    LaunchedEffect(done) { if (done) haptics.perform(HapticEvent.RestFinished) }
+    RestFinishedHaptic(done)
     val minus = { haptics.perform(HapticEvent.StepperStep); onMinus15() }
     val plus = { haptics.perform(HapticEvent.StepperStep); onPlus15() }
     val minusLabel = stringResource(Res.string.ds_timer_minus15)
