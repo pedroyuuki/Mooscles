@@ -59,4 +59,12 @@
     <string name="gallery_toast_action_message">Série removida</string>
     <string name="gallery_toast_action">Desfazer</string>
     <string name="gallery_toast_error_message">Não foi possível salvar o arquivo</string>
+    <string name="gallery_page_workout_inputs">Controles do treino</string>
+    <string name="gallery_page_set_row">Linha de série</string>
+    <string name="gallery_section_workout_inputs">Campo numérico, stepper, check da série e selo de PR</string>
+    <string name="gallery_section_set_rows">Linhas de série em cada estado</string>
+    <string name="gallery_sample_load_name">carga</string>
+    <string name="gallery_sample_load_label">Carga</string>
+    <string name="gallery_sample_reps_label">Repetições</string>
+    <string name="gallery_sample_step">2,5 quilos</string>
 </resources>

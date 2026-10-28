@@ -59,4 +59,12 @@
     <string name="gallery_toast_action_message">Set removed</string>
     <string name="gallery_toast_action">Undo</string>
     <string name="gallery_toast_error_message">Could not save the file</string>
+    <string name="gallery_page_workout_inputs">Workout inputs</string>
+    <string name="gallery_page_set_row">Set row</string>
+    <string name="gallery_section_workout_inputs">Numeric field, stepper, set check and PR badge</string>
+    <string name="gallery_section_set_rows">Set rows in every state</string>
+    <string name="gallery_sample_load_name">load</string>
+    <string name="gallery_sample_load_label">Load</string>
+    <string name="gallery_sample_reps_label">Reps</string>
+    <string name="gallery_sample_step">2.5 kilograms</string>
 </resources>

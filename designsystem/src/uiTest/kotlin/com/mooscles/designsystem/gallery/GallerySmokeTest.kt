@@ -12,8 +12,10 @@ import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.resources.gallery_section_icons
 import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
+import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
+import com.mooscles.designsystem.resources.gallery_section_workout_inputs
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,6 +33,8 @@ class GallerySmokeTest {
         GalleryPage.Fields to Res.string.gallery_section_text_fields,
         GalleryPage.States to Res.string.gallery_section_states,
         GalleryPage.Overlays to Res.string.gallery_section_overlays,
+        GalleryPage.WorkoutInputs to Res.string.gallery_section_workout_inputs,
+        GalleryPage.SetRow to Res.string.gallery_section_set_rows,
     )
 
     @OptIn(ExperimentalTestApi::class)

@@ -13,4 +13,25 @@
     <string name="ds_error_prefix">Error</string>
     <string name="ds_close">Close</string>
     <string name="ds_dismiss">Dismiss</string>
+    <string name="ds_set_row_a11y">Set %1$d of %2$d, previous %3$s, load %4$s, %5$s, %6$s</string>
+    <string name="ds_set_row_a11y_no_previous">Set %1$d of %2$d, load %3$s, %4$s, %5$s</string>
+    <plurals name="ds_reps_count">
+        <item quantity="one">%1$d rep</item>
+        <item quantity="other">%1$d reps</item>
+    </plurals>
+    <string name="ds_set_done">completed</string>
+    <string name="ds_set_not_done">not completed</string>
+    <string name="ds_action_complete_set">Complete set</string>
+    <string name="ds_action_edit_load">Edit load</string>
+    <string name="ds_action_edit_reps">Edit reps</string>
+    <string name="ds_action_change_type">Change type</string>
+    <string name="ds_action_remove_set">Remove set</string>
+    <string name="ds_complete_set_n">Complete set %1$d</string>
+    <string name="ds_stepper_increase">Increase %1$s by %2$s</string>
+    <string name="ds_stepper_decrease">Decrease %1$s by %2$s</string>
+    <string name="ds_pr_label">PR</string>
+    <string name="ds_pr_spoken">personal record</string>
+    <string name="ds_set_type_warmup_short">W</string>
+    <string name="ds_set_type_drop_short">D</string>
+    <string name="ds_set_type_failure_short">F</string>
 </resources>

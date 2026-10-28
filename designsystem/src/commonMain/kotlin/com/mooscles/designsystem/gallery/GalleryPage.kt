@@ -11,7 +11,9 @@ import com.mooscles.designsystem.gallery.pages.FoundationsPage
 import com.mooscles.designsystem.gallery.pages.IconsPage
 import com.mooscles.designsystem.gallery.pages.OverlaysPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
+import com.mooscles.designsystem.gallery.pages.SetRowPage
 import com.mooscles.designsystem.gallery.pages.StatesPage
+import com.mooscles.designsystem.gallery.pages.WorkoutInputsPage
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_page_buttons
 import com.mooscles.designsystem.resources.gallery_page_chips
@@ -20,7 +22,9 @@ import com.mooscles.designsystem.resources.gallery_page_foundations
 import com.mooscles.designsystem.resources.gallery_page_icons
 import com.mooscles.designsystem.resources.gallery_page_overlays
 import com.mooscles.designsystem.resources.gallery_page_rows
+import com.mooscles.designsystem.resources.gallery_page_set_row
 import com.mooscles.designsystem.resources.gallery_page_states
+import com.mooscles.designsystem.resources.gallery_page_workout_inputs
 import org.jetbrains.compose.resources.StringResource
 
 /** The pages of the design gallery. Each batch of components adds its own entry. */
@@ -33,6 +37,8 @@ enum class GalleryPage(val title: StringResource) {
     Fields(Res.string.gallery_page_fields),
     States(Res.string.gallery_page_states),
     Overlays(Res.string.gallery_page_overlays),
+    WorkoutInputs(Res.string.gallery_page_workout_inputs),
+    SetRow(Res.string.gallery_page_set_row),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
@@ -52,6 +58,8 @@ fun GalleryPage.Content() {
             GalleryPage.Fields -> FieldsPage()
             GalleryPage.States -> StatesPage()
             GalleryPage.Overlays -> OverlaysPage()
+            GalleryPage.WorkoutInputs -> WorkoutInputsPage()
+            GalleryPage.SetRow -> SetRowPage()
         }
     }
 }
