@@ -166,6 +166,10 @@ jobs:
       - name: Summarize iOS simulator tests
         if: ${{ !cancelled() }}
         shell: pwsh
+        env:
+          # The common tests in :shared today. Raise it when tests move into
+          # commonTest, so a silently skipped class fails the job.
+          MIN_IOS_TESTS: 6
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -177,13 +181,15 @@ jobs:
                   if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
               }
           }
+          $minimum = [int]$env:MIN_IOS_TESTS
           $lines = @(
               '### iOS simulator tests',
-              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped."
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
           ) + ($failed | ForEach-Object { "- ``$_``" })
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
+          if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
 
       - name: Upload iOS reports
         if: ${{ failure() }}

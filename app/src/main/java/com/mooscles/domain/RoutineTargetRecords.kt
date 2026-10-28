@@ -5,6 +5,7 @@ import com.mooscles.data.LoadConvention
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
 import kotlin.math.abs
+import kotlin.math.ulp
 
 /** A routine target is always copied from one eligible, completed working set. */
 data class RoutineTargetRecord(
@@ -20,10 +21,10 @@ object RoutineTargetRecords {
 
     // Match PR comparisons: ignore unit-conversion noise without rounding real load increases away.
     private fun sameLoad(first: Double, second: Double): Boolean =
-        abs(first - second) <= maxOf(Math.ulp(first), Math.ulp(second)) * 4
+        abs(first - second) <= maxOf(first.ulp, second.ulp) * 4
 
     private fun heavier(value: Double, baseline: Double): Boolean = value > baseline &&
-        value - baseline > maxOf(Math.ulp(value), Math.ulp(baseline)) * 4
+        value - baseline > maxOf(value.ulp, baseline.ulp) * 4
 
     private fun eligible(set: WorkoutSet, convention: LoadConvention): Boolean =
         WorkoutCalculations.validCompleted(set) && !set.warmup && !set.assistance &&

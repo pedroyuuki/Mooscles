@@ -6,6 +6,7 @@ import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutExercise
 import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
+import kotlin.math.ulp
 
 object WeightUnits {
     const val POUNDS_PER_KG = 2.2046226218487757
@@ -136,10 +137,10 @@ object WorkoutCalculations {
 
     // Ignore only binary floating-point round-trip noise, not a fixed decimal load increment.
     private fun heavier(value: Double, baseline: Double): Boolean = value > baseline &&
-        value - baseline > maxOf(Math.ulp(value), Math.ulp(baseline)) * 4
+        value - baseline > maxOf(value.ulp, baseline.ulp) * 4
 
     private fun sameLoad(first: Double, second: Double): Boolean =
-        kotlin.math.abs(first - second) <= maxOf(Math.ulp(first), Math.ulp(second)) * 4
+        kotlin.math.abs(first - second) <= maxOf(first.ulp, second.ulp) * 4
 
     private data class Key(val exerciseId: String, val convention: LoadConvention)
 

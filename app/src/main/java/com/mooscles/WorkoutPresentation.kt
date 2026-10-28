@@ -1,13 +1,14 @@
 package com.mooscles
 
 import com.mooscles.data.*
+import com.mooscles.domain.DecimalText
 import com.mooscles.domain.WorkoutCalculations
 import com.mooscles.domain.WeightUnits
 import com.mooscles.domain.ExercisePerformance
 import com.mooscles.domain.RepsPr
 import com.mooscles.domain.WeightPr
 import com.mooscles.ui.*
-import java.util.Locale
+import kotlin.math.ulp
 
 /** Owned by the sequential presentation flow; never called from composition. */
 internal class WorkoutPresentation {
@@ -64,7 +65,7 @@ internal class WorkoutPresentation {
                     previousPerformances[e.exerciseId to e.convention].orEmpty()
                         .firstOrNull { it.workout.id != w.id && it.workout.startedAt < w.startedAt }?.sets?.joinToString(" · ") {
                         val load = if (it.weightKg == 0.0 && !it.assistance && e.convention != LoadConvention.ASSISTANCE) "Bodyweight"
-                        else "${if (it.assistance || e.convention == LoadConvention.ASSISTANCE) "Assistance " else ""}${String.format(Locale.US, "%.2f", WeightUnits.fromKg(it.weightKg, prefs.pounds)).trimEnd('0').trimEnd('.')} ${if (prefs.pounds) "lb" else "kg"}"
+                        else "${if (it.assistance || e.convention == LoadConvention.ASSISTANCE) "Assistance " else ""}${DecimalText.fixed2(WeightUnits.fromKg(it.weightKg, prefs.pounds)).trimEnd('0').trimEnd('.')} ${if (prefs.pounds) "lb" else "kg"}"
                         "$load × ${it.reps}"
                     }
                 }
@@ -82,7 +83,7 @@ internal class WorkoutPresentation {
                         record.exercise.id == e.exerciseId && record.exercise.convention == e.convention.label &&
                             savedSets.any { set ->
                                 val sameLoad = kotlin.math.abs(set.weightKg - record.weightKg) <=
-                                    maxOf(Math.ulp(set.weightKg), Math.ulp(record.weightKg)) * 4
+                                    maxOf(set.weightKg.ulp, record.weightKg.ulp) * 4
                                 val assisted = set.assistance || e.convention == LoadConvention.ASSISTANCE
                                 WorkoutCalculations.validCompleted(set) && !set.warmup && sameLoad &&
                                     if (record.kind == RecordKind.WEIGHT) !assisted
