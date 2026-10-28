@@ -23,6 +23,7 @@ class SizesTimingElevationTest {
                 s.border, s.borderError, s.focusRingWidth, s.focusRingOffset,
             ),
         )
+        assertEquals(2.dp, s.borderSelected)
         assertEquals(60, s.tickCount)
         assertEquals(0.9f, s.sheetMaxFraction)
         assertEquals(0.3f, s.progressIndeterminateFraction)

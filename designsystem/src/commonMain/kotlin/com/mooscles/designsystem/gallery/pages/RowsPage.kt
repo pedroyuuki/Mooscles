@@ -36,7 +36,7 @@ fun RowsPage() {
         TopBar(title, onBack = {}, actions = { MIconButton(MIcons.Plus, actionLabel, onClick = {}) })
         SectionHeader(stringResource(Res.string.gallery_section_rows))
         SettingsRow(title, subtitle = subtitle, onClick = {})
-        SettingsRow(title, trailing = { MSwitch(checked = on, onCheckedChange = { on = it }) })
+        SettingsRow(title, trailing = { MSwitch(checked = on, onCheckedChange = { on = it }, contentDescription = title) })
         SettingsRow(title, onClick = {}, enabled = false)
         SwitchRow(title, checked = on, onCheckedChange = { on = it }, subtitle = subtitle)
         SwitchRow(title, checked = false, onCheckedChange = {}, enabled = false)

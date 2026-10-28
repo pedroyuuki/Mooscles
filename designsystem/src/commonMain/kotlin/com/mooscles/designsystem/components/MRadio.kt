@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.theme.MTheme
@@ -28,6 +30,7 @@ fun MRadio(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    contentDescription: String? = null,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
@@ -54,6 +57,7 @@ fun MRadio(
     Box(
         modifier = modifier
             .then(if (onClick == null) Modifier else Modifier.sizeIn(minWidth = MTheme.targets.min, minHeight = MTheme.targets.min))
+            .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier)
             .then(action),
         contentAlignment = Alignment.Center,
     ) {
@@ -61,7 +65,7 @@ fun MRadio(
             Modifier
                 .size(MTheme.sizes.icon24)
                 .mFocusRing(CircleShape, source)
-                .border(if (selected) MTheme.sizes.borderError else MTheme.sizes.border, ring, CircleShape),
+                .border(if (selected) MTheme.sizes.borderSelected else MTheme.sizes.border, ring, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             if (selected) Box(Modifier.size(MTheme.space.s3).background(dot, CircleShape))

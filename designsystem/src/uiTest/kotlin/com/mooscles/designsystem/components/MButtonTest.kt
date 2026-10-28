@@ -13,6 +13,8 @@ import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -63,6 +65,8 @@ class MButtonTest {
         waitForIdle()
         assertEquals(0, clicks)
         onNodeWithTag("b").assertContentDescriptionContains(getString(Res.string.ds_loading))
+        onNodeWithTag("b").assertIsNotEnabled()
+        onAllNodesWithText("Save").assertCountEquals(0)
     }
 
     @OptIn(ExperimentalTestApi::class)

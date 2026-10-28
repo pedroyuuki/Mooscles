@@ -17,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -27,6 +29,7 @@ import com.mooscles.designsystem.theme.MTheme
 /**
  * A switch. With [onCheckedChange] it is a control by itself (48 dp target, toggle haptics);
  * with null it only draws the state, for a row that owns the gesture ([SwitchRow]).
+ * [contentDescription] names a standalone switch (needed whenever it is used outside a row).
  * On also shows a check in the thumb and moves the thumb, so the state is not by color alone.
  */
 @Composable
@@ -35,6 +38,7 @@ fun MSwitch(
     onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    contentDescription: String? = null,
 ) {
     val colors = MTheme.colors
     val haptics = MTheme.haptics
@@ -81,6 +85,7 @@ fun MSwitch(
     Box(
         modifier = modifier
             .then(if (onCheckedChange == null) Modifier else Modifier.sizeIn(minWidth = MTheme.targets.min, minHeight = MTheme.targets.min))
+            .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier)
             .then(action),
         contentAlignment = Alignment.Center,
     ) {

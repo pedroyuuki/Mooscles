@@ -72,6 +72,8 @@ data class MoosclesSizes(
     val rowMin: Dp = 56.dp,
     val border: Dp = 1.dp,
     val borderError: Dp = 2.dp,
+    /** Ring of a selected radio. The spec is silent: a controller choice, 2 dp like the focus ring. */
+    val borderSelected: Dp = 2.dp,
     val focusRingWidth: Dp = 2.dp,
     val focusRingOffset: Dp = 2.dp,
     /** Share of the track the indeterminate progress bar fills while it moves (or rests). */

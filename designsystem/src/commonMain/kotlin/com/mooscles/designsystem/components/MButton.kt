@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -122,7 +123,10 @@ fun MButton(
             contentAlignment = Alignment.Center,
         ) {
             Row(
-                Modifier.alpha(if (loading) 0f else 1f).padding(vertical = MTheme.space.s2),
+                Modifier
+                    .alpha(if (loading) 0f else 1f)
+                    .then(if (loading) Modifier.clearAndSetSemantics {} else Modifier)
+                    .padding(vertical = MTheme.space.s2),
                 horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

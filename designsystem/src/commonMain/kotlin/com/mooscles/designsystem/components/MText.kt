@@ -17,7 +17,8 @@ import com.mooscles.designsystem.theme.MTheme
  * The text of the design system. The color is [color] when given, else the container's
  * content color, else the color of [style], else `text.primary`.
  *
- * `labelCaps` is drawn in upper case for the current locale, but that is visual only: the
+ * [caps] defaults to true for the `labelCaps` style and is explicit, so it survives `style.copy(...)`.
+ * Caps text is drawn in upper case for the current locale, but that is visual only: the
  * semantics keep the original text, so screen readers and tests read it as written.
  */
 @Composable
@@ -26,6 +27,7 @@ fun MText(
     style: TextStyle,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
+    caps: Boolean = style == MTheme.type.labelCaps,
 ) {
     val content = LocalMContentColor.current
     val resolved = when {
@@ -34,7 +36,6 @@ fun MText(
         style.color != Color.Unspecified -> style.color
         else -> MTheme.colors.textPrimary
     }
-    val caps = style == MTheme.type.labelCaps
     val shown = if (caps) text.toUpperCase(Locale.current) else text
     val original = text
     BasicText(
