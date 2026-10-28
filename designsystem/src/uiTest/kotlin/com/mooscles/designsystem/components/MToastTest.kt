@@ -2,7 +2,10 @@ package com.mooscles.designsystem.components
 
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.AccessibilityManager
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -32,11 +35,33 @@ class MToastTest {
         var result: MToastResult? = null
     }
 
-    private fun ComposeUiTest.start(run: Run, message: String, kind: MToastKind = MToastKind.Info, action: String? = null) {
+    /** Stands in for a screen reader that asks for [timeout] ms whenever the toast has controls. */
+    private class LongTimeouts(val timeout: Long) : AccessibilityManager {
+        val asked = mutableListOf<Triple<Long, Boolean, Boolean>>()
+        override fun calculateRecommendedTimeoutMillis(
+            originalTimeoutMillis: Long,
+            containsIcons: Boolean,
+            containsText: Boolean,
+            containsControls: Boolean,
+        ): Long {
+            asked += Triple(originalTimeoutMillis, containsText, containsControls)
+            return if (containsControls) timeout else originalTimeoutMillis
+        }
+    }
+
+    private fun ComposeUiTest.start(
+        run: Run,
+        message: String,
+        kind: MToastKind = MToastKind.Info,
+        action: String? = null,
+        accessibility: AccessibilityManager? = null,
+    ) {
         mainClock.autoAdvance = false
         withTheme {
-            LaunchedEffect(Unit) { run.result = run.state.show(message, kind, action) }
-            MToastHost(run.state, Modifier.fillMaxSize())
+            CompositionLocalProvider(LocalAccessibilityManager provides (accessibility ?: LocalAccessibilityManager.current)) {
+                LaunchedEffect(Unit) { run.result = run.state.show(message, kind, action) }
+                MToastHost(run.state, Modifier.fillMaxSize())
+            }
         }
         mainClock.advanceTimeByFrame()
         mainClock.advanceTimeByFrame()
@@ -111,5 +136,30 @@ class MToastTest {
             start(Run(), "Saved")
             onNodeWithTag(ToastErrorIconTag, useUnmergedTree = true).assertDoesNotExist()
         }
+    }
+
+    @Test
+    fun actionToastWaitsForTheTimeTheAccessibilitySettingsAskFor() = runComposeUiTest {
+        val run = Run()
+        val timing = MoosclesTiming()
+        val accessibility = LongTimeouts(timeout = 60_000)
+        start(run, "Set removed", action = "Undo", accessibility = accessibility)
+        mainClock.advanceTimeBy(timing.toastAction + 10_000)
+        onNodeWithTag(ToastTag).assertExists()
+        assertNull(run.result)
+        assertEquals(listOf(Triple(timing.toastAction, true, true)), accessibility.asked)
+        mainClock.advanceTimeBy(60_000 - timing.toastAction - 10_000 + MoosclesMotion().fast + 200L)
+        onNodeWithTag(ToastTag).assertDoesNotExist()
+        assertEquals(MToastResult.Dismissed, run.result)
+    }
+
+    @Test
+    fun infoToastAsksForTheTimeWithoutControls() = runComposeUiTest {
+        val run = Run()
+        val accessibility = LongTimeouts(timeout = 60_000)
+        start(run, "Saved", accessibility = accessibility)
+        mainClock.advanceTimeBy(MoosclesTiming().toastInfo + MoosclesMotion().fast + 200L)
+        onNodeWithTag(ToastTag).assertDoesNotExist()
+        assertEquals(listOf(Triple(MoosclesTiming().toastInfo, true, false)), accessibility.asked)
     }
 }

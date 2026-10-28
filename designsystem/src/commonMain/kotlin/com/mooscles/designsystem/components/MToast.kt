@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -82,7 +83,8 @@ internal class MToastData(
 /**
  * Queues toasts, one at a time: [show] suspends until the toast is gone and says how.
  * An info toast goes away by itself after `timing.toastInfo` (`timing.toastAction` when it
- * has an action); an error toast stays until it is closed (or its action is used).
+ * has an action), or the longer time the platform's accessibility settings recommend; an error
+ * toast stays until it is closed (or its action is used).
  */
 @Stable
 class MToastHostState {
@@ -132,10 +134,21 @@ fun MToastHost(state: MToastHostState, modifier: Modifier = Modifier) {
             shown = null
         }
     }
+    val accessibility = LocalAccessibilityManager.current
     LaunchedEffect(data) {
         val toast = data ?: return@LaunchedEffect
         if (toast.kind == MToastKind.Info) {
-            delay(if (toast.actionLabel != null) timing.toastAction else timing.toastInfo)
+            val hasAction = toast.actionLabel != null
+            val base = if (hasAction) timing.toastAction else timing.toastInfo
+            // With a screen reader or switch access on, the platform lengthens the time (for a toast
+            // with an action, usually until it is closed), as the Material SnackbarHost does.
+            val timeout = accessibility?.calculateRecommendedTimeoutMillis(
+                base,
+                containsIcons = true,
+                containsText = true,
+                containsControls = hasAction,
+            ) ?: base
+            delay(timeout)
             toast.finish(MToastResult.Dismissed)
         }
     }
