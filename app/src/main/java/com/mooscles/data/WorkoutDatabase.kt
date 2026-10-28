@@ -17,7 +17,11 @@ import androidx.room.useWriterConnection
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.sqlite.execSQL
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 class EnumConverters {
     @TypeConverter fun muscle(value: String) = MuscleGroup.valueOf(value)
@@ -183,9 +187,23 @@ abstract class WorkoutDatabase : RoomDatabase() {
 
 /**
  * All or nothing on Room's single writer connection, as `withTransaction` was before the driver
- * (which has no SupportSQLite helper for it). A call made inside another one, and every DAO call in
- * [block], reuses the connection confined to this coroutine and joins the outer transaction: reads
- * see the outer writes, and an exception anywhere rolls everything back.
+ * (which has no SupportSQLite helper for it). Every DAO call in [block] runs on that connection,
+ * so reads see the transaction's own writes and an exception anywhere rolls everything back.
+ *
+ * A call made inside another one for the same database runs [block] directly in the enclosing
+ * transaction. It must not call `useWriterConnection` again: Room refreshes the invalidation
+ * tracker after every such call, and each refresh would park a Room IO thread on the connection
+ * pool until the outer commit. Like before, the outer commit is the only refresh.
  */
-suspend fun <R> WorkoutDatabase.writeTransaction(block: suspend () -> R): R =
-    useWriterConnection { connection -> connection.immediateTransaction { block() } }
+suspend fun <R> WorkoutDatabase.writeTransaction(block: suspend () -> R): R {
+    if (currentCoroutineContext()[EnclosingWriteTransaction]?.database === this) return block()
+    return useWriterConnection { connection ->
+        connection.immediateTransaction { withContext(EnclosingWriteTransaction(this@writeTransaction)) { block() } }
+    }
+}
+
+/** Marks the coroutine running the block of a top-level [writeTransaction] on [database]. */
+private class EnclosingWriteTransaction(val database: WorkoutDatabase) :
+    AbstractCoroutineContextElement(EnclosingWriteTransaction) {
+    companion object Key : CoroutineContext.Key<EnclosingWriteTransaction>
+}

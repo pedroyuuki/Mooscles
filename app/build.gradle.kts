@@ -60,7 +60,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.room:room-runtime:2.8.5")
-    implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
     // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.
     // sqlite 2.7.x pairs with Room 3 and drops restricted APIs that 2.8.x was compiled with.

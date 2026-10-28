@@ -5,9 +5,14 @@ import androidx.room.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.domain.WorkoutCalculations
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -44,6 +49,38 @@ class RoomPersistenceTest {
         }.exceptionOrNull()
         assertEquals("Folder not found.", error?.message)
         assertEquals(before, repo.snapshot())
+    }
+
+    /**
+     * A nested command must run on the enclosing transaction's connection without starting its own
+     * connection use: Room refreshes the invalidation tracker after every `useWriterConnection`, and
+     * each refresh would park a Room IO thread on the connection pool until the outer commit.
+     */
+    @Test fun nestedCommandsDoNotParkRoomThreadsOnTheConnectionPool() = runBlocking {
+        val observed = Channel<AppData>(Channel.CONFLATED)
+        val collector = launch(Dispatchers.Default) { repo.data.collect { observed.send(it) } }
+        try {
+            withTimeout(10_000) { observed.receive() }
+            val parked = database.writeTransaction {
+                repo.createRoutine("Inside the outer transaction")
+                repeat(6) { repo.snapshot() }
+                repo.localState()
+                // Give any refresh coroutine time to reach the pool, then look at every thread.
+                var waiting = emptyList<String>()
+                repeat(50) {
+                    waiting = Thread.getAllStackTraces().filter { (_, frames) ->
+                        frames.any { it.className == "android.database.sqlite.SQLiteConnectionPool" && it.methodName == "waitForConnection" }
+                    }.keys.map { it.name }
+                    if (waiting.isNotEmpty()) return@writeTransaction waiting
+                    Thread.sleep(20)
+                }
+                waiting
+            }
+            assertEquals("Threads waiting for a connection inside the transaction", emptyList<String>(), parked)
+            withTimeout(10_000) { while (observed.receive().routines.none { it.name == "Inside the outer transaction" }) Unit }
+        } finally {
+            collector.cancel()
+        }
     }
 
     @Test fun routineEditsPreserveWorkoutSnapshotsAndDuplicateIndependentPlans() = runBlocking {
