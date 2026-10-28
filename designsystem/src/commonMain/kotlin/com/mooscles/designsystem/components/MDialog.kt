@@ -3,10 +3,13 @@ package com.mooscles.designsystem.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -55,6 +58,7 @@ internal const val DialogConfirmDangerTag = "dialog-confirm-danger"
  * platform back button: Android's goes through the Dialog's own request, hardware keys
  * through `onPreviewKeyEvent`; both end in the same guarded [close].
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MDialog(
     title: String,
@@ -121,16 +125,20 @@ fun MDialog(
                         }
                         .overlayElevation(shape)
                         .background(colors.bgOverlay, shape)
+                        // Scrolls when it is taller than the window (landscape, split screen, 200 % text).
+                        .verticalScroll(rememberScrollState())
                         .padding(MTheme.space.s6)
                         .semantics { paneTitle = title },
                     verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
                 ) {
                     MText(title, style = MTheme.type.titleLg, modifier = Modifier.semantics { heading() })
                     MText(text, style = MTheme.type.bodyLg, color = colors.textSecondary)
-                    Row(
+                    // Long labels wrap onto a second line, still at the end, instead of squeezing the confirmation.
+                    FlowRow(
                         Modifier.fillMaxWidth().padding(top = MTheme.space.s2),
                         horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.spacedBy(MTheme.space.s2),
+                        itemVerticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (dismissLabel != null) {
                             MButton(

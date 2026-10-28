@@ -1,6 +1,13 @@
 package com.mooscles.designsystem.components
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import com.mooscles.designsystem.assertShownWhole
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.click
@@ -79,5 +86,48 @@ class MDialogTest {
         waitForIdle()
         onNodeWithTag(DialogConfirmDangerTag).assertExists()
         onNodeWithTag(DialogConfirmTag).assertDoesNotExist()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aDialogTallerThanTheWindowScrollsToItsActions() = runComposeUiTest {
+        var confirmed = 0
+        val text = List(40) { "Every set logged in this workout will be removed for good." }.joinToString(" ")
+        withTheme(fontScale = 2f) {
+            MDialog("Discard workout?", text, "Discard", onConfirm = { confirmed++ }, onDismiss = {}, dismissLabel = "Keep training")
+        }
+        waitForIdle()
+        onNodeWithTag(DialogConfirmTag).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(DialogConfirmTag).performClick()
+        waitForIdle()
+        assertEquals(1, confirmed)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.labelLayout(label: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        val node = onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode()
+        val action = node.config[SemanticsActions.GetTextLayoutResult].action
+        assertTrue(action != null && action(results), "no text layout result for $label")
+        return results.first()
+    }
+
+    /** At 200 % the two labels do not fit on one line together: the confirmation wraps below, whole, still last. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun longActionLabelsWrapInsteadOfSqueezing() = runComposeUiTest {
+        withTheme(fontScale = 2f) {
+            MDialog("Discard?", "Sets are lost.", "Discard workout", onConfirm = {}, onDismiss = {}, dismissLabel = "Continue training")
+        }
+        waitForIdle()
+        val card = onNodeWithTag(DialogTag).getBoundsInRoot()
+        val dismiss = onNodeWithTag(DialogDismissTag).getBoundsInRoot()
+        val confirm = onNodeWithTag(DialogConfirmTag).getBoundsInRoot()
+        for ((name, bounds) in listOf("dismiss" to dismiss, "confirm" to confirm)) {
+            assertTrue(bounds.left >= card.left && bounds.right <= card.right, "$name $bounds outside the card $card")
+        }
+        assertTrue(confirm.top >= dismiss.bottom || confirm.left >= dismiss.right, "the confirmation is not last: $dismiss, $confirm")
+        assertShownWhole(labelLayout("Continue training"), "dismiss")
+        assertShownWhole(labelLayout("Discard workout"), "confirm")
     }
 }
