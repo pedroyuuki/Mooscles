@@ -3,20 +3,20 @@ package com.mooscles.designsystem.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import com.mooscles.designsystem.interaction.MoosclesHaptics
-import com.mooscles.designsystem.interaction.NoHaptics
+import com.mooscles.designsystem.interaction.rememberPlatformHaptics
 import com.mooscles.designsystem.tokens.MoosclesColors
 import com.mooscles.designsystem.tokens.rememberMoosclesTypography
 
 /**
  * Provides every design system token to [content]. [reducedMotion] defaults to the system
- * setting; tests and the gallery may override it. [haptics] stays [NoHaptics] until the
- * platform implementations land.
+ * setting; tests and the gallery may override it. [haptics] defaults to the
+ * platform implementation.
  */
 @Composable
 fun MoosclesDesignTheme(
     dark: Boolean,
     reducedMotion: Boolean = rememberSystemReducedMotion(),
-    haptics: MoosclesHaptics = NoHaptics,
+    haptics: MoosclesHaptics = rememberPlatformHaptics(),
     content: @Composable () -> Unit,
 ) {
     val colors = if (dark) MoosclesColors.Dark else MoosclesColors.Light
