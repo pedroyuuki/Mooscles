@@ -265,7 +265,7 @@ Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Deci
 | --- | --- | --- | --- | --- |
 | 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; build/release no macOS e CI concluídos (2026-10-27); faltam a chave de assinatura (pendente com o dono do repositório original) e a release v1.5.0, e o "Pronto quando" ainda pede o export/import verificado entre aparelhos reais | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) · [build no macOS e CI](plans/2026-10-27-macos-build-ci.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
 | 1 | não iniciada | — | — | — |
-| 2 | spec aprovada em 2026-10-27 (direção "Giz & Ferro"); implementação depois da 1B | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | — | — |
+| 2 | spec aprovada e plano pronto em 2026-10-27 (direção "Giz & Ferro"); implementação depois da 1B | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | [design system](plans/2026-10-27-phase2-design-system.md) | — |
 | 3 | não iniciada | — | — | — |
 | 4 | não iniciada | — | — | — |
 | 5 | não iniciada | — | — | — |
