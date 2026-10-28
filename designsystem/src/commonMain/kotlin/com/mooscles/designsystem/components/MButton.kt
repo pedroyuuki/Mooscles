@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -44,6 +46,9 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_loading
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
+
+/** The tag of a button's leading icon, present only when [MButton] has one. */
+const val ButtonIconTag = "button-icon"
 
 enum class MButtonVariant { Primary, Secondary, Tonal, Text, Destructive, Danger }
 
@@ -130,7 +135,16 @@ fun MButton(
                 horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (icon != null) MIcon(icon, contentDescription = null, size = MTheme.sizes.icon20, tint = content)
+                // The icon grows with the text (font scale), so a large label is not paired with a small icon.
+                if (icon != null) {
+                    MIcon(
+                        icon,
+                        contentDescription = null,
+                        size = MTheme.sizes.icon20 * LocalDensity.current.fontScale,
+                        tint = content,
+                        modifier = Modifier.testTag(ButtonIconTag),
+                    )
+                }
                 MText(
                     text,
                     style = textStyle.copy(textAlign = TextAlign.Center),
