@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.resources.Res
@@ -34,6 +35,7 @@ import com.mooscles.designsystem.resources.ds_action_complete_set
 import com.mooscles.designsystem.resources.ds_action_edit_load
 import com.mooscles.designsystem.resources.ds_action_edit_reps
 import com.mooscles.designsystem.resources.ds_action_remove_set
+import com.mooscles.designsystem.resources.ds_action_uncomplete_set
 import com.mooscles.designsystem.resources.ds_pr_spoken
 import com.mooscles.designsystem.resources.ds_reps_count
 import com.mooscles.designsystem.resources.ds_set_done
@@ -79,7 +81,8 @@ private const val TWO_LINE_FONT_SCALE = 1.5f
  * One set of the active workout: number (and a letter for a warm-up, drop or failure set), the
  * previous result, load, reps and the check, at least 56 dp tall. With a font scale of 1.5 or more
  * it is two lines. The whole row is one accessibility node ("Set 4 of 5, previous ..., load ...,
- * 6 reps, not completed") with five custom actions; its parts are not separate nodes. [loadField]
+ * 6 reps, not completed") with five custom actions; its parts are not separate nodes, except
+ * the editable [loadField] and [repsField], which stay their own nodes so a screen reader can reach and edit them. [loadField]
  * and [repsField] replace the default tappable numbers with a [NumericField]. The haptics follow
  * [SetRowState.status]: to `Completed` the plain one, to `CompletedRecord` the record one instead,
  * back to pending the unchecked one. Removing with "undo" is up to the caller (a toast).
@@ -126,7 +129,7 @@ fun SetRow(
     } else {
         stringResource(Res.string.ds_set_row_a11y_no_previous, state.index, state.total, state.loadSpoken, repsText, statusText)
     }
-    val labelComplete = stringResource(Res.string.ds_action_complete_set)
+    val labelComplete = stringResource(if (completed) Res.string.ds_action_uncomplete_set else Res.string.ds_action_complete_set)
     val labelLoad = stringResource(Res.string.ds_action_edit_load)
     val labelReps = stringResource(Res.string.ds_action_edit_reps)
     val labelType = stringResource(Res.string.ds_action_change_type)
@@ -157,7 +160,7 @@ fun SetRow(
         }
     }
     val check: @Composable () -> Unit = {
-        SetCheck(completed, onCompleteChange, state.index, haptics = false)
+        Box(Modifier.clearAndSetSemantics {}) { SetCheck(completed, onCompleteChange, state.index, haptics = false) }
     }
 
     Column(
@@ -165,7 +168,7 @@ fun SetRow(
             .fillMaxWidth()
             .background(background, shape)
             .padding(horizontal = MTheme.space.s2)
-            .clearAndSetSemantics {
+            .semantics(mergeDescendants = true) {
                 contentDescription = description
                 customActions = listOf(
                     CustomAccessibilityAction(labelComplete) { onCompleteChange(!completed); true },
@@ -175,6 +178,7 @@ fun SetRow(
                     CustomAccessibilityAction(labelRemove) { onRemove(); true },
                 )
             },
+        verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap),
     ) {
         if (twoLines) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap), verticalAlignment = Alignment.Top) {
@@ -207,7 +211,7 @@ private fun IndexCell(state: SetRowState, onChangeType: () -> Unit) {
         SetType.Drop -> stringResource(Res.string.ds_set_type_drop_short)
         SetType.Failure -> stringResource(Res.string.ds_set_type_failure_short)
     }
-    Column(
+    Box(Modifier.clearAndSetSemantics {}) { Column(
         Modifier
             .sizeIn(minWidth = MTheme.targets.min, minHeight = MTheme.targets.workout)
             .clickable(role = Role.Button, onClick = onChangeType),
@@ -226,13 +230,13 @@ private fun IndexCell(state: SetRowState, onChangeType: () -> Unit) {
                     .padding(horizontal = MTheme.space.s2),
             )
         }
-    }
+    } }
 }
 
 @Composable
 private fun PreviousCell(state: SetRowState, record: Boolean, animateBadge: Boolean, modifier: Modifier) {
     Column(
-        modifier.testTag(SetRowPreviousTag).sizeIn(minHeight = MTheme.targets.workout),
+        modifier.testTag(SetRowPreviousTag).sizeIn(minHeight = MTheme.targets.workout).clearAndSetSemantics {},
         verticalArrangement = Arrangement.Center,
     ) {
         MText(state.previous ?: DASH, MTheme.type.numSm, color = MTheme.colors.textSecondary)
@@ -245,13 +249,15 @@ private const val DASH = "–"
 /** The default load or reps: the number as a 56 dp tall tappable text. */
 @Composable
 private fun NumberCell(text: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .widthIn(min = MTheme.sizes.numericFieldWidth)
-            .sizeIn(minHeight = MTheme.targets.workout)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        MText(text, MTheme.type.numMd, modifier = Modifier.padding(horizontal = MTheme.space.s2))
+    Box(Modifier.clearAndSetSemantics {}) {
+        Box(
+            Modifier
+                .widthIn(min = MTheme.sizes.numericFieldWidth)
+                .sizeIn(minHeight = MTheme.targets.workout)
+                .clickable(role = Role.Button, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            MText(text, MTheme.type.numMd, modifier = Modifier.padding(horizontal = MTheme.space.s2))
+        }
     }
 }

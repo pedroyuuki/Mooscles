@@ -22,6 +22,7 @@
     <string name="ds_set_done">concluída</string>
     <string name="ds_set_not_done">não concluída</string>
     <string name="ds_action_complete_set">Concluir série</string>
+    <string name="ds_action_uncomplete_set">Marcar série como não feita</string>
     <string name="ds_action_edit_load">Editar carga</string>
     <string name="ds_action_edit_reps">Editar repetições</string>
     <string name="ds_action_change_type">Mudar tipo</string>

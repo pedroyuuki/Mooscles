@@ -2,16 +2,17 @@ package com.mooscles.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -28,7 +29,14 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.theme.MTheme
-import kotlinx.coroutines.delay
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.util.fastAll
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import kotlinx.coroutines.withTimeoutOrNull
 
 const val StepperDecreaseTag = "stepper-decrease"
 const val StepperIncreaseTag = "stepper-increase"
@@ -73,11 +81,6 @@ fun Stepper(
     }
 }
 
-/** Not a plain click: the same press that waits for the hold also ends in a click, which the hold swallows. */
-private class HoldState {
-    var repeated = false
-}
-
 @Composable
 private fun StepperButton(
     icon: ImageVector,
@@ -88,33 +91,43 @@ private fun StepperButton(
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
-    val pressed by source.collectIsPressedAsState()
-    val hold = remember { HoldState() }
     val currentStep by rememberUpdatedState(step)
     val repeatDelay = MTheme.timing.stepperRepeatDelay
     val repeatInterval = MTheme.timing.stepperRepeatInterval
-    LaunchedEffect(pressed, enabled) {
-        if (pressed && enabled) {
-            hold.repeated = false
-            delay(repeatDelay)
-            hold.repeated = true
-            currentStep()
-            while (true) {
-                delay(repeatInterval)
-                currentStep()
-            }
-        }
-    }
     val shape = RoundedCornerShape(MTheme.radius.md)
     Box(
         Modifier
             .testTag(tag)
             .sizeIn(minWidth = MTheme.sizes.stepperButtonWidth, minHeight = MTheme.sizes.stepperButtonHeight)
             .mPressScale(source, enabled)
-            .semantics { contentDescription = label }
-            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button) {
-                if (!hold.repeated) currentStep()
-                hold.repeated = false
+            .semantics {
+                contentDescription = label
+                role = Role.Button
+                if (enabled) onClick { currentStep(); true } else disabled()
+            }
+            .focusable(enabled, source)
+            .pointerInput(enabled, repeatDelay, repeatInterval) {
+                if (!enabled) return@pointerInput
+                // The timing starts at the finger going down and ends synchronously when it lifts,
+                // not at a recomposition. Initial pass: the press is seen whatever consumes it.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val press = PressInteraction.Press(down.position)
+                    source.tryEmit(press)
+                    var released = false
+                    try {
+                        if (withTimeoutOrNull(repeatDelay) { awaitRelease() } != null) {
+                            released = true
+                            currentStep()
+                        } else {
+                            currentStep()
+                            while (withTimeoutOrNull(repeatInterval) { awaitRelease() } == null) currentStep()
+                            released = true
+                        }
+                    } finally {
+                        source.tryEmit(if (released) PressInteraction.Release(press) else PressInteraction.Cancel(press))
+                    }
+                }
             }
             .mFocusRing(shape, source)
             .background(if (enabled) colors.bgSurface else colors.bgInset, shape)
@@ -122,5 +135,13 @@ private fun StepperButton(
         contentAlignment = Alignment.Center,
     ) {
         MIcon(icon, contentDescription = null, size = MTheme.sizes.icon24, tint = if (enabled) colors.textPrimary else colors.textDisabled)
+    }
+}
+
+/** Suspends until no pointer is down any more (lifted or cancelled). */
+private suspend fun AwaitPointerEventScope.awaitRelease() {
+    while (true) {
+        val event = awaitPointerEvent(PointerEventPass.Initial)
+        if (event.changes.fastAll { !it.pressed }) return
     }
 }

@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.icons.MIcon
@@ -64,14 +66,22 @@ fun SetCheck(
         val becameChecked = checked && !previous
         previous = checked
         if (!becameChecked) return@LaunchedEffect
-        when (val choice = MotionPolicy.keyMoment(KeyMoment.SetCompleted, reduced)) {
-            is MotionChoice.Spring -> {
-                scale.snapTo(choice.fromScale)
-                scale.animateTo(1f, spring(choice.tokens.dampingRatio, choice.tokens.stiffness))
+        try {
+            when (val choice = MotionPolicy.keyMoment(KeyMoment.SetCompleted, reduced)) {
+                is MotionChoice.Spring -> {
+                    scale.snapTo(choice.fromScale)
+                    scale.animateTo(1f, spring(choice.tokens.dampingRatio, choice.tokens.stiffness))
+                }
+                is MotionChoice.Fade -> {
+                    alpha.snapTo(0f)
+                    alpha.animateTo(1f, tween(choice.durationMs))
+                }
             }
-            is MotionChoice.Fade -> {
-                alpha.snapTo(0f)
-                alpha.animateTo(1f, tween(choice.durationMs))
+        } finally {
+            // Unchecking in the middle of the entrance must not leave the disc small or faint.
+            withContext(NonCancellable) {
+                scale.snapTo(1f)
+                alpha.snapTo(1f)
             }
         }
     }

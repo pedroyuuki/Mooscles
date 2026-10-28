@@ -48,30 +48,31 @@ class StepperTest {
         onNodeWithTag(StepperIncreaseTag).assertIsEnabled()
     }
 
-    /** The margins (not the exact 399/400/480/560 ms) absorb the frame the press takes to reach the effect. */
+    /** Timing is read from the test clock at each step, 1 ms at a time, so no assertion sits on a frame boundary. */
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun holdRepeatsAfterFourHundredThenEveryEighty() = runComposeUiTest {
-        var steps = 0
+        val times = mutableListOf<Long>()
         var value by mutableStateOf(0.0)
         withTheme {
-            Stepper(value, { value = it; steps++ }, step = 1.0, min = 0.0, display = "$value", decreaseLabel = "Decrease", increaseLabel = "Increase")
+            Stepper(value, { value = it; times += mainClock.currentTime }, step = 1.0, min = 0.0, display = "$value", decreaseLabel = "Decrease", increaseLabel = "Increase")
         }
         waitForIdle()
         mainClock.autoAdvance = false
         onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
-        mainClock.advanceTimeByFrame()
-        mainClock.advanceTimeBy(300)
-        assertEquals(0, steps, "before 400 ms")
-        mainClock.advanceTimeBy(150)
-        assertEquals(1, steps, "at 450 ms")
-        mainClock.advanceTimeBy(50)
-        assertEquals(2, steps, "at 500 ms")
-        mainClock.advanceTimeBy(90)
-        assertEquals(3, steps, "at 590 ms")
+        val start = mainClock.currentTime
+        repeat(700) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertTrue(times.size >= 4, "steps at ${times.map { it - start }}")
+        val offsets = times.map { it - start }
+        assertTrue(offsets[0] in 398..416, "first repeat at ${offsets[0]} ms, expected about 400")
+        for (i in 1 until offsets.size) {
+            val gap = offsets[i] - offsets[i - 1]
+            assertTrue(gap in 64..96, "gap $i is $gap ms, expected about 80")
+        }
+        val before = times.size
         onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
-        mainClock.advanceTimeBy(500)
-        assertEquals(3, steps, "releasing adds nothing")
+        repeat(400) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(before, times.size, "a step happened after the finger lifted")
     }
 
     @OptIn(ExperimentalTestApi::class)

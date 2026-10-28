@@ -14,6 +14,9 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -106,6 +109,76 @@ class SetRowTest {
         )
         runOnUiThread { actions.forEach { it.action() } }
         assertEquals(listOf("complete:true", "load", "reps", "type", "remove"), calls)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun completeActionFollowsTheState() {
+        for ((lang, expected) in listOf("en" to "Mark set as not done", "pt-BR" to "Marcar série como não feita")) {
+            runComposeUiTest {
+                val calls = mutableListOf<Boolean>()
+                withTheme { ProvideAppLocale(lang) { Row(state(status = SetStatus.Completed), onComplete = { calls += it }) } }
+                waitForIdle()
+                val actions = onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty()
+                assertEquals(expected, actions.first().label)
+                runOnUiThread { actions.first().action() }
+                assertEquals(listOf(false), calls)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun editableFieldsStayReachableForScreenReaders() = runComposeUiTest {
+        var load by mutableStateOf("85")
+        var reps by mutableStateOf("6")
+        withTheme {
+            ProvideAppLocale("en") {
+                SetRow(
+                    state(status = SetStatus.Editing), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
+                    loadField = { NumericField(load, { load = it }, NumericKind.Load, "Load") },
+                    repsField = { NumericField(reps, { reps = it }, NumericKind.Reps, "Reps") },
+                )
+            }
+        }
+        waitForIdle()
+        val fields = onAllNodes(hasSetTextAction())
+        assertEquals(2, fields.fetchSemanticsNodes().size)
+        assertEquals("85", fields[0].fetchSemanticsNode().config.getOrNull(SemanticsProperties.EditableText)?.text)
+        assertEquals("6", fields[1].fetchSemanticsNode().config.getOrNull(SemanticsProperties.EditableText)?.text)
+        fields[0].performTextReplacement("90")
+        fields[1].performTextReplacement("8")
+        waitForIdle()
+        assertEquals("90", load)
+        assertEquals("8", reps)
+        val row = onNodeWithTag("row").fetchSemanticsNode().config
+        assertEquals(listOf("Set 4 of 5, previous 80 kilograms by 6, load 85 kilograms, 6 reps, not completed"), row.getOrNull(SemanticsProperties.ContentDescription))
+        assertEquals(5, row.getOrNull(SemanticsActions.CustomActions).orEmpty().size)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun recordBadgeFinishesItsEntranceInsideARow() {
+        for (reduced in listOf(false, true)) {
+            var settled: Rect? = null
+            runComposeUiTest {
+                withTheme(reducedMotion = reduced) { Row(state(status = SetStatus.CompletedRecord)) }
+                waitForIdle()
+                settled = onNodeWithTag(PrBadgeTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            }
+            runComposeUiTest {
+                var status by mutableStateOf(SetStatus.Editing)
+                withTheme(reducedMotion = reduced) { Row(state(status = status)) }
+                waitForIdle()
+                status = SetStatus.CompletedRecord
+                waitForIdle()
+                mainClock.advanceTimeBy(1_000)
+                val bounds = onNodeWithTag(PrBadgeTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                assertEquals(settled!!.top, bounds.top, 0.5f, "reduced=$reduced top")
+                assertEquals(settled!!.height, bounds.height, 0.5f, "reduced=$reduced height")
+                assertEquals(settled!!.width, bounds.width, 0.5f, "reduced=$reduced width")
+            }
+        }
     }
 
     @OptIn(ExperimentalTestApi::class)

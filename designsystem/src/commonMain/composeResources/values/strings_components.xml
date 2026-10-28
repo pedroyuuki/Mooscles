@@ -22,6 +22,7 @@
     <string name="ds_set_done">completed</string>
     <string name="ds_set_not_done">not completed</string>
     <string name="ds_action_complete_set">Complete set</string>
+    <string name="ds_action_uncomplete_set">Mark set as not done</string>
     <string name="ds_action_edit_load">Edit load</string>
     <string name="ds_action_edit_reps">Edit reps</string>
     <string name="ds_action_change_type">Change type</string>

@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -45,24 +49,34 @@ fun PrBadge(modifier: Modifier = Modifier, soft: Boolean = false, animateIn: Boo
     val container = if (soft) colors.prSubtle else colors.prSolid
     val content = if (soft) colors.prText else colors.prOn
     val choice = MotionPolicy.keyMoment(KeyMoment.PersonalRecord, MTheme.reducedMotion)
-    val scale = remember { Animatable(1f) }
-    val alpha = remember { Animatable(1f) }
-    val rise = remember { Animatable(0f) }
-    val riseFrom = (choice as? MotionChoice.Spring)?.riseDp ?: Dp(0f)
-    val riseFromPx = with(LocalDensity.current) { riseFrom.toPx() }
-    LaunchedEffect(animateIn) {
-        if (!animateIn) return@LaunchedEffect
-        when (choice) {
-            is MotionChoice.Spring -> {
-                scale.snapTo(choice.fromScale)
-                rise.snapTo(riseFromPx)
-                val spec = spring<Float>(choice.tokens.dampingRatio, choice.tokens.stiffness)
-                scale.animateTo(1f, spec)
-                rise.animateTo(0f, spec)
+    // Captured once: the entrance belongs to the moment the badge enters, even if the caller
+    // stops asking for it on the next recomposition.
+    val animate = remember { animateIn }
+    val fadeMs = MTheme.motion.fast
+    val riseFromPx = with(LocalDensity.current) { ((choice as? MotionChoice.Spring)?.riseDp ?: Dp(0f)).toPx() }
+    val scale = remember { Animatable(if (animate && choice is MotionChoice.Spring) choice.fromScale else 1f) }
+    val rise = remember { Animatable(if (animate) riseFromPx else 0f) }
+    val alpha = remember { Animatable(if (animate) 0f else 1f) }
+    LaunchedEffect(Unit) {
+        if (!animate) return@LaunchedEffect
+        try {
+            when (choice) {
+                is MotionChoice.Spring -> {
+                    val spec = spring<Float>(choice.tokens.dampingRatio, choice.tokens.stiffness)
+                    coroutineScope {
+                        launch { scale.animateTo(1f, spec) }
+                        launch { rise.animateTo(0f, spec) }
+                        launch { alpha.animateTo(1f, tween(fadeMs)) }
+                    }
+                }
+                is MotionChoice.Fade -> alpha.animateTo(1f, tween(choice.durationMs))
             }
-            is MotionChoice.Fade -> {
-                alpha.snapTo(0f)
-                alpha.animateTo(1f, tween(choice.durationMs))
+        } finally {
+            // Whatever ended the entrance, the badge rests fully visible.
+            withContext(NonCancellable) {
+                scale.snapTo(1f)
+                rise.snapTo(0f)
+                alpha.snapTo(1f)
             }
         }
     }
