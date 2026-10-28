@@ -45,6 +45,15 @@ android {
     // LargeHistoryFixture lives with the :shared common tests, which use it too.
     sourceSets.getByName("test").kotlin.directories.add("../shared/src/testFixtures/kotlin")
 }
+// The UI contract lives in :shared, which the Compose compiler does not process. This keeps the
+// stability these types had in :app; see the file for the list and why it has no wildcards.
+composeCompiler { stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf")) }
+// With AGP's built-in Kotlin the option above is not an input of the compile tasks, so an edit to
+// the file alone would leave them UP-TO-DATE. Declare the file so editing it recompiles.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    inputs.file("compose-stability.conf").withPropertyName("composeStabilityConfiguration")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
