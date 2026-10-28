@@ -2,21 +2,33 @@ package com.mooscles.designsystem.gallery
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 
 class GallerySmokeTest {
+    /** A string each page shows once rendered. Every new page must add its entry here. */
+    private val knownText: Map<GalleryPage, StringResource> = mapOf(
+        GalleryPage.Foundations to Res.string.gallery_section_colors,
+    )
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun everyPageRendersInBothThemes() {
+        assertEquals(GalleryPage.entries.toSet(), knownText.keys, "Add a known text for the new page")
         for (dark in listOf(false, true)) {
             for (page in GalleryPage.entries) {
                 runComposeUiTest {
                     withTheme(dark = dark) { page.Content() }
                     waitForIdle()
-                    onNodeWithTag(galleryPageTag(page)).assertExists("${page.name} dark=$dark")
+                    onNodeWithText(getString(knownText.getValue(page))).assertExists("${page.name} dark=$dark")
                 }
             }
         }
@@ -24,13 +36,14 @@ class GallerySmokeTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun theListOpensAPage() {
+    fun theListShowsEveryTitleAndOpensAPage() {
         runComposeUiTest {
             withTheme { GalleryScreen(onBack = {}) }
             waitForIdle()
-            onNodeWithTag(galleryEntryTag(GalleryPage.Foundations)).assertExists().performClick()
+            for (page in GalleryPage.entries) onNodeWithText(getString(page.title)).assertExists(page.name)
+            onNodeWithTag(galleryEntryTag(GalleryPage.Foundations)).performClick()
             waitForIdle()
-            onNodeWithTag(galleryPageTag(GalleryPage.Foundations)).assertExists()
+            onNodeWithText(getString(knownText.getValue(GalleryPage.Foundations))).assertExists()
         }
     }
 }

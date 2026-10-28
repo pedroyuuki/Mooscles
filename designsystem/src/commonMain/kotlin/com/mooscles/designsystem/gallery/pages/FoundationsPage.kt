@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_sample_text
 import com.mooscles.designsystem.resources.gallery_section_colors
@@ -31,6 +30,7 @@ import com.mooscles.designsystem.resources.gallery_section_type
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.designsystem.tokens.Contrast
 import com.mooscles.designsystem.tokens.ElevationSpec
+import com.mooscles.designsystem.tokens.tabular
 import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
 
@@ -62,10 +62,8 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun Caption(text: String) {
-    BasicText(text, style = MTheme.type.caption.copy(color = MTheme.colors.textSecondary).withTabular())
+    BasicText(text, style = MTheme.type.caption.copy(color = MTheme.colors.textSecondary).tabular())
 }
-
-private fun TextStyle.withTabular(): TextStyle = copy(fontFeatureSettings = "tnum")
 
 private class ColorPair(val name: String, val fg: Color, val bg: Color)
 
@@ -101,7 +99,7 @@ private fun Colors() {
                 BasicText(pair.name, style = MTheme.type.labelMd.copy(color = pair.fg))
                 BasicText(
                     ratioText(Contrast.ratio(pair.fg, pair.bg)),
-                    style = MTheme.type.labelMd.copy(color = pair.fg).withTabular(),
+                    style = MTheme.type.labelMd.copy(color = pair.fg).tabular(),
                 )
             }
         }

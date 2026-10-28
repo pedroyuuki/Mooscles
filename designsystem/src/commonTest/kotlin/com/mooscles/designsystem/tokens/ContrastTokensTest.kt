@@ -109,8 +109,17 @@ class ContrastTokensTest {
 
     @Test
     fun exemptPairsAreOnlyDisabledTextAndSubtleBorder() {
-        val exempt = pairs.filter { it.kind == Kind.Exempt || it.kind == Kind.Decorative }.map { it.name }
-        assertEquals(listOf("textDisabled on bgSurface", "borderSubtle on bgSurface"), exempt)
+        // Exemption comes from the token names, not from the Kind tag of the table row.
+        val exemptNames = setOf("textDisabled", "borderSubtle")
+        assertEquals(2, pairs.count { it.fg.name in exemptNames })
+        for (p in pairs.filter { it.fg.name !in exemptNames }) {
+            val isText = p.fg.name.startsWith("text") || p.fg.name.endsWith("Text") ||
+                p.fg.name.endsWith("On") || p.fg.name == "accentInverseText"
+            val minimum = if (isText) 4.5 else 3.0
+            assertEquals(if (isText) Kind.Text else Kind.NonText, p.kind, "${p.name} kind")
+            assertTrue(ratio(p, MoosclesColors.Light) >= minimum, "${p.name} light")
+            assertTrue(ratio(p, MoosclesColors.Dark) >= minimum, "${p.name} dark")
+        }
     }
 
     private fun round2(value: Double) = (value * 100).roundToInt() / 100.0
