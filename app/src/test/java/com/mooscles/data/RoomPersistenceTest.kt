@@ -5,8 +5,10 @@ import androidx.room.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.domain.WorkoutCalculations
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collect
@@ -79,31 +81,47 @@ class RoomPersistenceTest {
      * A nested command must run on the enclosing transaction's connection without starting its own
      * connection use: Room refreshes the invalidation tracker after every `useWriterConnection`, and
      * each refresh would park a Room IO thread on the connection pool until the outer commit.
+     *
+     * Scoped to this test's own database: its driver records the thread of every statement it
+     * prepares. A refresh prepares its `BEGIN` before it blocks, so while the outer transaction
+     * holds the connection, any statement prepared on another thread is a use that has to wait.
+     * Room's IO threads are shared by every database in the JVM, so stacks alone do not say whose
+     * pool a thread is waiting on.
      */
-    @Test fun nestedCommandsDoNotParkRoomThreadsOnTheConnectionPool() = runBlocking {
+    @Test fun nestedCommandsDoNotUseThisDatabaseFromOtherThreadsDuringTheTransaction() = runBlocking {
+        val statements = CopyOnWriteArrayList<Pair<String, Thread>>()
+        val db = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java)
+            .setDriver(RecordingDriver { sql -> statements += sql to Thread.currentThread() }).build()
+        val repository = WorkoutRepository(db)
         val observed = Channel<AppData>(Channel.CONFLATED)
-        val collector = launch(Dispatchers.Default) { repo.data.collect { observed.send(it) } }
+        val collector = launch(Dispatchers.Default) { repository.data.collect { observed.send(it) } }
         try {
+            repository.initialize()
             withTimeout(10_000) { observed.receive() }
-            val parked = database.writeTransaction {
-                repo.createRoutine("Inside the outer transaction")
-                repeat(6) { repo.snapshot() }
-                repo.localState()
-                // Give any refresh coroutine time to reach the pool, then look at every thread.
-                var waiting = emptyList<String>()
-                repeat(50) {
-                    waiting = Thread.getAllStackTraces().filter { (_, frames) ->
-                        frames.any { it.className == "android.database.sqlite.SQLiteConnectionPool" && it.methodName == "waitForConnection" }
-                    }.keys.map { it.name }
-                    if (waiting.isNotEmpty()) return@writeTransaction waiting
+            // Quiescence: earlier top-level commands' refreshes and reloads are finished.
+            withTimeout(10_000) {
+                do { val count = statements.size; delay(300) } while (statements.size != count)
+            }
+            val foreign = db.writeTransaction {
+                val owner = Thread.currentThread()
+                val start = statements.size
+                repository.createRoutine("Inside the outer transaction")
+                repeat(6) { repository.snapshot() }
+                repository.localState()
+                // Give any refresh started by a nested call time to reach the connection.
+                var found = emptyList<String>()
+                for (attempt in 0 until 50) {
+                    found = statements.drop(start).filter { it.second !== owner }.map { "${it.second.name}: ${it.first}" }
+                    if (found.isNotEmpty()) break
                     Thread.sleep(20)
                 }
-                waiting
+                found
             }
-            assertEquals("Threads waiting for a connection inside the transaction", emptyList<String>(), parked)
+            assertEquals("Statements on this database from other threads during the transaction", emptyList<String>(), foreign)
             withTimeout(10_000) { while (observed.receive().routines.none { it.name == "Inside the outer transaction" }) Unit }
         } finally {
             collector.cancel()
+            db.close()
         }
     }
 
