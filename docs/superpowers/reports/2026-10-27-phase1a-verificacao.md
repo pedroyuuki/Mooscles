@@ -11,7 +11,7 @@
 
 - **A atualização por cima não mudou nenhum dado.** O APK novo, instalado com `adb install -r` sobre o antigo, abriu o mesmo banco e as mesmas preferências. O dump SQL completo do `mooscles.db` ficou idêntico, os dois arquivos DataStore (`local_preferences` e `app_updates`) ficaram idênticos byte a byte, e o export feito depois da atualização é idêntico byte a byte ao de antes, tirando o `exportedAt`. Isso inclui o treino ativo com séries completas e o timer de descanso rodando: o timer voltou com o mesmo prazo e terminou na hora certa ("Rest complete").
 - **Desempenho: nenhuma piora acima do ruído, e a apresentação ficou mais rápida com o processo já aberto.** O `present()` caiu de 0,76–1,51 s para 0,27–0,42 s na troca kg/lb, e de 1,99 s para 0,31 s no import da base grande. Na abertura a frio, o ruído da máquina dominou a medida (detalhes abaixo). Nas execuções alternadas antes/depois, o histórico apareceu de 5,6 a 7,3 s depois do primeiro quadro no APK novo e de 7,5 a 8,8 s no antigo. Nenhum ANR.
-- **APK debug: +1,78 MiB** (19.927.075 → 21.796.480 bytes, +9,4%). Passa do orçamento de cerca de 1 MB da spec. A Task 1 tinha medido +1,32 MiB contra um APK antigo que carregava ~0,47 MB de espaço morto. O crescimento foi aceito pelo controlador com base no número antigo, e o número corrigido precisa ser confirmado.
+- **APK debug: +1,78 MiB** (19.927.075 → 21.796.480 bytes, +9,4%). Passa do orçamento de cerca de 1 MB da spec. A Task 1 tinha medido +1,32 MiB contra um APK antigo que carregava ~0,47 MB de espaço morto. O crescimento (`androidx.window` via Compose UI 1.12, necessário para a fase 3) foi aceito com o número corrigido.
 - **Uma diferença visual:** o indicador do item selecionado na barra de navegação inferior ficou mais estreito, de 168 para 147 px (64 → 56 dp), por causa do Material 3 novo. Fora isso, as telas comparadas são iguais pixel a pixel, tirando o relógio e a contagem do timer. O gesto de voltar e o edge-to-edge se comportam igual no Android 15.
 - **R8:** o APK `assemblePerformance` exportou a base grande, importou o próprio arquivo numa instalação limpa e exportou de novo. O segundo export é igual ao primeiro, tirando o `exportedAt`.
 
@@ -79,7 +79,7 @@ Os mesmos prints foram tirados antes e depois e comparados pixel a pixel, por um
 | History depois do gesto de voltar (borda esquerda → centro) a partir do detalhe | status bar, dock do timer, barra inferior | o gesto voltou para a lista nos dois ([print 06](2026-10-27-phase1a-verificacao/06-before-back-gesture.png), [print 07](2026-10-27-phase1a-verificacao/07-after-back-gesture.png)) |
 
 - **Edge-to-edge:** a status bar, a barra de gestos e o espaço do conteúdo atrás delas ficaram nas mesmas linhas de pixel. Só os ícones do relógio mudam.
-- **Barra de navegação inferior:** com a tela parada (4 s depois do toque), o indicador do item selecionado tem 168 px de largura antes e 147 px depois, na mesma posição ([print 08](2026-10-27-phase1a-verificacao/08-before-records-nav.png), [print 09](2026-10-27-phase1a-verificacao/09-after-records-nav.png)). Os pixels do rótulo também mudam um pouco (linhas 2260–2284). Vem do Material 3 do BOM 2026.09.00. É uma mudança perceptível, embora pequena, e a spec proíbe mudança perceptível de tela: o controlador decide se aceita ou se fixa a largura.
+- **Barra de navegação inferior:** com a tela parada (4 s depois do toque), o indicador do item selecionado tem 168 px de largura antes e 147 px depois, na mesma posição ([print 08](2026-10-27-phase1a-verificacao/08-before-records-nav.png), [print 09](2026-10-27-phase1a-verificacao/09-after-records-nav.png)). Os pixels do rótulo também mudam um pouco (linhas 2260–2284). Vem do Material 3 do BOM 2026.09.00. É uma mudança perceptível, embora pequena, que contradiz o antiobjetivo da spec. Aceita, porque a fase 2 redesenha a navegação; registrado na spec.
 - **Comportamento igual nos dois, registrado para não ser confundido com regressão:** estando em Settings, aberto a partir de History, tocar em History na barra inferior deixa o app em Settings, porque o `restoreState` restaura a pilha salva. Antes e depois fazem o mesmo.
 
 ## Desempenho
@@ -161,10 +161,18 @@ Assim, o kotlinx.serialization funciona sob o R8 com Kotlin 2.4 e KSP2 na ida e 
 - **A suíte inteira localmente:** fica com o CI, como combinado. Este commit só tem docs e assets.
 - **O import com mais de uma execução de cada lado**, a abertura a frio do R8 e o treino iniciado e finalizado com a base grande (que a verificação anterior mediu) não foram repetidos.
 - **TalkBack e teclado.**
-- **Um teste instrumentado** que abre um banco v5 e um DataStore criados pela versão anterior (a spec pede). Não faz parte desta task. A atualização por cima no emulador cobre o mesmo caminho na prática, mas sem teste automatizado.
+- **`connectedDebugAndroidTest` não rodou:** o `androidTest` só foi compilado (`assembleDebugAndroidTest`).
+- **Um teste instrumentado** que abre um banco v5 e um DataStore criados pela versão anterior (a spec pede). Adiado para a etapa 1B, quando o DataStore passa para o código comum. A atualização por cima no emulador cobre o mesmo caminho na prática, mas sem teste automatizado.
 
 ## Incidentes
 
 - Numa rodada da troca de unidade, a tela de Settings estava com outra rolagem, e quatro toques caíram em textos sem ação (a nota do updater), não nos botões de unidade. O `uiautomator` confirmou que nada mudou. As execuções foram apagadas e refeitas com as coordenadas certas.
 - `pm clear com.mooscles` foi usado só no `emulator-5554`, três vezes (antes do fixture da atualização, antes do import da base no APK novo e no teste do R8). A cada vez, a permissão de notificação foi concedida de novo.
 - O emulador terminou com o APK debug desta branch e a base grande importada pelo APK R8.
+
+## Avisos para a 1B
+
+- `MigrationEquivalenceTest` e `RollbackV142DataCompatibilityTest` procuram `schemas/` ou `app/schemas/`; os schemas passam para `shared/schemas/`.
+- `.setDriver(AndroidSQLiteDriver())` se repete em ~15 construtores de banco nos testes; um helper facilita a troca.
+- `@Volatile` e `@Synchronized` em `WorkoutDatabase.kt` resolvem para `kotlin.jvm.*`. No `commonMain`, use `kotlin.concurrent.Volatile` ou tire a sincronização (as chamadas aninhadas rodam em sequência numa só corrotina).
+- A semântica de exceção de DAO difere entre os drivers (ver a regra de transação de escrita no `AGENTS.md`).
