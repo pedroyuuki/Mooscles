@@ -9,18 +9,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,12 +16,39 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.mooscles.backup.BackupTexts
 import com.mooscles.backup.suggestedBackupFileName
+import com.mooscles.designsystem.components.ErrorBanner
+import com.mooscles.designsystem.components.MButton
+import com.mooscles.designsystem.components.MButtonVariant
+import com.mooscles.designsystem.components.MDialog
+import com.mooscles.designsystem.components.MProgressBar
+import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.components.SectionHeader
+import com.mooscles.designsystem.icons.MIcon
+import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.settings_data_desc
+import com.mooscles.designsystem.resources.settings_data_dismiss
+import com.mooscles.designsystem.resources.settings_data_footer
+import com.mooscles.designsystem.resources.settings_data_title
+import com.mooscles.designsystem.resources.settings_export
+import com.mooscles.designsystem.resources.settings_import
+import com.mooscles.designsystem.resources.settings_import_blocked
+import com.mooscles.designsystem.resources.settings_import_cancel
+import com.mooscles.designsystem.resources.settings_import_confirm
+import com.mooscles.designsystem.resources.settings_import_nothing_new
+import com.mooscles.designsystem.resources.settings_import_ok
+import com.mooscles.designsystem.resources.settings_import_title
+import com.mooscles.designsystem.theme.MTheme
 import java.time.LocalDate
+import org.jetbrains.compose.resources.stringResource
 
-/** Settings card for JSON export and import. Cancelling a picker (null URI) does nothing. */
+/**
+ * The "Your data" section of Settings: JSON export and import. Cancelling a picker (null URI)
+ * does nothing. Export and import are secondary buttons: the screen keeps its one primary
+ * button for the updater's current step.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, modifier: Modifier = Modifier) {
@@ -43,65 +58,89 @@ fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, m
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) actions.prepareImport(uri.toString())
     }
-    Card(modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Your data", style = MaterialTheme.typography.titleMedium)
-            Text("Save a copy of your workouts, routines and settings to a file, or restore one.", style = MaterialTheme.typography.bodyMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+    val colors = MTheme.colors
+    val space = MTheme.space
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(space.s3)) {
+        SectionHeader(stringResource(Res.string.settings_data_title))
+        Column(Modifier.fillMaxWidth().padding(horizontal = space.s4), verticalArrangement = Arrangement.spacedBy(space.s3)) {
+            MText(stringResource(Res.string.settings_data_desc), MTheme.type.bodyMd, color = colors.textSecondary)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap), verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap)) {
+                MButton(
+                    stringResource(Res.string.settings_export),
                     onClick = { exportLauncher.launch(suggestedBackupFileName(LocalDate.now())) },
-                    enabled = !state.busy, modifier = Modifier.testTag("data-export"),
-                ) { Text("Export data") }
-                OutlinedButton(
+                    variant = MButtonVariant.Secondary,
+                    icon = MIcons.Upload,
+                    enabled = !state.busy,
+                    modifier = Modifier.testTag("data-export"),
+                )
+                MButton(
+                    stringResource(Res.string.settings_import),
                     onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                    enabled = !state.busy && !workoutActive, modifier = Modifier.testTag("data-import"),
-                ) { Text("Import data") }
+                    variant = MButtonVariant.Secondary,
+                    icon = MIcons.Download,
+                    enabled = !state.busy && !workoutActive,
+                    modifier = Modifier.testTag("data-import"),
+                )
             }
             if (workoutActive) {
-                Text("Finish or discard the active workout to import", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                MText(stringResource(Res.string.settings_import_blocked), MTheme.type.bodyMd, color = colors.textSecondary)
             }
             if (state.busy) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    state.working?.let { Text(it, Modifier.testTag("data-working"), style = MaterialTheme.typography.bodyMedium) }
-                    LinearProgressIndicator(Modifier.fillMaxWidth().testTag("data-progress"))
+                Column(verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                    // The operation name comes ready from the ViewModel, in English (plan decision 11).
+                    state.working?.let { MText(it, MTheme.type.bodyMd, modifier = Modifier.testTag("data-working")) }
+                    MProgressBar(progress = null, modifier = Modifier.testTag("data-progress"), contentDescription = state.working)
                 }
             }
             state.message?.let { message ->
-                val color = if (state.messageIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 Column(Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(
-                            if (state.messageIsError) Icons.Outlined.ErrorOutline else Icons.Outlined.CheckCircle,
-                            contentDescription = null, tint = if (state.messageIsError) color else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag(if (state.messageIsError) "data-message-error" else "data-message-success"),
-                        )
-                        Text(message, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = color)
+                    if (state.messageIsError) {
+                        ErrorBanner(message, Modifier.testTag("data-message-error"))
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                            horizontalArrangement = Arrangement.spacedBy(space.s2),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            MIcon(
+                                MIcons.CircleCheck,
+                                contentDescription = null,
+                                size = MTheme.sizes.icon20,
+                                tint = colors.accentText,
+                                modifier = Modifier.testTag("data-message-success"),
+                            )
+                            MText(message, MTheme.type.bodyMd, modifier = Modifier.weight(1f))
+                        }
                     }
-                    TextButton(onClick = actions::clearBackupMessage, modifier = Modifier.align(Alignment.End).testTag("data-message-dismiss")) { Text("Dismiss") }
+                    MButton(
+                        stringResource(Res.string.settings_data_dismiss),
+                        onClick = actions::clearBackupMessage,
+                        variant = MButtonVariant.Text,
+                        modifier = Modifier.align(Alignment.End).testTag("data-message-dismiss"),
+                    )
                 }
             }
-            Text(
-                "Backups contain your full workout history without encryption. Keep the file somewhere private.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            MText(stringResource(Res.string.settings_data_footer), MTheme.type.bodyMd, color = colors.textSecondary)
         }
     }
-    // The dialog closes as soon as the import starts; the card shows the progress.
+    // The dialog closes as soon as the import starts; the section shows the progress.
     state.pendingImport?.takeIf { !state.busy }?.let { summary ->
         if (BackupTexts.isNothingNew(summary)) {
-            AlertDialog(
-                onDismissRequest = actions::cancelImport,
-                title = { Text("Import backup?") },
-                text = { Text(BackupTexts.NOTHING_NEW) },
-                confirmButton = { TextButton(onClick = actions::cancelImport) { Text("OK") } },
+            MDialog(
+                title = stringResource(Res.string.settings_import_title),
+                text = stringResource(Res.string.settings_import_nothing_new),
+                confirmLabel = stringResource(Res.string.settings_import_ok),
+                onConfirm = actions::cancelImport,
+                onDismiss = actions::cancelImport,
             )
         } else {
-            AlertDialog(
-                onDismissRequest = actions::cancelImport,
-                title = { Text("Import backup?") },
-                text = { Text(BackupTexts.summary(summary)) },
-                confirmButton = { TextButton(onClick = actions::confirmImport) { Text("Import") } },
-                dismissButton = { TextButton(onClick = actions::cancelImport) { Text("Cancel") } },
+            MDialog(
+                title = stringResource(Res.string.settings_import_title),
+                text = importSummaryText(summary),
+                confirmLabel = stringResource(Res.string.settings_import_confirm),
+                onConfirm = actions::confirmImport,
+                onDismiss = actions::cancelImport,
+                dismissLabel = stringResource(Res.string.settings_import_cancel),
             )
         }
     }

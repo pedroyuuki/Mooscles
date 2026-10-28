@@ -18,11 +18,13 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_sample_error
 import com.mooscles.designsystem.resources.gallery_sample_help
 import com.mooscles.designsystem.resources.gallery_sample_label
+import com.mooscles.designsystem.resources.gallery_sample_row
+import com.mooscles.designsystem.resources.gallery_sample_suffix
 import com.mooscles.designsystem.resources.gallery_section_text_fields
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
 
-/** The text field: empty, with help, with an error and disabled. */
+/** The text field: empty, with help, with an error, with a suffix and disabled. */
 @Composable
 fun FieldsPage() {
     val label = stringResource(Res.string.gallery_sample_label)
@@ -31,6 +33,7 @@ fun FieldsPage() {
     var plain by remember { mutableStateOf(TextFieldValue("")) }
     var withHelp by remember { mutableStateOf(TextFieldValue("")) }
     var invalid by remember { mutableStateOf(TextFieldValue("")) }
+    var withSuffix by remember { mutableStateOf(TextFieldValue("2:00")) }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
@@ -39,6 +42,7 @@ fun FieldsPage() {
         MTextField(plain, { plain = it }, label)
         MTextField(withHelp, { withHelp = it }, label, help = help)
         MTextField(invalid, { invalid = it }, label, error = error)
+        MTextField(withSuffix, { withSuffix = it }, stringResource(Res.string.gallery_sample_row), suffix = stringResource(Res.string.gallery_sample_suffix))
         MTextField(TextFieldValue(label), {}, label, enabled = false)
     }
 }

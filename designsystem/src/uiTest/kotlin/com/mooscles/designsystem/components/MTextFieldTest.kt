@@ -87,4 +87,17 @@ class MTextFieldTest {
         assertTrue(field.height >= box.height, "field ${field.height} < box ${box.height}")
         assertTrue(box.height > minPx, "the box did not grow with 200% text")
     }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun suffixIsDrawnInsideTheBoxAndReadWithTheField() = runComposeUiTest {
+        withTheme(fontScale = 2f) { MTextField(TextFieldValue("2:00"), {}, "Rest", suffix = "min") }
+        waitForIdle()
+        val config = onNode(hasSetTextAction()).fetchSemanticsNode().config
+        assertTrue("min" in config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text })
+        assertEquals("2:00", config.getOrNull(SemanticsProperties.EditableText)?.text)
+        val box = onNodeWithTag(TextFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val suffix = onNodeWithTag(TextFieldSuffixTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue(suffix.left >= box.left && suffix.right <= box.right && suffix.top >= box.top && suffix.bottom <= box.bottom, "suffix $suffix outside box $box")
+    }
 }

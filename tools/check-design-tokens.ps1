@@ -8,7 +8,7 @@ violation is printed as "file:line: rule". Exit code 1 when there is any, 0 when
 Line comments (//) and KDoc lines are ignored.
 
 Without -Path the target is the component, gallery and licenses folders of :designsystem
-(folders that do not exist yet are skipped). Task 15 adds the pilot screen files of :app.
+(folders that do not exist yet are skipped) and the files of the pilot screen (Settings) in :app.
 .PARAMETER Path
 Files or folders to check. A folder is searched for *.kt files.
 #>
@@ -20,7 +20,12 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 if (-not $Path -or $Path.Count -eq 0) {
     $base = 'designsystem/src/commonMain/kotlin/com/mooscles/designsystem'
-    $Path = @("$base/components", "$base/gallery", "$base/licenses") | ForEach-Object { Join-Path $root $_ }
+    $pilot = 'app/src/main/java/com/mooscles/ui'
+    $Path = @(
+        "$base/components", "$base/gallery", "$base/licenses",
+        "$pilot/SettingsScreen.kt", "$pilot/UpdateSection.kt", "$pilot/DataSection.kt",
+        "$pilot/SettingsRestDurationField.kt", "$pilot/SettingsTexts.kt"
+    ) | ForEach-Object { Join-Path $root $_ }
 }
 
 # Rule name, then regex. Color.Transparent and Color.Unspecified are not color values: allowed.

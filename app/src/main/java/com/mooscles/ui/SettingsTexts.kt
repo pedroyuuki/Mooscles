@@ -52,7 +52,7 @@ fun importSummaryText(summary: ImportSummary): String {
     }
 }
 
-/** Title of the update status card; in English it equals [updateStatusTitle]. */
+/** Title of the update status block; the English titles are the ones the app shipped before. */
 @Composable
 fun updateStatusTitleText(phase: UpdatePhase): String = stringResource(
     when (phase) {

@@ -11,7 +11,6 @@ import com.mooscles.ui.updateStatusTitleText
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,7 +108,6 @@ class SettingsTextsHostTest {
         assertEquals(listOf("12,5 MB", "512 KB", "1,0 MB", "1023 KB", "1,1 MB", "1,0 MB"), render("pt-BR") { sizes() })
     }
 
-    @Ignore("Enabled in Task 15")
     @Test
     fun everySettingsKeyIsUsed() {
         val xml = File("../designsystem/src/commonMain/composeResources/values/strings_settings.xml").readText()

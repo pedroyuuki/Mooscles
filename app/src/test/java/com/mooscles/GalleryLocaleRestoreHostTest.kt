@@ -134,6 +134,10 @@ class GalleryLocaleRestoreHostTest {
         compose.onNodeWithTag(GalleryTags.SCREEN).assertDoesNotExist()
         compose.onNodeWithTag("app-updates").assertExists()
         assertSystemLanguage()
+        // The Settings strings (Compose resources) are read again in the system language.
+        compose.onNodeWithText("Settings").assertExists()
+        compose.onNodeWithText("App updates").assertExists()
+        compose.onNodeWithText("Atualizações do app").assertDoesNotExist()
         // A date formatted by Settings after the return, in the system language.
         val english = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, system).format(Date(checkedAt))
         val portuguese = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.forLanguageTag("pt-BR")).format(Date(checkedAt))

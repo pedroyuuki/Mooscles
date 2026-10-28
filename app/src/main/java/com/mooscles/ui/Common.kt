@@ -61,41 +61,78 @@ private fun trainingFieldColors() = TextFieldDefaults.colors(
     disabledIndicatorColor = Color.Transparent,
 )
 
+/**
+ * The editing state of a rest duration typed as m:ss, shared by [RestDurationField] and
+ * [SettingsRestDurationField]. Typing goes through `RestDuration.edit`; a rejected keystroke
+ * keeps the text and sets [rejected]. A new duration is reported once through
+ * `onSecondsChange`, and an outside change of `seconds` replaces the text while unfocused.
+ */
+@Stable
+class RestDurationEditorState internal constructor(
+    private val text: MutableState<TextFieldValue>,
+    private val lastEmitted: MutableIntState,
+    private val focused: MutableState<Boolean>,
+    private val rejectedState: MutableState<Boolean>,
+    private val emit: (Int) -> Unit,
+) {
+    val value: TextFieldValue get() = text.value
+    val rejected: Boolean get() = rejectedState.value
+
+    fun onValueChange(next: TextFieldValue) {
+        val current = text.value
+        val previous = RestDuration.EditorValue(current.text, current.selection.start, current.selection.end)
+        val edited = RestDuration.edit(previous,
+            RestDuration.EditorValue(next.text, next.selection.start, next.selection.end))
+        rejectedState.value = next.text != current.text && edited == previous
+        text.value = TextFieldValue(edited.text, TextRange(edited.selectionStart, edited.selectionEnd))
+        RestDuration.parse(edited.text)?.let { duration ->
+            if (duration != lastEmitted.intValue) { lastEmitted.intValue = duration; emit(duration) }
+        }
+    }
+
+    /** Focusing selects the minutes digits, ready to be typed over. */
+    fun onFocusChange(isFocused: Boolean) {
+        if (isFocused && !focused.value) text.value = text.value.copy(selection = TextRange(0, 4))
+        focused.value = isFocused
+    }
+
+    internal fun sync(seconds: Int) {
+        if (!focused.value && RestDuration.parse(text.value.text) != seconds.coerceIn(0, RestDuration.MAX_SECONDS)) {
+            text.value = TextFieldValue(RestDuration.editor(seconds).text, TextRange(0, 4))
+            lastEmitted.intValue = seconds.coerceIn(0, RestDuration.MAX_SECONDS)
+        }
+    }
+}
+
+@Composable
+fun rememberRestDurationEditor(seconds: Int, onSecondsChange: (Int) -> Unit, key: String): RestDurationEditorState {
+    val initial = RestDuration.editor(seconds)
+    val text = rememberSaveable(key, stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(initial.text, TextRange(0, 4)))
+    }
+    val lastEmitted = rememberSaveable(key) { mutableIntStateOf(seconds.coerceIn(0, RestDuration.MAX_SECONDS)) }
+    val focused = remember(key) { mutableStateOf(false) }
+    val rejected = remember(key) { mutableStateOf(false) }
+    val currentOnSecondsChange by rememberUpdatedState(onSecondsChange)
+    val state = remember(text, lastEmitted, focused, rejected) {
+        RestDurationEditorState(text, lastEmitted, focused, rejected) { currentOnSecondsChange(it) }
+    }
+    LaunchedEffect(seconds) { state.sync(seconds) }
+    return state
+}
+
 @Composable
 fun RestDurationField(
     seconds: Int, onSecondsChange: (Int) -> Unit, modifier: Modifier = Modifier,
     label: String = "Rest duration", testTag: String = "rest-duration",
     help: String = "Minutes, then seconds · maximum 5:00",
 ) {
-    val initial = RestDuration.editor(seconds)
-    var value by rememberSaveable(testTag, stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(initial.text, TextRange(0, 4)))
-    }
-    var lastEmitted by rememberSaveable(testTag) { mutableIntStateOf(seconds.coerceIn(0, RestDuration.MAX_SECONDS)) }
-    var focused by remember(testTag) { mutableStateOf(false) }
-    var rejected by remember(testTag) { mutableStateOf(false) }
-    LaunchedEffect(seconds) {
-        if (!focused && RestDuration.parse(value.text) != seconds.coerceIn(0, RestDuration.MAX_SECONDS)) {
-            value = TextFieldValue(RestDuration.editor(seconds).text, TextRange(0, 4))
-            lastEmitted = seconds.coerceIn(0, RestDuration.MAX_SECONDS)
-        }
-    }
-    TextField(value, { next ->
-        val previous = RestDuration.EditorValue(value.text, value.selection.start, value.selection.end)
-        val edited = RestDuration.edit(previous,
-            RestDuration.EditorValue(next.text, next.selection.start, next.selection.end))
-        rejected = next.text != value.text && edited == previous
-        value = TextFieldValue(edited.text, TextRange(edited.selectionStart, edited.selectionEnd))
-        RestDuration.parse(edited.text)?.let { duration ->
-            if (duration != lastEmitted) { lastEmitted = duration; onSecondsChange(duration) }
-        }
-    }, label = { Text(label) }, suffix = { Text("min") }, singleLine = true,
-        modifier = modifier.testTag(testTag).onFocusChanged {
-            if (it.isFocused && !focused) value = value.copy(selection = TextRange(0, 4))
-            focused = it.isFocused
-        }, shape = RoundedCornerShape(14.dp), isError = rejected,
+    val editor = rememberRestDurationEditor(seconds, onSecondsChange, testTag)
+    TextField(editor.value, editor::onValueChange, label = { Text(label) }, suffix = { Text("min") }, singleLine = true,
+        modifier = modifier.testTag(testTag).onFocusChanged { editor.onFocusChange(it.isFocused) },
+        shape = RoundedCornerShape(14.dp), isError = editor.rejected,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        supportingText = { Text(if (rejected) "Use 0:00 to 5:00, with seconds from 00 to 59." else help) },
+        supportingText = { Text(if (editor.rejected) "Use 0:00 to 5:00, with seconds from 00 to 59." else help) },
         colors = trainingFieldColors())
 }
 

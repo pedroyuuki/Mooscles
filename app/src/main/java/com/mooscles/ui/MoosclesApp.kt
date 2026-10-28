@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.mooscles.designsystem.licenses.LicensesScreen
 
 private data class Destination(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 private val destinations = listOf(
@@ -53,14 +54,20 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
             }
         }
         LaunchedEffect(state.updateSettingsRequest) {
-            if (state.updateSettingsRequest > 0) nav.navigate("settings") { launchSingleTop = true }
+            // Lands on the updates section, also when Settings is already open: that entry is
+            // replaced, since a single-top navigation would keep its old section argument.
+            if (state.updateSettingsRequest > 0) nav.navigate(SettingsRoutes.settings(SettingsRoutes.UPDATES)) {
+                popUpTo(SettingsRoutes.SETTINGS) { inclusive = true }
+                launchSingleTop = true
+            }
         }
         val snack = remember { SnackbarHostState() }
         LaunchedEffect(state.error) { state.error?.let { snack.showSnackbar(it); actions.clearError() } }
         Scaffold(
             topBar = {
-                // The gallery brings its own top bar.
-                if (route != DeveloperGallery.ROUTE) TopAppBar(title = { Text("mooscles", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) },
+                // Settings has the design system's top bar; the gallery and the licenses bring their own.
+                if (route == SettingsRoutes.SETTINGS) SettingsTopBar(onBack = { nav.popBackStack() })
+                else if (route != DeveloperGallery.ROUTE && route != SettingsRoutes.LICENSES) TopAppBar(title = { Text("mooscles", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) },
                     navigationIcon = { if (route !in destinations.map { it.route }) IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, "Back") } },
                     actions = { IconButton(onClick = { nav.navigate("settings") { launchSingleTop = true } }) { Icon(Icons.Outlined.Tune, "Settings") } })
             },
@@ -109,7 +116,12 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                         else MissingScreen("Exercise unavailable")
                     }
                     composable("records") { RecordsScreen(state, onExercise = { nav.navigate("exercise/$it") }) }
-                    composable("settings") { SettingsScreen(state, actions, onOpenGallery = { nav.navigate(DeveloperGallery.ROUTE) }) }
+                    composable(SettingsRoutes.SETTINGS, arguments = listOf(navArgument(SettingsRoutes.SECTION_ARG) { type = NavType.StringType; defaultValue = "" })) { page ->
+                        SettingsScreen(state, actions, section = page.arguments?.getString(SettingsRoutes.SECTION_ARG).orEmpty(),
+                            onOpenLicenses = { nav.navigate(SettingsRoutes.LICENSES) },
+                            onOpenGallery = { nav.navigate(DeveloperGallery.ROUTE) })
+                    }
+                    composable(SettingsRoutes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
                     composable(DeveloperGallery.ROUTE) { DeveloperGalleryRoute(nav) }
                 }
                 if (state.loading) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -150,56 +162,3 @@ private fun LiveWorkoutTimerDock(state: UiState, actions: MoosclesActions, timer
 
 @Composable
 private fun MissingScreen(title: String) = EmptyState(Icons.Outlined.SearchOff, title, "This item may have been deleted. Return to your library to continue.")
-
-@Composable
-fun SettingsScreen(state: UiState, actions: MoosclesActions, onOpenGallery: () -> Unit = {}) {
-    val prefs = state.preferences
-    androidx.compose.foundation.lazy.LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item { PageHeading("Make it yours", "Settings", "Your training, your preferences. Stored on this device.") }
-        item { UpdateSection(state.updates, actions, onOpenGallery = onOpenGallery) }
-        item {
-            Card {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Weight units", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilterChip(selected = !prefs.pounds, onClick = { actions.setPounds(false) }, label = { Text("Kilograms · kg") })
-                        FilterChip(selected = prefs.pounds, onClick = { actions.setPounds(true) }, label = { Text("Pounds · lb") })
-                    }
-                    Text("Records keep their original precision when you change units.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        item {
-            Card {
-                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Appearance", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("system", "light", "dark").forEach { theme -> FilterChip(selected = prefs.theme == theme, onClick = { actions.setTheme(theme) }, label = { Text(human(theme)) }) }
-                    }
-                }
-            }
-        }
-        item {
-            Card {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text("Automatic rest", style = MaterialTheme.typography.titleMedium); Text("Start after completing a set", style = MaterialTheme.typography.bodySmall) }
-                        Switch(checked = prefs.autoRest, onCheckedChange = actions::setAutoRest)
-                    }
-                    Text("Completing another set restarts rest using that exercise’s duration.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    RestDurationField(prefs.defaultRestSeconds, actions::setDefaultRest, Modifier.fillMaxWidth(),
-                        label = "Default rest duration", testTag = "default-rest-duration")
-                    Text("Each exercise can use its own rest duration.", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        item { DataSection(state.backup, workoutActive = state.active != null, actions = actions) }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary)
-                Text("Just you and your progress", style = MaterialTheme.typography.titleMedium)
-                Text("Your routines, workout history, and records stay on this device. Training works offline. App connections check and download updates from GitHub. Sharing creates a workout image on your device and opens the app you choose, where you select the recipient and confirm sending. Workout data is excluded from automatic cloud backups. Use Export data above to keep your own copy.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}

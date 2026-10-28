@@ -46,6 +46,7 @@
     <string name="gallery_sample_label">Exercise name</string>
     <string name="gallery_sample_help">Shown in your library</string>
     <string name="gallery_sample_error">Enter a name</string>
+    <string name="gallery_sample_suffix">min</string>
     <string name="gallery_sample_empty_title">No workouts yet</string>
     <string name="gallery_sample_empty_body">Finish a workout and it shows up here.</string>
     <string name="gallery_sample_start">Start a workout</string>
