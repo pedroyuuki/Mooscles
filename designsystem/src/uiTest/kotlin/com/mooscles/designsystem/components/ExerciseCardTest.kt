@@ -1,5 +1,7 @@
 package com.mooscles.designsystem.components
 
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -80,5 +82,21 @@ class ExerciseCardTest {
         onNodeWithTag("a-set").assertDoesNotExist()
         onNodeWithTag(ExerciseAddSetTag).assertDoesNotExist()
         onNodeWithTag(ExerciseMenuTag).assertExists()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun imageHasTheEquipmentIconUnderneathWhileItLoads() {
+        runComposeUiTest {
+            // A painter that has not loaded draws nothing; the placeholder must be there to show through.
+            withTheme { Card(ExerciseMedia.Image(ColorPainter(Color.Transparent))) }
+            waitForIdle()
+            onNodeWithTag(ExerciseMediaPlaceholderTag, useUnmergedTree = true).assertExists()
+        }
+        runComposeUiTest {
+            withTheme { Card(ExerciseMedia.None) }
+            waitForIdle()
+            onNodeWithTag(ExerciseMediaPlaceholderTag, useUnmergedTree = true).assertDoesNotExist()
+        }
     }
 }
