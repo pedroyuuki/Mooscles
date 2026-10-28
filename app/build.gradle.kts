@@ -1,8 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.serialization")
 }
 android {
     namespace = "com.mooscles"
@@ -44,12 +42,24 @@ android {
         }
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    // LargeHistoryFixture lives with the :shared common tests, which use it too.
+    sourceSets.getByName("test").kotlin.directories.add("../shared/src/testFixtures/kotlin")
 }
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+// The UI contract lives in :shared, which the Compose compiler does not process. This keeps the
+// stability these types had in :app; see the file for the list and why it has no wildcards.
+composeCompiler { stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf")) }
+// With AGP's built-in Kotlin the option above is not an input of the compile tasks, so an edit to
+// the file alone would leave them UP-TO-DATE. Declare the file so editing it recompiles.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    inputs.file("compose-stability.conf").withPropertyName("composeStabilityConfiguration")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
+    // Brings Room, the SQLite driver and kotlinx-serialization through its api dependencies.
+    implementation(project(":shared"))
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
@@ -59,16 +69,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.room:room-runtime:2.8.5")
-    ksp("androidx.room:room-compiler:2.8.5")
-    // AndroidSQLiteDriver (the system SQLite), at the version Room 2.8.5 is built against.
-    // sqlite 2.7.x pairs with Room 3 and drops restricted APIs that 2.8.x was compiled with.
-    //noinspection GradleDependency
-    implementation("androidx.sqlite:sqlite-framework:2.6.2")
     implementation("androidx.datastore:datastore-preferences:1.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("org.robolectric:robolectric:4.17")

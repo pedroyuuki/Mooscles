@@ -44,7 +44,7 @@ fun RoutinesScreen(state: UiState, actions: MoosclesActions, onEdit: (String) ->
                         }
                         Icon(Icons.Outlined.FitnessCenter, null, Modifier.size(42.dp))
                     }
-                    Text(if (state.active == null) "Choose your split below or go with the flow." else "${state.active.completedSets} sets logged · Your session is saved as you go.", style = MaterialTheme.typography.bodyMedium)
+                    Text(state.active?.let { "${it.completedSets} sets logged · Your session is saved as you go." } ?: "Choose your split below or go with the flow.", style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = { if (state.active == null) actions.startWorkout(null); onWorkout() }, enabled = !state.startingWorkout,
                         modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(if (state.startingWorkout) "Opening workout…" else if (state.active == null) "Start empty workout" else "Resume workout") }
                 }

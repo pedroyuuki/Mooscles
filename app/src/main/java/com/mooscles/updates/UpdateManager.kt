@@ -32,7 +32,7 @@ class UpdateManager(
     val store: UpdateStore = UpdateStore(context.updateStore),
     private val client: ReleaseClient = ReleaseClient(),
     private val now: () -> Long = System::currentTimeMillis,
-) {
+) : UpdateCoordinator {
     private val checkGate = Mutex()
     private val installGate = Mutex()
     private val downloadGate = Mutex()
@@ -42,7 +42,7 @@ class UpdateManager(
     private val directory get() = File(context.filesDir, "updates").also { it.mkdirs() }
     private fun apkFile(code: Long) = File(directory, "update-$code.apk")
 
-    val ui = store.flow.map { s ->
+    override val ui = store.flow.map { s ->
         val installed = installedVersion(context)
         UpdateUi(installed.second, installed.first, s.checkedAt.takeIf { it > 0 },
             s.automatic, s.wifiOnly, s.prereleases, s.phase,
@@ -70,7 +70,7 @@ class UpdateManager(
         } catch (e: Exception) { if (e is CancellationException) throw e; report(e) }
     }
 
-    suspend fun onTrainingChanged() {
+    override suspend fun onTrainingChanged() {
         val state = store.snapshot()
         if (state.phase == UpdatePhase.DEFERRED && !trainingBusy()) {
             store.change { if (it.phase == UpdatePhase.DEFERRED) it.copy(
@@ -80,7 +80,7 @@ class UpdateManager(
         if (store.snapshot().phase in setOf(UpdatePhase.READY, UpdatePhase.DEFERRED)) attemptInstall(false)
     }
 
-    suspend fun assertTrainingMayStart() {
+    override suspend fun assertTrainingMayStart() {
         require(store.snapshot().phase != UpdatePhase.INSTALLING) { "An update is being installed. Training will be available again shortly." }
     }
 
@@ -91,7 +91,7 @@ class UpdateManager(
         work.enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.KEEP, request)
     }
 
-    suspend fun requestCheck(manual: Boolean) {
+    override suspend fun requestCheck(manual: Boolean) {
         val s = store.snapshot()
         if (!UpdatePolicy.canCheck(s, manual, now())) {
             if (manual) store.change { it.copy(message = if (now() < it.retryAt)
@@ -153,7 +153,7 @@ class UpdateManager(
         } finally { checkGate.unlock() }
     }
 
-    suspend fun setAutomatic(enabled: Boolean) {
+    override suspend fun setAutomatic(enabled: Boolean) {
         store.change { it.copy(automatic = enabled) }
         if (!enabled && store.snapshot().phase in DOWNLOAD_PHASES) cancelDownload(markCancelled = false)
         else if (enabled) {
@@ -163,7 +163,7 @@ class UpdateManager(
         }
     }
 
-    suspend fun setWifiOnly(enabled: Boolean) {
+    override suspend fun setWifiOnly(enabled: Boolean) {
         val previous = store.change { it.copy(wifiOnly = enabled) }
         if (previous.phase in DOWNLOAD_PHASES) {
             cancelDownload(markCancelled = false)
@@ -171,7 +171,7 @@ class UpdateManager(
         }
     }
 
-    suspend fun setPrereleases(enabled: Boolean) {
+    override suspend fun setPrereleases(enabled: Boolean) {
         installGate.withLock {
             if (store.snapshot().phase == UpdatePhase.INSTALLING) return
             cancelDownloadLocked(markCancelled = false)
@@ -181,7 +181,7 @@ class UpdateManager(
         requestCheck(true)
     }
 
-    suspend fun enqueueDownload(manual: Boolean = false) {
+    override suspend fun enqueueDownload(manual: Boolean) {
         val state = store.snapshot()
         val candidate = state.available ?: return
         if (candidate.metadata.versionCode <= installedVersion(context).first) { reconcile(); return }
@@ -247,7 +247,7 @@ class UpdateManager(
         }
     }
 
-    suspend fun cancelDownload(markCancelled: Boolean = true) = installGate.withLock { cancelDownloadLocked(markCancelled) }
+    override suspend fun cancelDownload(markCancelled: Boolean) = installGate.withLock { cancelDownloadLocked(markCancelled) }
 
     private suspend fun cancelDownloadLocked(markCancelled: Boolean) {
         val old = store.snapshot()

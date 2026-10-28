@@ -144,7 +144,7 @@ class AppViewModelPerformanceHostTest {
         model.setAutoRest(false)
         model.updateSet(set.id, 8, 20.0, true, false, false)
         model.renameWorkout(session.id, "Saved settings barrier")
-        awaitUi(model) { it.active?.name == "Saved settings barrier" && it.active.exercises.single().sets.first().completed }
+        awaitUi(model) { it.active.let { a -> a?.name == "Saved settings barrier" && a.exercises.single().sets.first().completed } }
         assertFalse(app.timer.state.value.running)
         assertFalse(app.timer.state.value.paused)
         assertEquals(175, runBlocking(Dispatchers.IO) { app.preferences.snapshot().defaultRestSeconds })

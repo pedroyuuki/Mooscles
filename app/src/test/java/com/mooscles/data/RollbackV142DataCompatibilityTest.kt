@@ -118,9 +118,7 @@ class RollbackV142DataCompatibilityTest {
             .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3, WorkoutDatabase.MIGRATION_3_4, WorkoutDatabase.MIGRATION_4_5)
             .build()
         assertEquals(5, database!!.userVersion())
-        val schema = File("schemas/com.mooscles.data.WorkoutDatabase/5.json").takeIf { file -> file.isFile }
-            ?: File("app/schemas/com.mooscles.data.WorkoutDatabase/5.json")
-        assertEquals(listOf(listOf<Any?>(JSONObject(schema.readText()).getJSONObject("database").getString("identityHash"))),
+        assertEquals(listOf(listOf<Any?>(JSONObject(exportedSchemaFile(5).readText()).getJSONObject("database").getString("identityHash"))),
             database!!.typedRows("SELECT identity_hash FROM room_master_table WHERE id = 42"))
         WorkoutRepository(database!!)
     }

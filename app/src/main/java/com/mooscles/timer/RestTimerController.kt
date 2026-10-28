@@ -30,14 +30,14 @@ class RestTimerController(
     private val sessionChanges: Flow<String?> = (context.applicationContext as MoosclesApplication)
         .repository.activeWorkoutIds,
     private val now: () -> Long = System::currentTimeMillis,
-) {
+) : RestTimer {
     private val mutex = Mutex()
     private val alarm = context.getSystemService(AlarmManager::class.java)
     private val notifications = context.getSystemService(NotificationManager::class.java)
     private var activeTone: ToneGenerator? = null
     private val problem = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = problem.asStateFlow()
-    fun clearError() { problem.value = null }
+    override val error: StateFlow<String?> = problem.asStateFlow()
+    override fun clearError() { problem.value = null }
     var foreground: Boolean = false
     // Reading errors never replace the on-disk store. Retain the last good state (or the
     // initial idle state) while retrying, allowing recovery from transient storage failures.
@@ -50,7 +50,7 @@ class RestTimerController(
         emit(RestTimerState())
     }.stateIn(scope, SharingStarted.Eagerly, RestTimerState())
     private val ticks = flow { while (true) { emit(Unit); delay(250) } }
-    val ui: StateFlow<TimerUi> = combine(state, ticks) { s, _ ->
+    override val ui: StateFlow<TimerUi> = combine(state, ticks) { s, _ ->
         val now = now()
         if (s.running && s.remaining(now) == 0L) scope.launch { complete(s.token) }
         TimerUi(s.exerciseName, ceil(s.remaining(now) / 1000.0).toInt(), (s.durationMillis / 1000).toInt(),
@@ -120,18 +120,18 @@ class RestTimerController(
             schedule(persistence.command())
         }
     }
-    suspend fun start(name: String, seconds: Int, workoutExerciseId: String? = null) {
+    override suspend fun start(name: String, seconds: Int, workoutExerciseId: String?) {
         notifications.cancel(1)
         mutate { this.start(name, seconds, workoutExerciseId) }
     }
-    suspend fun pause() { mutate { this.pause() } }
-    suspend fun resume() { mutate { this.resume() } }
-    suspend fun reset() { mutate { this.reset() }; notifications.cancel(1) }
-    suspend fun skip() { mutate { this.skip() }; notifications.cancel(1) }
-    suspend fun adjust(seconds: Int) { mutate { this.adjust(seconds) } }
-    suspend fun clear() = safely { clearForSessionEnd() }
+    override suspend fun pause() { mutate { this.pause() } }
+    override suspend fun resume() { mutate { this.resume() } }
+    override suspend fun reset() { mutate { this.reset() }; notifications.cancel(1) }
+    override suspend fun skip() { mutate { this.skip() }; notifications.cancel(1) }
+    override suspend fun adjust(seconds: Int) { mutate { this.adjust(seconds) } }
+    override suspend fun clear() = safely { clearForSessionEnd() }
     /** Session completion navigation must not report success after a failed durable clear. */
-    suspend fun clearForSessionEnd() {
+    override suspend fun clearForSessionEnd() {
         mutex.withLock {
             // Stop external effects even if the following durable clear temporarily fails.
             cancelAlerts()

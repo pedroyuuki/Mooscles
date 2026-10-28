@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -217,10 +216,7 @@ class RoutineTargetMigrationTest {
     }
 
     private fun createLegacyDatabase(filename: String, data: AppData, version: Int) {
-        val schemaPath = "schemas/com.mooscles.data.WorkoutDatabase/$version.json"
-        val schemaFile = listOf(File(schemaPath), File("app/$schemaPath")).firstOrNull { it.isFile }
-            ?: error("Room's exported version-one schema was not found")
-        val schema = JSONObject(schemaFile.readText()).getJSONObject("database")
+        val schema = JSONObject(exportedSchemaFile(version).readText()).getJSONObject("database")
         val path = context.getDatabasePath(filename)
         path.parentFile!!.mkdirs()
         SQLiteDatabase.openOrCreateDatabase(path, null).use { raw ->

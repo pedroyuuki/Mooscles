@@ -10,11 +10,22 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import java.io.File
 
 /*
  * Helpers for tests that inspect the database through Room's own driver connection, which replaced
  * `openHelper` (a database with a driver has no SupportSQLite open helper).
  */
+
+/**
+ * Room's exported schema JSON for [version], in `shared/schemas`. Gradle runs `:app` tests from
+ * `app/`, an IDE may run them from the repository root, so both are tried.
+ */
+fun exportedSchemaFile(version: Int): File {
+    val path = "shared/schemas/com.mooscles.data.WorkoutDatabase/$version.json"
+    return listOf(File("../$path"), File(path)).firstOrNull { it.isFile }
+        ?: error("Room's exported version $version schema was not found at $path")
+}
 
 /** `PRAGMA user_version`, read on Room's connection. */
 suspend fun WorkoutDatabase.userVersion(): Int = useReaderConnection { connection ->

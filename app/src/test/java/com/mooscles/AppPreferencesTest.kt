@@ -2,6 +2,7 @@ package com.mooscles
 
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -176,7 +177,7 @@ class AppPreferencesTest {
     }
 
     @Test fun restoreRejectsInvalidTheme() = runBlocking {
-        val preferences = AppPreferences(ApplicationProvider.getApplicationContext())
+        val preferences = AppPreferences(ApplicationProvider.getApplicationContext<Context>())
         val saved = BackupPreferences(pounds = true, theme = "light", autoRest = false, defaultRestSeconds = 90, selectedRoutineFolderId = "upper")
         preferences.restore(saved)
 
@@ -189,7 +190,7 @@ class AppPreferencesTest {
     }
 
     @Test fun restoreRejectsOutOfRangeRest() = runBlocking {
-        val preferences = AppPreferences(ApplicationProvider.getApplicationContext())
+        val preferences = AppPreferences(ApplicationProvider.getApplicationContext<Context>())
         val saved = BackupPreferences(pounds = true, theme = "dark", autoRest = true, defaultRestSeconds = 300, selectedRoutineFolderId = "default")
         preferences.restore(saved)
 
@@ -199,6 +200,14 @@ class AppPreferencesTest {
         }
 
         assertEquals(saved, preferences.snapshot().toBackup())
+    }
+
+    @Test fun factoryWritesThroughTheDelegateStore() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        AppPreferences(context).pounds(true)
+        assertEquals(true, context.moosclesStore.data.first()[booleanPreferencesKey("pounds")])
+        // A second instance shares the process-wide store instead of opening the file again.
+        assertTrue(AppPreferences(context).snapshot().pounds)
     }
 
     @Test fun invalidDefaultRestCannotOverwriteSavedMaximum() = runBlocking {
