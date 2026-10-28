@@ -13,8 +13,11 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $isWindowsHost = -not ($IsLinux -or $IsMacOS)
 $adb = Join-Path (Join-Path (Join-Path (Join-Path $projectRoot '.tooling') 'android-sdk') 'platform-tools') $(if ($isWindowsHost) { 'adb.exe' } else { 'adb' })
 if (-not $isWindowsHost -and -not (Test-Path -LiteralPath $adb)) {
-    # Outside Windows adb is rarely on PATH; use the SDK named by the environment.
-    $sdkAdb = @($env:ANDROID_SDK_ROOT, $env:ANDROID_HOME) | Where-Object { $_ } |
+    # Outside Windows adb is rarely on PATH; use the SDK named by the environment,
+    # then the Android Studio default on macOS (as prepare-release.ps1 does).
+    $sdkRoots = @($env:ANDROID_SDK_ROOT, $env:ANDROID_HOME)
+    if ($IsMacOS) { $sdkRoots += Join-Path (Join-Path (Join-Path $HOME 'Library') 'Android') 'sdk' }
+    $sdkAdb = $sdkRoots | Where-Object { $_ } |
         ForEach-Object { Join-Path (Join-Path $_ 'platform-tools') 'adb' } |
         Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if ($sdkAdb) { $adb = $sdkAdb }

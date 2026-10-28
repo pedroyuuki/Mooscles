@@ -3,6 +3,7 @@ package com.mooscles.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -53,7 +54,7 @@ class RoutineTargetMigrationTest {
             database = openMigrating(filename)
             var repo = WorkoutRepository(database)
             val upgraded = repo.snapshot()
-            assertEquals(5, database.openHelper.writableDatabase.version)
+            assertEquals(5, database.userVersion())
             assertLegacyDataUnchanged(legacy, upgraded)
             assertEquals(planned.sortedBy { it.id }, upgraded.routineSets.sortedBy { it.id })
             assertTrue(upgraded.workouts.all { it.sourceRoutineId == null })
@@ -152,7 +153,7 @@ class RoutineTargetMigrationTest {
         try {
             database = openMigrating(filename)
             var repository = WorkoutRepository(database)
-            assertEquals(5, database.openHelper.writableDatabase.version)
+            assertEquals(5, database.userVersion())
             assertTrue(database.dao().targetCheckpoints().isEmpty())
             assertLegacyDataUnchanged(legacy, repository.snapshot())
 
@@ -199,7 +200,7 @@ class RoutineTargetMigrationTest {
     }
 
     private fun openMigrating(filename: String): WorkoutDatabase =
-        Room.databaseBuilder(context, WorkoutDatabase::class.java, filename)
+        Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver())
             .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3, WorkoutDatabase.MIGRATION_3_4, WorkoutDatabase.MIGRATION_4_5).build()
 
     private fun assertLegacyDataUnchanged(expected: AppData, actual: AppData) {

@@ -2,6 +2,7 @@ package com.mooscles.data
 
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mooscles.domain.WorkoutCalculations
@@ -22,7 +23,7 @@ class WorkoutRepositoryTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     @Before fun setup() = runBlocking {
-        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         repo = WorkoutRepository(database)
         repo.initialize()
     }
@@ -132,7 +133,7 @@ class WorkoutRepositoryTest {
 
     @Test fun processReopenRestoresActiveWorkoutAndDecimalSetsWithoutDuplicates() = runBlocking {
         val fileName = "persistence-${newId()}.db"
-        var fileDatabase = Room.databaseBuilder(context, WorkoutDatabase::class.java, fileName).build()
+        var fileDatabase = Room.databaseBuilder(context, WorkoutDatabase::class.java, fileName).setDriver(AndroidSQLiteDriver()).build()
         try {
             val fileRepo = WorkoutRepository(fileDatabase)
             fileRepo.initialize()
@@ -141,7 +142,7 @@ class WorkoutRepositoryTest {
             val set = fileRepo.snapshot().exerciseSets(entry).first()
             fileRepo.updateSet(set.copy(weightKg = 22.75, reps = 7, completed = true))
             fileDatabase.close()
-            fileDatabase = Room.databaseBuilder(context, WorkoutDatabase::class.java, fileName).build()
+            fileDatabase = Room.databaseBuilder(context, WorkoutDatabase::class.java, fileName).setDriver(AndroidSQLiteDriver()).build()
             val reopened = WorkoutRepository(fileDatabase)
             val data = reopened.data.first()
             assertEquals(workout, data.activeWorkout!!.id)

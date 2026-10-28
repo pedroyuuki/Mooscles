@@ -1,6 +1,5 @@
 package com.mooscles.data
 
-import androidx.room.withTransaction
 import com.mooscles.backup.BackupApp
 import com.mooscles.backup.BackupCodec
 import com.mooscles.backup.BackupData
@@ -59,7 +58,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     private fun <T> reuseEqual(previous: List<T>, current: List<T>): List<T> =
         if (previous == current) previous else current
 
-    suspend fun initialize() = db.withTransaction {
+    suspend fun initialize() = db.writeTransaction {
         ensureDefaultFolder()
         dao.seedExercises(ExerciseCatalog.exercises)
         val catalog = ExerciseCatalog.exercises.associateBy { it.id }
@@ -82,12 +81,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         synchronizeRoutineTargets()
     }
 
-    suspend fun snapshot(): AppData = db.withTransaction {
+    suspend fun snapshot(): AppData = db.writeTransaction {
         AppData(dao.exercises(), dao.routines(), dao.routineExercises(), dao.workouts(), dao.workoutExercises(), dao.sets(), dao.routineSets(), dao.routineFolders())
     }
 
     /** Everything a backup holds, read atomically. Call after [initialize] so the default folder exists. */
-    suspend fun localState(): LocalState = db.withTransaction { LocalState(snapshot(), dao.targetCheckpoints()) }
+    suspend fun localState(): LocalState = db.writeTransaction { LocalState(snapshot(), dao.targetCheckpoints()) }
 
     suspend fun exportBackup(preferences: BackupPreferences, app: BackupApp, exportedAt: String): BackupFile {
         val state = localState()
@@ -109,7 +108,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
      * merged history. [beforeCommit] runs last, inside the transaction, so the caller can apply the
      * preferences right before the commit: if it throws, nothing is imported.
      */
-    suspend fun importBackup(file: BackupFile, beforeCommit: suspend (ImportPlan) -> Unit = {}): ImportPlan = db.withTransaction {
+    suspend fun importBackup(file: BackupFile, beforeCommit: suspend (ImportPlan) -> Unit = {}): ImportPlan = db.writeTransaction {
         check(dao.activeWorkout() == null) { "Finish or discard the active workout to import" }
         val plan = ImportPlanner.plan(file, localState())
         with(plan.entities) {
@@ -199,27 +198,27 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.seedRoutineFolder(RoutineFolder(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME))
     }
 
-    suspend fun createRoutineFolder(name: String): String = db.withTransaction {
+    suspend fun createRoutineFolder(name: String): String = db.writeTransaction {
         ensureDefaultFolder()
         val folder = RoutineFolder(name = EditRules.name(name), position = dao.routineFolders().size)
         dao.insertRoutineFolder(folder)
         folder.id
     }
 
-    suspend fun renameRoutineFolder(id: String, name: String) = db.withTransaction {
+    suspend fun renameRoutineFolder(id: String, name: String) = db.writeTransaction {
         val folder = requireNotNull(dao.routineFolder(id)) { "Folder not found." }
         dao.updateRoutineFolder(folder.copy(name = EditRules.name(name)))
     }
 
     /** Moving only changes membership; routine identity and active/finished snapshots stay intact. */
-    suspend fun moveRoutineToFolder(routineId: String, folderId: String) = db.withTransaction {
+    suspend fun moveRoutineToFolder(routineId: String, folderId: String) = db.writeTransaction {
         ensureDefaultFolder()
         requireNotNull(dao.routineFolder(folderId)) { "Folder not found." }
         val routine = requireNotNull(dao.routine(routineId)) { "Routine not found." }
         dao.updateRoutine(routine.copy(folderId = folderId))
     }
 
-    suspend fun createRoutine(name: String, folderId: String = RoutineFolder.DEFAULT_ID): String = db.withTransaction {
+    suspend fun createRoutine(name: String, folderId: String = RoutineFolder.DEFAULT_ID): String = db.writeTransaction {
         ensureDefaultFolder()
         requireNotNull(dao.routineFolder(folderId)) { "Folder not found." }
         val item = Routine(name = EditRules.name(name), position = dao.routines().size, folderId = folderId)
@@ -227,12 +226,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         item.id
     }
 
-    suspend fun renameRoutine(id: String, name: String) = db.withTransaction {
+    suspend fun renameRoutine(id: String, name: String) = db.writeTransaction {
         val item = requireNotNull(dao.routine(id)) { "Routine not found." }
         dao.updateRoutine(item.copy(name = EditRules.name(name)))
     }
 
-    suspend fun duplicateRoutine(id: String): String = db.withTransaction {
+    suspend fun duplicateRoutine(id: String): String = db.writeTransaction {
         val original = requireNotNull(dao.routine(id)) { "Routine not found." }
         val copy = original.copy(id = newId(), name = (original.name.take(113) + " (copy)"), position = dao.routines().size)
         dao.insertRoutine(copy)
@@ -246,12 +245,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         copy.id
     }
 
-    suspend fun deleteRoutine(id: String) = db.withTransaction {
+    suspend fun deleteRoutine(id: String) = db.writeTransaction {
         dao.deleteRoutine(id)
         dao.routines().forEachIndexed { index, item -> dao.updateRoutine(item.copy(position = index)) }
     }
 
-    suspend fun moveRoutine(id: String, direction: Int) = db.withTransaction {
+    suspend fun moveRoutine(id: String, direction: Int) = db.writeTransaction {
         val selected = requireNotNull(dao.routine(id)) { "Routine not found." }
         val items = dao.routines().filter { it.folderId == selected.folderId }.toMutableList()
         val positions = items.map { it.position }
@@ -259,13 +258,13 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         items.forEachIndexed { index, item -> dao.updateRoutine(item.copy(position = positions[index])) }
     }
 
-    suspend fun reorderRoutines(ids: List<String>) = db.withTransaction {
+    suspend fun reorderRoutines(ids: List<String>) = db.writeTransaction {
         val items = dao.routines()
         require(ids.toSet() == items.map { it.id }.toSet() && ids.size == items.size) { "Invalid routine order." }
         ids.forEachIndexed { index, id -> dao.updateRoutine(items.first { it.id == id }.copy(position = index)) }
     }
 
-    suspend fun addRoutineExercise(routineId: String, exerciseId: String): String = db.withTransaction {
+    suspend fun addRoutineExercise(routineId: String, exerciseId: String): String = db.writeTransaction {
         requireNotNull(dao.routine(routineId)) { "Routine not found." }
         requireNotNull(dao.exercise(exerciseId)) { "Exercise not found." }
         val item = RoutineExercise(routineId = routineId, exerciseId = exerciseId, position = dao.routineItems(routineId).size,
@@ -276,7 +275,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         item.id
     }
 
-    suspend fun updateRoutineExercise(item: RoutineExercise) = db.withTransaction {
+    suspend fun updateRoutineExercise(item: RoutineExercise) = db.writeTransaction {
         val existing = requireNotNull(dao.routineExercise(item.id)) { "Routine exercise not found." }
         require(existing.routineId == item.routineId) { "Cannot move an exercise to another routine." }
         requireNotNull(dao.exercise(item.exerciseId)) { "Exercise not found." }
@@ -300,7 +299,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         mirrorPlan(item.id)
     }
 
-    suspend fun addRoutineSet(entryId: String): String = db.withTransaction {
+    suspend fun addRoutineSet(entryId: String): String = db.writeTransaction {
         val plan = requireNotNull(dao.routineExercise(entryId)) { "Routine exercise not found." }
         val rows = ensurePlannedSets(plan)
         EditRules.routineSetCount(rows.size + 1)
@@ -310,7 +309,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         row.id
     }
 
-    suspend fun removeRoutineSet(setId: String) = db.withTransaction {
+    suspend fun removeRoutineSet(setId: String) = db.writeTransaction {
         val row = requireNotNull(dao.routineSet(setId)) { "Routine set not found." }
         val rows = dao.plannedSets(row.routineExerciseId)
         require(rows.size > 1) { "Keep at least one planned set." }
@@ -321,30 +320,30 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         mirrorPlan(row.routineExerciseId)
     }
 
-    suspend fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = db.withTransaction {
+    suspend fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = db.writeTransaction {
         EditRules.target(reps, weightKg)
         val row = requireNotNull(dao.routineSet(setId)) { "Routine set not found." }
         dao.updateRoutineSet(row.copy(targetReps = reps, targetWeightKg = weightKg, inheritPr = false))
         mirrorPlan(row.routineExerciseId)
     }
 
-    suspend fun inheritRoutineSet(setId: String) = db.withTransaction {
+    suspend fun inheritRoutineSet(setId: String) = db.writeTransaction {
         val row = requireNotNull(dao.routineSet(setId)) { "Routine set not found." }
         val plan = requireNotNull(dao.routineExercise(row.routineExerciseId)) { "Routine exercise not found." }
         dao.updateRoutineSet(inheritedSet(plan, row.position, row.id))
         mirrorPlan(row.routineExerciseId)
     }
 
-    suspend fun updateRoutineExerciseRest(entryId: String, seconds: Int) = db.withTransaction {
+    suspend fun updateRoutineExerciseRest(entryId: String, seconds: Int) = db.writeTransaction {
         EditRules.rest(seconds)
         val plan = requireNotNull(dao.routineExercise(entryId)) { "Routine exercise not found." }
         dao.updateRoutineExercise(plan.copy(restSeconds = seconds))
     }
 
-    suspend fun replaceRoutineExercise(id: String, exerciseId: String) = db.withTransaction {
+    suspend fun replaceRoutineExercise(id: String, exerciseId: String) = db.writeTransaction {
         val item = requireNotNull(dao.routineExercise(id)) { "Routine exercise not found." }
         requireNotNull(dao.exercise(exerciseId)) { "Exercise not found." }
-        if (item.exerciseId == exerciseId) return@withTransaction
+        if (item.exerciseId == exerciseId) return@writeTransaction
         val replacement = item.copy(exerciseId = exerciseId, targetWeightKg = null, targetReps = 0)
         dao.updateRoutineExercise(replacement)
         ensurePlannedSets(item).forEach { row ->
@@ -353,26 +352,26 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         mirrorPlan(id)
     }
 
-    suspend fun removeRoutineExercise(id: String) = db.withTransaction {
-        val item = dao.routineExercise(id) ?: return@withTransaction
+    suspend fun removeRoutineExercise(id: String) = db.writeTransaction {
+        val item = dao.routineExercise(id) ?: return@writeTransaction
         dao.deleteRoutineExercise(id)
         dao.routineItems(item.routineId).forEachIndexed { index, entry -> dao.updateRoutineExercise(entry.copy(position = index)) }
     }
 
-    suspend fun moveRoutineExercise(id: String, direction: Int) = db.withTransaction {
+    suspend fun moveRoutineExercise(id: String, direction: Int) = db.writeTransaction {
         val entry = requireNotNull(dao.routineExercise(id)) { "Routine exercise not found." }
         val items = dao.routineItems(entry.routineId).toMutableList()
         move(items, id, direction) { it.id }
         items.forEachIndexed { index, item -> dao.updateRoutineExercise(item.copy(position = index)) }
     }
 
-    suspend fun reorderRoutineExercises(routineId: String, ids: List<String>) = db.withTransaction {
+    suspend fun reorderRoutineExercises(routineId: String, ids: List<String>) = db.writeTransaction {
         val items = dao.routineItems(routineId)
         require(ids.toSet() == items.map { it.id }.toSet() && ids.size == items.size) { "Invalid exercise order." }
         ids.forEachIndexed { index, id -> dao.updateRoutineExercise(items.first { it.id == id }.copy(position = index)) }
     }
 
-    suspend fun saveExercise(item: Exercise) = db.withTransaction {
+    suspend fun saveExercise(item: Exercise) = db.writeTransaction {
         val valid = item.copy(name = EditRules.name(item.name))
         val existing = dao.exercise(item.id)
         require(existing == null || existing.custom) { "Only custom exercises can be edited." }
@@ -386,13 +385,13 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     }
 
     /** Returning the existing active id makes double taps and process recreation idempotent. */
-    suspend fun startEmpty(name: String = "Workout", defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.withTransaction {
+    suspend fun startEmpty(name: String = "Workout", defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.writeTransaction {
         EditRules.rest(defaultRestSeconds)
         dao.activeWorkout()?.id ?: Workout(name = EditRules.name(name), startedAt = now).also { dao.insertWorkout(it) }.id
     }
 
-    suspend fun startRoutine(routineId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.withTransaction {
-        dao.activeWorkout()?.let { return@withTransaction it.id }
+    suspend fun startRoutine(routineId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.writeTransaction {
+        dao.activeWorkout()?.let { return@writeTransaction it.id }
         EditRules.rest(defaultRestSeconds)
         val routine = requireNotNull(dao.routine(routineId)) { "Routine not found." }
         val workout = Workout(name = routine.name, startedAt = now, sourceRoutineId = routine.id)
@@ -427,12 +426,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         workout.id
     }
 
-    suspend fun renameWorkout(id: String, name: String) = db.withTransaction {
+    suspend fun renameWorkout(id: String, name: String) = db.writeTransaction {
         val item = requireNotNull(dao.workout(id)) { "Workout not found." }
         dao.updateWorkout(item.copy(name = EditRules.name(name)))
     }
 
-    suspend fun addWorkoutExercise(workoutId: String, exerciseId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS): String = db.withTransaction {
+    suspend fun addWorkoutExercise(workoutId: String, exerciseId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS): String = db.writeTransaction {
         requireNotNull(dao.workout(workoutId)) { "Workout not found." }
         EditRules.rest(defaultRestSeconds)
         val exercise = requireNotNull(dao.exercise(exerciseId)) { "Exercise not found." }
@@ -443,7 +442,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         entry.id
     }
 
-    suspend fun replaceWorkoutExercise(id: String, exerciseId: String) = db.withTransaction {
+    suspend fun replaceWorkoutExercise(id: String, exerciseId: String) = db.writeTransaction {
         val old = requireNotNull(dao.workoutExercise(id)) { "Workout exercise not found." }
         val exercise = requireNotNull(dao.exercise(exerciseId)) { "Exercise not found." }
         dao.updateWorkoutExercise(snapshotExercise(exercise, old.workoutId, old.position, old.restSeconds).copy(id = old.id))
@@ -452,39 +451,39 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
             assistance = exercise.convention == LoadConvention.ASSISTANCE)) }
     }
 
-    suspend fun updateWorkoutExercise(item: WorkoutExercise) = db.withTransaction {
+    suspend fun updateWorkoutExercise(item: WorkoutExercise) = db.writeTransaction {
         val existing = requireNotNull(dao.workoutExercise(item.id)) { "Workout exercise not found." }
         require(existing.workoutId == item.workoutId && existing.exerciseId == item.exerciseId) { "Exercise identity cannot change." }
         EditRules.rest(item.restSeconds)
         dao.updateWorkoutExercise(item.copy(name = EditRules.name(item.name)))
     }
 
-    suspend fun updateWorkoutExerciseRest(id: String, seconds: Int) = db.withTransaction {
+    suspend fun updateWorkoutExerciseRest(id: String, seconds: Int) = db.writeTransaction {
         EditRules.rest(seconds)
         val item = requireNotNull(dao.workoutExercise(id)) { "Workout exercise not found." }
         dao.updateWorkoutExercise(item.copy(restSeconds = seconds))
     }
 
-    suspend fun removeWorkoutExercise(id: String) = db.withTransaction {
-        val item = dao.workoutExercise(id) ?: return@withTransaction
+    suspend fun removeWorkoutExercise(id: String) = db.writeTransaction {
+        val item = dao.workoutExercise(id) ?: return@writeTransaction
         dao.deleteWorkoutExercise(id)
         dao.workoutItems(item.workoutId).forEachIndexed { index, entry -> dao.updateWorkoutExercise(entry.copy(position = index)) }
     }
 
-    suspend fun moveWorkoutExercise(id: String, direction: Int) = db.withTransaction {
+    suspend fun moveWorkoutExercise(id: String, direction: Int) = db.writeTransaction {
         val entry = requireNotNull(dao.workoutExercise(id)) { "Workout exercise not found." }
         val items = dao.workoutItems(entry.workoutId).toMutableList()
         move(items, id, direction) { it.id }
         items.forEachIndexed { index, item -> dao.updateWorkoutExercise(item.copy(position = index)) }
     }
 
-    suspend fun reorderWorkoutExercises(workoutId: String, ids: List<String>) = db.withTransaction {
+    suspend fun reorderWorkoutExercises(workoutId: String, ids: List<String>) = db.writeTransaction {
         val items = dao.workoutItems(workoutId)
         require(ids.toSet() == items.map { it.id }.toSet() && ids.size == items.size) { "Invalid exercise order." }
         ids.forEachIndexed { index, id -> dao.updateWorkoutExercise(items.first { it.id == id }.copy(position = index)) }
     }
 
-    suspend fun addSet(workoutExerciseId: String): String = db.withTransaction {
+    suspend fun addSet(workoutExerciseId: String): String = db.writeTransaction {
         val exercise = requireNotNull(dao.workoutExercise(workoutExerciseId)) { "Workout exercise not found." }
         val sets = dao.exerciseSets(workoutExerciseId)
         EditRules.workoutSetCount(sets.size + 1)
@@ -496,30 +495,30 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         item.id
     }
 
-    suspend fun updateSet(item: WorkoutSet) = db.withTransaction {
+    suspend fun updateSet(item: WorkoutSet) = db.writeTransaction {
         val existing = requireNotNull(dao.set(item.id)) { "Set not found." }
         require(existing.workoutExerciseId == item.workoutExerciseId) { "Cannot move a set to another exercise." }
         EditRules.workoutSet(item)
         dao.updateSet(item)
     }
 
-    suspend fun setCompleted(id: String, completed: Boolean): WorkoutSet = db.withTransaction {
+    suspend fun setCompleted(id: String, completed: Boolean): WorkoutSet = db.writeTransaction {
         val item = requireNotNull(dao.set(id)) { "Set not found." }.copy(completed = completed)
         EditRules.workoutSet(item)
         dao.updateSet(item)
         item
     }
 
-    suspend fun removeSet(id: String) = db.withTransaction {
-        val item = dao.set(id) ?: return@withTransaction
+    suspend fun removeSet(id: String) = db.writeTransaction {
+        val item = dao.set(id) ?: return@writeTransaction
         dao.deleteSet(id)
         dao.exerciseSets(item.workoutExerciseId).forEachIndexed { index, entry -> dao.updateSet(entry.copy(position = index)) }
     }
 
     /** All child mutations are already durable; final status/end time changes atomically once. */
-    suspend fun finishWorkout(id: String, now: Long = System.currentTimeMillis()): Boolean = db.withTransaction {
+    suspend fun finishWorkout(id: String, now: Long = System.currentTimeMillis()): Boolean = db.writeTransaction {
         val workout = requireNotNull(dao.workout(id)) { "Workout not found." }
-        if (workout.status == WorkoutStatus.FINISHED) return@withTransaction false
+        if (workout.status == WorkoutStatus.FINISHED) return@writeTransaction false
         val sets = dao.workoutSets(id)
         require(sets.any { it.completed }) { "Complete at least one set before finishing." }
         sets.forEach(EditRules::workoutSet)
@@ -528,13 +527,13 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         true
     }
 
-    suspend fun discardWorkout(id: String) = db.withTransaction {
-        val workout = dao.workout(id) ?: return@withTransaction
+    suspend fun discardWorkout(id: String) = db.writeTransaction {
+        val workout = dao.workout(id) ?: return@writeTransaction
         require(workout.status == WorkoutStatus.ACTIVE) { "Only active workouts can be discarded." }
         dao.deleteWorkout(id)
     }
 
-    suspend fun deleteWorkout(id: String) = db.withTransaction { dao.deleteWorkout(id) }
+    suspend fun deleteWorkout(id: String) = db.writeTransaction { dao.deleteWorkout(id) }
 
     private fun snapshotExercise(exercise: Exercise, workoutId: String, position: Int, restSeconds: Int) = WorkoutExercise(
         workoutId = workoutId, exerciseId = exercise.id, name = exercise.name, muscle = exercise.muscle,

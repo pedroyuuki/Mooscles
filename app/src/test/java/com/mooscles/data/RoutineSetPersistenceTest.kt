@@ -2,6 +2,7 @@ package com.mooscles.data
 
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.domain.RoutineTargetRecords
 import com.mooscles.domain.WeightUnits
@@ -23,7 +24,7 @@ class RoutineSetPersistenceTest {
     private var clock = 1000L
 
     @Before fun setup() = runBlocking {
-        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         repo = WorkoutRepository(database)
         repo.initialize()
     }
@@ -215,7 +216,7 @@ class RoutineSetPersistenceTest {
 
     @Test fun perRowValuesInheritanceModesRestAndOrderSurviveDiskReopenAndNewRecords() = runBlocking {
         val filename = "routine-rows-${newId()}.db"
-        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+        var disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
         try {
             repo = WorkoutRepository(disk)
             repo.initialize()
@@ -229,7 +230,7 @@ class RoutineSetPersistenceTest {
             repo.updateRoutineExerciseRest(entry, 145)
             val before = repo.snapshot()
             disk.close()
-            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).build()
+            disk = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver()).build()
             repo = WorkoutRepository(disk)
             repo.initialize()
             assertEquals(before.plannedSets(entry), repo.snapshot().plannedSets(entry))

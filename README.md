@@ -64,7 +64,7 @@ Sharing supports WhatsApp, WhatsApp Business and the standard Android Sharesheet
 
 Version 1.1.0 adds **Settings → App updates** with foreground checks, approximately six-hour background checks, stable/prerelease channels, Wi-Fi download preferences, progress, retries, and Android installation approval. Installation waits for saved workouts and stopped rest timers. Install this updater-enabled APK once on older versions to enable future updates. See [UPDATES.md](UPDATES.md) for the required APK + `update.json` release assets and publishing procedure.
 
-Toolchain: AGP 8.7.3, Gradle wrapper 8.14.5, Kotlin/Compose compiler 2.1.20, KSP 2.1.20-1.0.32, Compose BOM 2025.04.01, Room 2.7.2; Java bytecode 17, JDK 21 used for builds. Compile/target API 35, build-tools 35.0.0.
+Toolchain: AGP 9.3.3 (built-in Kotlin), Gradle wrapper 9.7.1, Kotlin/Compose compiler 2.4.21, KSP 2.3.12, Compose BOM 2026.09.00, Room 2.8.5 with `AndroidSQLiteDriver` (`androidx.sqlite:sqlite-framework` pinned to 2.6.2), DataStore 1.3.0; Java bytecode 17, JDK 21 used for builds. Compile API 37, target API 35, build-tools 36.0.0.
 
 On the development workspace, the local JDK and SDK are installed under ignored `.tooling/`; ignored `local.properties` points to the SDK. After configuring your own JDK and SDK as described below, run:
 
@@ -78,7 +78,7 @@ On any machine without the original signing key, `build.ps1` ends with exit code
 
 After Android Studio's daemon-toolchain migration, `gradle/gradle-daemon-jvm.properties` declares **Adoptium Java 21** for Gradle. Android Studio and command-line builds use these criteria; `build.ps1` also selects the bundled JDK 21 to launch the wrapper. Gradle 8.x cannot run with Java 25.
 
-On a fresh checkout, install Adoptium JDK 21, Android SDK platform 35 and build-tools 35.0.0. Set `JAVA_HOME` and set `sdk.dir` in untracked `local.properties` to your SDK folder. The checked-in wrapper downloads Gradle. Build dependencies require network only during initial resolution.
+On a fresh checkout, install Adoptium JDK 21, Android SDK platform `android-37.0` and build-tools 36.0.0. Set `JAVA_HOME` and set `sdk.dir` in untracked `local.properties` to your SDK folder. The checked-in wrapper downloads Gradle. Build dependencies require network only during initial resolution.
 
 ```powershell
 .\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
@@ -89,7 +89,7 @@ The latter requires a booted emulator or authorized USB device. Debug APK: `app/
 
 To create an installable APK in Android Studio, select the `debug` build variant, then **Build → Generate Bundle(s) / APK(s) → Generate APK(s)**. When it finishes, click **locate** in the notification. You can copy/share `app-debug.apk` and install it directly on an Android 8+ device. The debug APK is signed automatically. For a future production-signed distribution, use **Build → Generate Signed App Bundle or APK → APK** after resolving signing compatibility with existing installations; changing the key can prevent updates.
 
-Version compatibility references: [AGP 8.7](https://developer.android.com/build/releases/agp-8-7-0-release-notes), [Kotlin Gradle compatibility](https://kotlinlang.org/docs/gradle-configure-project.html), [Compose compiler plugin](https://developer.android.com/jetpack/androidx/releases/compose-kotlin), [Room releases](https://developer.android.com/jetpack/androidx/releases/room).
+Version compatibility references: [AGP 9.3](https://developer.android.com/build/releases/agp-9-3-0-release-notes), [Kotlin Gradle compatibility](https://kotlinlang.org/docs/gradle-configure-project.html), [Compose compiler plugin](https://developer.android.com/jetpack/androidx/releases/compose-kotlin), [Room releases](https://developer.android.com/jetpack/androidx/releases/room).
 
 ## Architecture and persistence
 

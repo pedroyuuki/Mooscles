@@ -2,7 +2,7 @@ package com.mooscles.data
 
 import android.content.Context
 import androidx.room.Room
-import androidx.room.withTransaction
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.LargeHistoryFixture
 import com.mooscles.backup.BackupApp
@@ -39,10 +39,10 @@ class BackupRepositoryTest {
     private val app = BackupApp("1.5.0", 17, "android")
 
     @Before fun setup() = runBlocking {
-        phoneDb = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        phoneDb = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         phone = WorkoutRepository(phoneDb)
         phone.initialize()
-        otherDb = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        otherDb = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         other = WorkoutRepository(otherDb)
         other.initialize()
     }
@@ -305,7 +305,7 @@ class BackupRepositoryTest {
         val exercises = other.snapshot().exercises.filter { !it.custom && it.convention == LoadConvention.TOTAL_LOAD }.take(6)
         val dao = otherDb.dao()
         val rows = LargeHistoryFixture.rows(exercises)
-        otherDb.withTransaction {
+        otherDb.writeTransaction {
             dao.insertWorkouts(rows.workouts)
             dao.insertWorkoutExercises(rows.entries)
             dao.insertSets(rows.sets)

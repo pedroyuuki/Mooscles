@@ -3,6 +3,7 @@ package com.mooscles.sharing
 import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.data.Equipment
 import com.mooscles.data.LoadConvention
@@ -34,7 +35,7 @@ class WorkoutShareExportIntegrationTest {
     private lateinit var repository: WorkoutRepository
 
     @Before fun setup() = runBlocking {
-        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         repository = WorkoutRepository(database)
         repository.initialize()
     }

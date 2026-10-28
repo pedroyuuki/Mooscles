@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.backup.BackupApp
 import com.mooscles.backup.BackupCodec
@@ -290,7 +291,7 @@ class AppViewModelBackupHostTest {
 
     /** One finished workout from one routine with one custom exercise, made on another install. */
     private fun otherInstallBackup(): String = runBlocking(Dispatchers.IO) {
-        val db = Room.inMemoryDatabaseBuilder(app, WorkoutDatabase::class.java).build()
+        val db = Room.inMemoryDatabaseBuilder(app, WorkoutDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
         try {
             val other = WorkoutRepository(db)
             other.initialize()

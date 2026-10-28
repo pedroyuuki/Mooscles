@@ -1,5 +1,7 @@
 package com.mooscles
 
+import androidx.room.execSQL
+import androidx.room.useWriterConnection
 import android.Manifest
 import android.app.AlarmManager
 import android.app.Notification
@@ -173,8 +175,8 @@ class AppViewModelFoldersDiscardHostTest {
         val before = snapshot()
         val previousEvent = model.contentUi.value.discardNavigationRequest
         runBlocking(Dispatchers.IO) {
-            app.database.openHelper.writableDatabase.execSQL(
-                "CREATE TRIGGER reject_discard_for_test BEFORE DELETE ON workouts BEGIN SELECT RAISE(ABORT, 'Injected discard failure'); END")
+            app.database.useWriterConnection { it.execSQL(
+                "CREATE TRIGGER reject_discard_for_test BEFORE DELETE ON workouts BEGIN SELECT RAISE(ABORT, 'Injected discard failure'); END") }
         }
         try {
             repeat(10) { model.discardWorkout() }
@@ -186,7 +188,7 @@ class AppViewModelFoldersDiscardHostTest {
             assertEquals(before.sets, snapshot().sets)
         } finally {
             runBlocking(Dispatchers.IO) {
-                app.database.openHelper.writableDatabase.execSQL("DROP TRIGGER IF EXISTS reject_discard_for_test")
+                app.database.useWriterConnection { it.execSQL("DROP TRIGGER IF EXISTS reject_discard_for_test") }
             }
         }
         model.clearError()

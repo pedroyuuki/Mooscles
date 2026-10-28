@@ -42,3 +42,4 @@ service-account*.json
 service_account*.json
 
 # Keep source, Room schemas, and the Gradle wrapper (including its JAR).
+.vscode/
