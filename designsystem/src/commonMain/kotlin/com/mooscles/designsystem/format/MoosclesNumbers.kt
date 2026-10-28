@@ -1,5 +1,8 @@
 package com.mooscles.designsystem.format
 
+import kotlin.math.abs
+import kotlin.math.round
+
 /**
  * Localizes numbers the domain already rounded. The rounding rule stays in the domain
  * (`number()` in :app, `DecimalText.fixed2` in :shared); this only swaps separators.
@@ -27,6 +30,27 @@ object MoosclesNumbers {
         }
         return (if (negative) "-" else "") + grouped + (if (fraction != null) decimal + fraction else "")
     }
+
+    /**
+     * The plain text of [value] the way the domain writes a load (`number()` in :app): rounded to
+     * hundredths, without trailing zeros, so 20.0 is `20`, 82.5 is `82.5` and 0.1 + 0.2 is `0.3`.
+     * Never `Double.toString()`, which writes `20.0` and `1.0E7`. A value whose hundredths fall
+     * exactly halfway rounds to the even one; loads and steps are multiples of 0.25 and never do.
+     */
+    fun plain(value: Double): String {
+        require(value.isFinite()) { "Not a finite number: $value" }
+        val cents = round(abs(value) * CENTS).toLong()
+        val integer = cents / CENTS.toLong()
+        val fraction = cents % CENTS.toLong()
+        val digits = when {
+            fraction == 0L -> ""
+            fraction % 10 == 0L -> "." + (fraction / 10)
+            else -> "." + (if (fraction < 10) "0" else "") + fraction
+        }
+        return (if (value < 0 && cents != 0L) "-" else "") + integer + digits
+    }
+
+    private const val CENTS = 100.0
 
     /** `82,5 kg`, with a no-break space before the unit. */
     fun weight(plain: String, unit: String, locale: NumberLocale): String =

@@ -23,6 +23,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.mooscles.designsystem.format.MoosclesNumbers
+import com.mooscles.designsystem.format.NumberLocale
+import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -52,7 +55,8 @@ const val StepperValueTag = "stepper-value"
  * between). A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
  * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Every step gives the
  * `StepperStep` haptic. The value never goes below [min], where the decrease button is disabled.
- * [display] is the already localized text of [value].
+ * [display] is the text of [value]; by default the domain's plain decimal ([MoosclesNumbers.plain],
+ * `20`, `82.5`) with the separators of [numberLocale] (`82,5` in pt-BR), never `20.0`.
  */
 @Composable
 fun Stepper(
@@ -60,10 +64,11 @@ fun Stepper(
     onValueChange: (Double) -> Unit,
     step: Double,
     min: Double,
-    display: String,
     decreaseLabel: String,
     increaseLabel: String,
     modifier: Modifier = Modifier,
+    numberLocale: NumberLocale = currentNumberLocale(),
+    display: String = MoosclesNumbers.localize(MoosclesNumbers.plain(value), numberLocale),
 ) {
     val currentValue by rememberUpdatedState(value)
     val currentOnChange by rememberUpdatedState(onValueChange)

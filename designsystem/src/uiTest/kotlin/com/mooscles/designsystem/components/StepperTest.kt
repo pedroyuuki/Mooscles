@@ -1,5 +1,7 @@
 package com.mooscles.designsystem.components
 
+import com.mooscles.designsystem.format.NumberLocale
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -122,5 +124,22 @@ class StepperTest {
         onNodeWithTag(StepperIncreaseTag).performKeyInput { pressKey(Key.Spacebar) }
         waitForIdle()
         assertEquals(2.0, value)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun defaultDisplayIsTheDomainDecimalNeverDoubleToString() {
+        for ((locale, value, expected) in listOf(
+            Triple(NumberLocale.EN, 20.0, "20"), Triple(NumberLocale.EN, 82.5, "82.5"),
+            Triple(NumberLocale.PT_BR, 20.0, "20"), Triple(NumberLocale.PT_BR, 82.5, "82,5"),
+        )) {
+            runComposeUiTest {
+                withTheme {
+                    Stepper(value, {}, step = 2.5, min = 0.0, decreaseLabel = "Decrease", increaseLabel = "Increase", numberLocale = locale)
+                }
+                waitForIdle()
+                onNodeWithTag(StepperValueTag).assertTextEquals(expected)
+            }
+        }
     }
 }
