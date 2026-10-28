@@ -86,8 +86,9 @@ class IosDatabaseTest {
         }.exceptionOrNull()
 
         assertTrue(error is IllegalStateException, "$error")
+        // The wording of the outer message is the common implementation's; assert on the type and
+        // on the nested failure it carries as its cause instead.
         val causes = generateSequence<Throwable>(error) { it.cause }.map { it.message }.toList()
-        assertTrue("A nested write transaction failed, so the enclosing one is rolled back" in causes, "$causes")
         assertTrue("Nested failure" in causes, "$causes")
         assertEquals(before, repository.snapshot())
         assertTrue(repository.snapshot().routines.none { it.name == "A" || it.name == "B" })

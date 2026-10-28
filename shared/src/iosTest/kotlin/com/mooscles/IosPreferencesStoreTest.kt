@@ -25,20 +25,24 @@ class IosPreferencesStoreTest {
     @Test fun preferencesAndTimerPersistAcrossStoreInstances() = runBlocking<Unit> {
         val now = { 1_000_000L }
         val firstScope = SupervisorJob()
-        val store = createMoosclesStore(directory.path, CoroutineScope(Dispatchers.IO + firstScope))
-        val preferences = AppPreferences(store)
-        preferences.restore(BackupPreferences(true, "dark", false, 150, "default"))
-        val timer = RestTimerPersistence(store, now)
-        timer.start("Press", 90, "entry")
-        val savedPreferences = preferences.snapshot()
-        val savedTimer = timer.snapshot()
-        assertEquals(PreferencesUi(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 150,
-            selectedRoutineFolderId = "default"), savedPreferences)
-        assertEquals("Press", savedTimer.exerciseName)
-        assertEquals(1_090_000L, savedTimer.deadline)
-        assertEquals("entry", savedTimer.workoutExerciseId)
-        // DataStore allows one active instance per file; closing the scope releases it.
-        firstScope.cancelAndJoin()
+        val (savedPreferences, savedTimer) = try {
+            val store = createMoosclesStore(directory.path, CoroutineScope(Dispatchers.IO + firstScope))
+            val preferences = AppPreferences(store)
+            preferences.restore(BackupPreferences(true, "dark", false, 150, "default"))
+            val timer = RestTimerPersistence(store, now)
+            timer.start("Press", 90, "entry")
+            val savedPreferences = preferences.snapshot()
+            val savedTimer = timer.snapshot()
+            assertEquals(PreferencesUi(pounds = true, theme = "dark", autoRest = false, defaultRestSeconds = 150,
+                selectedRoutineFolderId = "default"), savedPreferences)
+            assertEquals("Press", savedTimer.exerciseName)
+            assertEquals(1_090_000L, savedTimer.deadline)
+            assertEquals("entry", savedTimer.workoutExerciseId)
+            savedPreferences to savedTimer
+        } finally {
+            // DataStore allows one active instance per file; closing the scope releases it, even when an assertion failed.
+            firstScope.cancelAndJoin()
+        }
 
         val secondScope = SupervisorJob()
         try {
@@ -51,6 +55,8 @@ class IosPreferencesStoreTest {
         }
     }
 
+    // Side effect, left in place on purpose: moosclesDataDirectory() creates the simulator app's
+    // real Library/Application Support directory. It is empty, harmless, and the simulator is disposable.
     @Test fun dataDirectoryIsApplicationSupportInTheSandbox() {
         val path = moosclesDataDirectory()
         assertTrue(path.endsWith("/Library/Application Support"), path)

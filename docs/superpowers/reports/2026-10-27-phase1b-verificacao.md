@@ -1,7 +1,7 @@
 # Fase 1B: atualização por cima, desempenho e tamanho no emulador
 
 - **Data:** 2026-10-28
-- **Branch:** `chore/phase1b-shared-module`, código verificado em `b7986de` (a Task 9 em `23825fa` mais o teste `AppViewModelInstallHostTest`, que não muda o APK)
+- **Branch:** `chore/phase1b-shared-module`, os dois APKs do depois foram montados a partir de `23825fa`; `b7986de` só acrescenta o teste de host `AppViewModelInstallHostTest`, que não entra no APK
 - **Spec:** [fase 1](../specs/2026-10-27-phase1-shared-base-design.md) · **Plano:** [fase 1B](../plans/2026-10-27-phase1b-shared-module.md) · **Etapa anterior:** [verificação da 1A](2026-10-27-phase1a-verificacao.md)
 - **Antes:** APK debug e APK R8 da `main` em `72e835f` (o código de antes da 1B), montados num worktree separado
 - **Depois:** APK debug desta branch (`./gradlew :app:assembleDebug`) e o APK R8 (`:app:assemblePerformance`)
@@ -15,7 +15,7 @@
   - o export feito depois é idêntico byte a byte ao de antes, tirando o `exportedAt`.
 
   Isso inclui o treino ativo com quatro séries completas e o timer de descanso rodando: o app mostrou "Pick up where you left off", o alarme ficou no mesmo instante, e o dock chegou a "Rest complete" no prazo salvo.
-- **Desempenho: nenhuma piora acima do ruído.** Nas medianas, a abertura a frio ficou mais rápida no APK novo (histórico visível 1,71 s contra 7,44 s depois do primeiro quadro). Nas duas pontas as execuções se dividem em dois grupos, um de 1 a 3 s e outro de 7 a 10 s, então a diferença das medianas mostra só em qual grupo caiu cada execução. A troca kg/lb ficou em 0,45 s contra 0,57 s. No import da base grande, o `present()` ficou em 0,86 s contra 1,00 s, e do toque ao fim do `present()` em 3,61 s contra 3,30 s, com as cinco execuções de cada lado entre 2,0 e 5,6 s. Nenhum ANR.
+- **Desempenho: nenhuma piora acima do ruído.** Na abertura a frio não houve regressão, mas também não há diferença conclusiva: as execuções são bimodais e as medianas caem em grupos diferentes (histórico visível 1,71 s no APK novo contra 7,44 s no antigo, depois do primeiro quadro). Nas duas pontas as execuções se dividem em dois grupos, um de 1 a 3 s e outro de 7 a 10 s, então a diferença das medianas mostra só em qual grupo caiu cada execução. A troca kg/lb ficou em 0,45 s contra 0,57 s. No import da base grande, o `present()` ficou em 0,86 s contra 1,00 s, e do toque ao fim do `present()` em 3,61 s contra 3,30 s, com as cinco execuções de cada lado entre 2,0 e 5,6 s. Nenhum ANR.
 - **APK debug: +236 bytes** (21.796.480 → 21.796.716). As entradas comprimidas cresceram 8.214 bytes, quase tudo dex. O orçamento era de cerca de 1 MB. O APK R8 tem o mesmo tamanho nos dois, 2.246.209 bytes.
 - **R8:** o APK `assemblePerformance` exportou a base grande, importou o próprio arquivo numa instalação limpa e exportou de novo. Os dois exports são iguais tirando o `exportedAt`, e também iguais ao export R8 da 1A. O kotlinx.serialization funciona sob o R8 vindo de um módulo de biblioteca.
 - **Um teste novo de host**, `AppViewModelInstallHostTest`, prende o botão Install ao `UpdateManager.requestInstall()`, o caminho que espera o treino e o timer terminarem.
@@ -70,7 +70,7 @@ Igual à 1A. O `dumpsys dbinfo` mostra `journalMode=WAL, syncMode=NORMAL` na con
 
 ### Telas
 
-Os prints de History, Records e rotinas foram tirados só depois da troca, e não foram comparados pixel a pixel com o antes, como na 1A. A igualdade dessas telas vem dos dados: o dump, as preferências e o export idênticos, e os números que a tela mostra (10 treinos, 160 séries, 40 PRs) são os do export. A 1B não mexeu em nenhuma tela.
+Os prints de History, Records e rotinas foram tirados só depois da troca, e não foram comparados pixel a pixel com o antes, como na 1A. A igualdade dessas telas vem dos dados: o dump, as preferências e o export idênticos, e os números que a tela mostra (10 treinos, 160 séries, 40 PRs) são os do export. A única edição em arquivo de tela foi a reescrita de smart-cast em `RoutineScreens.kt:47`, que gera o mesmo texto: nenhuma tela mudou de aparência.
 
 ## Desempenho
 
@@ -127,7 +127,7 @@ Nenhum ANR em nenhuma execução: nenhum `ANR in` nem `FATAL` nos `logcat` das m
 
 ## Tamanho do APK
 
-| APK | Antes (`72e835f`) | Depois (`b7986de`) | Diferença |
+| APK | Antes (`72e835f`) | Depois (build de `23825fa`, o mesmo código de `b7986de`) | Diferença |
 | --- | --- | --- | --- |
 | debug | 21.796.480 B | 21.796.716 B | **+236 B** |
 | performance (R8) | 2.246.209 B | 2.246.209 B | 0 B |
@@ -170,6 +170,8 @@ O `compat-reviewer` da Task 7 pediu um teste que prendesse o `AppViewModel.insta
 - **History, Records e rotinas antes da troca:** só há prints depois. A comparação dessas telas é pelos dados (ver [Telas](#telas)).
 - **A suíte inteira localmente:** fica com o CI. Localmente rodou só o `AppViewModelInstallHostTest`.
 - **A abertura a frio do R8**, TalkBack e teclado.
+- **`compat-reviewer` na Task 10:** não foi rodado, porque a Task 10 não alterou código de produção (só testes e documentos). Os dados, o updater e o timer foram cobertos pelos revisores das tarefas anteriores.
+- **Job `release-script` do CI:** foi pulado no push final (só havia mudança em documentos). A branch inteira foi coberta pela execução manual (`workflow_dispatch`) 40689232664, com os quatro jobs do release-script verdes.
 
 ## Incidentes
 

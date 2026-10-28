@@ -186,6 +186,19 @@ jobs:
       - name: Compile for iOS and run the simulator tests
         run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --console=plain --continue
 
+      # kspIosArm64 and kspIosSimulatorArm64 run only here, so an iOS-only divergence in the
+      # exported schema (and its identityHash) is caught here, not in the host job.
+      - name: Room schemas unchanged
+        if: ${{ !cancelled() }}
+        run: |
+          git diff --exit-code -- shared/schemas
+          status=$(git status --porcelain -- shared/schemas)
+          if [ -n "$status" ]; then
+            echo "Room schema files changed or appeared:"
+            echo "$status"
+            exit 1
+          fi
+
       - name: Summarize iOS simulator tests
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -219,7 +232,7 @@ jobs:
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
-          if ($platform.Count -lt 6) { throw "Only $($platform.Count) of the 6 iOS entry point tests ran." }
+          if ($platform.Count -ne 6) { throw "$($platform.Count) iOS entry point tests ran; exactly 6 are expected (update this number and MIN_IOS_TESTS when adding or removing one)." }
 
       - name: Upload iOS reports
         if: ${{ failure() }}
