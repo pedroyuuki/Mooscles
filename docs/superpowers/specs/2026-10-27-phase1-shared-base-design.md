@@ -96,3 +96,9 @@ O produto vai para o iOS e passa por um redesign completo. Se o redesign viesse 
 - **2026-10-27, etapa 1A, barra de navegação.** O indicador do item selecionado na barra inferior ficou mais estreito (64 → 56 dp) por causa da atualização do Material 3. Aceito, porque a fase 2 redesenha a navegação. Isso contradiz o antiobjetivo de "nenhuma mudança perceptível"; fica registrado.
 - **2026-10-27, etapa 1A, tamanho do APK.** O APK debug cresceu +1,78 MiB (19,9 → 21,8 MB). O +1,32 MiB medido antes estava distorcido pelo espaço morto do empacotamento incremental. Aceito: o crescimento vem do `androidx.window`, trazido pelo Compose UI 1.12, que a fase 3 precisa.
 - **2026-10-27, etapa 1A, teste instrumentado de atualização.** O teste instrumentado que abre um banco v5 e um DataStore criados pela versão anterior fica adiado para a etapa 1B, quando o DataStore passa para o código comum e o teste mais importa. A 1A se apoiou na atualização por cima no emulador e no `MigrationEquivalenceTest`.
+- **2026-10-27, decisões do plano da 1B** ([plano](../plans/2026-10-27-phase1b-shared-module.md)). Três escolhas mudam o texto acima sem mudar o objetivo:
+  1. **Datas:** usar `kotlin.time.Clock`/`Instant` em vez de `kotlinx-datetime`. É o mesmo tipo desde o kotlinx-datetime 0.7, com uma dependência a menos.
+  2. **Busca de exercícios:** em vez de `expect/actual` sobre o `Normalizer`, o dobramento de acentos é uma tabela em Kotlin puro gerada da JVM 21 e conferida para todos os code points. Ela congela o comportamento atual (Unicode 15.0) e não depende do ICU de cada aparelho.
+  3. **Código com `Context` no `:shared`:**
+     - `WorkoutDatabase.open(context)` fica em `shared/src/androidMain`;
+     - o delegate `preferencesDataStore` continua no `:app`, e o código comum recebe o `DataStore` pronto, para manter uma única instância por processo e o mesmo caminho de arquivo.
