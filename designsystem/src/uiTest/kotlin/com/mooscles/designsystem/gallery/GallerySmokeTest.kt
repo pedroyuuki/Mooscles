@@ -9,12 +9,15 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
+import com.mooscles.designsystem.resources.gallery_section_exercise_card
 import com.mooscles.designsystem.resources.gallery_section_icons
+import com.mooscles.designsystem.resources.gallery_section_records
 import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
+import com.mooscles.designsystem.resources.gallery_section_timer
 import com.mooscles.designsystem.resources.gallery_section_workout_inputs
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
@@ -35,6 +38,9 @@ class GallerySmokeTest {
         GalleryPage.Overlays to Res.string.gallery_section_overlays,
         GalleryPage.WorkoutInputs to Res.string.gallery_section_workout_inputs,
         GalleryPage.SetRow to Res.string.gallery_section_set_rows,
+        GalleryPage.Timer to Res.string.gallery_section_timer,
+        GalleryPage.Records to Res.string.gallery_section_records,
+        GalleryPage.ExerciseCard to Res.string.gallery_section_exercise_card,
     )
 
     @OptIn(ExperimentalTestApi::class)

@@ -67,4 +67,15 @@
     <string name="gallery_sample_load_label">Carga</string>
     <string name="gallery_sample_reps_label">Repetições</string>
     <string name="gallery_sample_step">2,5 quilos</string>
+    <string name="gallery_page_timer">Timer de descanso</string>
+    <string name="gallery_page_records">Recordes</string>
+    <string name="gallery_page_exercise_card">Card de exercício</string>
+    <string name="gallery_section_timer">Dock do timer e anel expandido</string>
+    <string name="gallery_section_records">Aviso de recorde</string>
+    <string name="gallery_section_exercise_card">Card de exercício com e sem imagem</string>
+    <string name="gallery_show_pr_toast">Mostrar aviso de recorde</string>
+    <string name="gallery_sample_exercise">Supino reto</string>
+    <string name="gallery_sample_exercise_meta">Barra, peito</string>
+    <string name="gallery_sample_exercise_next">Supino inclinado com halteres</string>
+    <string name="gallery_sample_pr_detail">85 kg × 6</string>
 </resources>

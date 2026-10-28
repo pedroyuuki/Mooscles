@@ -6,24 +6,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.mooscles.designsystem.gallery.pages.ButtonsPage
 import com.mooscles.designsystem.gallery.pages.ChipsPage
+import com.mooscles.designsystem.gallery.pages.ExerciseCardPage
 import com.mooscles.designsystem.gallery.pages.FieldsPage
 import com.mooscles.designsystem.gallery.pages.FoundationsPage
 import com.mooscles.designsystem.gallery.pages.IconsPage
 import com.mooscles.designsystem.gallery.pages.OverlaysPage
+import com.mooscles.designsystem.gallery.pages.RecordsPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
 import com.mooscles.designsystem.gallery.pages.SetRowPage
 import com.mooscles.designsystem.gallery.pages.StatesPage
+import com.mooscles.designsystem.gallery.pages.TimerPage
 import com.mooscles.designsystem.gallery.pages.WorkoutInputsPage
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_page_buttons
 import com.mooscles.designsystem.resources.gallery_page_chips
+import com.mooscles.designsystem.resources.gallery_page_exercise_card
 import com.mooscles.designsystem.resources.gallery_page_fields
 import com.mooscles.designsystem.resources.gallery_page_foundations
 import com.mooscles.designsystem.resources.gallery_page_icons
 import com.mooscles.designsystem.resources.gallery_page_overlays
+import com.mooscles.designsystem.resources.gallery_page_records
 import com.mooscles.designsystem.resources.gallery_page_rows
 import com.mooscles.designsystem.resources.gallery_page_set_row
 import com.mooscles.designsystem.resources.gallery_page_states
+import com.mooscles.designsystem.resources.gallery_page_timer
 import com.mooscles.designsystem.resources.gallery_page_workout_inputs
 import org.jetbrains.compose.resources.StringResource
 
@@ -39,6 +45,9 @@ enum class GalleryPage(val title: StringResource) {
     Overlays(Res.string.gallery_page_overlays),
     WorkoutInputs(Res.string.gallery_page_workout_inputs),
     SetRow(Res.string.gallery_page_set_row),
+    Timer(Res.string.gallery_page_timer),
+    Records(Res.string.gallery_page_records),
+    ExerciseCard(Res.string.gallery_page_exercise_card),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
@@ -60,6 +69,9 @@ fun GalleryPage.Content() {
             GalleryPage.Overlays -> OverlaysPage()
             GalleryPage.WorkoutInputs -> WorkoutInputsPage()
             GalleryPage.SetRow -> SetRowPage()
+            GalleryPage.Timer -> TimerPage()
+            GalleryPage.Records -> RecordsPage()
+            GalleryPage.ExerciseCard -> ExerciseCardPage()
         }
     }
 }

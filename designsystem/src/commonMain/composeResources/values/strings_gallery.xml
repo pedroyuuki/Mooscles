@@ -67,4 +67,15 @@
     <string name="gallery_sample_load_label">Load</string>
     <string name="gallery_sample_reps_label">Reps</string>
     <string name="gallery_sample_step">2.5 kilograms</string>
+    <string name="gallery_page_timer">Rest timer</string>
+    <string name="gallery_page_records">Records</string>
+    <string name="gallery_page_exercise_card">Exercise card</string>
+    <string name="gallery_section_timer">Rest timer dock and expanded ring</string>
+    <string name="gallery_section_records">Personal record toast</string>
+    <string name="gallery_section_exercise_card">Exercise card with and without media</string>
+    <string name="gallery_show_pr_toast">Show record toast</string>
+    <string name="gallery_sample_exercise">Bench press</string>
+    <string name="gallery_sample_exercise_meta">Barbell, chest</string>
+    <string name="gallery_sample_exercise_next">Incline dumbbell press</string>
+    <string name="gallery_sample_pr_detail">85 kg × 6</string>
 </resources>

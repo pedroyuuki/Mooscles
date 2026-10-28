@@ -35,4 +35,26 @@
     <string name="ds_set_type_warmup_short">W</string>
     <string name="ds_set_type_drop_short">D</string>
     <string name="ds_set_type_failure_short">F</string>
+    <string name="ds_timer_rest">Rest</string>
+    <string name="ds_timer_done">Rest complete</string>
+    <string name="ds_timer_paused">Paused</string>
+    <string name="ds_timer_minus15">Subtract 15 seconds</string>
+    <string name="ds_timer_plus15">Add 15 seconds</string>
+    <string name="ds_timer_skip">Skip rest</string>
+    <string name="ds_timer_up_next">Up next</string>
+    <string name="ds_timer_announce">Rest, %1$s remaining</string>
+    <plurals name="ds_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="ds_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <string name="ds_duration_and">%1$s and %2$s</string>
+    <string name="ds_pr_toast_title">New record: %1$s</string>
+    <string name="ds_pr_toast_before">before %1$s</string>
+    <string name="ds_add_set">Add set</string>
+    <string name="ds_media_offline">Image not downloaded yet</string>
+    <string name="ds_exercise_menu">Exercise options</string>
 </resources>
