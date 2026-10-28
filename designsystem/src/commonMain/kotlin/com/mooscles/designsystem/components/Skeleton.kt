@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -45,7 +46,7 @@ fun Skeleton(
 ) {
     val low = MTheme.sizes.skeletonMinAlpha
     val alpha: State<Float> = if (MTheme.reducedMotion) {
-        mutableStateOf(1f)
+        remember { mutableStateOf(1f) }
     } else {
         rememberInfiniteTransition(label = "skeleton").animateFloat(
             initialValue = 1f,
