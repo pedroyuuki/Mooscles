@@ -14,7 +14,11 @@
     <string name="gallery_language_system">Sistema</string>
     <string name="gallery_language_en">English</string>
     <string name="gallery_language_pt_br">Português (Brasil)</string>
-    <string name="gallery_reduce_motion">Reduzir movimento</string>
+    <string name="gallery_motion_system">Sistema</string>
+    <string name="gallery_motion_reduced">Reduzido</string>
+    <string name="gallery_motion_full">Completo</string>
+    <string name="gallery_controls_show">Mostrar controles</string>
+    <string name="gallery_controls_hide">Ocultar controles</string>
     <string name="gallery_controls_motion">Movimento</string>
     <string name="gallery_page_foundations">Fundamentos</string>
     <string name="gallery_page_icons">Ícones</string>
@@ -93,4 +97,6 @@
     <string name="gallery_sample_exercise_next">Supino inclinado com halteres</string>
     <string name="gallery_sample_pr_detail">85 kg × 6</string>
     <string name="gallery_finish_rest">Terminar descanso</string>
+    <string name="gallery_sample_previous_spoken">%1$s por %2$d</string>
+    <string name="gallery_sample_reps_error">Mín. 1</string>
 </resources>
