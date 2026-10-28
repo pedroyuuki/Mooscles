@@ -120,3 +120,42 @@ CI ios: <pending>
 - **As páginas da galeria no tema escuro e a 200% depois das correções da crítica:** as capturas "depois" são do tema claro. Os testes de 200% e dos dois temas passaram no emulador.
 - **Um passo por segundo do anel com reduzir movimento** num timer correndo: as amostras da galeria são estáticas. Só o `RestTimerRingMathTest` cobre isso.
 - **O spike não provou** a qualidade visual das fontes, a desambiguação de 1/l/I e 0/O, nem um aparelho físico (ver o [relatório](2026-10-28-phase2-tnum-spike.md#o-que-não-foi-provado)).
+
+## Rodada final de correções
+
+Feita depois da [revisão final da branch](../../../.superpowers/sdd/2026-10-27-phase2-design-system/final-review.md) (3 Important, 9 Minor), em `37e3a9a`..`1f486b9`. Rodado no Mac e no emulador sobre `1f486b9`:
+
+- `:designsystem:connectedAndroidDeviceTest`: 203 de 203. Eram 189; os 14 novos são do Stepper (+4), do toast (+2), do diálogo (+2), do timer (+3) e o `TextFitTest` (3).
+- `:designsystem:testAndroidHostTest`: 66 de 66.
+- `:app:testDebugUnitTest`: 377 de 377. O `:app:assembleDebug` compilou.
+- `tools/check-design-tokens.ps1`: limpo, 51 arquivos.
+
+O `MIN_DS_IOS_TESTS` subiu de 186 para 200. O iOS continua sem prova até o job `ios` do CI.
+
+Os três testes de arrasto do Stepper e os dois de acessibilidade do toast falham com o código anterior às correções. Isso foi conferido no emulador.
+
+### Corrigido
+
+- **I1, Stepper** (`37e3a9a`). O toque nos botões −/+ agora é cancelado, sem passo e sem repetição, em três casos:
+  - o dedo passa do `touchSlop`;
+  - o dedo sai do botão;
+  - uma rolagem consome o movimento, o que é conferido no passe Final.
+
+  Um flick rápido ou um arrasto lento que começa num botão dentro de `verticalScroll` não muda mais o valor. Mexer o dedo durante a repetição para a repetição, e um tremor abaixo do slop ainda conta como toque. Toque curto, repetição (400/80 ms), teclado e a ação de semântica não mudaram: os 7 testes antigos do `StepperTest` continuam passando.
+- **I2, toast** (`7b5884b`). O tempo vem de `LocalAccessibilityManager.current?.calculateRecommendedTimeoutMillis(…)`, com controles só quando há ação. Sem serviço de acessibilidade, continua 4 s ou 6 s. O teste usa um `AccessibilityManager` falso, e a toast continua visível depois dos 6 s.
+- **M2, `MDialog`** (`d2c4e86`). O cartão rola quando passa da altura da janela, e as ações ficam num `FlowRow` alinhado ao fim. Os testes, a 200%:
+  - com texto longo, o botão de confirmar é alcançado por rolagem e confirma;
+  - com os rótulos "Continue training" e "Discard workout", os dois botões ficam inteiros e o de confirmar continua por último.
+- **M3, `restore()` no Android** (`c8d4dea`). Agora devolve só o locale sobre a configuração atual. Não há teste novo: os testes do `AppLocaleTest` cobrem a volta do idioma.
+- **M5, háptico do timer** (`a83f9b6`). O `RestFinished` só toca na passagem para Done. Isso vale para o dock e para o expandido (`RestFinishedHaptic`): trocar de vista durante a espera de 3 s não vibra de novo.
+- **M6, discos de ±15 s** (`a83f9b6`). O mínimo continua 80 dp, e o disco alarga com texto grande. A 200%, "−15 s" e "+15 s" aparecem inteiros (`assertShownWhole`).
+- **M9, `assertShownWhole`** (`b633250`). Ganhou testes negativos: ele falha para um texto de uma linha mais estreito do que precisa e para um texto que quebra em duas linhas. Há também um controle positivo.
+- **Recomendação 5, `Skeleton`** (`b633250`). O `mutableStateOf(1f)` com movimento reduzido ficou dentro de `remember`.
+
+### Adiado
+
+- **M1, clique simulado pelo TalkBack na linha de série.** Para corrigir, é preciso escolher qual ação o toque duplo faz, ou se ele não faz nada, e conferir numa sessão real de TalkBack, que continua pendente. Fica para a fase 3, junto com a tela de treino.
+- **M4, idioma persistente no iOS.** O app iOS ainda não existe (fase 7), e o `actual` de iOS só se prova no CI. Fica registrado para quando houver `iosApp`.
+- **M7, regex e escopo do guard de tokens.** Hoje nada escapa: o grep da revisão achou só `Dp(0f)` e o viewport de `MIconBuilder`. Ampliar o escopo para `theme/` e `icons/` exige isenções para os próprios tokens. Isso é trabalho de ferramenta com risco de falso positivo, melhor feito numa mudança própria com as fixtures novas.
+- **M8, `MIN_HOST_TESTS`.** Está no CI, que fica com o controlador nesta rodada. Só o `MIN_DS_IOS_TESTS` foi mexido.
+- **I3, CI ios.** É do controlador. O placeholder "CI ios" acima continua pendente.
