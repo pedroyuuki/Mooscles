@@ -46,5 +46,6 @@ actual object LocalAppLocale {
         savedLocale = null
         savedConfiguration = null
         resources = null
+        LocaleEpoch.bump()
     }
 }

@@ -2,6 +2,8 @@ package com.mooscles.designsystem.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import com.mooscles.designsystem.i18n.LocaleEpoch
 import com.mooscles.designsystem.interaction.MoosclesHaptics
 import com.mooscles.designsystem.interaction.rememberPlatformHaptics
 import com.mooscles.designsystem.tokens.MoosclesColors
@@ -20,13 +22,16 @@ fun MoosclesDesignTheme(
     content: @Composable () -> Unit,
 ) {
     val colors = if (dark) MoosclesColors.Dark else MoosclesColors.Light
-    CompositionLocalProvider(
-        LocalMoosclesColors provides colors,
-        LocalMoosclesTypography provides rememberMoosclesTypography(),
-        LocalMoosclesReducedMotion provides reducedMotion,
-        LocalMoosclesHaptics provides haptics,
-        LocalMoosclesDark provides dark,
-        LocalMContentColor provides colors.textPrimary,
-        content = content,
-    )
+    // Rebuilds the content after a gallery language override was undone (see LocaleEpoch).
+    key(LocaleEpoch.value.intValue) {
+        CompositionLocalProvider(
+            LocalMoosclesColors provides colors,
+            LocalMoosclesTypography provides rememberMoosclesTypography(),
+            LocalMoosclesReducedMotion provides reducedMotion,
+            LocalMoosclesHaptics provides haptics,
+            LocalMoosclesDark provides dark,
+            LocalMContentColor provides colors.textPrimary,
+            content = content,
+        )
+    }
 }

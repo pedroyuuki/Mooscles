@@ -44,5 +44,6 @@ actual object LocalAppLocale {
         overriding = false
         previousOverride = null
         systemTag = null
+        LocaleEpoch.bump()
     }
 }
