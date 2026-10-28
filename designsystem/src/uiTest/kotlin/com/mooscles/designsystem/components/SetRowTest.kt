@@ -23,6 +23,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import com.mooscles.designsystem.theme.MTheme
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -34,7 +35,9 @@ import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.assertShownWhole
+import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.withTheme
+import kotlin.math.ceil
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -263,28 +266,81 @@ class SetRowTest {
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun numbersNeverEllipsizeAtTwoHundredPercentOn320dp() = runComposeUiTest {
-        withTheme(fontScale = 2f) {
+    fun numbersNeverEllipsizeAtTwoHundredPercentOn320dp() = assertNumbersWholeOn320dp()
+
+    /** The iOS simulator's density: a dp is a pixel. Android still scales large text non-linearly. */
+    @Test
+    fun numbersNeverEllipsizeAtTwoHundredPercentOn320dpAtDensityOne() = assertNumbersWholeOn320dp(density = 1f)
+
+    /** What the iOS simulator renders at 2x: density 1 and 28 sp drawn at 56 dp. */
+    @Test
+    fun numbersNeverEllipsizeAtLinearTwoHundredPercentOn320dp() =
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE)
+
+    @Test
+    fun editableNumbersNeverClipAtLinearTwoHundredPercentOn320dp() =
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE, fields = true)
+
+    /** iOS's largest accessibility sizes are about 3x: the cells wrap onto more lines, never inside a value. */
+    @Test
+    fun numbersWrapBetweenCellsAtThreeHundredPercentOn320dp() {
+        assertNumbersWholeOn320dp(density = 1f, fontScale = 3f)
+        assertNumbersWholeOn320dp(density = 1f, fontScale = 3f, fields = true)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun assertNumbersWholeOn320dp(density: Float? = null, fontScale: Float = 2f, fields: Boolean = false) = runComposeUiTest {
+        withTheme(fontScale = fontScale, density = density) {
             Box(Modifier.width(320.dp)) {
                 ProvideAppLocale("en") {
-                    Row(state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12"))
+                    val row = state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12")
+                    if (fields) {
+                        SetRow(
+                            row.copy(status = SetStatus.Editing, reps = 12), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
+                            loadField = { NumericField("187.5", {}, NumericKind.Load, "Load") },
+                            repsField = { NumericField("12", {}, NumericKind.Reps, "Reps") },
+                        )
+                    } else {
+                        Row(row)
+                    }
                 }
             }
         }
         waitForIdle()
+        val dpPx = density ?: this.density.density
         val texts = onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
             .fetchSemanticsNodes()
-        assertTrue(texts.isNotEmpty())
+        assertTrue(texts.size >= 3, "only ${texts.size} texts")
         for (node in texts) {
             val results = mutableListOf<TextLayoutResult>()
             runOnUiThread { node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results) }
             for (layout in results) assertShownWhole(layout)
         }
-        val check = onNodeWithContentDescription("Complete set 4", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val widthPx = with(density) { 320.dp.toPx() }
-        assertTrue(check.right <= widthPx + 0.5f, "check ends at ${check.right} beyond $widthPx")
+        if (fields) {
+            // A text field scrolls a value that is wider than it, so the whole-text check above
+            // passes even when it is clipped: its drawn box must hold the text and its padding.
+            val boxes = onAllNodes(hasTestTag(NumericFieldBoxTag), useUnmergedTree = true).fetchSemanticsNodes()
+            val editable = onAllNodes(hasSetTextAction(), useUnmergedTree = true).fetchSemanticsNodes()
+            assertEquals(2, boxes.size)
+            assertEquals(2, editable.size)
+            val padding = 8.dp.value * 2 * dpPx
+            for ((box, field) in boxes.zip(editable)) {
+                val results = mutableListOf<TextLayoutResult>()
+                runOnUiThread { field.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results) }
+                val text = results.single()
+                val needed = ceil(text.multiParagraph.intrinsics.maxIntrinsicWidth)
+                assertTrue(
+                    box.boundsInRoot.width >= needed + padding - 0.5f,
+                    "\"${text.layoutInput.text}\" needs $needed px and $padding px of padding, its box is ${box.boundsInRoot.width}",
+                )
+            }
+        }
+        val widthPx = 320 * dpPx
+        for (tag in listOf(SetRowPreviousTag, SetRowLoadTag, SetRowRepsTag, SetRowCheckTag)) {
+            val bounds = onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            assertTrue(bounds.left >= -0.5f && bounds.right <= widthPx + 0.5f, "$tag spans ${bounds.left}..${bounds.right}, the row is $widthPx")
+        }
     }
 
     @OptIn(ExperimentalTestApi::class)

@@ -298,8 +298,9 @@ jobs:
           # RestTimerRingMathTest 3, RestTimerDockTest 9, RestTimerExpandedTest 5, PrToastTest 3, ExerciseCardTest 6,
           # ComponentColorsTest 5. Task 16 critique: LicenseTextTest 5, MButtonIconScaleTest 1, GallerySmokeTest +4, FullWidthTest 3.
           # Final fix wave: StepperTest +4, MToastTest +2, MDialogTest +2, RestTimerDockTest +1, RestTimerExpandedTest +2, TextFitTest 3.
+          # Set row density fix: SetRowTest +4.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 200
+          MIN_DS_IOS_TESTS: 204
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
