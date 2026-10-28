@@ -2,6 +2,7 @@ package com.mooscles.ui
 
 import android.os.SystemClock
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +16,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.MProgressBar
@@ -77,14 +80,16 @@ fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = 
     val space = MTheme.space
     Column(modifier.fillMaxWidth().testTag("app-updates"), verticalArrangement = Arrangement.spacedBy(space.s2)) {
         SectionHeader(stringResource(Res.string.settings_updates_title))
-        // Seven quick taps unlock the hidden design gallery (in memory only). The row is a
-        // button of at least 56 dp, read with its text.
+        // Seven quick taps unlock the hidden design gallery (in memory only). The row is at least
+        // 56 dp tall, but it is not a button: a screen reader reads it as plain text (one node,
+        // no role, no click action), because a tap shows nothing until the seventh.
         SettingsRow(
             title = if (state.installedVersionName.isBlank()) stringResource(Res.string.settings_updates_reading_version)
             else stringResource(Res.string.settings_updates_installed, state.installedVersionName, state.installedVersionCode.toString()),
-            modifier = Modifier.testTag("update-installed-version"),
-            onClick = { DeveloperGallery.registerVersionTap(SystemClock.uptimeMillis()) },
-            trailing = {},
+            modifier = Modifier
+                .testTag("update-installed-version")
+                .semantics(mergeDescendants = true) {}
+                .pointerInput(Unit) { detectTapGestures { DeveloperGallery.registerVersionTap(SystemClock.uptimeMillis()) } },
         )
         SwitchRow(
             stringResource(Res.string.settings_updates_automatic), state.automaticUpdates, actions::setAutomaticUpdates,
@@ -106,9 +111,10 @@ fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = 
         )
         UpdateStatus(state, actions, Modifier.padding(horizontal = space.s4))
         if (state.releaseNotes.isNotBlank()) ReleaseNotes(state.releaseNotes)
+        // The label and its value stay together; the button gets its own space below them.
         Column(
             Modifier.fillMaxWidth().padding(horizontal = space.s4, vertical = space.s2),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Column {
                 MText(stringResource(Res.string.settings_updates_last_checked), MTheme.type.labelMd, color = MTheme.colors.textSecondary)
@@ -128,8 +134,11 @@ fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = 
                 modifier = Modifier.testTag("update-check"),
             )
         }
-        Note(stringResource(Res.string.settings_updates_schedule))
-        Note(stringResource(Res.string.settings_updates_approval_note))
+        // Two paragraphs: a paragraph gap between them, not the line gap of one paragraph.
+        Column(Modifier.padding(top = space.s2), verticalArrangement = Arrangement.spacedBy(space.s3)) {
+            Note(stringResource(Res.string.settings_updates_schedule))
+            Note(stringResource(Res.string.settings_updates_approval_note))
+        }
         if (DeveloperGallery.unlocked) {
             SettingsRow(
                 stringResource(Res.string.settings_component_gallery),
