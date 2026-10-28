@@ -494,3 +494,14 @@ Direto, calmo, de quem está do lado na academia, sem torcida e sem culpa. Trata
 3. **Separador decimal por idioma:** em pt-BR, as cargas passam a aparecer com vírgula (`82,5`).
 4. **Produção das ilustrações (fase 4):** encomendar a um ilustrador com licença explícita, seguindo este estilo, ou desenhar internamente um piloto de 20 exercícios. Custo e prazo não foram pesquisados.
 5. **Háptico sem opção no app:** segue o ajuste do sistema. Se ele quiser um interruptor "Vibração" em Configurações, isso entra na tela piloto como preferência nova (chave nova no DataStore, aditiva).
+
+## Aprovação
+
+- **2026-10-27:** o dono aprovou o design system ("gostei do designe system, ta aprovado"). Nas cinco escolhas em aberto, valem os padrões propostos nesta spec:
+  1. o ícone novo (duas anilhas) entra na fase 3;
+  2. o tema padrão continua "Sistema";
+  3. as cargas aparecem com vírgula em pt-BR (`82,5`);
+  4. as ilustrações começam com um piloto próprio de 20 exercícios;
+  5. a vibração segue o ajuste do sistema, sem interruptor por enquanto.
+
+  Qualquer uma pode ser revista depois.
