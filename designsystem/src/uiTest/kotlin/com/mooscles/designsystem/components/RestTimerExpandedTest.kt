@@ -12,12 +12,12 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.tokens.MoosclesSizes
+import com.mooscles.designsystem.assertShownWhole
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -88,8 +88,7 @@ class RestTimerExpandedTest {
                 val node = onNodeWithTag(TimerTimeTag, useUnmergedTree = true).fetchSemanticsNode()
                 val action = node.config[SemanticsActions.GetTextLayoutResult].action
                 assertTrue(action != null && action(results), "no text layout result")
-                assertEquals(1, results.first().lineCount, "scale $scale")
-                assertFalse(results.first().hasVisualOverflow, "scale $scale")
+                assertShownWhole(results.first(), "scale $scale")
                 val ring = onNodeWithTag(TimerRingTag).fetchSemanticsNode().boundsInRoot
                 val time = node.boundsInRoot
                 val clear = with(density) { (MoosclesSizes().expandedRing - (MoosclesSizes().tickLength + 4.dp + MoosclesSizes().expandedRingStroke) * 2).toPx() }

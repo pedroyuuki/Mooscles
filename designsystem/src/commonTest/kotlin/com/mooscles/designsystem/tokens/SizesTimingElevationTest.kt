@@ -32,6 +32,8 @@ class SizesTimingElevationTest {
         assertEquals(0.5f, s.skeletonMinAlpha)
         // Not in decision 7: the dialog card width, added in Task 10 (the spec gives none).
         assertEquals(360.dp, s.dialogMaxWidth)
+        // Not in decision 7: the text cursor beside a numeric field's value (foundation's 2 dp).
+        assertEquals(2.dp, s.textCursor)
     }
 
     @Test

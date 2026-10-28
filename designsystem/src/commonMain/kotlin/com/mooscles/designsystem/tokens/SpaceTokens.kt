@@ -55,6 +55,8 @@ data class MoosclesSizes(
     val checkDisc: Dp = 44.dp,
     val numericFieldWidth: Dp = 72.dp,
     val numericFieldHeight: Dp = 48.dp,
+    /** The text cursor of a field (foundation draws it 2 dp wide): room a numeric field keeps beside its number. */
+    val textCursor: Dp = 2.dp,
     val stepperButtonWidth: Dp = 64.dp,
     val stepperButtonHeight: Dp = 56.dp,
     val dockRing: Dp = 48.dp,

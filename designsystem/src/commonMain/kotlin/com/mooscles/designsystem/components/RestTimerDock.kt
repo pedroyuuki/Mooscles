@@ -139,6 +139,10 @@ internal fun timerStatus(visual: RestTimerVisual): String = when (visual.phase) 
     TimerPhase.Running -> visual.label
 }
 
+/** The side padding of a ±15 s label: `space.2`, so "−15 s" (about 40 dp) stays within the 56 dp target. */
+internal val TimerAdjustPadding: Dp
+    @Composable get() = MTheme.space.s2
+
 /** The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is its label. */
 @Composable
 internal fun TimerAdjustButton(
@@ -161,7 +165,7 @@ internal fun TimerAdjustButton(
             .mFocusRing(shape, source)
             .background(colors.bgRaised, shape)
             .border(MTheme.sizes.border, colors.borderStrong, shape)
-            .padding(horizontal = MTheme.space.s3),
+            .padding(horizontal = TimerAdjustPadding),
         contentAlignment = Alignment.Center,
     ) {
         MText(text, MTheme.type.labelLg)
@@ -208,19 +212,24 @@ fun RestTimerDock(
     val timeStyle = MTheme.type.numDock
     val buttonStyle = MTheme.type.labelLg
     val padding = MTheme.space.s3
+    val adjustPadding = TimerAdjustPadding
     val ring = MTheme.sizes.dockRing
     val target = MTheme.targets.workout
+    val skipSize = MTheme.sizes.iconButton56
     val gap = MTheme.targets.gap
-    val needed = with(density) {
+    // The inline row in whole pixels, rounded the way the layout rounds each piece: outer padding,
+    // ring, two row gaps, the widest time, both ±15 s buttons, skip and the two gaps between them.
+    val neededPx = with(density) {
         fun width(text: String, style: androidx.compose.ui.text.TextStyle) =
-            measurer.measure(text, style, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width.toDp()
+            measurer.measure(text, style, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width
         val time = width(DOCK_WIDEST_TIME, timeStyle)
-        val adjust = maxOf(target, maxOf(width(minusShort, buttonStyle), width(plusShort, buttonStyle)) + padding * 2)
-        padding * 2 + ring + padding * 2 + time + adjust * 2 + target + gap * 2
+        val label = maxOf(width(minusShort, buttonStyle), width(plusShort, buttonStyle))
+        val adjust = maxOf(target.roundToPx(), label + adjustPadding.roundToPx() * 2)
+        padding.roundToPx() * 4 + ring.roundToPx() + time + adjust * 2 + skipSize.roundToPx() + gap.roundToPx() * 2
     }
 
     BoxWithConstraints(modifier.testTag(TimerDockTag)) {
-        val fits = !constraints.hasBoundedWidth || maxWidth >= needed
+        val fits = !constraints.hasBoundedWidth || constraints.maxWidth >= neededPx
         val stacked = density.fontScale >= STACK_FONT_SCALE || !fits
         val buttons: @Composable (Modifier) -> Unit = { each ->
             TimerAdjustButton(minusShort, minusLabel, minus, each.testTag(TimerMinusTag))
@@ -255,7 +264,7 @@ fun RestTimerDock(
                         MIconButton(
                             MIcons.SkipForward, skipLabel, onSkip,
                             modifier = Modifier.testTag(TimerSkipTag),
-                            size = MTheme.sizes.iconButton56,
+                            size = skipSize,
                         )
                     }
                 }

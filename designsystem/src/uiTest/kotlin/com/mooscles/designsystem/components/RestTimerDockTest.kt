@@ -20,10 +20,10 @@ import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.tokens.MoosclesTargets
+import com.mooscles.designsystem.assertShownWhole
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -48,8 +48,7 @@ class RestTimerDockTest {
         assertTrue(action != null && action(results), "no text layout result")
         val layout = results.first()
         assertEquals("tnum", layout.layoutInput.style.fontFeatureSettings)
-        assertFalse(layout.hasVisualOverflow)
-        assertEquals(1, layout.lineCount)
+        assertShownWhole(layout)
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -154,8 +153,7 @@ class RestTimerDockTest {
                     val action = node.config[SemanticsActions.GetTextLayoutResult].action
                     assertTrue(action != null && action(results), "no text layout result")
                     val where = "width $width scale $scale"
-                    assertEquals(1, results.first().lineCount, where)
-                    assertFalse(results.first().hasVisualOverflow, where)
+                    assertShownWhole(results.first(), where)
                     val dock = onNodeWithTag(TimerDockTag).fetchSemanticsNode().boundsInRoot
                     val time = node.boundsInRoot
                     assertTrue(time.left >= dock.left && time.right <= dock.right, "$where: time outside the dock")

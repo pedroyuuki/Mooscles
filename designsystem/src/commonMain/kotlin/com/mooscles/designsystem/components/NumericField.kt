@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,12 +17,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.padding
 import com.mooscles.designsystem.icons.MIcon
@@ -37,7 +41,9 @@ const val NumericFieldBoxTag = "numeric-field-box"
 
 /**
  * A number entered during a workout: 72 x 48 dp (at least; it grows with the number and the
- * text size, never clipping it), `num.md`, a decimal or number keyboard by [kind]. The target is
+ * text size, never clipping it), `num.md`, a decimal or number keyboard by [kind]. The text area
+ * is exactly as wide as the value (or [suggested]) plus the cursor, within the 72 dp: a bare
+ * `BasicTextField` is at least ten "H" wide, which would stretch the box to ~150 dp. The target is
  * 56 dp tall. While empty it shows [suggested] in `text.secondary`. The label is
  * [accessibilityLabel] on the field's own semantics (there is no visible label); an [error] adds
  * a 2 dp danger border, the alert icon and the message, and is also reported as `error`.
@@ -60,6 +66,18 @@ fun NumericField(
     val hasError = error != null
     val errorPrefix = stringResource(Res.string.ds_error_prefix)
     val textColor = if (enabled) colors.textPrimary else colors.textDisabled
+    val textStyle = MTheme.type.numMd.copy(color = textColor, textAlign = TextAlign.Center)
+    val padding = MTheme.space.s2
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val direction = LocalLayoutDirection.current
+    val textWidth = with(density) {
+        fun width(text: String) =
+            measurer.measure(text, textStyle, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width.toDp()
+        val shown = width(value)
+        maxOf(shown, suggested?.let(::width) ?: shown) + MTheme.sizes.textCursor
+    }
+    val areaWidth = maxOf(MTheme.sizes.numericFieldWidth - padding * 2, textWidth)
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         BasicTextField(
             value = value,
@@ -70,7 +88,7 @@ fun NumericField(
             },
             enabled = enabled,
             singleLine = true,
-            textStyle = MTheme.type.numMd.copy(color = textColor, textAlign = TextAlign.Center),
+            textStyle = textStyle,
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (kind == NumericKind.Load) KeyboardType.Decimal else KeyboardType.Number,
             ),
@@ -93,13 +111,14 @@ fun NumericField(
                                 if (hasError) colors.dangerText else colors.borderStrong,
                                 shape,
                             )
-                            .padding(horizontal = MTheme.space.s2),
+                            .padding(horizontal = padding),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (value.isEmpty() && suggested != null) {
                             MText(suggested, MTheme.type.numMd, color = colors.textSecondary, modifier = Modifier.clearAndSetSemantics {})
                         }
-                        inner()
+                        // A fixed width overrides the text field's own minimum (ten "H"); it is never narrower than the text.
+                        Box(Modifier.width(areaWidth), contentAlignment = Alignment.Center) { inner() }
                     }
                 }
             },

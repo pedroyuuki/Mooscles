@@ -25,10 +25,10 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
+import com.mooscles.designsystem.assertShownWhole
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SetRowTest {
@@ -272,10 +272,7 @@ class SetRowTest {
         for (node in texts) {
             val results = mutableListOf<TextLayoutResult>()
             runOnUiThread { node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results) }
-            for (layout in results) {
-                assertFalse(layout.hasVisualOverflow, "\"${layout.layoutInput.text.text}\" overflows")
-                assertFalse(layout.didOverflowWidth, "\"${layout.layoutInput.text.text}\" overflows its width")
-            }
+            for (layout in results) assertShownWhole(layout)
         }
         val check = onNodeWithContentDescription("Complete set 4", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val widthPx = with(density) { 320.dp.toPx() }

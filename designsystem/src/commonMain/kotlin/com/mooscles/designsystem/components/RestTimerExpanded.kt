@@ -71,14 +71,21 @@ fun RestTimerExpanded(
     val sizes = MTheme.sizes
     val full = MTheme.type.numDisplay
     val inner = sizes.expandedRing - (sizes.tickLength + MTheme.space.s1 + sizes.expandedRingStroke) * 2
-    val smallest = MTheme.type.numLg.fontSize.value / full.fontSize.value
-    val fit = with(density) {
+    // The shrink is worked out on the drawn size (dp), not on sp: with Android's nonlinear font
+    // scaling a smaller sp grows by a larger factor, so scaling the sp would not shrink the width
+    // by the same share.
+    val timeStyle = with(density) {
+        val smallest = MTheme.type.numLg.fontSize.toDp() / full.fontSize.toDp()
         val width = measurer.measure(
             EXPANDED_WIDEST_TIME, full, softWrap = false, maxLines = 1, layoutDirection = direction, density = density,
         ).size.width.toDp()
-        (inner / width).coerceIn(smallest, 1f)
+        val fit = (inner / width).coerceIn(smallest, 1f)
+        if (fit < 1f) {
+            full.copy(fontSize = (full.fontSize.toDp() * fit).toSp(), lineHeight = (full.lineHeight.toDp() * fit).toSp())
+        } else {
+            full
+        }
     }
-    val timeStyle = if (fit < 1f) full.copy(fontSize = full.fontSize * fit, lineHeight = full.lineHeight * fit) else full
 
     Box(modifier.testTag(TimerExpandedTag)) {
         Column(
