@@ -9,7 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
@@ -137,5 +139,43 @@ class RestTimerDockTest {
             assertTrue(plus.top >= minus.bottom - 0.5f, "plus under minus")
             assertTrue(skip.top >= plus.bottom - 0.5f, "skip under plus")
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun timeNeverWrapsOrClipsAtAnyScaleOrWidth() {
+        for (width in listOf(360, 320)) {
+            for (scale in listOf(1f, 1.3f, 1.4f, 1.5f)) {
+                runComposeUiTest {
+                    withTheme(fontScale = scale) { Box(Modifier.width(width.dp)) { RestTimerDock(visual(600), {}, {}, {}) } }
+                    waitForIdle()
+                    val results = mutableListOf<TextLayoutResult>()
+                    val node = onNodeWithTag(TimerTimeTag, useUnmergedTree = true).fetchSemanticsNode()
+                    val action = node.config[SemanticsActions.GetTextLayoutResult].action
+                    assertTrue(action != null && action(results), "no text layout result")
+                    val where = "width $width scale $scale"
+                    assertEquals(1, results.first().lineCount, where)
+                    assertFalse(results.first().hasVisualOverflow, where)
+                    val dock = onNodeWithTag(TimerDockTag).fetchSemanticsNode().boundsInRoot
+                    val time = node.boundsInRoot
+                    assertTrue(time.left >= dock.left && time.right <= dock.right, "$where: time outside the dock")
+                    // The buttons never leave the dock either.
+                    for (tag in listOf(TimerMinusTag, TimerPlusTag, TimerSkipTag)) {
+                        val button = onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+                        assertTrue(button.right <= dock.right + 1f, "$where: $tag outside the dock")
+                    }
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun visibleLabelsAreInTheAccessibleNames() = runComposeUiTest {
+        withTheme { ProvideAppLocale("en") { RestTimerDock(visual(84), {}, {}, {}) } }
+        waitForIdle()
+        onNodeWithTag(TimerMinusTag).assertContentDescriptionEquals("Minus 15 seconds")
+        onNodeWithTag(TimerPlusTag).assertContentDescriptionEquals("Plus 15 seconds")
+        onNodeWithText("\u221215 s", useUnmergedTree = true).assertExists()
     }
 }

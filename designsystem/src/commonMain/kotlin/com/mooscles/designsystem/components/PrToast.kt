@@ -41,7 +41,7 @@ import kotlinx.coroutines.withContext
 const val PrToastTag = "pr-toast"
 
 /** For tests: which entrance the toast chose, `"Spring"` or `"Fade"`. */
-val MotionChoiceUsed = SemanticsPropertyKey<String>("MotionChoiceUsed")
+internal val MotionChoiceUsed = SemanticsPropertyKey<String>("MotionChoiceUsed")
 
 internal var SemanticsPropertyReceiver.motionChoiceUsed by MotionChoiceUsed
 
@@ -62,7 +62,8 @@ fun PrToast(
     if (!visible) return
     val dismiss = rememberUpdatedState(onDismiss)
     val hold = MTheme.timing.prToast
-    LaunchedEffect(Unit) {
+    // A record shown in place of another (new text) starts the hold again.
+    LaunchedEffect(title, detail) {
         delay(hold)
         dismiss.value()
     }

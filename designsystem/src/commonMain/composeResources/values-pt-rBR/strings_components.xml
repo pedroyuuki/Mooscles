@@ -38,8 +38,10 @@
     <string name="ds_timer_rest">Descanso</string>
     <string name="ds_timer_done">Descanso concluído</string>
     <string name="ds_timer_paused">Pausado</string>
-    <string name="ds_timer_minus15">Tirar 15 segundos</string>
-    <string name="ds_timer_plus15">Adicionar 15 segundos</string>
+    <string name="ds_timer_minus15">Menos 15 segundos</string>
+    <string name="ds_timer_plus15">Mais 15 segundos</string>
+    <string name="ds_timer_minus15_short">−15 s</string>
+    <string name="ds_timer_plus15_short">+15 s</string>
     <string name="ds_timer_skip">Pular descanso</string>
     <string name="ds_timer_up_next">A seguir</string>
     <string name="ds_timer_announce">Descanso, %1$s restantes</string>

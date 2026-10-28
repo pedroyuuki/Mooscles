@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -41,8 +44,10 @@ import com.mooscles.designsystem.resources.ds_seconds
 import com.mooscles.designsystem.resources.ds_timer_announce
 import com.mooscles.designsystem.resources.ds_timer_done
 import com.mooscles.designsystem.resources.ds_timer_minus15
+import com.mooscles.designsystem.resources.ds_timer_minus15_short
 import com.mooscles.designsystem.resources.ds_timer_paused
 import com.mooscles.designsystem.resources.ds_timer_plus15
+import com.mooscles.designsystem.resources.ds_timer_plus15_short
 import com.mooscles.designsystem.resources.ds_timer_skip
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
@@ -54,14 +59,14 @@ const val TimerPlusTag = "timer-plus15"
 const val TimerSkipTag = "timer-skip"
 const val TimerAnnounceTag = "timer-announce"
 
-/** From this font scale on, the dock stacks its buttons under the time instead of beside it. */
+/** From this font scale on, the dock always stacks its buttons under the time (it also stacks when they do not fit beside it). */
 private const val STACK_FONT_SCALE = 1.5f
 
 /** A tick is the clock moving down by up to this many seconds; anything else is an adjustment. */
 private const val TICK_SECONDS = 2
 
-private const val MINUS_15 = "−15"
-private const val PLUS_15 = "+15"
+/** The widest time the dock shows, so the layout is chosen from a value that does not change every second. */
+private const val DOCK_WIDEST_TIME = "00:00"
 
 /** The text of the spoken duration, "1 minute and 24 seconds". Zero stays plural. */
 @Composable
@@ -165,12 +170,13 @@ internal fun TimerAdjustButton(
 
 /**
  * The rest timer docked above the bottom bar: a 48 dp ring, the name, the time (`num.dock`,
- * tabular, never cut), then -15, +15 and skip, each 56 dp. From a font scale of 1.5 the buttons
- * stack under the time. When the phase turns [TimerPhase.Done] it gives the `RestFinished` haptic
- * once and says "Rest complete"; how long that stays up is the caller's (3 s, `timing.timerDoneHold`).
- * A hidden polite live region speaks the start, each adjustment and the end, not every second.
- * The component is presentational: only the ring and the time read the clock, so nothing outside
- * the dock changes when [visual] ticks.
+ * tabular, one line, never cut), then -15, +15 and skip, each 56 dp. The buttons stack under the
+ * time from a font scale of 1.5, or sooner when the measured width of the widest time plus the
+ * buttons does not fit the dock. When the phase turns [TimerPhase.Done] it gives the `RestFinished`
+ * haptic once and says "Rest complete"; how long that stays up is the caller's (3 s,
+ * `timing.timerDoneHold`). A hidden polite live region speaks the start, each adjustment and the
+ * end, not every second. The component is presentational and owns no clock: the caller passes a new
+ * [visual] each second, which recomposes the dock (the ring sweep is read while drawing).
  */
 @Composable
 fun RestTimerDock(
@@ -182,7 +188,7 @@ fun RestTimerDock(
 ) {
     val colors = MTheme.colors
     val haptics = MTheme.haptics
-    val stacked = LocalDensity.current.fontScale >= STACK_FONT_SCALE
+    val density = LocalDensity.current
     val progress = rememberRingProgress(visual)
     val announcement = rememberTimerAnnouncement(visual)
     val status = timerStatus(visual)
@@ -192,20 +198,40 @@ fun RestTimerDock(
     val plus = { haptics.perform(HapticEvent.StepperStep); onPlus15() }
     val minusLabel = stringResource(Res.string.ds_timer_minus15)
     val plusLabel = stringResource(Res.string.ds_timer_plus15)
+    val minusShort = stringResource(Res.string.ds_timer_minus15_short)
+    val plusShort = stringResource(Res.string.ds_timer_plus15_short)
     val skipLabel = stringResource(Res.string.ds_timer_skip)
     val shape = RoundedCornerShape(MTheme.radius.lg)
 
-    val buttons: @Composable (Modifier) -> Unit = { each ->
-        TimerAdjustButton(MINUS_15, minusLabel, minus, each.testTag(TimerMinusTag))
-        TimerAdjustButton(PLUS_15, plusLabel, plus, each.testTag(TimerPlusTag))
+    val measurer = rememberTextMeasurer()
+    val direction = LocalLayoutDirection.current
+    val timeStyle = MTheme.type.numDock
+    val buttonStyle = MTheme.type.labelLg
+    val padding = MTheme.space.s3
+    val ring = MTheme.sizes.dockRing
+    val target = MTheme.targets.workout
+    val gap = MTheme.targets.gap
+    val needed = with(density) {
+        fun width(text: String, style: androidx.compose.ui.text.TextStyle) =
+            measurer.measure(text, style, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width.toDp()
+        val time = width(DOCK_WIDEST_TIME, timeStyle)
+        val adjust = maxOf(target, maxOf(width(minusShort, buttonStyle), width(plusShort, buttonStyle)) + padding * 2)
+        padding * 2 + ring + padding * 2 + time + adjust * 2 + target + gap * 2
     }
-    Box(modifier.testTag(TimerDockTag)) {
+
+    BoxWithConstraints(modifier.testTag(TimerDockTag)) {
+        val fits = !constraints.hasBoundedWidth || maxWidth >= needed
+        val stacked = density.fontScale >= STACK_FONT_SCALE || !fits
+        val buttons: @Composable (Modifier) -> Unit = { each ->
+            TimerAdjustButton(minusShort, minusLabel, minus, each.testTag(TimerMinusTag))
+            TimerAdjustButton(plusShort, plusLabel, plus, each.testTag(TimerPlusTag))
+        }
         Column(
-            Modifier.fillMaxWidth().background(colors.bgRaised, shape).padding(MTheme.space.s3),
-            verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
+            Modifier.fillMaxWidth().background(colors.bgRaised, shape).padding(padding),
+            verticalArrangement = Arrangement.spacedBy(padding),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3)) {
-                RestTimerRing({ progress.value }, MTheme.sizes.dockRing, MTheme.sizes.dockRingStroke, ticks = false) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(padding)) {
+                RestTimerRing({ progress.value }, ring, MTheme.sizes.dockRingStroke, ticks = false) {
                     MIcon(
                         if (done) MIcons.CircleCheck else MIcons.Timer,
                         contentDescription = null,
@@ -215,10 +241,16 @@ fun RestTimerDock(
                 }
                 Column(Modifier.weight(1f)) {
                     MText(status, MTheme.type.labelMd, color = colors.textSecondary)
-                    MText(MoosclesNumbers.clock(visual.remainingSeconds), MTheme.type.numDock, modifier = Modifier.testTag(TimerTimeTag))
+                    MText(
+                        MoosclesNumbers.clock(visual.remainingSeconds),
+                        timeStyle,
+                        modifier = Modifier.testTag(TimerTimeTag),
+                        softWrap = false,
+                        maxLines = 1,
+                    )
                 }
                 if (!stacked) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap), verticalAlignment = Alignment.CenterVertically) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
                         buttons(Modifier)
                         MIconButton(
                             MIcons.SkipForward, skipLabel, onSkip,
@@ -229,7 +261,7 @@ fun RestTimerDock(
                 }
             }
             if (stacked) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
                     buttons(Modifier.fillMaxWidth())
                     MButton(
                         skipLabel, onSkip,

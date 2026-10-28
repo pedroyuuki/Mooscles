@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.mooscles.designsystem.components.MButton
+import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.RestTimerDock
 import com.mooscles.designsystem.components.RestTimerExpanded
 import com.mooscles.designsystem.components.RestTimerVisual
@@ -18,6 +20,7 @@ import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.TimerPhase
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_timer_rest
+import com.mooscles.designsystem.resources.gallery_finish_rest
 import com.mooscles.designsystem.resources.gallery_sample_exercise_next
 import com.mooscles.designsystem.resources.gallery_section_timer
 import com.mooscles.designsystem.theme.MTheme
@@ -32,6 +35,7 @@ private const val SAMPLE_REMAINING = 84
 fun TimerPage() {
     val label = stringResource(Res.string.ds_timer_rest)
     val next = stringResource(Res.string.gallery_sample_exercise_next)
+    var finished by remember { mutableStateOf(false) }
     var remaining by remember { mutableStateOf(SAMPLE_REMAINING) }
     fun visual(phase: TimerPhase, seconds: Int) = RestTimerVisual(seconds, TOTAL, phase, label)
     Column(
@@ -41,7 +45,11 @@ fun TimerPage() {
         SectionHeader(stringResource(Res.string.gallery_section_timer))
         RestTimerDock(visual(TimerPhase.Running, remaining), { remaining = (remaining - STEP).coerceAtLeast(0) }, { remaining = (remaining + STEP).coerceAtMost(TOTAL) }, {})
         RestTimerDock(visual(TimerPhase.Paused, SAMPLE_REMAINING), {}, {}, {})
-        RestTimerDock(visual(TimerPhase.Done, 0), {}, {}, {})
+        if (finished) {
+            RestTimerDock(visual(TimerPhase.Done, 0), {}, {}, {})
+        } else {
+            MButton(stringResource(Res.string.gallery_finish_rest), { finished = true }, variant = MButtonVariant.Secondary)
+        }
         RestTimerExpanded(
             visual(TimerPhase.Running, remaining), next,
             { remaining = (remaining - STEP).coerceAtLeast(0) }, { remaining = (remaining + STEP).coerceAtMost(TOTAL) }, {},

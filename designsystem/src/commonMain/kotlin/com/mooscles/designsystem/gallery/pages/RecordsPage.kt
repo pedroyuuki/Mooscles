@@ -42,6 +42,6 @@ fun RecordsPage() {
             PrBadge(soft = true)
             MButton(stringResource(Res.string.gallery_show_pr_toast), { shown = true }, variant = MButtonVariant.Secondary)
         }
-        PrToast(title, "$detail · $before", shown, { shown = false }, Modifier.align(Alignment.BottomCenter))
+        PrToast(title, "$detail · $before", shown, { shown = false }, Modifier.align(Alignment.TopCenter))
     }
 }

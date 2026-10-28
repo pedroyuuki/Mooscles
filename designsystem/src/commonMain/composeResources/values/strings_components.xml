@@ -38,8 +38,10 @@
     <string name="ds_timer_rest">Rest</string>
     <string name="ds_timer_done">Rest complete</string>
     <string name="ds_timer_paused">Paused</string>
-    <string name="ds_timer_minus15">Subtract 15 seconds</string>
-    <string name="ds_timer_plus15">Add 15 seconds</string>
+    <string name="ds_timer_minus15">Minus 15 seconds</string>
+    <string name="ds_timer_plus15">Plus 15 seconds</string>
+    <string name="ds_timer_minus15_short">−15 s</string>
+    <string name="ds_timer_plus15_short">+15 s</string>
     <string name="ds_timer_skip">Skip rest</string>
     <string name="ds_timer_up_next">Up next</string>
     <string name="ds_timer_announce">Rest, %1$s remaining</string>

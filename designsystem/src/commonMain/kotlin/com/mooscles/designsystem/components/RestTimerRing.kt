@@ -1,6 +1,7 @@
 package com.mooscles.designsystem.components
 
 import androidx.compose.runtime.State
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -108,8 +109,8 @@ internal fun RestTimerRing(
 }
 
 /**
- * The ring progress as a state animated with `motion.slow` between whole seconds (the timer only
- * reports whole seconds); reduced motion jumps straight to the stepped value. A finished timer draws the ring full, with the check.
+ * The ring progress as a state swept linearly over each second (the timer only reports whole
+ * seconds); reduced motion jumps straight to the stepped value. A finished timer draws the ring full, with the check.
  */
 @Composable
 internal fun rememberRingProgress(visual: RestTimerVisual): State<Float> {
@@ -118,6 +119,12 @@ internal fun rememberRingProgress(visual: RestTimerVisual): State<Float> {
         TimerPhase.Done -> 1f
         else -> ringProgress(visual.remainingSeconds * MS_PER_SECOND, visual.totalSeconds * MS_PER_SECOND, reduced)
     }
-    val spec = tween<Float>(if (reduced) MTheme.motion.instant else MTheme.motion.slow, easing = MTheme.motion.easeOut)
+    // Steady sweep: each reported second is crossed in one second, linearly. Reduced motion and the
+    // end jump straight to the value.
+    val spec = if (reduced || visual.phase == TimerPhase.Done) {
+        tween<Float>(MTheme.motion.instant)
+    } else {
+        tween(MS_PER_SECOND.toInt(), easing = LinearEasing)
+    }
     return animateFloatAsState(target, spec, label = "ring")
 }

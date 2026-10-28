@@ -28,6 +28,8 @@ fun MText(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
     caps: Boolean = style == MTheme.type.labelCaps,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     val content = LocalMContentColor.current
     val resolved = when {
@@ -46,5 +48,7 @@ fun MText(
             modifier
         },
         style = style.copy(color = resolved),
+        softWrap = softWrap,
+        maxLines = maxLines,
     )
 }
