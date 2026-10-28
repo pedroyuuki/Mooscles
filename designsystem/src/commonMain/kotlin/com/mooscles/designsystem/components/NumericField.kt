@@ -73,7 +73,7 @@ fun NumericField(
     val direction = LocalLayoutDirection.current
     val textWidth = with(density) {
         fun width(text: String) =
-            measurer.measure(text, textStyle, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width.toDp()
+            measurer.measure(text, textStyle, softWrap = false, maxLines = 1, layoutDirection = direction, density = density).size.width.let { kotlin.math.ceil(it.toDouble()).toInt() + 1 }.toDp()
         val shown = width(value)
         maxOf(shown, suggested?.let(::width) ?: shown) + MTheme.sizes.textCursor
     }
@@ -88,6 +88,7 @@ fun NumericField(
             },
             enabled = enabled,
             singleLine = true,
+            maxLines = 1,
             textStyle = textStyle,
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (kind == NumericKind.Load) KeyboardType.Decimal else KeyboardType.Number,
@@ -115,7 +116,7 @@ fun NumericField(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (value.isEmpty() && suggested != null) {
-                            MText(suggested, MTheme.type.numMd, color = colors.textSecondary, modifier = Modifier.clearAndSetSemantics {})
+                            MText(suggested, MTheme.type.numMd, color = colors.textSecondary, softWrap = false, maxLines = 1, modifier = Modifier.clearAndSetSemantics {})
                         }
                         // A fixed width overrides the text field's own minimum (ten "H"); it is never narrower than the text.
                         Box(Modifier.width(areaWidth), contentAlignment = Alignment.Center) { inner() }

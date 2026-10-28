@@ -297,7 +297,7 @@ private fun IndexCell(index: Int, letter: String?, onChangeType: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        MText(index.toString(), MTheme.type.numSetIndex)
+        MText(index.toString(), MTheme.type.numSetIndex, softWrap = false, maxLines = 1)
         if (letter != null) {
             MText(
                 letter,
@@ -318,7 +318,7 @@ private fun PreviousCell(state: SetRowState, record: Boolean, animateBadge: Bool
         modifier.testTag(SetRowPreviousTag).sizeIn(minHeight = MTheme.targets.workout).clearAndSetSemantics {},
         verticalArrangement = Arrangement.Center,
     ) {
-        MText(state.previous ?: EMPTY_VALUE, MTheme.type.numSm, color = MTheme.colors.textSecondary)
+        MText(state.previous ?: EMPTY_VALUE, MTheme.type.numSm, color = MTheme.colors.textSecondary, softWrap = false, maxLines = 1)
         if (record) PrBadge(soft = true, animateIn = animateBadge)
     }
 }
@@ -337,7 +337,7 @@ private fun NumberCell(text: String, onClick: () -> Unit) {
                 .clickable(role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            MText(text, MTheme.type.numMd, modifier = Modifier.padding(horizontal = MTheme.space.s2))
+            MText(text, MTheme.type.numMd, modifier = Modifier.padding(horizontal = MTheme.space.s2), softWrap = false, maxLines = 1)
         }
     }
 }
