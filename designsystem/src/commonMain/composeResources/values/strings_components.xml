@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the design system components. English is the base; every key also exists in values-pt-rBR. -->
+<resources>
+    <string name="ds_licenses_title">Open-source licenses</string>
+</resources>

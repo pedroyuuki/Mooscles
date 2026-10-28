@@ -1,5 +1,5 @@
 # Host tests, lint and a debug build on every push and pull request, the iOS
-# targets of :shared compiled and its common tests run on the iOS simulator, plus
+# targets of :shared and :designsystem compiled and their tests run on the iOS simulator, plus
 # a check that the release script still works on Linux and Windows, run when tools/,
 # build.ps1, app/build.gradle.kts (version and signing inputs) or a workflow
 # changes, and on every manual run.
@@ -62,8 +62,34 @@ jobs:
 
       # No test retry: a flaky test must fail the job so it gets looked at.
       - name: Test, lint and assemble
-        # :shared registers no lint report task of its own (AGP 9.3.3 KMP library).
-        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
+        # :shared and :designsystem register no lint report task of their own (AGP 9.3.3 KMP
+        # library: only lintAnalyzeAndroidHostTest, which writes no report).
+        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :designsystem:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
+
+      # Phase 2 budget: APK growth over the phase's base, the fonts, and fonts plus icons.
+      - name: APK budget
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: ./tools/check-apk-budget.ps1 -Apk app/build/outputs/apk/debug/app-debug.apk
+
+      # Shapes the digits of the design system fonts with HarfBuzz, with and without tnum,
+      # and checks each file against the SHA-256 lock. A host-side indicator: the device
+      # proof is TnumRegressionTest on the iOS simulator (job ios) and the emulator.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: ${{ !cancelled() }}
+        with:
+          python-version: '3.13'
+
+      - name: Font check (HarfBuzz)
+        if: ${{ !cancelled() }}
+        # Explicit bash: -o pipefail, so the script's exit code survives tee. Every font must
+        # have tabular figures with tnum; Inter (the text face) must be proportional without it.
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check fonttools==4.68.0 uharfbuzz==0.57.0
+          python3 -I tools/check_fonts.py designsystem/src/commonMain/composeResources/font/*.ttf \
+            --lock designsystem/font-sources.txt --require-tabular '*' --require-proportional 'inter*' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       # The exported JSON is a contract with installed databases. Room writes shared/schemas
       # only when a schema changed (otherwise the copy task is NO-SOURCE), so a build that
@@ -96,7 +122,8 @@ jobs:
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
-              'shared/build/test-results/testAndroidHostTest'
+              'shared/build/test-results/testAndroidHostTest',
+              'designsystem/build/test-results/testAndroidHostTest'
           ) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.xml' -ErrorAction SilentlyContinue }
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
           foreach ($file in $files) {
@@ -110,7 +137,7 @@ jobs:
           $minimum = [int]$env:MIN_HOST_TESTS
           $lines = @(
               '### Host tests',
-              "$tests tests in $($files.Count) classes (:app and :shared): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+              "$tests tests in $($files.Count) classes (:app, :shared and :designsystem): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
           ) + ($failed | ForEach-Object { "- ``$_``" })
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -126,6 +153,8 @@ jobs:
             app/build/test-results/
             shared/build/reports/
             shared/build/test-results/
+            designsystem/build/reports/
+            designsystem/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -140,8 +169,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Compiles the iOS device target of :shared and runs its common tests on the
-  # iOS simulator. Only a Mac can build Kotlin/Native Apple targets.
+  # Compiles the iOS device targets of :shared and :designsystem and runs their tests
+  # (common tests, plus the design system UI tests) on the iOS simulator. Only a Mac
+  # can build Kotlin/Native Apple targets.
   ios:
     name: iOS compile and simulator tests
     runs-on: macos-26
@@ -180,11 +210,11 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'designsystem/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: konan-${{ runner.os }}-
 
       - name: Compile for iOS and run the simulator tests
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --console=plain --continue
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :designsystem:compileKotlinIosArm64 :designsystem:iosSimulatorArm64Test --console=plain --continue
 
       # kspIosArm64 and kspIosSimulatorArm64 run only here, so an iOS-only divergence in the
       # exported schema (and its identityHash) is caught here, not in the host job.
@@ -234,6 +264,36 @@ jobs:
           if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
           if ($platform.Count -ne 6) { throw "$($platform.Count) iOS entry point tests ran; exactly 6 are expected (update this number and MIN_IOS_TESTS when adding or removing one)." }
 
+      # The design system on its own, so a skipped :designsystem class cannot hide behind
+      # the :shared total above.
+      - name: Summarize design system iOS simulator tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        env:
+          # TnumRegressionTest (6). Raise it in every task that adds design system tests
+          # to commonTest, iosTest or uiTest.
+          MIN_DS_IOS_TESTS: 6
+        run: |
+          $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          foreach ($file in $files) {
+              $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
+              $tests += [int]$suite.tests; $failures += [int]$suite.failures
+              $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
+              foreach ($case in @($suite.testcase)) {
+                  if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+              }
+          }
+          $minimum = [int]$env:MIN_DS_IOS_TESTS
+          $lines = @(
+              '### Design system iOS simulator tests',
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+          ) + ($failed | ForEach-Object { "- ``$_``" })
+          $lines | Write-Host
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if ($files.Count -eq 0) { throw 'No design system iOS simulator test results were written.' }
+          if ($tests -lt $minimum) { throw "Only $tests design system iOS simulator tests ran; at least $minimum are expected." }
+
       - name: Upload iOS reports
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -242,6 +302,8 @@ jobs:
           path: |
             shared/build/reports/
             shared/build/test-results/
+            designsystem/build/reports/
+            designsystem/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 

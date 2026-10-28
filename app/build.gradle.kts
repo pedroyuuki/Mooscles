@@ -60,6 +60,9 @@ dependencies {
     androidTestImplementation(composeBom)
     // Brings Room, the SQLite driver and kotlinx-serialization through its api dependencies.
     implementation(project(":shared"))
+    // Design system (tokens, components, fonts, strings); Compose Multiplatform 1.12.2 maps to the
+    // Jetpack Compose 1.12.1 of the BOM above, so it changes no Compose version.
+    implementation(project(":designsystem"))
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
