@@ -78,22 +78,21 @@ fun MTextField(
     val borderColor = if (hasError) colors.dangerText else colors.borderStrong
     val errorPrefix = stringResource(Res.string.ds_error_prefix)
 
-    // One merged node: the typed value (editable text), the label and the help or error text,
-    // so a screen reader reads them together; a validation error is also set as `error`.
-    Column(
-        modifier.semantics(mergeDescendants = true) { if (error != null) error("$errorPrefix: $error") },
-        verticalArrangement = Arrangement.spacedBy(MTheme.space.s1),
-    ) {
-        MText(label, MTheme.type.labelMd, color = if (enabled) colors.textSecondary else colors.textDisabled)
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
-            textStyle = textStyle.copy(color = if (enabled) colors.textPrimary else colors.textDisabled),
-            keyboardOptions = keyboardOptions,
-            interactionSource = source,
-            cursorBrush = SolidColor(colors.accentText),
-            decorationBox = { inner ->
+    // The label and the help or error text are drawn inside the decoration box, so they are
+    // descendants of the field's own semantics node and merge into it with the typed value; a
+    // validation error is also set as `error` on that node.
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.semantics { if (error != null) error("$errorPrefix: $error") },
+        enabled = enabled,
+        textStyle = textStyle.copy(color = if (enabled) colors.textPrimary else colors.textDisabled),
+        keyboardOptions = keyboardOptions,
+        interactionSource = source,
+        cursorBrush = SolidColor(colors.accentText),
+        decorationBox = { inner ->
+            Column(verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
+                MText(label, MTheme.type.labelMd, color = if (enabled) colors.textSecondary else colors.textDisabled)
                 Box(
                     Modifier
                         .testTag(TextFieldBoxTag)
@@ -104,21 +103,21 @@ fun MTextField(
                         .padding(horizontal = MTheme.space.s4, vertical = MTheme.space.s2),
                     contentAlignment = Alignment.CenterStart,
                 ) { inner() }
-            },
-        )
-        if (hasError) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.Top) {
-                MIcon(
-                    MIcons.CircleAlert,
-                    contentDescription = null,
-                    size = MTheme.sizes.icon16,
-                    tint = colors.dangerText,
-                    modifier = Modifier.testTag(TextFieldErrorIconTag).padding(top = MTheme.space.s1),
-                )
-                MText(error, MTheme.type.caption, color = colors.dangerText)
+                if (hasError) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.Top) {
+                        MIcon(
+                            MIcons.CircleAlert,
+                            contentDescription = null,
+                            size = MTheme.sizes.icon16,
+                            tint = colors.dangerText,
+                            modifier = Modifier.testTag(TextFieldErrorIconTag).padding(top = MTheme.space.s1),
+                        )
+                        MText(error, MTheme.type.caption, color = colors.dangerText)
+                    }
+                } else if (help != null) {
+                    MText(help, MTheme.type.caption, color = colors.textSecondary)
+                }
             }
-        } else if (help != null) {
-            MText(help, MTheme.type.caption, color = colors.textSecondary)
-        }
-    }
+        },
+    )
 }

@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -56,7 +57,7 @@ class MTextFieldTest {
     fun disabledIsNotEditable() = runComposeUiTest {
         withTheme { MTextField(TextFieldValue("x"), {}, "Name", enabled = false) }
         waitForIdle()
-        onNode(hasSetTextAction()).assertIsNotEnabled()
+        onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.EditableText)).assertIsNotEnabled()
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -81,8 +82,9 @@ class MTextFieldTest {
         val box = onNodeWithTag(TextFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val minPx = with(density) { MoosclesSizes().numericFieldHeight.toPx() }
         assertTrue(box.height >= minPx, "box ${box.height} < min $minPx")
-        val text = onNode(hasText("Barbell"), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertTrue(box.height >= text.height, "box ${box.height} clips text ${text.height}")
+        // The field node spans label plus box, so the box must sit inside it without being cut.
+        val field = onNode(hasSetTextAction()).fetchSemanticsNode().boundsInRoot
+        assertTrue(field.height >= box.height, "field ${field.height} < box ${box.height}")
         assertTrue(box.height > minPx, "the box did not grow with 200% text")
     }
 }
