@@ -91,6 +91,22 @@ jobs:
             --lock designsystem/font-sources.txt --require-tabular '*' --require-proportional 'inter*' \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # Components, the gallery and the licenses page may not hard-code colors, measures or
+      # durations: those live in designsystem/.../tokens/. The two fixtures prove the guard
+      # still catches (8 violating lines) and still passes clean code.
+      - name: Design token guard
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          ./tools/check-design-tokens.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Design token violations in the design system.' }
+          ./tools/check-design-tokens.ps1 -Path tools/fixtures/design-tokens/clean.kt.txt
+          if ($LASTEXITCODE -ne 0) { throw 'The guard flagged the clean fixture.' }
+          $found = @(./tools/check-design-tokens.ps1 -Path tools/fixtures/design-tokens/violations.kt.txt)
+          if ($LASTEXITCODE -ne 1) { throw "The guard exited $LASTEXITCODE on the violations fixture; expected 1." }
+          $lines = @($found | Where-Object { $_ -match 'violations\.kt\.txt:\d+:' })
+          if ($lines.Count -ne 8) { throw "The guard reported $($lines.Count) violating lines; expected 8." }
+
       # The exported JSON is a contract with installed databases. Room writes shared/schemas
       # only when a schema changed (otherwise the copy task is NO-SOURCE), so a build that
       # regenerates a different or new file fails here. Against the merge base with main,
@@ -270,9 +286,10 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # TnumRegressionTest (6). Raise it in every task that adds design system tests
+          # TnumRegressionTest (6), the commonTest token classes (20) and the uiTest theme and
+          # gallery classes (4). Raise it in every task that adds design system tests
           # to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 6
+          MIN_DS_IOS_TESTS: 30
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the hidden design gallery. English is the base; every key also exists in values-pt-rBR. -->
+<resources>
+    <string name="gallery_title">Galeria de design</string>
+    <string name="gallery_back">Voltar</string>
+    <string name="gallery_page_foundations">Fundamentos</string>
+    <string name="gallery_section_colors">Cores e contraste medido</string>
+    <string name="gallery_section_type">Tipografia</string>
+    <string name="gallery_section_space">Espaço</string>
+    <string name="gallery_section_radius">Raio</string>
+    <string name="gallery_section_elevation">Elevação</string>
+    <string name="gallery_section_motion">Movimento</string>
+    <string name="gallery_sample_text">Pesado 82,5 kg × 8</string>
+</resources>

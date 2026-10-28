@@ -1,0 +1,79 @@
+package com.mooscles.designsystem.tokens
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+/** Spacing scale (spec "Espaço"): `s4` is 16 dp. All multiples of 4. */
+data class MoosclesSpace(
+    val s1: Dp = 4.dp,
+    val s2: Dp = 8.dp,
+    val s3: Dp = 12.dp,
+    val s4: Dp = 16.dp,
+    val s5: Dp = 20.dp,
+    val s6: Dp = 24.dp,
+    val s8: Dp = 32.dp,
+    val s10: Dp = 40.dp,
+    val s12: Dp = 48.dp,
+    val s16: Dp = 64.dp,
+) {
+    fun all(): List<Dp> = listOf(s1, s2, s3, s4, s5, s6, s8, s10, s12, s16)
+}
+
+/** Corner radii (spec "Raio"); `full` is the 50% pill. */
+data class MoosclesRadius(
+    val xs: Dp = 4.dp,
+    val sm: Dp = 8.dp,
+    val md: Dp = 12.dp,
+    val lg: Dp = 20.dp,
+    val xl: Dp = 28.dp,
+    val full: Shape = RoundedCornerShape(percent = 50),
+)
+
+/** Touch targets: 48 dp everywhere, 56 dp for workout actions, 8 dp between targets. */
+data class MoosclesTargets(
+    val min: Dp = 48.dp,
+    val workout: Dp = 56.dp,
+    val gap: Dp = 8.dp,
+)
+
+/**
+ * Measures the components draw with (plan decision 7 and rulings F15, F36). A control may
+ * draw less than its target, never a smaller touch area.
+ */
+data class MoosclesSizes(
+    val icon16: Dp = 16.dp,
+    val icon20: Dp = 20.dp,
+    val icon24: Dp = 24.dp,
+    val icon28: Dp = 28.dp,
+    val iconButton48: Dp = 48.dp,
+    val iconButton56: Dp = 56.dp,
+    val buttonL: Dp = 56.dp,
+    val buttonM: Dp = 48.dp,
+    val buttonS: Dp = 40.dp,
+    val checkDisc: Dp = 44.dp,
+    val numericFieldWidth: Dp = 72.dp,
+    val numericFieldHeight: Dp = 48.dp,
+    val stepperButtonWidth: Dp = 64.dp,
+    val stepperButtonHeight: Dp = 56.dp,
+    val dockRing: Dp = 48.dp,
+    val dockRingStroke: Dp = 4.dp,
+    val expandedRing: Dp = 280.dp,
+    val expandedRingStroke: Dp = 12.dp,
+    val tickLength: Dp = 8.dp,
+    val tickWidth: Dp = 2.dp,
+    val tickCount: Int = 60,
+    val timerDisc: Dp = 80.dp,
+    val media: Dp = 64.dp,
+    val sheetHandleWidth: Dp = 32.dp,
+    val sheetHandleHeight: Dp = 4.dp,
+    val sheetMaxFraction: Float = 0.9f,
+    val rowMin: Dp = 56.dp,
+    val border: Dp = 1.dp,
+    val borderError: Dp = 2.dp,
+    val focusRingWidth: Dp = 2.dp,
+    val focusRingOffset: Dp = 2.dp,
+    /** Share of the track the indeterminate progress bar fills while it moves (or rests). */
+    val progressIndeterminateFraction: Float = 0.3f,
+)
