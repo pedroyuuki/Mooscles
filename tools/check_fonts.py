@@ -15,8 +15,9 @@ It exits with 1 when:
     without `tnum` (the control could never fail);
   * a file's SHA-256 differs from the --lock file, or a font is missing from it.
 
-The lock file has one `<sha256>  <file name>` line per font (sha256sum format);
-fonts are matched by file name. GLOBs are matched against the file name and the
+The lock file has one `<file name> <source URL at a pinned commit> <sha256>` line
+per font, separated by whitespace; blank lines and lines starting with `#` are
+ignored. Fonts are matched by the file name (basename) of each argument. GLOBs are matched against the file name and the
 full path (fnmatch).
 
 This is a host-side indicator only. Android (Minikin) and Compose Multiplatform on
@@ -54,10 +55,15 @@ def read_lock(path):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            parts = line.split(None, 1)
-            if len(parts) != 2:
-                raise SystemExit(f"{path}:{number}: expected '<sha256>  <file name>'")
-            lock[parts[1].lstrip("*").strip()] = parts[0].lower()
+            parts = line.split()
+            if len(parts) != 3:
+                raise SystemExit(f"{path}:{number}: expected '<file name> <source URL> <sha256>'")
+            name, _source, digest = parts
+            if len(digest) != 64 or any(c not in "0123456789abcdefABCDEF" for c in digest):
+                raise SystemExit(f"{path}:{number}: '{digest}' is not a SHA-256")
+            if name in lock:
+                raise SystemExit(f"{path}:{number}: {name} is listed twice")
+            lock[name] = digest.lower()
     return lock
 
 

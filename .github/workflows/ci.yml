@@ -79,7 +79,7 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check fonttools==4.68.0 uharfbuzz==0.57.0
           python3 -I tools/check_fonts.py fontspike/src/commonMain/composeResources/font/*.ttf \
-            --lock fontspike/fonts.sha256 --require-proportional '*.ttf' --require-tabular '*.ttf' \
+            --lock fontspike/font-sources.txt --require-proportional '*.ttf' --require-tabular '*.ttf' \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
       # The exported JSON is a contract with installed databases. Room writes shared/schemas
