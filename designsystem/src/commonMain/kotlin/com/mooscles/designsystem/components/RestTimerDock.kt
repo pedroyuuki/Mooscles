@@ -147,7 +147,6 @@ internal fun timerStatus(visual: RestTimerVisual): String = when (visual.phase) 
 internal val TimerAdjustPadding: Dp
     @Composable get() = MTheme.space.s2
 
-/** The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is its label. */
 /**
  * Gives the `RestFinished` haptic when [done] turns true while this timer view is shown, not when
  * the view enters the composition already done (switching between the dock and the expanded timer,
@@ -163,6 +162,7 @@ internal fun RestFinishedHaptic(done: Boolean) {
     }
 }
 
+/** The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is its label. */
 @Composable
 internal fun TimerAdjustButton(
     text: String,

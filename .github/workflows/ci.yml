@@ -136,7 +136,7 @@ jobs:
         env:
           # The host total before :shared existed. Moving tests between the two
           # modules must never lose any, so the sum may not drop below it.
-          MIN_HOST_TESTS: 487
+          MIN_HOST_TESTS: 600
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
