@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.mooscles.designsystem.components.MSwitch
+import com.mooscles.designsystem.components.RadioGroup
 import com.mooscles.designsystem.components.RadioRow
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.SettingsRow
@@ -40,9 +41,11 @@ fun RowsPage() {
         SettingsRow(title, onClick = {}, enabled = false)
         SwitchRow(title, checked = on, onCheckedChange = { on = it }, subtitle = subtitle)
         SwitchRow(title, checked = false, onCheckedChange = {}, enabled = false)
-        for (index in 0..1) {
-            RadioRow(title, selected = choice == index, onSelect = { choice = index }, subtitle = subtitle)
+        RadioGroup {
+            for (index in 0..1) {
+                RadioRow(title, selected = choice == index, onSelect = { choice = index }, subtitle = subtitle)
+            }
+            RadioRow(title, selected = false, onSelect = {}, enabled = false)
         }
-        RadioRow(title, selected = false, onSelect = {}, enabled = false)
     }
 }

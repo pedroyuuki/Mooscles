@@ -14,7 +14,10 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasParent
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -48,6 +51,25 @@ class RowsTest {
         waitForIdle()
         assertEquals(false, checked)
         assertEquals(listOf(HapticEvent.ToggleOn, HapticEvent.ToggleOff), haptics.events.toList())
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun radioGroupIsASelectableGroupOfRadioButtons() = runComposeUiTest {
+        withTheme {
+            RadioGroup(Modifier.testTag("group")) {
+                RadioRow("Kilograms", selected = true, onSelect = {}, modifier = Modifier.testTag("kg"))
+                RadioRow("Pounds", selected = false, onSelect = {}, modifier = Modifier.testTag("lb"))
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("group").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
+        for (tag in listOf("kg", "lb")) {
+            onNodeWithTag(tag).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+                .assert(hasParent(hasTestTag("group")))
+        }
+        onNodeWithTag("kg").assertIsSelected()
+        onNodeWithTag("lb").assertIsNotSelected()
     }
 
     @OptIn(ExperimentalTestApi::class)

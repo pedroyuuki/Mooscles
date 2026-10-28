@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.components.RadioGroup
 import com.mooscles.designsystem.components.RadioRow
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.SettingsRow
@@ -105,21 +106,25 @@ fun SettingsScreen(
             .padding(bottom = space.s6),
     ) {
         SectionHeader(stringResource(Res.string.settings_appearance))
-        listOf(
-            "system" to Res.string.settings_theme_system,
-            "light" to Res.string.settings_theme_light,
-            "dark" to Res.string.settings_theme_dark,
-        ).forEach { (theme, label) ->
-            // An unknown stored value (none of the three) selects no row.
-            RadioRow(stringResource(label), selected = prefs.theme == theme, onSelect = { actions.setTheme(theme) },
-                modifier = Modifier.testTag("theme-$theme"))
+        RadioGroup(Modifier.testTag("theme-group")) {
+            listOf(
+                "system" to Res.string.settings_theme_system,
+                "light" to Res.string.settings_theme_light,
+                "dark" to Res.string.settings_theme_dark,
+            ).forEach { (theme, label) ->
+                // An unknown stored value (none of the three) selects no row.
+                RadioRow(stringResource(label), selected = prefs.theme == theme, onSelect = { actions.setTheme(theme) },
+                    modifier = Modifier.testTag("theme-$theme"))
+            }
         }
 
         SectionHeader(stringResource(Res.string.settings_weight_units))
-        RadioRow(stringResource(Res.string.settings_unit_kg), selected = !prefs.pounds, onSelect = { actions.setPounds(false) },
-            modifier = Modifier.testTag("unit-kg"))
-        RadioRow(stringResource(Res.string.settings_unit_lb), selected = prefs.pounds, onSelect = { actions.setPounds(true) },
-            modifier = Modifier.testTag("unit-lb"))
+        RadioGroup(Modifier.testTag("unit-group")) {
+            RadioRow(stringResource(Res.string.settings_unit_kg), selected = !prefs.pounds, onSelect = { actions.setPounds(false) },
+                modifier = Modifier.testTag("unit-kg"))
+            RadioRow(stringResource(Res.string.settings_unit_lb), selected = prefs.pounds, onSelect = { actions.setPounds(true) },
+                modifier = Modifier.testTag("unit-lb"))
+        }
         SettingsNote(stringResource(Res.string.settings_units_hint))
 
         SectionHeader(stringResource(Res.string.settings_auto_rest))

@@ -7,11 +7,13 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -109,7 +111,16 @@ fun SettingsRow(
     ) { RowBody(title, subtitle, enabled, null, tail) }
 }
 
-/** A single choice in a group: the whole row is a radio button. */
+/**
+ * The container of a set of [RadioRow]s that answer one question. It is a selectable group,
+ * so screen readers announce the options as one group with their position ("1 of 3").
+ */
+@Composable
+fun RadioGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.fillMaxWidth().selectableGroup(), content = content)
+}
+
+/** A single choice in a group: the whole row is a radio button. Put the rows of one question in a [RadioGroup]. */
 @Composable
 fun RadioRow(
     title: String,
