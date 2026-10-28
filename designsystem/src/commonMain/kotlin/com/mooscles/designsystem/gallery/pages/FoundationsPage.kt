@@ -55,7 +55,7 @@ fun FoundationsPage() {
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
-        BasicText(title, style = MTheme.type.titleMd.copy(color = MTheme.colors.textPrimary))
+        PageHeader(title)
         content()
     }
 }

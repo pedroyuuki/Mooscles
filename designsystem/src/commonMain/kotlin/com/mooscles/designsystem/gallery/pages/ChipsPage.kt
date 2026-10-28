@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.mooscles.designsystem.components.MChip
 import com.mooscles.designsystem.components.MChipKind
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_sample_chip
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
@@ -29,15 +28,21 @@ fun ChipsPage() {
     var selected by remember { mutableStateOf(MChipKind.Filter) }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
-        verticalArrangement = Arrangement.spacedBy(MTheme.space.s2),
+        verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
     ) {
-        SectionHeader(stringResource(Res.string.gallery_section_chip_kinds))
+        PageHeader(stringResource(Res.string.gallery_section_chip_kinds))
         for (kind in MChipKind.entries) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
-                MChip(label, selected = selected == kind, onClick = { selected = kind }, kind = kind)
-                MChip(label, selected = selected != kind, onClick = { selected = kind }, kind = kind)
-                MChip(label, selected = false, onClick = {}, kind = kind, enabled = false)
-            }
+            Sample("kind = ${kind.name}") { ChipRow(kind, label, selected) { selected = it } }
         }
+    }
+}
+
+/** One kind: unselected, selected and disabled (which of the first two is selected follows the taps). */
+@Composable
+private fun ChipRow(kind: MChipKind, label: String, selected: MChipKind, onSelect: (MChipKind) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
+        MChip(label, selected = selected == kind, onClick = { onSelect(kind) }, kind = kind)
+        MChip(label, selected = selected != kind, onClick = { onSelect(kind) }, kind = kind)
+        MChip(label, selected = false, onClick = {}, kind = kind, enabled = false)
     }
 }

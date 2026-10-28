@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.ColorPainter
 import com.mooscles.designsystem.components.ExerciseCard
 import com.mooscles.designsystem.components.ExerciseMedia
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.SetRow
 import com.mooscles.designsystem.components.SetRowState
 import com.mooscles.designsystem.components.SetStatus
@@ -41,7 +40,7 @@ fun ExerciseCardPage() {
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
     ) {
-        SectionHeader(stringResource(Res.string.gallery_section_exercise_card))
+        PageHeader(stringResource(Res.string.gallery_section_exercise_card))
         for (item in media) {
             ExerciseCard(name, meta, item, MIcons.Barbell, onMenu = {}, onAddSet = {}) {
                 SetRow(row(1, SetStatus.Completed), {}, {}, {}, {}, {})

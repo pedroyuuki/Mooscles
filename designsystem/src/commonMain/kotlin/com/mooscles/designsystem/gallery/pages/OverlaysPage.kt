@@ -23,7 +23,6 @@ import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.MToastHost
 import com.mooscles.designsystem.components.MToastHostState
 import com.mooscles.designsystem.components.MToastKind
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_dialog_cancel
 import com.mooscles.designsystem.resources.gallery_dialog_confirm
@@ -66,7 +65,7 @@ fun OverlaysPage() {
             Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
             verticalArrangement = Arrangement.spacedBy(MTheme.space.s2),
         ) {
-            SectionHeader(stringResource(Res.string.gallery_section_overlays))
+            PageHeader(stringResource(Res.string.gallery_section_overlays))
             val wide = Modifier.fillMaxWidth()
             MButton(stringResource(Res.string.gallery_open_dialog), { dialog = true }, wide, MButtonVariant.Secondary)
             MButton(stringResource(Res.string.gallery_open_destructive_dialog), { destructive = true }, wide, MButtonVariant.Secondary)

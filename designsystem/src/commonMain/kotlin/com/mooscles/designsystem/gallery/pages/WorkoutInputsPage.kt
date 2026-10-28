@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import com.mooscles.designsystem.components.NumericField
 import com.mooscles.designsystem.components.NumericKind
 import com.mooscles.designsystem.components.PrBadge
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.SetCheck
 import com.mooscles.designsystem.components.Stepper
 import com.mooscles.designsystem.format.MoosclesNumbers
@@ -24,9 +23,9 @@ import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_stepper_decrease
 import com.mooscles.designsystem.resources.ds_stepper_increase
-import com.mooscles.designsystem.resources.gallery_sample_error
 import com.mooscles.designsystem.resources.gallery_sample_load_label
 import com.mooscles.designsystem.resources.gallery_sample_load_name
+import com.mooscles.designsystem.resources.gallery_sample_reps_error
 import com.mooscles.designsystem.resources.gallery_sample_reps_label
 import com.mooscles.designsystem.resources.gallery_sample_step
 import com.mooscles.designsystem.resources.gallery_section_workout_inputs
@@ -43,17 +42,18 @@ fun WorkoutInputsPage() {
     val repsLabel = stringResource(Res.string.gallery_sample_reps_label)
     val name = stringResource(Res.string.gallery_sample_load_name)
     val step = stringResource(Res.string.gallery_sample_step)
-    val error = stringResource(Res.string.gallery_sample_error)
+    // A reps field rejects 0: its error says the reps rule, not the text field's "Enter a name".
+    val error = stringResource(Res.string.gallery_sample_reps_error)
     var load by remember { mutableStateOf("") }
     var reps by remember { mutableStateOf("8") }
-    var invalid by remember { mutableStateOf("999") }
+    var invalid by remember { mutableStateOf("0") }
     var stepped by remember { mutableStateOf(20.0) }
     var done by remember { mutableStateOf(false) }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
     ) {
-        SectionHeader(stringResource(Res.string.gallery_section_workout_inputs))
+        PageHeader(stringResource(Res.string.gallery_section_workout_inputs))
         Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.Top) {
             NumericField(load, { load = it }, NumericKind.Load, loadLabel, suggested = MoosclesNumbers.localize("82.5", locale))
             NumericField(reps, { reps = it }, NumericKind.Reps, repsLabel)

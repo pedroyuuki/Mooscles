@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import com.mooscles.designsystem.components.EmptyState
 import com.mooscles.designsystem.components.ErrorBanner
 import com.mooscles.designsystem.components.MProgressBar
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.Skeleton
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.resources.Res
@@ -33,7 +32,7 @@ fun StatesPage() {
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
     ) {
-        SectionHeader(stringResource(Res.string.gallery_section_states))
+        PageHeader(stringResource(Res.string.gallery_section_states))
         MProgressBar(progress = 0.4f)
         MProgressBar(progress = null)
         ErrorBanner(
