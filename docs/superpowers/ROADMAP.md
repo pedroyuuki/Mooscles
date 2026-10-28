@@ -1,6 +1,6 @@
 # Roadmap do Mooscles
 
-Atualizado em 2026-10-27. Este é o mapa de onde o produto vai. Cada fase vira uma ou mais specs (`specs/`), planos (`plans/`) e releases (`releases/`), seguindo o fluxo do [AGENTS.md](../../AGENTS.md). Quando uma fase termina, marque-a aqui e ligue os documentos que a entregaram.
+Atualizado em 2026-10-28. Este é o mapa de onde o produto vai. Cada fase vira uma ou mais specs (`specs/`), planos (`plans/`) e releases (`releases/`), seguindo o fluxo do [AGENTS.md](../../AGENTS.md). Quando uma fase termina, marque-a aqui e ligue os documentos que a entregaram.
 
 ## Aonde queremos chegar
 
@@ -40,8 +40,9 @@ O projeto falhou, mesmo que "funcione", se acontecer alguma destas coisas:
   - O tema é apenas um esquema de cores Material 3 (verde e laranja) com a fonte padrão do sistema.
   - Não há escala de espaçamento nem de formas: são 233 medidas soltas em `dp` com 35 valores diferentes e 9 raios de borda distintos.
   - `ui/Common.kt` tem só 10 componentes compartilhados.
+  - **2026-10-28:** a fase 2 entregou o design system "Giz & Ferro" no módulo `:designsystem` (Compose Multiplatform, Android e iOS): tokens de cor, tipo, espaço, raio, elevação, movimento e háptico; 28 arquivos de componentes; Inter e Barlow Condensed com algarismos tabulares; 38 ícones; a galeria escondida; e Configurações refeita só com ele. As outras telas continuam no Material 3 antigo, com as mesmas cores e textos, até a sua fase. Ver a [verificação](reports/2026-10-28-phase2-verificacao.md).
 - **Movimento e mídia:** nenhuma animação, nenhum gráfico, uma única imagem na UI, e os 287 exercícios do catálogo não têm mídia.
-- **Textos:** 144 textos fixos no código, sem recursos de string nem tradução. A UI está toda em inglês.
+- **Textos:** 144 textos fixos no código, sem recursos de string nem tradução. A UI está toda em inglês. **2026-10-28:** os textos dos componentes e de Configurações estão em recursos, em inglês e pt-BR; as outras telas migram quando forem redesenhadas.
 
 ## Decisões tomadas (chamadas minhas, revisáveis)
 
@@ -143,6 +144,14 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 - a fonte grande do sistema (200%) não quebra os componentes;
 - a galeria roda no Android e no iOS.
 
+**Andamento (2026-10-28):** implementada na branch `feat/phase2-design-system`, verificada no emulador e no host, à espera do job `ios` do CI e do merge na `main` do fork. [Spec](specs/2026-10-27-phase2-design-system-design.md) (com as [notas de implementação](specs/2026-10-27-phase2-design-system-design.md#notas-de-implementação)), [plano](plans/2026-10-27-phase2-design-system.md), [spike de `tnum`](reports/2026-10-28-phase2-tnum-spike.md), [verificação](reports/2026-10-28-phase2-verificacao.md), [crítica de Configurações e da galeria](reports/2026-10-28-phase2-critica-configuracoes.md).
+
+- Tokens: `tools/check-design-tokens.ps1` limpo nos componentes, na galeria, nas licenças e em Configurações, e no CI.
+- Contraste: os 50 pares da spec passam no WCAG AA nos dois temas, por teste.
+- 200%: os testes de dispositivo montam cada página da galeria a 2,0 nos dois temas, e as capturas do emulador não mostram corte no conteúdo de Configurações. A casca do app (abas e dock antigo) quebra a 200%; isso foi para a fase 3.
+- Galeria: no Android, atrás de 7 toques na versão, em Configurações. No iOS, como teste (`GallerySmokeTest` no simulador do CI), porque não há `iosApp`; a revisão visual no iOS fica para a fase 7.
+- Não verificado: uma sessão real de TalkBack, qualquer coisa num iPhone ou num Android físico, e as mensagens do updater e do backup em pt-BR (continuam em inglês até a fase 6). Lista completa na verificação.
+
 ### Fase 3 — Redesign do treino ativo · v2.0 · 3–5 semanas
 
 **Objetivo:** o fluxo usado todo dia fica o mais rápido e agradável possível. Esta é a fase que define o produto.
@@ -156,6 +165,14 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 - Reação animada ao bater um PR.
 - Resumo de fim de treino com estatísticas e o novo cartão de compartilhamento.
 - Espaço reservado para a mídia do exercício (thumbnail), pronto para a fase 4.
+- Herdado da crítica da fase 2 ([relatório](reports/2026-10-28-phase2-critica-configuracoes.md#fase-3)), na casca do app que a fase 2 não reconstruiu:
+  - #1: o dock antigo do timer corta "−0:15", "+0:15" e o nome do exercício a 200%;
+  - #2: os rótulos das abas quebram no meio da palavra a 200%;
+  - #3: a 200%, com treino ativo, sobra cerca de 45% da altura para o conteúdo;
+  - #4: idiomas misturados em pt-BR (abas e dock em inglês);
+  - #5: no tema claro, a barra de abas lavanda do Material não combina com a página;
+  - #20: tocar na aba atual de dentro da galeria não volta à raiz da aba.
+- Também da fase 2: o campo lê o valor antes do nome ("2:30, Default rest duration, …", #11), o que exige mudar o `MTextField`; e uma sessão real de TalkBack em Configurações e na linha de série, que o emulador não permitiu.
 
 **Pronto quando:**
 
@@ -264,8 +281,8 @@ Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Deci
 | Fase | Status | Spec | Plano | Release |
 | --- | --- | --- | --- | --- |
 | 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; build/release no macOS e CI concluídos (2026-10-27); faltam a chave de assinatura (pendente com o dono do repositório original) e a release v1.5.0, e o "Pronto quando" ainda pede o export/import verificado entre aparelhos reais | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) · [build no macOS e CI](plans/2026-10-27-macos-build-ci.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
-| 1 | não iniciada | — | — | — |
-| 2 | spec aprovada e plano pronto em 2026-10-27 (direção "Giz & Ferro"); implementação depois da 1B | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | [design system](plans/2026-10-27-phase2-design-system.md) | — |
+| 1 | concluída: 1A e 1B na `main` do fork (2026-10-27 e 2026-10-28), sem release | [base multiplataforma](specs/2026-10-27-phase1-shared-base-design.md) | [1A](plans/2026-10-27-phase1a-toolchain-room.md) · [1B](plans/2026-10-27-phase1b-shared-module.md) | — |
+| 2 | implementada e verificada em 2026-10-28 na branch `feat/phase2-design-system` ([verificação](reports/2026-10-28-phase2-verificacao.md), [spike](reports/2026-10-28-phase2-tnum-spike.md), [crítica](reports/2026-10-28-phase2-critica-configuracoes.md)); falta o job `ios` do CI e o merge na `main` do fork; sem release (entra no PR final, ver a [v1.5.0](releases/v1.5.0.md)) | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | [design system](plans/2026-10-27-phase2-design-system.md) | — |
 | 3 | não iniciada | — | — | — |
 | 4 | não iniciada | — | — | — |
 | 5 | não iniciada | — | — | — |
