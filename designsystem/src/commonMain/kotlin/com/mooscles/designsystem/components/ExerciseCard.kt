@@ -39,6 +39,7 @@ const val ExerciseEquipmentIconTag = "exercise-equipment-icon"
 const val ExerciseOfflineIconTag = "exercise-offline-icon"
 const val ExerciseOfflineTextTag = "exercise-offline-text"
 const val ExerciseSetsTag = "exercise-sets"
+const val ExerciseMediaPlaceholderTag = "exercise-media-placeholder"
 
 /** What the 64 dp thumbnail of an exercise shows. */
 @Immutable
@@ -49,14 +50,16 @@ sealed interface ExerciseMedia {
     /** The image exists but is not on the device yet: an "image off" icon and a short note. */
     data object Offline : ExerciseMedia
 
+    /** An image; until its [painter] draws (while it loads), the equipment icon shows through. */
     data class Image(val painter: Painter) : ExerciseMedia
 }
 
 /**
  * An exercise in the workout: the thumbnail ([media], 64 dp), [name], [meta] (muscle, equipment),
  * the options menu and, below, the set rows given by [sets] and a 56 dp "Add set" button. With
- * [collapsed] only the header remains. Without an image the thumbnail is the equipment icon;
- * with one (or the offline note) the equipment icon sits beside [meta].
+ * [collapsed] only the header remains. Without an image the thumbnail is the equipment icon, and
+ * an image is drawn over that icon, so a tile still loading shows it; with an image (or the offline
+ * note) the equipment icon also sits beside [meta].
  */
 @Composable
 fun ExerciseCard(
@@ -88,12 +91,20 @@ fun ExerciseCard(
                 contentAlignment = Alignment.Center,
             ) {
                 when (media) {
-                    is ExerciseMedia.Image -> Image(
-                        media.painter,
-                        contentDescription = null,
-                        modifier = Modifier.size(MTheme.sizes.media),
-                        contentScale = ContentScale.Crop,
-                    )
+                    is ExerciseMedia.Image -> {
+                        // The placeholder under the image: a painter that has not loaded yet draws
+                        // nothing, and the tile must not be an empty square meanwhile.
+                        MIcon(
+                            equipmentIcon, null, Modifier.testTag(ExerciseMediaPlaceholderTag),
+                            size = MTheme.sizes.icon28, tint = colors.textTertiary,
+                        )
+                        Image(
+                            media.painter,
+                            contentDescription = null,
+                            modifier = Modifier.size(MTheme.sizes.media),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                     ExerciseMedia.Offline -> MIcon(
                         MIcons.ImageOff, null, Modifier.testTag(ExerciseOfflineIconTag),
                         size = MTheme.sizes.icon24, tint = colors.textTertiary,

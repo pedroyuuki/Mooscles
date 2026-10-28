@@ -58,6 +58,7 @@ const val TimerMinusTag = "timer-minus15"
 const val TimerPlusTag = "timer-plus15"
 const val TimerSkipTag = "timer-skip"
 const val TimerAnnounceTag = "timer-announce"
+const val TimerPausedIconTag = "timer-paused-icon"
 
 /** From this font scale on, the dock always stacks its buttons under the time (it also stacks when they do not fit beside it). */
 private const val STACK_FONT_SCALE = 1.5f
@@ -174,6 +175,7 @@ internal fun TimerAdjustButton(
 
 /**
  * The rest timer docked above the bottom bar: a 48 dp ring, the name, the time (`num.dock`,
+ * in `text.secondary` and with a pause icon and a `text.tertiary` arc while paused,
  * tabular, one line, never cut), then -15, +15 and skip, each 56 dp. The buttons stack under the
  * time from a font scale of 1.5, or sooner when the measured width of the widest time plus the
  * buttons does not fit the dock. When the phase turns [TimerPhase.Done] it gives the `RestFinished`
@@ -197,6 +199,7 @@ fun RestTimerDock(
     val announcement = rememberTimerAnnouncement(visual)
     val status = timerStatus(visual)
     val done = visual.phase == TimerPhase.Done
+    val paused = visual.phase == TimerPhase.Paused
     LaunchedEffect(done) { if (done) haptics.perform(HapticEvent.RestFinished) }
     val minus = { haptics.perform(HapticEvent.StepperStep); onMinus15() }
     val plus = { haptics.perform(HapticEvent.StepperStep); onPlus15() }
@@ -240,10 +243,15 @@ fun RestTimerDock(
             verticalArrangement = Arrangement.spacedBy(padding),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(padding)) {
-                RestTimerRing({ progress.value }, ring, MTheme.sizes.dockRingStroke, ticks = false) {
+                RestTimerRing({ progress.value }, ring, MTheme.sizes.dockRingStroke, ticks = false, phase = visual.phase) {
                     MIcon(
-                        if (done) MIcons.CircleCheck else MIcons.Timer,
+                        when (visual.phase) {
+                            TimerPhase.Done -> MIcons.CircleCheck
+                            TimerPhase.Paused -> MIcons.Pause
+                            TimerPhase.Running -> MIcons.Timer
+                        },
                         contentDescription = null,
+                        modifier = if (paused) Modifier.testTag(TimerPausedIconTag) else Modifier,
                         size = MTheme.sizes.icon20,
                         tint = if (done) colors.timerProgress else colors.textSecondary,
                     )
@@ -254,6 +262,7 @@ fun RestTimerDock(
                         MoosclesNumbers.clock(visual.remainingSeconds),
                         timeStyle,
                         modifier = Modifier.testTag(TimerTimeTag),
+                        color = if (paused) colors.textSecondary else colors.textPrimary,
                         softWrap = false,
                         maxLines = 1,
                     )

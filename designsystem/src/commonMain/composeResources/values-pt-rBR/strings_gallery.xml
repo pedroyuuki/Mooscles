@@ -55,7 +55,7 @@
     <string name="gallery_sample_empty_body">Termine um treino e ele aparece aqui.</string>
     <string name="gallery_sample_start">Iniciar um treino</string>
     <string name="gallery_sample_not_now">Agora não</string>
-    <string name="gallery_sample_banner">Não foi possível salvar. Tente de novo.</string>
+    <string name="gallery_sample_banner">Não foi possível salvar.</string>
     <string name="gallery_sample_retry">Tentar de novo</string>
     <string name="gallery_page_overlays">Sobreposições</string>
     <string name="gallery_section_overlays">Diálogos, sheets e toasts</string>

@@ -176,4 +176,17 @@ class RestTimerDockTest {
         onNodeWithTag(TimerPlusTag).assertContentDescriptionEquals("Plus 15 seconds")
         onNodeWithText("\u221215 s", useUnmergedTree = true).assertExists()
     }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun pausedShowsThePauseIconAndRunningDoesNot() {
+        for ((phase, paused) in listOf(TimerPhase.Paused to true, TimerPhase.Running to false, TimerPhase.Done to false)) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale("en") { RestTimerDock(visual(60, phase), {}, {}, {}) } }
+                waitForIdle()
+                val icon = onNodeWithTag(TimerPausedIconTag, useUnmergedTree = true)
+                if (paused) icon.assertExists() else icon.assertDoesNotExist()
+            }
+        }
+    }
 }

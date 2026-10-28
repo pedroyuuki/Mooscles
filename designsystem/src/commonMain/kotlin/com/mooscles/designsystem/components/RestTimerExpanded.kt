@@ -94,7 +94,7 @@ fun RestTimerExpanded(
             verticalArrangement = Arrangement.spacedBy(MTheme.space.s6),
         ) {
             RestTimerRing(
-                { progress.value }, sizes.expandedRing, sizes.expandedRingStroke, ticks = true,
+                { progress.value }, sizes.expandedRing, sizes.expandedRingStroke, ticks = true, phase = visual.phase,
                 modifier = Modifier.testTag(TimerRingTag),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -103,6 +103,7 @@ fun RestTimerExpanded(
                         MoosclesNumbers.clock(visual.remainingSeconds),
                         timeStyle,
                         modifier = Modifier.testTag(TimerTimeTag),
+                        color = if (visual.phase == TimerPhase.Paused) colors.textSecondary else colors.textPrimary,
                         softWrap = false,
                         maxLines = 1,
                     )

@@ -55,7 +55,7 @@
     <string name="gallery_sample_empty_body">Finish a workout and it shows up here.</string>
     <string name="gallery_sample_start">Start a workout</string>
     <string name="gallery_sample_not_now">Not now</string>
-    <string name="gallery_sample_banner">Could not save. Try again.</string>
+    <string name="gallery_sample_banner">Could not save.</string>
     <string name="gallery_sample_retry">Try again</string>
     <string name="gallery_page_overlays">Overlays</string>
     <string name="gallery_section_overlays">Dialogs, sheets and toasts</string>

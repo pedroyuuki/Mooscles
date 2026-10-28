@@ -21,6 +21,19 @@ class MoosclesNumbersTest {
     }
 
     @Test
+    fun plainWritesTheDomainDecimalNeverDoubleToString() {
+        val cases = mapOf(
+            20.0 to "20", 82.5 to "82.5", 82.25 to "82.25", 0.05 to "0.05", 0.1 + 0.2 to "0.3",
+            -2.5 to "-2.5", -0.001 to "0", 0.0 to "0", 1e7 to "10000000", 102.50000000001 to "102.5",
+        )
+        for ((value, expected) in cases) assertEquals(expected, MoosclesNumbers.plain(value), "$value")
+        assertEquals("20", MoosclesNumbers.localize(MoosclesNumbers.plain(20.0), NumberLocale.PT_BR))
+        assertEquals("82,5", MoosclesNumbers.localize(MoosclesNumbers.plain(82.5), NumberLocale.PT_BR))
+        assertEquals("1.234,5", MoosclesNumbers.localize(MoosclesNumbers.plain(1234.5), NumberLocale.PT_BR))
+        assertFailsWith<IllegalArgumentException> { MoosclesNumbers.plain(Double.NaN) }
+    }
+
+    @Test
     fun weightUsesNoBreakSpace() {
         assertEquals("82,5 kg", MoosclesNumbers.weight("82.5", "kg", NumberLocale.PT_BR))
         assertEquals("82.5 kg", MoosclesNumbers.weight("82.5", "kg", NumberLocale.EN))

@@ -12,7 +12,15 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.mooscles.designsystem.theme.MTheme
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performTextReplacement
@@ -277,5 +285,128 @@ class SetRowTest {
         val check = onNodeWithContentDescription("Complete set 4", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val widthPx = with(density) { 320.dp.toPx() }
         assertTrue(check.right <= widthPx + 0.5f, "check ends at ${check.right} beyond $widthPx")
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun checkIsAToggleOfItsOwnBesideTheRowSummary() {
+        for ((lang, label, heading) in listOf(
+            Triple("en", "Complete set 4", "Set 4 of 5"),
+            Triple("pt-BR", "Concluir série 4", "Série 4 de 5"),
+        )) {
+            runComposeUiTest {
+                var status by mutableStateOf(SetStatus.Pending)
+                val calls = mutableListOf<Boolean>()
+                withTheme {
+                    ProvideAppLocale(lang) {
+                        Row(state(status = status), onComplete = { calls += it; status = if (it) SetStatus.Completed else SetStatus.Pending })
+                    }
+                }
+                waitForIdle()
+                val check = onNodeWithTag(SetRowCheckTag)
+                check.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+                check.assertContentDescriptionEquals(label)
+                check.assertIsOff()
+                check.performClick()
+                waitForIdle()
+                assertEquals(listOf(true), calls)
+                onNodeWithTag(SetRowCheckTag).assertIsOn()
+                // The row keeps its one summary (the check's label is not merged into it) and its five actions.
+                val row = onNodeWithTag("row").fetchSemanticsNode().config
+                val description = row.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
+                assertEquals(1, description.size, "$description")
+                assertTrue(description.single().startsWith(heading), description.single())
+                assertEquals(5, row.getOrNull(SemanticsActions.CustomActions).orEmpty().size)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun screenReaderActivationOfTheCheckGivesTheTapHaptics() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        var status by mutableStateOf(SetStatus.Pending)
+        withTheme(haptics = haptics) {
+            Row(state(status = status), onComplete = { status = if (it) SetStatus.Completed else SetStatus.Pending })
+        }
+        waitForIdle()
+        // A screen reader's double tap is the node's click action.
+        onNodeWithTag(SetRowCheckTag).performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        assertEquals(SetStatus.Completed, status)
+        assertEquals(listOf(HapticEvent.SetCompleted), haptics.events.toList())
+        onNodeWithTag(SetRowCheckTag).performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        assertEquals(SetStatus.Pending, status)
+        assertEquals(listOf(HapticEvent.SetCompleted, HapticEvent.SetUnchecked), haptics.events.toList())
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun setTypeIsSpoken() {
+        val en = ", previous 80 kilograms by 6, load 85 kilograms, 6 reps, not completed"
+        val pt = ", anterior 80 quilos por 6, carga 85 quilos, 6 repetições, não concluída"
+        for ((lang, type, expected) in listOf(
+            Triple("en", SetType.Warmup, "Set 4 of 5, warm-up$en"),
+            Triple("en", SetType.Drop, "Set 4 of 5, drop set$en"),
+            Triple("en", SetType.Failure, "Set 4 of 5, to failure$en"),
+            Triple("pt-BR", SetType.Warmup, "Série 4 de 5, aquecimento$pt"),
+            Triple("pt-BR", SetType.Drop, "Série 4 de 5, drop set$pt"),
+            Triple("pt-BR", SetType.Failure, "Série 4 de 5, até a falha$pt"),
+        )) {
+            runComposeUiTest {
+                val spoken = if (lang == "en") state(type = type) else state(type = type, previousSpoken = "80 quilos por 6", loadSpoken = "85 quilos")
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun previousIsSpokenWithItsReps() {
+        for ((lang, load, expected) in listOf(
+            Triple("en", "55 kilograms", "55 kilograms by 10"),
+            Triple("pt-BR", "55 quilos", "55 quilos por 10"),
+        )) {
+            runComposeUiTest {
+                var spoken = ""
+                withTheme { ProvideAppLocale(lang) { spoken = spokenLoadByReps(load, 10) } }
+                waitForIdle()
+                assertEquals(expected, spoken)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun previousStaysOnOneLineAtOneThirtyPercent() {
+        val samples = listOf(
+            "55 kg × 10" to SetStatus.Pending,
+            "77.5 kg × 6" to SetStatus.Editing,
+            "187.5 kg × 12" to SetStatus.CompletedRecord,
+        )
+        for (width in listOf(360, 320)) {
+            for ((previous, status) in samples) {
+                runComposeUiTest {
+                    var needed = 0
+                    withTheme(fontScale = 1.3f) {
+                        val measurer = rememberTextMeasurer()
+                        needed = measurer.measure(previous, MTheme.type.numSm, softWrap = false, maxLines = 1).size.width
+                        Box(Modifier.width(width.dp)) { ProvideAppLocale("en") { Row(state(status = status, previous = previous, load = "187.5")) } }
+                    }
+                    waitForIdle()
+                    // The cell is as wide as its text needs, so the value is not broken over two lines.
+                    val cell = onNodeWithTag(SetRowPreviousTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                    assertTrue(cell.width >= needed - 0.5f, "$width dp: \"$previous\" needs $needed px, its cell is ${cell.width}")
+                    val widthPx = with(density) { width.dp.toPx() }
+                    for (tag in listOf(SetRowLoadTag, SetRowRepsTag, SetRowCheckTag)) {
+                        val bounds = onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                        assertTrue(bounds.right <= widthPx + 0.5f, "$width dp: $tag ends at ${bounds.right} beyond $widthPx")
+                    }
+                }
+            }
+        }
     }
 }

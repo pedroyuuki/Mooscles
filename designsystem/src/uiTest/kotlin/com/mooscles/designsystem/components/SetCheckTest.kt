@@ -3,6 +3,7 @@ package com.mooscles.designsystem.components
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
+import com.mooscles.designsystem.tokens.MoosclesMotion
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
@@ -62,5 +64,38 @@ class SetCheckTest {
         onNodeWithTag("c").performClick()
         waitForIdle()
         assertEquals(listOf(HapticEvent.SetCompleted, HapticEvent.SetUnchecked), haptics.events.toList())
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun entranceIsDrawnFromItsStartOnTheFirstFrame() {
+        for (reduced in listOf(false, true)) {
+            runComposeUiTest {
+                mainClock.autoAdvance = false
+                var checked by mutableStateOf(false)
+                withTheme(reducedMotion = reduced) { SetCheck(checked, { checked = it }, setNumber = 1, modifier = Modifier.testTag("c")) }
+                waitForIdle()
+                fun drawn() = onNodeWithTag("c").fetchSemanticsNode().config.let { it[SetCheckScale] to it[SetCheckAlpha] }
+                assertEquals(1f to 1f, drawn())
+                checked = true
+                Snapshot.sendApplyNotifications()
+                mainClock.advanceTimeByFrame()
+                // The first frame with the check already shows the start of the entrance (at most one
+                // animation frame in), never the finished disc that then jumps back.
+                val (scale, alpha) = drawn()
+                if (reduced) {
+                    assertTrue(alpha < 0.5f, "reduced: first frame drawn at alpha $alpha")
+                    assertEquals(1f, scale)
+                } else {
+                    val from = MoosclesMotion().setCheckFrom
+                    assertTrue(scale < (from + 1f) / 2f, "spring: first frame drawn at scale $scale, from $from")
+                    assertEquals(1f, alpha)
+                }
+                mainClock.advanceTimeBy(2_000)
+                val (restScale, restAlpha) = drawn()
+                assertEquals(1f, restScale, 0.001f)
+                assertEquals(1f, restAlpha, 0.001f)
+            }
+        }
     }
 }
