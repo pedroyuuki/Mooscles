@@ -1,5 +1,29 @@
 # Verification — 2026-10-23
 
+## Phase 2 design system and Settings (unreleased, fork branch) — 2026-10-28
+
+Branch `feat/phase2-design-system` in the fork, not in a published release. It adds the `:designsystem` module (tokens, components, fonts, icons, English and Brazilian Portuguese strings, a hidden component gallery and an open-source licenses screen) and rebuilds Settings with it. versionCode 16 and versionName 1.4.5 are unchanged; no Room, DataStore, updater or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-28-phase2-verificacao.md](docs/superpowers/reports/2026-10-28-phase2-verificacao.md).
+
+Verified:
+
+- Host tests: `:app` 377, `:designsystem` 66, all passing. The last green CI host run before the final critique fixes ran 611 tests (`:app`, `:shared` and `:designsystem`).
+- Design system UI and common tests on the Android 15 emulator (Pixel 8 profile): 189 of 189.
+- Contrast: all 50 text and non-text pairs of the spec meet WCAG 2.2 AA in both themes, computed from the tokens by `ContrastTokensTest`; the component combinations changed by the screen critique by `ComponentColorsTest`.
+- Fonts: tabular figures in Barlow Condensed and the Inter weight axis measured on the emulator and the iOS simulator (CI) in the font spike; `TnumRegressionTest` and a HarfBuzz check keep them in CI.
+- Debug APK size (clean build): +1,323,135 bytes over the post-1B base (limit 1.5 MiB); fonts 645,546 bytes compressed (limit 900 KiB); fonts and icons 835,411 bytes (limit 1 MiB).
+- Dependencies: no existing `:app` runtime dependency changed version; Compose Multiplatform 1.12.2 resolves to the Jetpack Compose 1.12.1 the app already used.
+- Upgrade in place on the emulator, from the fork's main (`4f698a8`) to this branch, with an active workout and a running rest timer: the preferences file stayed byte-identical, the workout resumed and the timer kept its deadline.
+- Settings in English and Portuguese, light and dark, at 200% font scale; the gallery's pages in both themes and at 200%; reduced motion turning springs into fades. Screenshots are in the report folder.
+- Fixed along the way: rotating the screen after opening the app from the update notification crashed with "Navigation graph has not been set" (pre-existing).
+
+Not verified:
+
+- A real TalkBack session: the emulator could not be driven with TalkBack, so reading order comes from the accessibility node tree and tests.
+- VoiceOver, haptics and rendering on a real iPhone; haptics on a physical Android phone; contrast under bright gym lighting; spring motion at 60 fps on a reference device.
+- Visual review of the gallery on iOS (there is no iOS app yet); the iOS CI job for the design system tests is pending its final run.
+- Updater and backup messages in Portuguese: they still come in English from the shared view-model until phase 6, as decided.
+- The release path from a published APK signed with the original key to this build.
+
 ## Release 1.4.5 / Build 16
 
 This release adds locally saved routine folders, fixes Train navigation after

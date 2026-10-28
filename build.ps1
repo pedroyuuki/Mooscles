@@ -1,4 +1,4 @@
-param([string[]]$Tasks = @(':app:testDebugUnitTest', ':shared:testAndroidHostTest', ':app:lintDebug', ':app:assembleDebug', ':app:assembleDebugAndroidTest'))
+param([string[]]$Tasks = @(':app:testDebugUnitTest', ':shared:testAndroidHostTest', ':designsystem:testAndroidHostTest', ':app:lintDebug', ':app:assembleDebug', ':app:assembleDebugAndroidTest'))
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
 # Windows PowerShell 5.x defines neither $IsLinux nor $IsMacOS and only runs on Windows.

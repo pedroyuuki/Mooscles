@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.mooscles.designsystem.theme.MoosclesDesignTheme
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF006B50), onPrimary = Color.White,
@@ -62,5 +63,9 @@ fun MoosclesTheme(theme: String, content: @Composable () -> Unit) {
             }
         }
     }
-    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = AppTypography, content = content)
+    // The Material theme stays exactly as before for the existing screens; the design system
+    // tokens (MTheme) are provided inside it for the new components.
+    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = AppTypography) {
+        MoosclesDesignTheme(dark = dark) { content() }
+    }
 }

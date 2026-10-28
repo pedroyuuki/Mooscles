@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import com.mooscles.ui.MoosclesTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
@@ -92,7 +93,7 @@ class DataSectionHostTest {
     fun messageIsShownUntilCleared() {
         val actions = CapturedDataActions()
         val state = mutableStateOf(BackupUi(message = "Exported 2 workouts, 1 routine and 0 custom exercises"))
-        compose.setContent { MaterialTheme { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state.value, false, actions) } } }
+        compose.setContent { MoosclesTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state.value, false, actions) } } }
         compose.onNodeWithText("Exported 2 workouts, 1 routine and 0 custom exercises").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("data-message-dismiss").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf("clear"), actions.calls) }
@@ -107,7 +108,7 @@ class DataSectionHostTest {
             androidx.compose.runtime.CompositionLocalProvider(
                 androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
             ) {
-                MaterialTheme {
+                MoosclesTheme("light") {
                     Column(Modifier.width(320.dp).verticalScroll(rememberScrollState())) {
                         DataSection(BackupUi(), false, CapturedDataActions())
                     }
@@ -129,7 +130,7 @@ class DataSectionHostTest {
     @Test
     fun progressLabelNamesEachOperation() {
         val state = mutableStateOf(BackupUi(busy = true, working = "Exporting…"))
-        compose.setContent { MaterialTheme { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state.value, false, CapturedDataActions()) } } }
+        compose.setContent { MoosclesTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state.value, false, CapturedDataActions()) } } }
         listOf("Exporting…", "Checking backup…", "Importing…").forEach { label ->
             compose.runOnIdle { state.value = BackupUi(busy = true, working = label) }
             compose.onNodeWithText(label).performScrollTo().assertIsDisplayed()
@@ -186,7 +187,7 @@ class DataSectionHostTest {
     }
 
     private fun show(state: BackupUi, actions: DataActions = CapturedDataActions(), workoutActive: Boolean = false) {
-        compose.setContent { MaterialTheme { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state, workoutActive, actions) } } }
+        compose.setContent { MoosclesTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) { DataSection(state, workoutActive, actions) } } }
     }
 
     private class CapturedDataActions : DataActions {
