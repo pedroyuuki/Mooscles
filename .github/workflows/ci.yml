@@ -106,6 +106,8 @@ jobs:
           if ($LASTEXITCODE -ne 1) { throw "The guard exited $LASTEXITCODE on the violations fixture; expected 1." }
           $lines = @($found | Where-Object { $_ -match 'violations\.kt\.txt:\d+:' })
           if ($lines.Count -ne 8) { throw "The guard reported $($lines.Count) violating lines; expected 8." }
+          # The expected exit code 1 above would otherwise become the step's exit code.
+          exit 0
 
       # The exported JSON is a contract with installed databases. Room writes shared/schemas
       # only when a schema changed (otherwise the copy task is NO-SOURCE), so a build that
