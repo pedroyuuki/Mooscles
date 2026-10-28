@@ -12,7 +12,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertTouchHeightIsAtLeast
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -39,7 +38,9 @@ class MButtonTest {
                 runComposeUiTest {
                     withTheme(dark = dark) { MButton("Save", onClick = {}, size = size, modifier = Modifier.testTag("b")) }
                     waitForIdle()
-                    onNodeWithTag("b").assertTouchHeightIsAtLeast(MoosclesTargets().min)
+                    val touch = onNodeWithTag("b").fetchSemanticsNode().touchBoundsInRoot
+                    val minPx = with(density) { MoosclesTargets().min.toPx() }
+                    assertTrue(touch.height >= minPx - 0.5f, "touch height ${touch.height} < $minPx")
                     if (size == MButtonSize.L) onNodeWithTag("b").assertHeightIsEqualTo(MoosclesSizes().buttonL)
                 }
             }
