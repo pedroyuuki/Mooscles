@@ -743,3 +743,22 @@ As marcadas com **(minha escolha)** são as que a spec deixou em aberto ou que e
 - [ ] **Step 2:** Atualizar os documentos da lista.
 - [ ] **Step 3: Verificar.** Os links do ROADMAP e do relatório abrem (`grep -o "](\([^)]*\))" … | xargs -I{} test -e …`, ou abrindo à mão). O último run do CI da branch está verde.
 - [ ] **Step 4:** Rodar o `compat-reviewer` na branch inteira (`git diff origin/main...HEAD`; esperado `SEGURO`) e o `/code-review`. Commit `docs: phase 2 design system verified` e push. Abrir o PR para a `main` do fork com o resumo do relatório. O merge fica liberado com o CI verde e o `/code-review` sem achados de prioridade alta.
+
+## Notas
+
+- **2026-10-28, decisões da varredura prévia.** Antes da Task 2, uma varredura só de leitura cruzou o plano com a spec e com o código pós-1B e encontrou 37 pontos (F1–F38; o F35 não foi usado). Cada um tem uma decisão, e cada task segue as que levam o seu número. A tabela fica no workspace de execução, fora do git. As que mudam o texto acima:
+  - **F1:** na Task 3, o `check-design-tokens.ps1` verifica só `components/`, `gallery/` e `licenses/` do design system. A Task 15 acrescenta os arquivos do `:app`.
+  - **F2:** o orçamento continua o da decisão 15: fontes até 900 KiB e o APK debug inteiro crescendo até 1,5 MiB. Além disso, fontes e ícones juntos ficam em até 1 MiB, que é o número da spec. A Task 17 registra isso na spec.
+  - **F3:** a Task 3 cria o `strings_gallery.xml`.
+  - **F5:** um só `accent.solid` por tela. Na tela piloto, Export e Import são `Secondary`.
+  - **F10:** o iOS do design system ganha um resumo e um mínimo próprios (`MIN_DS_IOS_TESTS`). A checagem de 6 testes de entrada do `:shared` não muda.
+  - **F17:** o script também reprova o uso de `Primitives.` fora de `tokens/`.
+  - **F23:** o `--lock` do `check_fonts.py` lê linhas `<arquivo> <url> <sha256>`.
+  - **F26:** quem produz as mensagens do updater e do backup é o `MoosclesViewModel`, no `:shared`.
+  - **F28:** a Task 17 cria a seção "Notas de implementação" na spec.
+  - **F30:** `Contrast.ratio` exige cores opacas.
+  - **F33:** `-Xexpect-actual-classes` no `designsystem/build.gradle.kts`.
+  - **F34:** `actions/setup-python` fixada por SHA, com versões exatas no `pip`.
+- **2026-10-28, resultado do spike ([relatório](../reports/2026-10-28-phase2-tnum-spike.md)):**
+  - **Decisão A:** as fontes do `google/fonts` no commit `9862abc`, sem modificação.
+  - **Testes de UI:** o `runComposeUiTest` está obsoleto no CMP 1.12.2. Os testes de UI da Task 2 em diante usam `androidx.compose.ui.test.v2.runComposeUiTest`. Ele enfileira as tarefas em vez de rodá-las na hora, então alguns testes podem precisar de espera explícita.
