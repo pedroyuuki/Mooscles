@@ -1,15 +1,19 @@
 package com.mooscles.designsystem.licenses
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.mooscles.designsystem.components.MText
@@ -24,9 +28,13 @@ import org.jetbrains.compose.resources.stringResource
 /** The tag of the screen's scrolling content. */
 const val LicensesContentTag = "licenses-content"
 
+/** The tag of a divider drawn for a rule line ("-----") of a license file. */
+const val LicenseRuleTag = "license-rule"
+
 /**
  * A bundled work and its license. The names are proper names, the same in every language,
- * and the text is the license file shipped in `files/licenses/`, unchanged.
+ * and the text is the license file shipped in `files/licenses/`, with its words unchanged; the
+ * screen only reflows its hard-wrapped lines (see [licenseBlocks]).
  */
 private class BundledLicense(val name: String, val license: String, val path: String)
 
@@ -66,12 +74,24 @@ fun LicensesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(horizontal = space.s4),
                 )
                 texts[entry.path]?.let { text ->
-                    MText(
-                        text,
-                        MTheme.type.bodyMd,
-                        color = MTheme.colors.textSecondary,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = space.s4, vertical = space.s3),
-                    )
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = space.s4, vertical = space.s3),
+                        verticalArrangement = Arrangement.spacedBy(space.s3),
+                    ) {
+                        remember(text) { licenseBlocks(text) }.forEach { block ->
+                            when (block) {
+                                is LicenseBlock.Paragraph ->
+                                    MText(block.text, MTheme.type.bodyMd, color = MTheme.colors.textSecondary, modifier = Modifier.fillMaxWidth())
+                                LicenseBlock.Rule -> Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(MTheme.sizes.border)
+                                        .background(MTheme.colors.borderSubtle)
+                                        .testTag(LicenseRuleTag),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
