@@ -102,9 +102,9 @@ Girar a tela depois de abrir o app pela notificação do updater derrubava o app
 ## CI
 
 - Host verde até `e119c35` (611 testes). As duas execuções seguintes do `host` caíram no `WorkoutCalculationsBatchTimingTest.activeWorkoutRepsPrsOnLargeHistoryAreFast` do `:shared`, um limite de tempo de relógio que já falhou antes em runners compartilhados e que esta fase não toca (ver as pendências da [v1.5.0](../releases/v1.5.0.md)).
-- O job `ios` não roda até o fim desde `fe5d211` (Task 3): ele fica na fila de um runner `macos-26` e é cancelado pela regra de concorrência no push seguinte. Por isso os testes do design system no simulador (186 pelo `MIN_DS_IOS_TESTS`, entre eles o `GallerySmokeTest`, que é a "galeria no iOS" da spec) ainda não têm uma execução verde. Fica pendente da execução final do CI, antes do merge:
-
-CI ios: <pending>
+- O job `ios` ficou sem rodar até o fim entre `fe5d211` (Task 3) e o fim da fase: na fila de um runner `macos-26`, ele era cancelado pela regra de concorrência no push seguinte ou pelo próprio GitHub, por falta de capacidade de runners macOS arm64 ("The job was not acquired by Runner of type hosted even after multiple attempts").
+- A primeira execução completa (40770015169, em `d6de221`) passou 188 de 189 testes do design system no simulador e achou um bug que o Android escondia: na linha de série, a 200%, o "187.5" ficava cortado no iOS. O iOS escala o texto de forma linear, e o Android, abaixo de 2x, não. Corrigido em `372a12f` (a linha mede a largura de que cada número precisa), com um teste a 2,01x no Android que reproduz o caso.
+- **CI ios: verde em 2026-10-28, run [40782682160](https://github.com/pedroyuuki/Mooscles/actions/runs/40782682160) em `372a12f`:** `:shared` 162/162 e `:designsystem` 207/207 no `iosSimulatorArm64Test`, incluindo o `GallerySmokeTest` (a galeria no iOS). Na mesma execução, o `host` passou com 624 testes (mínimo 600) e o `release-script` nas quatro combinações.
 
 ## O que **não** foi verificado
 
