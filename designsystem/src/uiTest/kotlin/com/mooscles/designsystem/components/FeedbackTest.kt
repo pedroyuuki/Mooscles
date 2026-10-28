@@ -8,13 +8,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.withTheme
+import com.mooscles.designsystem.tokens.MoosclesSizes
+import com.mooscles.designsystem.tokens.MoosclesTargets
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlin.test.assertEquals
 
 class FeedbackTest {
@@ -28,7 +33,7 @@ class FeedbackTest {
                 val config = onNodeWithTag("banner").fetchSemanticsNode().config
                 assertEquals(LiveRegionMode.Polite, config.getOrNull(SemanticsProperties.LiveRegion))
                 onNodeWithTag(ErrorBannerIconTag, useUnmergedTree = true).assertExists()
-                onNodeWithText("Could not save").assertExists()
+                onNodeWithText("Error: Could not save").assertExists()
             }
         }
     }
@@ -50,12 +55,40 @@ class FeedbackTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
+    fun errorBannerActionIsClickableAndHasAFullTouchTarget() = runComposeUiTest {
+        var retried = 0
+        withTheme { ErrorBanner("Could not save", actionLabel = "Retry", onAction = { retried++ }) }
+        waitForIdle()
+        val touch = onNodeWithText("Retry").fetchSemanticsNode().let { node ->
+            // The button node is the clickable ancestor (or the text itself when merged).
+            onAllNodes(hasClickAction()).onFirst().fetchSemanticsNode().touchBoundsInRoot
+        }
+        val minPx = with(density) { MoosclesTargets().min.toPx() }
+        assertTrue(touch.height >= minPx - 0.5f, "touch height ${touch.height} < $minPx")
+        onAllNodes(hasClickAction()).onFirst().performClick()
+        assertEquals(1, retried)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun skeletonPulsesWithoutReducedMotion() = runComposeUiTest {
+        mainClock.autoAdvance = false
+        withTheme { Skeleton(Modifier.testTag("s")) }
+        waitForIdle()
+        mainClock.advanceTimeBy(MoosclesTiming().skeletonPulse / 2)
+        val alpha = onNodeWithTag("s").fetchSemanticsNode().config.getOrNull(SkeletonAlpha)
+        assertTrue(alpha != null && alpha < 1f, "alpha $alpha did not pulse")
+        assertTrue(alpha >= MoosclesSizes().skeletonMinAlpha - 0.01f)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
     fun skeletonIsStillWithReducedMotion() = runComposeUiTest {
         mainClock.autoAdvance = false
         withTheme(reducedMotion = true) { Skeleton(Modifier.testTag("s")) }
         waitForIdle()
         val before = onNodeWithTag("s").fetchSemanticsNode().config.getOrNull(SkeletonAlpha)
-        mainClock.advanceTimeBy(com.mooscles.designsystem.tokens.MoosclesTiming().skeletonPulse)
+        mainClock.advanceTimeBy(MoosclesTiming().skeletonPulse)
         val after = onNodeWithTag("s").fetchSemanticsNode().config.getOrNull(SkeletonAlpha)
         assertEquals(before, after)
         assertEquals(1f, after)

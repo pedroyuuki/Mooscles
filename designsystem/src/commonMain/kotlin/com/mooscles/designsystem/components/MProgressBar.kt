@@ -18,6 +18,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.unit.LayoutDirection
+import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_loading
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +54,7 @@ fun MProgressBar(
         null
     }
     val fill = colors.accentSolid
+    val description = contentDescription ?: if (progress == null) stringResource(Res.string.ds_loading) else null
     Box(
         modifier
             .fillMaxWidth()
@@ -57,7 +62,7 @@ fun MProgressBar(
             .clip(MTheme.radius.full)
             .background(colors.bgInset)
             .semantics {
-                if (contentDescription != null) this.contentDescription = contentDescription
+                if (description != null) this.contentDescription = description
                 progressBarRangeInfo = if (progress == null) {
                     ProgressBarRangeInfo.Indeterminate
                 } else {
@@ -66,13 +71,18 @@ fun MProgressBar(
             }
             .drawBehind {
                 val width = size.width
+                val rtl = layoutDirection == LayoutDirection.Rtl
+                // Offsets are measured from the start edge: mirrored in right-to-left.
+                fun segment(startOffset: Float, length: Float) {
+                    val left = if (rtl) width - startOffset - length else startOffset
+                    drawRect(fill, topLeft = Offset(left, 0f), size = Size(length, size.height))
+                }
                 if (progress != null) {
-                    drawRect(fill, size = Size(width * progress.coerceIn(0f, 1f), size.height))
+                    segment(0f, width * progress.coerceIn(0f, 1f))
                 } else {
-                    val segment = width * fraction
+                    val length = width * fraction
                     // The segment slides from fully before the track to fully past it.
-                    val start = if (phase == null) 0f else -segment + (width + segment) * phase.value
-                    drawRect(fill, topLeft = Offset(start, 0f), size = Size(segment, size.height))
+                    segment(if (phase == null) 0f else -length + (width + length) * phase.value, length)
                 }
             },
     )

@@ -15,6 +15,7 @@ import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MTextFieldTest {
@@ -33,6 +34,25 @@ class MTextFieldTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
+    fun typedValueIsTheEditableTextAndErrorIsReported() = runComposeUiTest {
+        withTheme { MTextField(TextFieldValue("Squat"), {}, "Name", error = "Enter a name") }
+        waitForIdle()
+        val config = onNode(hasSetTextAction()).fetchSemanticsNode().config
+        assertEquals("Squat", config.getOrNull(SemanticsProperties.EditableText)?.text)
+        assertEquals("Error: Enter a name", config.getOrNull(SemanticsProperties.Error))
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun focusCallbackDoesNotFireOnFirstComposition() = runComposeUiTest {
+        val calls = mutableListOf<Boolean>()
+        withTheme { MTextField(TextFieldValue(""), {}, "Name", onFocusChange = { calls += it }) }
+        waitForIdle()
+        assertEquals(emptyList(), calls)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
     fun disabledIsNotEditable() = runComposeUiTest {
         withTheme { MTextField(TextFieldValue("x"), {}, "Name", enabled = false) }
         waitForIdle()
@@ -45,8 +65,10 @@ class MTextFieldTest {
         withTheme { MTextField(TextFieldValue(""), {}, "Name", help = "Shown in your library") }
         waitForIdle()
         val config = onNode(hasSetTextAction()).fetchSemanticsNode().config
-        assertTrue(config.getOrNull(SemanticsProperties.ContentDescription).orEmpty().contains("Name"))
-        assertEquals("Shown in your library", config.getOrNull(SemanticsProperties.StateDescription))
+        val texts = config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
+        assertTrue("Name" in texts && "Shown in your library" in texts, "texts: $texts")
+        assertNull(config.getOrNull(SemanticsProperties.ContentDescription))
+        assertNull(config.getOrNull(SemanticsProperties.Error))
     }
 
     @OptIn(ExperimentalTestApi::class)

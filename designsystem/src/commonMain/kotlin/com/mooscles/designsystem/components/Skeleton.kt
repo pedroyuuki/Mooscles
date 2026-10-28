@@ -9,9 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
@@ -23,7 +24,7 @@ val SkeletonAlpha = SemanticsPropertyKey<Float>("SkeletonAlpha")
 private var SemanticsPropertyReceiver.skeletonAlpha by SkeletonAlpha
 
 /**
- * A loading placeholder on `bg.inset`. Its opacity pulses over `timing.skeletonPulse`; with
+ * A loading placeholder block of `bg.raised`. Its opacity pulses over `timing.skeletonPulse`; with
  * reduced motion it stays still. Give it a size with [modifier].
  */
 @Composable
@@ -32,8 +33,8 @@ fun Skeleton(
     shape: Shape = RoundedCornerShape(MTheme.radius.xs),
 ) {
     val low = MTheme.sizes.skeletonMinAlpha
-    val alpha = if (MTheme.reducedMotion) {
-        1f
+    val alpha: State<Float> = if (MTheme.reducedMotion) {
+        mutableStateOf(1f)
     } else {
         rememberInfiniteTransition(label = "skeleton").animateFloat(
             initialValue = 1f,
@@ -43,12 +44,12 @@ fun Skeleton(
                 RepeatMode.Reverse,
             ),
             label = "skeletonAlpha",
-        ).value
+        )
     }
     Box(
         modifier
-            .semantics { skeletonAlpha = alpha }
-            .alpha(alpha)
-            .background(MTheme.colors.bgInset, shape),
+            .semantics { skeletonAlpha = alpha.value }
+            .graphicsLayer { this.alpha = alpha.value }
+            .background(MTheme.colors.bgRaised, shape),
     )
 }

@@ -18,13 +18,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import com.mooscles.designsystem.icons.MIcon
@@ -44,7 +45,7 @@ const val TextFieldErrorIconTag = "text-field-error-icon"
 /**
  * A text field. The border is `border.strong`, or 2 dp `danger.text` with an error, which is
  * always shown as the `CircleAlert` icon plus the message so color is never the only signal.
- * The label sits above the box and is read with the help (or error) text by the editable node.
+ * The label, the help (or error) text and the typed value form one merged accessibility node, and an error is also reported through `error` semantics.
  * The box is at least `numericFieldHeight` tall and grows with the text, so it never clips.
  */
 @Composable
@@ -64,15 +65,25 @@ fun MTextField(
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
     val currentOnFocusChange by rememberUpdatedState(onFocusChange)
-    LaunchedEffect(focused) { currentOnFocusChange(focused) }
+    var reported by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) {
+        if (focused != reported) {
+            reported = focused
+            currentOnFocusChange(focused)
+        }
+    }
     val shape = RoundedCornerShape(MTheme.radius.md)
     val hasError = error != null
     val borderWidth = if (hasError) MTheme.sizes.borderError else MTheme.sizes.border
     val borderColor = if (hasError) colors.dangerText else colors.borderStrong
     val errorPrefix = stringResource(Res.string.ds_error_prefix)
-    val described = error?.let { "$errorPrefix: $it" } ?: help
 
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
+    // One merged node: the typed value (editable text), the label and the help or error text,
+    // so a screen reader reads them together; a validation error is also set as `error`.
+    Column(
+        modifier.semantics(mergeDescendants = true) { if (error != null) error("$errorPrefix: $error") },
+        verticalArrangement = Arrangement.spacedBy(MTheme.space.s1),
+    ) {
         MText(label, MTheme.type.labelMd, color = if (enabled) colors.textSecondary else colors.textDisabled)
         BasicTextField(
             value = value,
@@ -82,10 +93,6 @@ fun MTextField(
             keyboardOptions = keyboardOptions,
             interactionSource = source,
             cursorBrush = SolidColor(colors.accentText),
-            modifier = Modifier.semantics {
-                contentDescription = label
-                if (described != null) stateDescription = described
-            },
             decorationBox = { inner ->
                 Box(
                     Modifier

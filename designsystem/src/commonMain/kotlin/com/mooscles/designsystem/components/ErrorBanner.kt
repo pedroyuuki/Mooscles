@@ -16,12 +16,15 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_error_prefix
+import org.jetbrains.compose.resources.stringResource
 import com.mooscles.designsystem.theme.MTheme
 
 /** The tag of the banner's icon. */
 const val ErrorBannerIconTag = "error-banner-icon"
 
-/** An error notice on `danger.subtle` with the `CircleAlert` icon, announced politely when it appears. */
+/** An error notice on `danger.subtle` with the `CircleAlert` icon (decorative) and an "Error:" prefix in the text, announced politely when it appears. */
 @Composable
 fun ErrorBanner(
     message: String,
@@ -30,6 +33,7 @@ fun ErrorBanner(
     onAction: (() -> Unit)? = null,
 ) {
     val colors = MTheme.colors
+    val prefix = stringResource(Res.string.ds_error_prefix)
     Row(
         modifier
             .fillMaxWidth()
@@ -47,7 +51,7 @@ fun ErrorBanner(
             modifier = Modifier.testTag(ErrorBannerIconTag),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
-            MText(message, MTheme.type.bodyMd, color = colors.textPrimary)
+            MText("$prefix: $message", MTheme.type.bodyMd, color = colors.textPrimary)
             if (actionLabel != null && onAction != null) {
                 MButton(actionLabel, onClick = onAction, variant = MButtonVariant.Text, size = MButtonSize.S)
             }
