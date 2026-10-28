@@ -89,3 +89,7 @@ O produto vai para o iOS e passa por um redesign completo. Se o redesign viesse 
 - Como dividir o `AppViewModel`: a lógica e o estado no código comum, e o que depende de `Application`, `Trace` ou `Build` entrando por interfaces ou por `expect/actual`.
 - Onde ficam os helpers que substituem `ulp`/`format`/`Normalizer`, desde que cada um tenha um teste de equivalência contra a implementação da JVM.
 - A ordem dos arquivos movidos, desde que cada commit compile e mantenha os testes verdes.
+
+## Notas
+
+- **2026-10-27, etapa 1A, tamanho do APK.** O APK debug passou do orçamento de "cerca de 1 MB". Medido com os dois APKs empacotados do zero (sem as sobras do empacotamento incremental do AGP), ele foi de 19.927.075 para 21.796.480 bytes: **+1,78 MiB (+9,4%)**. A Task 1 tinha medido +1,32 MiB contra um APK da `main` que ainda carregava ~0,47 MB de espaço morto (20.397.633 bytes) do empacotamento incremental. Quase todo o crescimento é dex das bibliotecas: o Compose UI 1.12 passou a depender de `androidx.window`, e o core 1.19, as coroutines 1.11 e os artefatos KMP novos somam o resto. O build R8 (`assemblePerformance`) cresceu só ~137 KiB. **Decisão do controlador: aceito**, porque o crescimento vem do Compose atual, que a fase 3 precisa de qualquer jeito. O usuário baixa ~1,9 MB a mais. A decisão foi tomada com o número de +1,32 MiB; o número corrigido está no [relatório da 1A](../reports/2026-10-27-phase1a-verificacao.md) para ser confirmado.
