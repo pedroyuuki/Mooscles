@@ -65,7 +65,6 @@ fun WorkoutInputsPage() {
             onValueChange = { stepped = it },
             step = STEP,
             min = 0.0,
-            display = MoosclesNumbers.localize(stepped.toString(), locale),
             decreaseLabel = stringResource(Res.string.ds_stepper_decrease, name, step),
             increaseLabel = stringResource(Res.string.ds_stepper_increase, name, step),
         )

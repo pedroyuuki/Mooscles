@@ -97,6 +97,5 @@
     <string name="gallery_sample_exercise_next">Incline dumbbell press</string>
     <string name="gallery_sample_pr_detail">85 kg × 6</string>
     <string name="gallery_finish_rest">Finish rest</string>
-    <string name="gallery_sample_previous_spoken">%1$s for %2$d</string>
     <string name="gallery_sample_reps_error">Min. 1</string>
 </resources>

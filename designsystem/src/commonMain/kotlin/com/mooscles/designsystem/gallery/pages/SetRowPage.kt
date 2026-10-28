@@ -15,12 +15,12 @@ import com.mooscles.designsystem.components.SetRow
 import com.mooscles.designsystem.components.SetRowState
 import com.mooscles.designsystem.components.SetStatus
 import com.mooscles.designsystem.components.SetType
+import com.mooscles.designsystem.components.spokenLoadByReps
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_unit_kg_spoken
-import com.mooscles.designsystem.resources.gallery_sample_previous_spoken
 import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
@@ -35,9 +35,7 @@ private fun SetSample.state(index: Int, locale: NumberLocale, spoken: (String) -
     index = index,
     total = TOTAL,
     previous = previousLoad?.let { MoosclesNumbers.setText(it, "kg", reps, locale) },
-    previousSpoken = previousLoad?.let {
-        stringResource(Res.string.gallery_sample_previous_spoken, spoken(MoosclesNumbers.localize(it, locale)), reps)
-    },
+    previousSpoken = previousLoad?.let { spokenLoadByReps(spoken(MoosclesNumbers.localize(it, locale)), reps) },
     load = MoosclesNumbers.localize(load, locale),
     loadSpoken = spoken(MoosclesNumbers.localize(load, locale)),
     reps = reps,

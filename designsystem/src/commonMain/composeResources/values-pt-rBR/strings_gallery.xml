@@ -97,6 +97,5 @@
     <string name="gallery_sample_exercise_next">Supino inclinado com halteres</string>
     <string name="gallery_sample_pr_detail">85 kg × 6</string>
     <string name="gallery_finish_rest">Terminar descanso</string>
-    <string name="gallery_sample_previous_spoken">%1$s por %2$d</string>
     <string name="gallery_sample_reps_error">Mín. 1</string>
 </resources>

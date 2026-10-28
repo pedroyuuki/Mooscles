@@ -24,7 +24,7 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_unit_kg_spoken
 import com.mooscles.designsystem.resources.gallery_controls_hide
 import com.mooscles.designsystem.resources.gallery_controls_show
-import com.mooscles.designsystem.resources.gallery_sample_previous_spoken
+import com.mooscles.designsystem.resources.ds_load_by_reps_spoken
 import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
@@ -277,7 +277,7 @@ class GallerySmokeTest {
     fun setRowSampleReadsThePreviousSetWithItsReps() = runComposeUiTest {
         withTheme { GalleryPage.SetRow.Content() }
         waitForIdle()
-        val previous = getString(Res.string.gallery_sample_previous_spoken, getString(Res.string.ds_unit_kg_spoken, "55"), 10)
+        val previous = getString(Res.string.ds_load_by_reps_spoken, getString(Res.string.ds_unit_kg_spoken, "55"), 10)
         onNode(hasContentDescription(previous, substring = true)).assertExists()
     }
 }

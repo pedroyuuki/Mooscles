@@ -169,20 +169,23 @@ private fun Radii() {
 private fun Elevations() {
     val e = MTheme.elevation
     Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s4)) {
-        ElevationBox("e1", e.e1, MTheme.colors.bgSurface)
+        // A card at e1 also has a border.subtle outline, so the sample has it too: on a light
+        // page the soft shadow alone barely separates it from the background.
+        ElevationBox("e1", e.e1, MTheme.colors.bgSurface, outline = MTheme.colors.borderSubtle)
         ElevationBox("e2", e.e2, MTheme.colors.bgRaised)
         ElevationBox("e3", e.e3, MTheme.colors.bgOverlay)
     }
 }
 
 @Composable
-private fun ElevationBox(name: String, spec: ElevationSpec, surface: Color) {
+private fun ElevationBox(name: String, spec: ElevationSpec, surface: Color, outline: Color? = null) {
     val shape = RoundedCornerShape(MTheme.radius.md)
     val hairline = spec.hairlineDark
     var modifier = Modifier.size(MTheme.sizes.media)
     modifier = if (MTheme.isDark) modifier else modifier.shadow(spec.shadowLight, shape, spotColor = MTheme.colors.shadow)
     modifier = modifier.background(surface, shape)
-    if (MTheme.isDark && hairline != null) modifier = modifier.border(MTheme.sizes.border, hairline, shape)
+    val edge = if (MTheme.isDark) hairline ?: outline else outline
+    if (edge != null) modifier = modifier.border(MTheme.sizes.border, edge, shape)
     Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Box(modifier)
         Caption(name)

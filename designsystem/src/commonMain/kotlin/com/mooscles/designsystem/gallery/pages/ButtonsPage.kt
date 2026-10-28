@@ -71,8 +71,7 @@ fun ButtonsPage() {
             )
         }
         PageHeader(stringResource(Res.string.gallery_section_icon_buttons))
-        val styles = MIconButtonStyle.entries.joinToString { it.name }
-        Sample("style = $styles; size = iconButton56; enabled = false; toggled") {
+        Sample("${MIconButtonStyle.entries.joinToString { it.name }}, 56, disabled, toggled") {
             // Centered on one line: the 56 dp button must not sit lower than the 48 dp ones.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
