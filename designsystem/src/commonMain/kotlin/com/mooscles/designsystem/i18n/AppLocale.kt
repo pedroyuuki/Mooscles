@@ -2,6 +2,7 @@ package com.mooscles.designsystem.i18n
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.key
 
@@ -17,10 +18,15 @@ expect object LocalAppLocale {
 
     @Composable
     infix fun provides(value: String?): ProvidedValue<*>
+
+    /** Puts the system language back. A no-op when no override is applied. */
+    fun restore()
 }
 
 @Composable
 fun ProvideAppLocale(tag: String?, content: @Composable () -> Unit) {
+    // Keyed on Unit: a tag change must not undo the language just applied, only leaving does.
+    DisposableEffect(Unit) { onDispose { LocalAppLocale.restore() } }
     CompositionLocalProvider(LocalAppLocale provides tag) {
         // A new key rebuilds the content, so every string is read again in the new language.
         key(tag) { content() }
