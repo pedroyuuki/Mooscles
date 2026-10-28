@@ -6,9 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mooscles.domain.RestDuration
-import java.util.UUID
-
-fun newId(): String = UUID.randomUUID().toString()
+import com.mooscles.domain.currentTimeMillis
 
 enum class MuscleGroup(val label: String) {
     CHEST("Chest"), BACK("Back"), SHOULDERS("Shoulders"), BICEPS("Biceps"),
@@ -104,7 +102,7 @@ data class RoutineSet(
 data class Workout(
     @PrimaryKey val id: String = newId(),
     val name: String,
-    val startedAt: Long = System.currentTimeMillis(),
+    val startedAt: Long = currentTimeMillis(),
     val endedAt: Long? = null,
     val status: WorkoutStatus = WorkoutStatus.ACTIVE,
     /** Stable origin only; deleting or renaming a routine must never alter this snapshot. */

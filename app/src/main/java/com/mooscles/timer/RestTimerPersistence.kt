@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mooscles.domain.RestDuration
+import com.mooscles.domain.currentTimeMillis
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.map
 /** Atomic timer transitions; the persisted deadline, rather than a UI countdown, is authoritative. */
 class RestTimerPersistence(
     private val store: DataStore<Preferences>,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = ::currentTimeMillis
 ) {
     private val tokenKey = longPreferencesKey("timer_token")
     private val nameKey = stringPreferencesKey("timer_name")

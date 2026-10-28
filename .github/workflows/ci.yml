@@ -1,5 +1,6 @@
-# Host tests, lint and a debug build on every push and pull request, plus a check
-# that the release script still works on Linux and Windows, run when tools/,
+# Host tests, lint and a debug build on every push and pull request, the iOS
+# targets of :shared compiled and its common tests run on the iOS simulator, plus
+# a check that the release script still works on Linux and Windows, run when tools/,
 # build.ps1, app/build.gradle.kts (version and signing inputs) or a workflow
 # changes, and on every manual run.
 # Nothing here is publishable: the CI APK is signed
@@ -59,13 +60,21 @@ jobs:
 
       # No test retry: a flaky test must fail the job so it gets looked at.
       - name: Test, lint and assemble
-        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --console=plain --continue
+        # :shared registers no lint report task of its own (AGP 9.3.3 KMP library).
+        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
       - name: Summarize host tests
         if: ${{ !cancelled() }}
         shell: pwsh
+        env:
+          # The host total before :shared existed. Moving tests between the two
+          # modules must never lose any, so the sum may not drop below it.
+          MIN_HOST_TESTS: 487
         run: |
-          $files = @(Get-ChildItem -Path 'app/build/test-results/testDebugUnitTest' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $files = @(
+              'app/build/test-results/testDebugUnitTest',
+              'shared/build/test-results/testAndroidHostTest'
+          ) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.xml' -ErrorAction SilentlyContinue }
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
           foreach ($file in $files) {
               $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
@@ -75,12 +84,14 @@ jobs:
                   if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
               }
           }
+          $minimum = [int]$env:MIN_HOST_TESTS
           $lines = @(
               '### Host tests',
-              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped."
+              "$tests tests in $($files.Count) classes (:app and :shared): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
           ) + ($failed | ForEach-Object { "- ``$_``" })
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if ($tests -lt $minimum) { throw "Only $tests host tests ran; at least $minimum are expected." }
 
       - name: Upload test and lint reports
         if: ${{ failure() }}
@@ -90,6 +101,8 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
+            shared/build/reports/
+            shared/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -103,6 +116,85 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
           retention-days: 7
+
+  # Compiles the iOS device target of :shared and runs its common tests on the
+  # iOS simulator. Only a Mac can build Kotlin/Native Apple targets.
+  ios:
+    name: iOS compile and simulator tests
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Xcode 26.4 is the version the Kotlin 2.4.20-2.4.21 compatibility table
+      # lists. On the macos-26 image Xcode_26.4.app links to Xcode_26.4.1.app.
+      - name: Select Xcode 26.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.4.app
+          xcodebuild -version
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Gradle configures :app as well, so the Android SDK must be complete here too.
+      - name: Install Android SDK packages
+        shell: pwsh
+        run: |
+          $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager'
+          @('y') * 10 | & $sdkmanager --install 'platforms;android-37.0' 'build-tools;36.0.0' | Select-Object -Last 3
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      # Kotlin/Native keeps its compiler and the Apple platform libraries in
+      # ~/.konan, outside the Gradle cache.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Compile for iOS and run the simulator tests
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --console=plain --continue
+
+      - name: Summarize iOS simulator tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          foreach ($file in $files) {
+              $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
+              $tests += [int]$suite.tests; $failures += [int]$suite.failures
+              $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
+              foreach ($case in @($suite.testcase)) {
+                  if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+              }
+          }
+          $lines = @(
+              '### iOS simulator tests',
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped."
+          ) + ($failed | ForEach-Object { "- ``$_``" })
+          $lines | Write-Host
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
+
+      - name: Upload iOS reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-reports
+          path: |
+            shared/build/reports/
+            shared/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # Decides whether the release-script matrix is worth running. It fails open:
   # a manual run, a missing or unknown base commit, a failed diff or a failure

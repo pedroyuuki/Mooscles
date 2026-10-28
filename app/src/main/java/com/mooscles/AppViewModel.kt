@@ -16,6 +16,7 @@ import com.mooscles.backup.BackupFile
 import com.mooscles.backup.BackupTexts
 import com.mooscles.backup.ImportPlanner
 import com.mooscles.data.*
+import com.mooscles.domain.currentIsoInstant
 import com.mooscles.ui.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -28,7 +29,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
 class AppViewModel(application: Application) : AndroidViewModel(application), MoosclesActions {
@@ -262,7 +262,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Mo
         val preferences = app.preferences.snapshot().toBackup()
         val about = BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android")
         val file = try {
-            val file = repo.exportBackup(preferences, about, Instant.now().toString())
+            val file = repo.exportBackup(preferences, about, currentIsoInstant())
             val text = withContext(Dispatchers.Default) { BackupCodec.encode(file) }
             BackupDocuments.write(app, uri, text)
             file

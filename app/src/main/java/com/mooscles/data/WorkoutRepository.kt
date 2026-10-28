@@ -11,6 +11,7 @@ import com.mooscles.backup.LocalState
 import com.mooscles.backup.from
 import com.mooscles.domain.RestDuration
 import com.mooscles.domain.RoutineTargetRecords
+import com.mooscles.domain.currentTimeMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -385,12 +386,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     }
 
     /** Returning the existing active id makes double taps and process recreation idempotent. */
-    suspend fun startEmpty(name: String = "Workout", defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.writeTransaction {
+    suspend fun startEmpty(name: String = "Workout", defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = currentTimeMillis()): String = db.writeTransaction {
         EditRules.rest(defaultRestSeconds)
         dao.activeWorkout()?.id ?: Workout(name = EditRules.name(name), startedAt = now).also { dao.insertWorkout(it) }.id
     }
 
-    suspend fun startRoutine(routineId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = System.currentTimeMillis()): String = db.writeTransaction {
+    suspend fun startRoutine(routineId: String, defaultRestSeconds: Int = RestDuration.DEFAULT_SECONDS, now: Long = currentTimeMillis()): String = db.writeTransaction {
         dao.activeWorkout()?.let { return@writeTransaction it.id }
         EditRules.rest(defaultRestSeconds)
         val routine = requireNotNull(dao.routine(routineId)) { "Routine not found." }
@@ -516,7 +517,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     }
 
     /** All child mutations are already durable; final status/end time changes atomically once. */
-    suspend fun finishWorkout(id: String, now: Long = System.currentTimeMillis()): Boolean = db.writeTransaction {
+    suspend fun finishWorkout(id: String, now: Long = currentTimeMillis()): Boolean = db.writeTransaction {
         val workout = requireNotNull(dao.workout(id)) { "Workout not found." }
         if (workout.status == WorkoutStatus.FINISHED) return@writeTransaction false
         val sets = dao.workoutSets(id)

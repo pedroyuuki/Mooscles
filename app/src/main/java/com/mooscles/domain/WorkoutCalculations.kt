@@ -303,7 +303,7 @@ object WorkoutCalculations {
         return result
     }
 
-    fun summary(data: AppData, workoutId: String, now: Long = System.currentTimeMillis()): WorkoutSummary? {
+    fun summary(data: AppData, workoutId: String, now: Long = currentTimeMillis()): WorkoutSummary? {
         val index = SnapshotIndex(data)
         val workout = data.workouts.firstOrNull { it.id == workoutId } ?: return null
         val records = prsForWorkout(index, workoutId)
