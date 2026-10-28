@@ -10,6 +10,7 @@ import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.resources.gallery_section_icons
+import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
@@ -25,6 +26,7 @@ class GallerySmokeTest {
         GalleryPage.Buttons to Res.string.gallery_section_buttons,
         GalleryPage.Chips to Res.string.gallery_section_chip_kinds,
         GalleryPage.Rows to Res.string.gallery_section_rows,
+        GalleryPage.Overlays to Res.string.gallery_section_overlays,
     )
 
     @OptIn(ExperimentalTestApi::class)

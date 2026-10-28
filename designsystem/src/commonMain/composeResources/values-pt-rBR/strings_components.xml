@@ -10,4 +10,6 @@
     <string name="ds_unit_lb_spoken">%1$s libras</string>
     <string name="ds_back">Voltar</string>
     <string name="ds_loading">Carregando</string>
+    <string name="ds_close">Fechar</string>
+    <string name="ds_dismiss">Dispensar</string>
 </resources>

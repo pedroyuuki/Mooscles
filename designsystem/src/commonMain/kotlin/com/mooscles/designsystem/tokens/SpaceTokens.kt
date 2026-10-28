@@ -76,4 +76,6 @@ data class MoosclesSizes(
     val focusRingOffset: Dp = 2.dp,
     /** Share of the track the indeterminate progress bar fills while it moves (or rests). */
     val progressIndeterminateFraction: Float = 0.3f,
+    /** Widest a dialog card gets; narrower screens keep `space.6` on each side instead. */
+    val dialogMaxWidth: Dp = 360.dp,
 )
