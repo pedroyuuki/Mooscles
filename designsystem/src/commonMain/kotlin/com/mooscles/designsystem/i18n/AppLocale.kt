@@ -19,14 +19,21 @@ expect object LocalAppLocale {
     @Composable
     infix fun provides(value: String?): ProvidedValue<*>
 
-    /** Puts the system language back. A no-op when no override is applied. */
-    fun restore()
+    /**
+     * Puts the system language back and returns true when an override was undone (false, a
+     * no-op, when none was applied). It does not rebuild anything: call it before navigating
+     * away from the overriding screen, so the next screen composes in the system language.
+     */
+    fun restore(): Boolean
 }
 
 @Composable
 fun ProvideAppLocale(tag: String?, content: @Composable () -> Unit) {
     // Keyed on Unit: a tag change must not undo the language just applied, only leaving does.
-    DisposableEffect(Unit) { onDispose { LocalAppLocale.restore() } }
+    // Leaving with the override still applied means content beside this one may already have
+    // composed in the overridden language, so the theme rebuilds its tree (see LocaleEpoch).
+    // Callers that restore before leaving (the gallery) never pay for that rebuild.
+    DisposableEffect(Unit) { onDispose { if (LocalAppLocale.restore()) LocaleEpoch.bump() } }
     CompositionLocalProvider(LocalAppLocale provides tag) {
         // A new key rebuilds the content, so every string is read again in the new language.
         key(tag) { content() }

@@ -1,5 +1,7 @@
 package com.mooscles.ui
 
+import android.os.SystemClock
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +35,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = Modifier) {
+fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = Modifier, onOpenGallery: () -> Unit = {}) {
     Card(modifier.fillMaxWidth().testTag("app-updates")) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -45,8 +47,13 @@ fun UpdateSection(state: UpdateUi, actions: UpdateActions, modifier: Modifier = 
                         else "Installed ${state.installedVersionName} · build ${state.installedVersionCode}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("update-installed-version"),
+                        // Seven quick taps unlock the hidden design gallery (in memory only).
+                        modifier = Modifier.testTag("update-installed-version")
+                            .clickable { DeveloperGallery.registerVersionTap(SystemClock.uptimeMillis()) },
                     )
+                    if (DeveloperGallery.unlocked) {
+                        TextButton(onClick = onOpenGallery, modifier = Modifier.testTag("open-gallery")) { Text("Component gallery") }
+                    }
                 }
             }
             UpdatePreference(

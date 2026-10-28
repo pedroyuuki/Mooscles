@@ -38,14 +38,14 @@ actual object LocalAppLocale {
         return LocalConfiguration.provides(updated)
     }
 
-    actual fun restore() {
-        val locale = savedLocale ?: return
+    actual fun restore(): Boolean {
+        val locale = savedLocale ?: return false
         Locale.setDefault(locale)
         @Suppress("DEPRECATION")
         resources?.updateConfiguration(savedConfiguration, resources?.displayMetrics)
         savedLocale = null
         savedConfiguration = null
         resources = null
-        LocaleEpoch.bump()
+        return true
     }
 }

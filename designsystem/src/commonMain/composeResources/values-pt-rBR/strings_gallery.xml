@@ -3,6 +3,19 @@
 <resources>
     <string name="gallery_title">Galeria de design</string>
     <string name="gallery_back">Voltar</string>
+    <string name="gallery_controls_theme">Tema</string>
+    <string name="gallery_theme_light">Claro</string>
+    <string name="gallery_theme_dark">Escuro</string>
+    <string name="gallery_controls_scale">Tamanho do texto</string>
+    <string name="gallery_scale_100">100%</string>
+    <string name="gallery_scale_130">130%</string>
+    <string name="gallery_scale_200">200%</string>
+    <string name="gallery_controls_language">Idioma</string>
+    <string name="gallery_language_system">Sistema</string>
+    <string name="gallery_language_en">English</string>
+    <string name="gallery_language_pt_br">Português (Brasil)</string>
+    <string name="gallery_reduce_motion">Reduzir movimento</string>
+    <string name="gallery_controls_motion">Movimento</string>
     <string name="gallery_page_foundations">Fundamentos</string>
     <string name="gallery_page_icons">Ícones</string>
     <string name="gallery_section_colors">Cores e contraste medido</string>

@@ -1,10 +1,21 @@
 package com.mooscles.designsystem.gallery
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.height
+import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
@@ -14,9 +25,13 @@ import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
+import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 
@@ -32,6 +47,12 @@ class GallerySmokeTest {
         GalleryPage.States to Res.string.gallery_section_states,
         GalleryPage.Overlays to Res.string.gallery_section_overlays,
     )
+
+    /** A failed language test must not leak Portuguese into the next test. */
+    @AfterTest
+    fun restoreSystemLanguage() {
+        LocalAppLocale.restore()
+    }
 
     @OptIn(ExperimentalTestApi::class)
     @Test
@@ -50,6 +71,21 @@ class GallerySmokeTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
+    fun everyPageRendersInBothThemesAtTwoHundredPercent() {
+        assertEquals(GalleryPage.entries.toSet(), knownText.keys, "Add a known text for the new page")
+        for (dark in listOf(false, true)) {
+            for (page in GalleryPage.entries) {
+                runComposeUiTest {
+                    withTheme(dark = dark, fontScale = 2f) { page.Content() }
+                    waitForIdle()
+                    onNodeWithText(getString(knownText.getValue(page))).assertExists("${page.name} dark=$dark at 200%")
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
     fun theListShowsEveryTitleAndOpensAPage() {
         runComposeUiTest {
             withTheme { GalleryScreen(onBack = {}) }
@@ -59,5 +95,102 @@ class GallerySmokeTest {
             waitForIdle()
             onNodeWithText(getString(knownText.getValue(GalleryPage.Foundations))).assertExists()
         }
+    }
+
+    /** Every page, with the gallery controls around it: each clickable node says what it is. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun everyClickableNodeHasALabel() {
+        for (page in GalleryPage.entries) {
+            runComposeUiTest {
+                withTheme { GalleryScreen(onBack = {}, initialPage = page) }
+                waitForIdle()
+                val nodes = onAllNodes(hasClickAction()).fetchSemanticsNodes()
+                assertTrue(nodes.isNotEmpty(), "${page.name}: no clickable node")
+                for (node in nodes) {
+                    val labels = node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() +
+                        node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
+                    assertTrue(labels.any { it.isNotBlank() }, "${page.name}: clickable node ${node.id} has no label: ${node.config}")
+                }
+            }
+        }
+    }
+
+    /** Every clickable target, drawn or extended, is at least 48 dp in both dimensions, measured in view. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun everyClickableTargetIsAtLeastTheMinimum() {
+        for (page in GalleryPage.entries) {
+            runComposeUiTest {
+                withTheme { GalleryScreen(onBack = {}, initialPage = page) }
+                waitForIdle()
+                val minPx = with(density) { MoosclesTargets().min.toPx() } - 0.5f
+                val inScroll = hasAnyAncestor(hasScrollAction())
+                val count = onAllNodes(hasClickAction()).fetchSemanticsNodes().size
+                for (index in 0 until count) {
+                    // Bounds are clipped by the page's scroll: bring each target into view first.
+                    val target = onAllNodes(hasClickAction())[index]
+                    if (inScroll.matches(target.fetchSemanticsNode())) target.performScrollTo()
+                    waitForIdle()
+                    val node = target.fetchSemanticsNode()
+                    val touch = node.touchBoundsInRoot
+                    val label = node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text }
+                        ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+                    assertTrue(
+                        touch.width >= minPx && touch.height >= minPx,
+                        "${page.name}: \"$label\" has a ${touch.width} x ${touch.height} px target, minimum $minPx",
+                    )
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun fontScaleControlChangesTheDensityOfThePage() = runComposeUiTest {
+        withTheme { GalleryScreen(onBack = {}, initialPage = GalleryPage.Foundations) }
+        waitForIdle()
+        val text = getString(knownText.getValue(GalleryPage.Foundations))
+        val normal = onNodeWithText(text).getUnclippedBoundsInRoot().height
+        onNodeWithTag(GalleryTags.scale(GalleryFontScale.Largest)).performClick()
+        waitForIdle()
+        onNodeWithTag(GalleryTags.scale(GalleryFontScale.Largest)).assertIsSelected()
+        val largest = onNodeWithText(text).getUnclippedBoundsInRoot().height
+        assertTrue(largest.value >= normal.value * 1.8f, "200% must grow the page text: $normal -> $largest")
+        // The controls themselves keep the screen's density.
+        val chip = onNodeWithTag(GalleryTags.scale(GalleryFontScale.Normal)).getUnclippedBoundsInRoot().height
+        onNodeWithTag(GalleryTags.scale(GalleryFontScale.Normal)).performClick()
+        waitForIdle()
+        assertEquals(normal, onNodeWithText(text).getUnclippedBoundsInRoot().height)
+        assertEquals(chip, onNodeWithTag(GalleryTags.scale(GalleryFontScale.Normal)).getUnclippedBoundsInRoot().height)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun languageControlTranslatesTheGalleryAndLeavingRestoresTheSystemLanguage() {
+        var left = 0
+        runComposeUiTest {
+            withTheme { GalleryScreen(onBack = { left++ }, initialPage = GalleryPage.Chips) }
+            waitForIdle()
+            onNodeWithTag(GalleryTags.language(GalleryLanguage.Portuguese)).performClick()
+            waitForIdle()
+            onNodeWithTag(GalleryTags.language(GalleryLanguage.Portuguese)).assertIsSelected()
+            // The emulator and the simulator run in English, so these are the translations.
+            onNodeWithText("Tipos de chip").assertExists()
+            onNodeWithText("Idioma").assertExists()
+            val back = hasContentDescription("Voltar") and hasClickAction()
+            // Back first closes the page, still in Portuguese.
+            onNode(back).performClick()
+            waitForIdle()
+            onNodeWithText("Galeria de design").assertExists()
+            assertEquals(0, left)
+            // Back on the list leaves, and the system language is already back when it does.
+            onNode(back).performClick()
+            waitForIdle()
+            assertEquals(1, left)
+            onNodeWithText("Design gallery").assertExists()
+            onNodeWithTag(GalleryTags.language(GalleryLanguage.System)).assertIsSelected()
+        }
+        assertFalse(LocalAppLocale.restore(), "Leaving must have restored the language already")
     }
 }

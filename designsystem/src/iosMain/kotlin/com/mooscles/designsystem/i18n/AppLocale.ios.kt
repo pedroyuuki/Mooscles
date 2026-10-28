@@ -37,13 +37,13 @@ actual object LocalAppLocale {
         return local.provides(value)
     }
 
-    actual fun restore() {
-        if (!overriding) return
+    actual fun restore(): Boolean {
+        if (!overriding) return false
         val previous = previousOverride
         if (previous == null) defaults.removeObjectForKey(LANGUAGES_KEY) else defaults.setObject(previous, LANGUAGES_KEY)
         overriding = false
         previousOverride = null
         systemTag = null
-        LocaleEpoch.bump()
+        return true
     }
 }

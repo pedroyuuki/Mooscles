@@ -59,7 +59,8 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
         LaunchedEffect(state.error) { state.error?.let { snack.showSnackbar(it); actions.clearError() } }
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("mooscles", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) },
+                // The gallery brings its own top bar.
+                if (route != DeveloperGallery.ROUTE) TopAppBar(title = { Text("mooscles", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) },
                     navigationIcon = { if (route !in destinations.map { it.route }) IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Outlined.ArrowBack, "Back") } },
                     actions = { IconButton(onClick = { nav.navigate("settings") { launchSingleTop = true } }) { Icon(Icons.Outlined.Tune, "Settings") } })
             },
@@ -108,7 +109,8 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                         else MissingScreen("Exercise unavailable")
                     }
                     composable("records") { RecordsScreen(state, onExercise = { nav.navigate("exercise/$it") }) }
-                    composable("settings") { SettingsScreen(state, actions) }
+                    composable("settings") { SettingsScreen(state, actions, onOpenGallery = { nav.navigate(DeveloperGallery.ROUTE) }) }
+                    composable(DeveloperGallery.ROUTE) { DeveloperGalleryRoute(nav) }
                 }
                 if (state.loading) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
@@ -150,11 +152,11 @@ private fun LiveWorkoutTimerDock(state: UiState, actions: MoosclesActions, timer
 private fun MissingScreen(title: String) = EmptyState(Icons.Outlined.SearchOff, title, "This item may have been deleted. Return to your library to continue.")
 
 @Composable
-fun SettingsScreen(state: UiState, actions: MoosclesActions) {
+fun SettingsScreen(state: UiState, actions: MoosclesActions, onOpenGallery: () -> Unit = {}) {
     val prefs = state.preferences
     androidx.compose.foundation.lazy.LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { PageHeading("Make it yours", "Settings", "Your training, your preferences. Stored on this device.") }
-        item { UpdateSection(state.updates, actions) }
+        item { UpdateSection(state.updates, actions, onOpenGallery = onOpenGallery) }
         item {
             Card {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

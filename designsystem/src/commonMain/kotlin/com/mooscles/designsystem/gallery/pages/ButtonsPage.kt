@@ -2,7 +2,7 @@ package com.mooscles.designsystem.gallery.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonSize
@@ -45,7 +44,8 @@ fun ButtonsPage() {
         for (variant in MButtonVariant.entries) {
             MButton(label, onClick = {}, variant = variant, modifier = Modifier.fillMaxWidth())
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
+        // These rows wrap: at 200% text one line cannot hold them and the last item would be squeezed.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
             for (size in MButtonSize.entries) {
                 MButton(label, onClick = {}, variant = MButtonVariant.Secondary, size = size)
             }
@@ -61,7 +61,7 @@ fun ButtonsPage() {
             modifier = Modifier.fillMaxWidth(),
         )
         SectionHeader(stringResource(Res.string.gallery_section_icon_buttons))
-        Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
             for (style in MIconButtonStyle.entries) {
                 MIconButton(MIcons.Plus, iconLabel, onClick = {}, style = style)
             }
