@@ -190,29 +190,36 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # The common tests in :shared today. Raise it when tests move into
-          # commonTest, so a silently skipped class fails the job.
-          MIN_IOS_TESTS: 156
+          # The common tests in :shared (156) plus the iOS-only entry point tests
+          # (6). Raise it when tests move into commonTest or iosTest, so a silently
+          # skipped class fails the job.
+          MIN_IOS_TESTS: 162
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
-          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
           foreach ($file in $files) {
               $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
               $tests += [int]$suite.tests; $failures += [int]$suite.failures
               $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
               foreach ($case in @($suite.testcase)) {
                   if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+                  # The iosTest classes (database and preferences entry points) are listed by name.
+                  if ($case.classname -match '\.Ios[A-Za-z]+Test\b') {
+                      $result = if ($case.failure -or $case.error) { 'failed' } elseif ($null -ne $case.SelectSingleNode('skipped')) { 'skipped' } else { 'passed' }
+                      $platform += "- ``$($case.classname).$($case.name)``: $result"
+                  }
               }
           }
           $minimum = [int]$env:MIN_IOS_TESTS
           $lines = @(
               '### iOS simulator tests',
               "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
-          ) + ($failed | ForEach-Object { "- ``$_``" })
+          ) + ($failed | ForEach-Object { "- ``$_``" }) + @('', 'iOS entry point tests:') + $platform
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
+          if ($platform.Count -lt 6) { throw "Only $($platform.Count) of the 6 iOS entry point tests ran." }
 
       - name: Upload iOS reports
         if: ${{ failure() }}

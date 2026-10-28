@@ -47,6 +47,11 @@ kotlin {
             //noinspection GradleDependency
             api("androidx.sqlite:sqlite-framework:2.6.2")
         }
+        iosMain.dependencies {
+            // BundledSQLiteDriver: SQLite compiled into the app, at the version Room 2.8.5 is built against.
+            //noinspection GradleDependency
+            implementation("androidx.sqlite:sqlite-bundled:2.6.2")
+        }
         // LargeHistoryFixture, shared with the :app host tests (app/build.gradle.kts).
         commonTest { kotlin.srcDir("src/testFixtures/kotlin") }
         commonTest.dependencies {
