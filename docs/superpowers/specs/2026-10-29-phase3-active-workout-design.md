@@ -50,12 +50,12 @@ O ROADMAP diz que esta é a fase que define o produto. O sistema da fase 2 já t
 - **Perder uma série**, um valor digitado ou um treino ativo: por fechar o app, girar a tela, matar o processo, atualizar o APK, apertar voltar ou descartar por engano sem confirmação.
 - **Registrar ficar mais lento:** qualquer fluxo do orçamento de toques com mais toques que hoje, ou o check esperar o banco para mudar na tela.
 - **Quebrar instalações existentes:** mudar o schema (v5), uma chave ou um tipo do DataStore, o `applicationId`, a assinatura, o `update.json` ou os canais de notificação já criados.
-- **Um segundo design para o iOS:** toda tela, componente e texto novo fica em `commonMain`. Só háptico, movimento reduzido, idioma, codificação de PNG e o que é de sistema (notificação, compartilhamento) têm código por plataforma.
+- **Um segundo design para o iOS:** toda tela, componente e texto novo fica em `commonMain`. Só háptico, movimento reduzido, idioma, codificação de PNG e o que é de sistema (notificação, compartilhamento) têm código por plataforma; datas e nomes de mês e de dia da semana não usam formatador da plataforma (ajustado em 2026-10-29).
 - **O timer recompor a lista:** um tick de contagem que recompõe um card ou uma linha.
 - **Celebração que atrapalha:** animação que segura o toque seguinte, aviso que cobre a série em edição, som ou vibração repetida.
 - **Recorde errado:** o aviso dizer "recorde" quando o histórico e o resumo não dizem, ou o contrário.
 - **Inglês novo em pt-BR:** um texto desta fase aparecer em inglês com o aparelho em pt-BR (os nomes do catálogo são a exceção conhecida).
-- **APK crescer mais de 1 MiB** sobre a `main` de depois da fase 2.
+- **APK crescer mais de 1 MiB** sobre a `main` de depois da fase 2, contando o `kotlinx-datetime` (ajustado em 2026-10-29).
 
 ## Escopo: o que entra
 
@@ -104,20 +104,20 @@ Todos aditivos, só em memória. Nada disso é gravado. Os campos de texto em in
 
 | Acréscimo | Para quê | Calculado em |
 | --- | --- | --- |
-| `WorkoutExerciseUi.previousSets: List<PreviousSetUi>` (`weightKg`, `reps`, `warmup`, `assistance`, por posição) e `previousDate: Long?` | coluna "Anterior" por série e "Anterior: 21 out" | `WorkoutPresentation`, da mesma passada que já monta `previous` |
-| `SetUi.record: SetRecordUi?` (`kind`, `previousKg`, `previousReps`) | selo na série e texto do aviso | `WorkoutPresentation`: cada recorde batido (não o primeiro registro) marca **uma** série, a primeira concluída e de trabalho que o realiza, pela mesma regra de tolerância (`ulp`) que já filtra `records` |
-| `UiState.errorCode: UiError?` (enum) ao lado de `error` | erro localizado na tela nova | `MoosclesViewModel`, junto da mensagem atual |
+| `WorkoutExerciseUi.previousSets: List<PreviousSetUi>` (`weightKg`, `reps`, `warmup`, `assistance`; só as séries concluídas da sessão anterior, na ordem) e `previousDate: Long?` | coluna "Anterior" por série e "Anterior: 21 out"; o pareamento é por tipo e ordem (D10) (ajustado em 2026-10-29) | `WorkoutPresentation`, da mesma passada que já monta `previous` |
+| `SetUi.record: SetRecordUi?` (`kind`; `previousKg` no recorde de carga; `previousReps` só no recorde de repetições) | selo na série e texto do aviso | `WorkoutPresentation`: cada recorde batido (não o primeiro registro) marca **exatamente a série que o `WorkoutCalculations` escolheu** como recorde, nunca outra; para isso `WeightPr` e `RepsPr` ganham o `setId` da série escolhida (acréscimo puro no domínio, ver a regra 2 das decisões de 2026-10-29) (ajustado em 2026-10-29) |
+| `UiState.errorCode: UiError?` (enum) ao lado de `error` | erro localizado na tela nova | `MoosclesViewModel`, que mapeia as exceções tipadas do `data/` e o código de erro do `RestTimer` (regra 7 das decisões de 2026-10-29) (ajustado em 2026-10-29) |
 | `MoosclesActions.restoreSet(entryId, position, set: SetUi)` | desfazer a remoção de uma série | `WorkoutRepository.restoreSet` |
 
 - Números ficam números no contrato. A tela formata carga, repetições, datas e durações com o `MoosclesNumbers` e o `NumberLocale` do `:designsystem` (`82,5` em pt-BR).
-- `UiError` cobre ao menos: falha ao salvar, timer sem acesso ao armazenamento, dados locais indisponíveis, treino bloqueado por uma atualização em instalação, série ou exercício que não existe mais, e o genérico. O VM continua preenchendo `error` com o texto de hoje para as telas antigas.
+- `UiError` cobre ao menos: falha ao salvar, timer sem acesso ao armazenamento, dados locais indisponíveis, treino bloqueado por uma atualização em instalação, série ou exercício que não existe mais, e o genérico. O VM continua preenchendo `error` com o texto de hoje para as telas antigas. A origem do código é tipada (ajustado em 2026-10-29): o `data/` lança exceções tipadas (mesma mensagem e mesmo comportamento de hoje, só o tipo muda), o `RestTimer` ganha um código de erro em enum ao lado do `error` em texto, e o VM traduz os dois para `UiError`; exceção sem tipo ou desconhecida vira o genérico.
 - **`restoreSet`:** numa `writeTransaction`, exige treino `ACTIVE`, o exercício existente, o id ausente e menos de 100 séries (`EditRules.workoutSetCount`); desloca as posições a partir de `position` e insere a série com o mesmo id e os mesmos valores. Valida com `EditRules.workoutSet`. Não captura exceção dentro da transação (AGENTS.md). Se a série não puder voltar (exercício removido, treino finalizado), o toast de desfazer já fechou ou a ação vira erro `UiError` "A série não pôde voltar".
 - **Descanso 0:00:** `updateSet` passa a não iniciar o timer quando o exercício tem descanso 0 (hoje `start(…, 0)` terminaria na hora). É o jeito de desligar o descanso de um exercício em supersérie (D14).
 
 ### Como o `:app` hospeda
 
 - O `NavHost` continua no `:app`, com as rotas em string atuais. `composable("workout")` passa a chamar `ActiveWorkoutRoute(...)` do `:screens`; `composable("workoutDetail/{id}?summary={summary}")` chama `WorkoutSummaryScreen` quando `summary=true` e a tela antiga quando `false`.
-- O `Scaffold` do `MoosclesApp` passa a usar a casca comum (`AppShellBottom` com a barra do treino e as abas). Nas rotas `workout`, galeria e licenças, a casca some.
+- O `Scaffold` do `MoosclesApp` passa a usar a casca comum (`AppShellBottom` com a barra do treino e as abas). Só na rota `workout` a casca some; a galeria e as licenças mantêm a barra de abas, como hoje (ajustado em 2026-10-29).
 - Compartilhar, abrir a notificação no treino e o que for de `Context` ficam no `:app`, entregues às telas como callbacks.
 
 **D5 (minha). A navegação continua com o `androidx.navigation` no `:app`; as telas do `:screens` não conhecem rotas.** *Por quê:* com as telas antigas ainda no `:app`, um NavHost comum exigiria registrar destinos Android num grafo comum e alinhar a versão do Navigation da JetBrains com a 2.10.2 do app, um risco sem ganho nesta fase. A escolha do NavHost comum fica para a fase 6, quando não sobrar tela antiga; as telas já nascem prontas para isso porque só recebem callbacks.
@@ -142,7 +142,7 @@ O ROADMAP pede "o treino ativo funciona inteiro no iOS (build interno)". Não h�
 - Ícones: Treinar = halter (próprio), Biblioteca = `LayoutGrid` (Lucide), Histórico = `History` (Lucide), Recordes = anilha com seta (próprio).
 - **Fonte grande:** o rótulo nunca quebra no meio da palavra. Quando algum rótulo não cabe na largura da sua coluna (medido, como a linha de série) ou a escala passa de 1,5, só a aba selecionada mostra o rótulo e as outras ficam só com o ícone, sem perder o nome acessível. *Por quê (minha):* é o padrão "rótulo só no destino ativo" do Material, mantém o texto do selecionado em 200% e resolve o #2 sem truncar.
 - Semântica: cada aba é `Role.Tab`, selecionada ou não, "Treinar, guia 1 de 4".
-- **#20:** tocar na aba já selecionada volta à raiz daquela aba, também de dentro da galeria e das licenças.
+- **#20:** tocar na aba já selecionada volta à raiz daquela aba, também de dentro da galeria e das licenças, que continuam com a barra de abas (ajustado em 2026-10-29).
 - **#5:** com as cores dos tokens, a barra acompanha o tema claro.
 - Strings em en e pt-BR: Train / Treinar, Library / Biblioteca, History / Histórico, Records / Recordes (**#4**).
 
@@ -203,10 +203,10 @@ O `SetRow` da fase 2: número (com a letra do tipo), anterior, carga, repetiçõ
 
 1. o valor salvo da própria série (alvo da rotina ou o que a pessoa já registrou), que não é sugestão;
 2. a série imediatamente acima **concluída hoje** no mesmo exercício;
-3. a série de mesma posição na sessão anterior do exercício (`previousSets`);
+3. a série correspondente da sessão anterior do exercício (`previousSets`), pareada por tipo e depois por ordem: o n-ésimo aquecimento de hoje com o n-ésimo aquecimento concluído da sessão anterior, a n-ésima série de trabalho com a n-ésima de trabalho concluída (a assistida conta como de trabalho). A coluna "Anterior" usa o mesmo pareamento; sem par, mostra "—" (ajustado em 2026-10-29);
 4. nada.
 
-"Vazio" é repetições 0, e carga 0 com repetições 0 numa série nunca tocada nesta sessão. Se a pessoa apagar um campo de propósito (por exemplo, para registrar só peso corporal), aquele campo não recebe mais sugestão nesta sessão: a tela guarda os pares (série, campo) tocados em `rememberSaveable`. *Por quê:* a série de cima de hoje captura a progressão (82,5 hoje contra 80 na semana passada), que é o caso comum de séries iguais; a anterior cobre a primeira série do dia; quem faz pirâmide tem o atalho de tocar no "anterior" (abaixo).
+"Vazio" é repetições 0. Na carga, a regra depende da convenção do exercício (ajustado em 2026-10-29): nas convenções de carga comum (`TOTAL_LOAD`, `PER_HAND`, `ONE_SIDE`), 0 kg conta como vazio e recebe a sugestão de carga; nas convenções "Added weight" (`BODYWEIGHT`) e "Assistance" (`ASSISTANCE`), 0 é um valor real (peso corporal sem carga extra, ou nenhuma assistência) e não é substituído. Testes em `commonTest`: 0 kg em carga comum recebe a sugestão; 0 kg em "Added weight" e em "Assistance" não recebe; um valor maior que 0 nunca é substituído; em libras, a sugestão grava o kg exato da origem; um campo apagado de propósito fica sem sugestão. Se a pessoa apagar um campo de propósito (por exemplo, para registrar só peso corporal), aquele campo não recebe mais sugestão nesta sessão: a tela guarda os pares (série, campo) tocados em `rememberSaveable`. *Por quê:* a série de cima de hoje captura a progressão (82,5 hoje contra 80 na semana passada), que é o caso comum de séries iguais; a anterior cobre a primeira série do dia; quem faz pirâmide tem o atalho de tocar no "anterior" (abaixo).
 
 **Concluir:**
 
@@ -278,7 +278,7 @@ Se a rota `workout` abrir sem treino ativo (depois de descartar, ou por um estad
 **D17 (minha). O recorde é confirmado pelo `WorkoutPresentation`, nunca previsto pela tela.** Quando uma série que a pessoa acabou de concluir chega no estado com `SetUi.record` preenchido:
 
 - o selo `PrBadge` entra na série com `spring.pr` (a linha vira "concluída com recorde");
-- o `PrToast` aparece no topo da lista, abaixo do cabeçalho: "Novo recorde de carga" ou "Novo recorde de repetições", com "87,5 kg × 6 · antes 85 kg × 6"; some em 4 s e é lido de forma educada; não cobre a linha em edição (se ela estiver no topo, o aviso vai para baixo do cabeçalho do card seguinte, ou espera ela sair da edição);
+- o `PrToast` aparece no topo da lista, abaixo do cabeçalho: "Novo recorde de carga" ou "Novo recorde de repetições", com "87,5 kg × 6 · antes 85 kg" no recorde de carga (o domínio guarda só a carga máxima anterior) e "80 kg × 8 · antes 80 kg × 6" no de repetições (mesma carga) (ajustado em 2026-10-29); some em 4 s e é lido de forma educada; não cobre a linha em edição (se ela estiver no topo, o aviso vai para baixo do cabeçalho do card seguinte, ou espera ela sair da edição);
 - o háptico de recorde toca.
 
 *Por quê:* a regra de recorde (convenções, aquecimento, assistência, tolerância por `ulp`) já existe num lugar só e é testada; duplicá-la na tela arrisca um aviso que o histórico desmente.
@@ -286,7 +286,7 @@ Se a rota `workout` abrir sem treino ativo (depois de descartar, ou por um estad
 - **D18 (minha). Primeiro registro não comemora no treino.** Um exercício sem histórico não dá aviso, selo nem háptico de recorde; ele aparece no resumo como "Primeiro registro". *Por quê:* num treino com exercícios novos, toda primeira série seria um "recorde", e a fase 2 pede sobriedade.
 - **Háptico (desvio da fase 2):** a tabela da fase 2 diz que o háptico de recorde substitui o de concluir. Como o check não pode esperar a confirmação, o de concluir toca no toque e o de recorde toca quando a confirmação chega. Se a confirmação chegar em até 150 ms, o de concluir já tocou e o de recorde toca mesmo assim; essa é a única sequência dupla permitida. Fica registrado na nota de implementação da fase 2.
 - Só séries concluídas nesta tela, nesta sessão de uso, disparam aviso. Recordes que já estavam no estado ao abrir (retomar o treino, reiniciar o app) mostram só o selo, sem aviso nem háptico.
-- Se um recorde deixa de valer (a pessoa desmarca ou edita a série), o selo sai sem aviso. Se uma série posterior bate o recorde de novo, o selo passa para ela e o aviso repete com o novo valor ("antes" continua sendo o recorde do histórico).
+- Se um recorde deixa de valer (a pessoa desmarca ou edita a série), o selo sai sem aviso. O selo fica sempre na série que o `WorkoutCalculations` escolhe como recorde (a mais pesada, com empate decidido pelas repetições, e na regra de repetições a de mais repetições naquela carga), nunca noutra com o mesmo valor (ajustado em 2026-10-29). Se uma série posterior bate o recorde de novo, o selo passa para ela e o aviso repete com o novo valor ("antes" continua sendo o recorde do histórico).
 
 ## Finalizar, descartar e resumo
 
@@ -307,8 +307,8 @@ Se a rota `workout` abrir sem treino ativo (depois de descartar, ou por um estad
 - Entra com `spring.finish` (o card de estatísticas de 0,92 a 1, com opacidade; fade com movimento reduzido) e o háptico de concluir.
 - Topo: "Treino concluído", o nome e a data com o horário ("ter., 29 out · 18:02–18:44").
 - Estatísticas em `num.lg`, em grade de 2 colunas (1 coluna a partir de 1,5): Duração, Séries, Volume (carga registrada × repetições, sem assistência, regra atual) e Exercícios.
-- "Recordes": uma linha por recorde batido, com o `PrBadge`, "Supino reto · 87,5 kg × 6 · antes 85 kg × 6"; depois "Primeiros registros" com o selo suave. A seção some se não houver nenhum.
-- Constância: "12 treinos nas últimas 4 semanas" (contado dos treinos finalizados, janela de 28 dias; nunca cobra ausência).
+- "Recordes": uma linha por recorde batido, com o `PrBadge`, "Supino reto · 87,5 kg × 6 · antes 85 kg" (ajustado em 2026-10-29); depois "Primeiros registros" com o selo suave. A seção some se não houver nenhum.
+- Constância: "12 treinos nas últimas 4 semanas" (contado dos treinos finalizados, janela de 28 dias de calendário no fuso do aparelho, pelo `kotlinx-datetime` (ajustado em 2026-10-29); nunca cobra ausência).
 - Por exercício: o nome e a melhor série ("82,5 kg × 8") em `num.sm`.
 - Ações: "Concluir" (primário L, volta a Treinar), "Compartilhar" (secundário L, com ícone) e "Ver detalhes" (texto, abre `workoutDetail/{id}?summary=false`, a tela antiga, que edita e apaga).
 
@@ -316,7 +316,7 @@ Se a rota `workout` abrir sem treino ativo (depois de descartar, ou por um estad
 
 **D20 (minha). O cartão é desenhado em código comum, na identidade nova, e o envio continua no `:app`.**
 
-- Formato: PNG de 1080 px de largura, como hoje, com as mesmas páginas quando o treino não cabe numa (regra atual do `WorkoutSharePreview`). Fundo grafite `bg.base` escuro sempre (o cartão é uma peça de marca, não segue o tema), a marca "MOOSCLES" com as anilhas, o nome e a data, Duração · Séries · Volume em Barlow Condensed, os recordes em latão com o selo, e a lista de exercícios com a melhor série. Números no formato do idioma do aparelho.
+- Formato: PNG de 1080 px de largura, como hoje, com as mesmas páginas quando o treino não cabe numa (regra atual do `WorkoutSharePreview`). Fundo grafite `bg.base` escuro sempre (o cartão é uma peça de marca, não segue o tema), a marca "MOOSCLES" com as anilhas, o nome e a data, Duração · Séries · Volume em Barlow Condensed, os recordes em latão com o selo, e a lista de exercícios com a melhor série. Números no formato do idioma do aparelho. A data e o horário do cartão saem do `kotlinx-datetime` (fuso do aparelho) com os nomes de mês e de dia da semana dos recursos en e pt-BR do `:screens`, sem formatador da plataforma (ajustado em 2026-10-29).
 - Desenho: um `ShareCardPainter` em `com.mooscles.screens.share` que desenha num `ImageBitmap` com `CanvasDrawScope` e `TextMeasurer` (APIs comuns), com as fontes do `:designsystem`. A prévia na sheet mostra o mesmo bitmap. O PNG é codificado por plataforma (Android: `Bitmap.compress`; iOS: Skia, na fase 7).
 - O `:app` continua dono do arquivo em cache privado, do `FileProvider` com permissão temporária, da limpeza de 7 dias e do atalho do WhatsApp.
 - Os dados do cartão (`WorkoutShareCard.from`, melhor série por exercício) vão para `commonMain` se forem Kotlin puro, com teste de equivalência contra a versão atual.
@@ -369,8 +369,9 @@ Nada vibra ao remover, desfazer, abrir sheets ou trocar de aba.
 - Textos de notificação e nomes de canal ficam em recursos Android do `:app` (`values` e `values-pt-rBR`), porque o `RestTimerController` não compõe.
 - Músculo, equipamento e convenção de carga são traduzidos pela tela a partir do enum (os rótulos em inglês do `:shared` não mudam, porque o backup e as telas antigas usam).
 - **Nomes de exercício:** continuam os do catálogo (em inglês) até a fase 4. É a única mistura de idioma conhecida nas telas novas, e fica registrada.
-- **Erros:** as telas novas nunca mostram `UiState.error` cru. Elas mostram o texto localizado do `UiError`, com o genérico "Não foi possível salvar a última mudança. Seus dados continuam no aparelho." para o que não tiver código.
+- **Erros:** as telas novas nunca mostram `UiState.error` cru. Elas mostram o texto localizado do `UiError` (vindo das exceções tipadas e do código do timer (ajustado em 2026-10-29)), com o genérico "Não foi possível salvar a última mudança. Seus dados continuam no aparelho." para o que não tiver código.
 - **D22 (minha). As mensagens do updater e do backup continuam em inglês até a fase 6** (decisão 11 do plano da fase 2). *Por quê:* elas só aparecem em Configurações, chegam prontas do updater e do backup, e localizá-las agora espalharia o diff desta fase por `updates/` e `backup/`, que ela não precisa tocar.
+- **Datas(ajustado em 2026-10-29):** o `org.jetbrains.kotlinx:kotlinx-datetime` (biblioteca de primeira parte do Kotlin) entra no `commonMain` só para fuso e calendário (`TimeZone`, `LocalDate`, `LocalDateTime`); o instante continua `kotlin.time.Instant` (decisão da 1B). Os nomes de mês e de dia da semana vêm dos recursos en e pt-BR do `:screens`, nunca de um formatador da plataforma. Um teste de equivalência contra o `java.time` na JVM (`androidHostTest`), como os helpers da 1B, cobre data local, fuso com horário de verão e a janela de 28 dias. O tamanho dele conta no orçamento de APK.
 - Formatação: datas curtas por idioma ("21 out" / "Oct 21"), separador decimal e de milhar por idioma, espaço não separável antes da unidade e `×` entre carga e repetições (regras da fase 2).
 
 Amostras (voz da fase 2: direto, sem exclamação, verbo no botão):
@@ -380,7 +381,7 @@ Amostras (voz da fase 2: direto, sem exclamação, verbo no botão):
 | Cabeçalho | 42:18 · 9 de 15 séries | 42:18 · 9 of 15 sets |
 | Sem histórico | Primeira vez | First time |
 | Série removida | Série 4 removida · Desfazer | Set 4 removed · Undo |
-| Recorde | Novo recorde de carga · 87,5 kg × 6 · antes 85 kg × 6 | New weight record · 87.5 kg × 6 · before 85 kg × 6 |
+| Recorde | Novo recorde de carga · 87,5 kg × 6 · antes 85 kg | New weight record · 87.5 kg × 6 · before 85 kg |
 | Finalizar | Finalizar treino? 9 séries em 4 exercícios · 42 min. | Finish workout? 9 sets across 4 exercises · 42 min. |
 | Bloqueado | Conclua pelo menos uma série para finalizar. | Complete at least one set to finish. |
 | Notificação | Descanso · Supino reto · a seguir série 5 | Rest · Bench press · next set 5 |
@@ -394,9 +395,10 @@ Amostras (voz da fase 2: direto, sem exclamação, verbo no botão):
 - **DataStore sem mudança:** nenhuma chave nova, renomeada ou com outro tipo em `local_preferences` ou `app_updates`. O timer continua com as chaves `timer_*` atuais; o `InProcessRestTimer` usa o mesmo `RestTimerPersistence`. Nenhuma preferência nova nesta fase (o estado das telas é de sessão).
 - **Escritas novas:** só `restoreSet`, que grava uma linha de `workout_sets` com as mesmas regras de `EditRules` das outras escritas, numa `writeTransaction` só, sem `catch` dentro.
 - **Comportamento novo do VM:** descanso 0:00 não inicia o timer; `errorCode` ao lado de `error`.
+- **Erros tipados (ajustado em 2026-10-29):** as exceções do `data/` (`WorkoutRepository`, `EditRules`) passam a ter tipo, com as mesmas mensagens e o mesmo efeito; o `RestTimer` ganha um código de erro em enum, implementado no `RestTimerController` e no `InProcessRestTimer`. Isso toca áreas do `compat-reviewer` e é revisado na implementação.
 - **Android:** canal novo `rest_progress` (aditivo; o `rest` não muda), receiver novo `exported=false`, ação nova de intent para abrir o treino, ícone do launcher novo. `applicationId`, assinatura, `minSdk`, `versionCode`, o `update.json` e o `trainingGate` da instalação não mudam: a atualização continua esperando não haver treino ativo nem timer.
 - **Histórico:** continua um snapshot independente; nada desta fase muda treinos finalizados.
-- O `compat-reviewer` roda antes do merge, porque a fase mexe em `shared/.../data/WorkoutRepository.kt`, `shared/.../timer/`, `app/.../timer/` e nos `build.gradle.kts`.
+- O `compat-reviewer` roda antes do merge, porque a fase mexe em `shared/.../data/WorkoutRepository.kt` e `EditRules.kt`, `shared/.../domain/WorkoutCalculations.kt` (o `setId` dos recordes), `shared/.../timer/`, `app/.../timer/` e nos `build.gradle.kts`.
 
 ## Desempenho
 
@@ -414,7 +416,7 @@ Base: as medidas da [fase 1B](../reports/2026-10-27-phase1b-verificacao.md) e do
 | Animações | 60 fps no aparelho de referência (ver as perguntas) |
 | APK debug | crescimento até 1 MiB sobre a `main` de depois da fase 2 (`4f2911c`), medido pelo `tools/check-apk-budget.ps1` com empacotamento do zero |
 
-Sem biblioteca nova de terceiros: nada de Material 3 no `:screens`, Lottie, Coil, Vico ou Roborazzi nesta fase. Ícones novos (Lucide `History`, `LayoutGrid`, `Search`, `Keyboard`, `Share2`, `Pencil`, `ArrowUp`, `ArrowDown` e o que mais a tela pedir) entram convertidos para `ImageVector`, como na fase 2.
+A única dependência nova é o `kotlinx-datetime`, de primeira parte (ajustado em 2026-10-29). Sem biblioteca nova de terceiros: nada de Material 3 no `:screens`, Lottie, Coil, Vico ou Roborazzi nesta fase. Ícones novos (Lucide `History`, `LayoutGrid`, `Search`, `Keyboard`, `Share2`, `Pencil`, `ArrowUp`, `ArrowDown` e o que mais a tela pedir) entram convertidos para `ImageVector`, como na fase 2.
 
 ## Spikes, antes de comprometer
 
@@ -473,6 +475,7 @@ Sem biblioteca nova de terceiros: nada de Material 3 no `:screens`, Lottie, Coil
 
 - "Registrar uma série não leva mais toques que hoje": medido pelo orçamento de toques acima.
 - "As animações mantêm 60 fps no aparelho de referência": medido com o build `preview` no aparelho do dono. Sem o aparelho, fica medido só no emulador e registrado como não verificado.
+- **Entrega "card de exercício com a última performance e o alvo visíveis" (ajustado em 2026-10-29):** o alvo da rotina é o valor pré-preenchido na linha de série, como esta spec já diz. Uma linha de alvo separada ("Alvo 3×8 · 80 kg") vai para a fase 4 (rotinas visuais). Desvio do ROADMAP registrado em 2026-10-29.
 - "O treino ativo funciona inteiro no iOS (build interno)": trocado pelo `ActiveWorkoutFlowTest` no simulador do CI (D6), pelo mesmo motivo das fases 1 e 2. O build interno no iPhone fica para a fase 7.
 
 ## O que fica para quem implementar
@@ -490,3 +493,15 @@ Sem biblioteca nova de terceiros: nada de Material 3 no `:screens`, Lottie, Coil
 
 1. **Qual é o aparelho Android de referência?** (Já está em aberto no ROADMAP.) Sem ele, o "60 fps no aparelho de referência" fica medido só no emulador.
 2. **Você topa instalar o "Mooscles Preview" (D24) no seu celular, ao lado do app de verdade, e percorrer a lista de TalkBack e háptico (cerca de 30 minutos)?** Ele não mexe no app instalado nem nos seus dados. Se não, esses itens continuam como não verificados, como na fase 2.
+
+## Decisões após a leitura do construtor (2026-10-29)
+
+Uma leitura da spec contra o código levantou sete perguntas. O dono delegou as decisões ao controlador, que respondeu assim. O texto acima foi ajustado no lugar, com a marca "(ajustado em 2026-10-29)".
+
+1. **Datas e fusos no código comum.** Entra o `org.jetbrains.kotlinx:kotlinx-datetime` (primeira parte do Kotlin), só para as contas de fuso e calendário (`TimeZone`, `LocalDate`, `LocalDateTime`). Os nomes de mês e de dia da semana vêm dos recursos en e pt-BR do próprio app, sem formatador da plataforma. Um teste de equivalência contra o `java.time` na JVM, como os helpers da 1B. O tamanho conta no orçamento de APK da fase. Ajustados: anti-objetivos, D20 (cartão), o resumo (constância), "Textos e idiomas" e "Desempenho".
+2. **"Antes" do recorde de carga.** Mostra "antes 85 kg", sem repetições, porque o domínio guarda só a carga máxima anterior (`WeightPr.previousWeightKg`). O selo e o aviso ficam exatamente na série que o `WorkoutCalculations` registra como recorde: no de carga, a de maior carga com empate pelas repetições (`maxWithOrNull`, que fica com a primeira em empate total); no de repetições, a de mais repetições naquela carga (`bestRepetitionSets`, que só troca por uma estritamente maior). Para a apresentação marcar essa série, `WeightPr` e `RepsPr` ganham o `setId` da série escolhida. O `SetRecordUi` não tem `previousReps` no recorde de carga; ele fica no de repetições, porque o domínio tem `RepsPr.previousReps`. Ajustados: o contrato de UI, "Recordes", o resumo e a tabela de voz.
+3. **Casca.** Só a rota do treino ativo é tela cheia, sem abas. A galeria e as licenças mantêm a barra de abas, como hoje, e tocar na aba selecionada volta à raiz dela também de lá (é assim que o #20 se resolve). Ajustados: "Como o `:app` hospeda" e a barra de abas.
+4. **Pareamento do "Anterior".** A coluna e a terceira fonte de sugestão pareiam por tipo e depois por ordem, entre as séries concluídas da sessão anterior: aquecimentos com aquecimentos, na ordem; séries de trabalho com séries de trabalho, na ordem. Ajustados: o contrato de UI e D10.
+5. **"Alvo visível" do ROADMAP.** O alvo da rotina é o valor pré-preenchido na linha de série. Uma linha de alvo separada ("Alvo 3×8 · 80 kg") passa para a fase 4 (rotinas visuais), como desvio datado do ROADMAP. Ajustado: "Adaptações do 'Pronto quando' do ROADMAP".
+6. **Carga zero.** Nas convenções de carga comum, 0 kg conta como vazio e recebe a sugestão de carga. Só "Added weight" e "Assistance" tratam 0 como valor real. A regra e os testes estão em D10.
+7. **Erros.** O `data/` pode lançar exceções tipadas (sem mudar o comportamento, só o tipo), e a interface `RestTimer` ganha um código de erro em enum. O `MoosclesViewModel` traduz os dois para `UiError`; erro sem tipo ou desconhecido vira a mensagem genérica localizada. Isso toca áreas do `compat-reviewer` e é revisado na implementação. Ajustados: o contrato de UI, "Textos e idiomas" e "Dados e compatibilidade".
