@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_section_colors
+import com.mooscles.designsystem.resources.gallery_section_icons
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,6 +18,7 @@ class GallerySmokeTest {
     /** A string each page shows once rendered. Every new page must add its entry here. */
     private val knownText: Map<GalleryPage, StringResource> = mapOf(
         GalleryPage.Foundations to Res.string.gallery_section_colors,
+        GalleryPage.Icons to Res.string.gallery_section_icons,
     )
 
     @OptIn(ExperimentalTestApi::class)

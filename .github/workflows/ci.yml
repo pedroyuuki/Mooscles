@@ -290,9 +290,9 @@ jobs:
         env:
           # Per class: TnumRegressionTest 6, ThemeTest 2, GallerySmokeTest 2, PrimitiveColorsTest 1,
           # ContrastMathTest 3, ContrastTokensTest 5, SemanticColorsTest 2, TypographyTokensTest 3,
-          # SpaceTokensTest 4, SizesTimingElevationTest 3, MotionTokensTest 3, ReducedMotionTest 1.
+          # SpaceTokensTest 4, SizesTimingElevationTest 3, MotionTokensTest 3, ReducedMotionTest 1, IconsTest 4.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 35
+          MIN_DS_IOS_TESTS: 39
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
