@@ -1,6 +1,6 @@
 # Mooscles — guia para agentes
 
-App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de treino. Dados, regras, preferências e a lógica das telas ficam num módulo Kotlin Multiplatform, `:shared` (Android, `iosArm64` e `iosSimulatorArm64`); o app iOS ainda não existe. Os dados ficam só no aparelho, sem conta, backend ou analytics. A única rede é a descoberta e o download de atualizações em GitHub Releases públicas. UI, comentários e docs do repositório são em inglês: mantenha assim.
+App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de treino. Dados, regras, preferências e a lógica das telas ficam num módulo Kotlin Multiplatform, `:shared` (Android, `iosArm64` e `iosSimulatorArm64`); o app iOS ainda não existe. Os dados ficam só no aparelho, sem conta, backend ou analytics. A única rede é a descoberta e o download de atualizações em GitHub Releases públicas. A UI tem inglês como idioma base e tradução pt-BR por recursos (`composeResources` do `:designsystem`); telas ainda não redesenhadas continuam com textos fixos em inglês até a sua fase. Comentários e docs de código são em inglês.
 
 ## Ambiente e comandos
 
