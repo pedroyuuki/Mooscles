@@ -13,4 +13,17 @@
     <string name="gallery_section_motion">Movimento</string>
     <string name="gallery_section_icons">Todos os ícones em 16, 20, 24 e 28</string>
     <string name="gallery_sample_text">Pesado 82,5 kg × 8</string>
+    <string name="gallery_page_buttons">Botões</string>
+    <string name="gallery_page_chips">Chips</string>
+    <string name="gallery_page_rows">Linhas</string>
+    <string name="gallery_section_buttons">Todas as variantes de botão</string>
+    <string name="gallery_section_icon_buttons">Botões de ícone</string>
+    <string name="gallery_section_chip_kinds">Tipos de chip</string>
+    <string name="gallery_section_rows">Linhas, interruptor, rádio e barra do topo</string>
+    <string name="gallery_sample_button">Continuar</string>
+    <string name="gallery_sample_long_label">Finalizar o treino e salvar</string>
+    <string name="gallery_sample_chip">Peito</string>
+    <string name="gallery_sample_row">Descanso automático</string>
+    <string name="gallery_sample_subtitle">Começa depois de cada série</string>
+    <string name="gallery_sample_icon_label">Adicionar</string>
 </resources>

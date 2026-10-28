@@ -8,4 +8,6 @@
     </plurals>
     <string name="ds_unit_kg_spoken">%1$s kilograms</string>
     <string name="ds_unit_lb_spoken">%1$s pounds</string>
+    <string name="ds_back">Back</string>
+    <string name="ds_loading">Loading</string>
 </resources>

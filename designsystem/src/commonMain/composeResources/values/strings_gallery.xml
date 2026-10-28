@@ -13,4 +13,17 @@
     <string name="gallery_section_motion">Motion</string>
     <string name="gallery_section_icons">All icons at 16, 20, 24 and 28</string>
     <string name="gallery_sample_text">Heavy 82.5 kg × 8</string>
+    <string name="gallery_page_buttons">Buttons</string>
+    <string name="gallery_page_chips">Chips</string>
+    <string name="gallery_page_rows">Rows</string>
+    <string name="gallery_section_buttons">All button variants</string>
+    <string name="gallery_section_icon_buttons">Icon buttons</string>
+    <string name="gallery_section_chip_kinds">Chip kinds</string>
+    <string name="gallery_section_rows">Rows, switch, radio and top bar</string>
+    <string name="gallery_sample_button">Continue</string>
+    <string name="gallery_sample_long_label">Finish the workout and save it</string>
+    <string name="gallery_sample_chip">Chest</string>
+    <string name="gallery_sample_row">Rest timer</string>
+    <string name="gallery_sample_subtitle">Starts after each set</string>
+    <string name="gallery_sample_icon_label">Add</string>
 </resources>
