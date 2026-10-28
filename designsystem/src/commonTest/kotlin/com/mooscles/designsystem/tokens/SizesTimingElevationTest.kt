@@ -27,6 +27,9 @@ class SizesTimingElevationTest {
         assertEquals(60, s.tickCount)
         assertEquals(0.9f, s.sheetMaxFraction)
         assertEquals(0.3f, s.progressIndeterminateFraction)
+        // Added in phase 2 (spec silent): no existing token fit.
+        assertEquals(8.dp, s.progressBarHeight)
+        assertEquals(0.5f, s.skeletonMinAlpha)
     }
 
     @Test

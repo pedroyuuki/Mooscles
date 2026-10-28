@@ -1,0 +1,44 @@
+package com.mooscles.designsystem.gallery.pages
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.TextFieldValue
+import com.mooscles.designsystem.components.MTextField
+import com.mooscles.designsystem.components.SectionHeader
+import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.gallery_sample_error
+import com.mooscles.designsystem.resources.gallery_sample_help
+import com.mooscles.designsystem.resources.gallery_sample_label
+import com.mooscles.designsystem.resources.gallery_section_text_fields
+import com.mooscles.designsystem.theme.MTheme
+import org.jetbrains.compose.resources.stringResource
+
+/** The text field: empty, with help, with an error and disabled. */
+@Composable
+fun FieldsPage() {
+    val label = stringResource(Res.string.gallery_sample_label)
+    val help = stringResource(Res.string.gallery_sample_help)
+    val error = stringResource(Res.string.gallery_sample_error)
+    var plain by remember { mutableStateOf(TextFieldValue("")) }
+    var withHelp by remember { mutableStateOf(TextFieldValue("")) }
+    var invalid by remember { mutableStateOf(TextFieldValue("")) }
+    Column(
+        Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
+        verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
+    ) {
+        SectionHeader(stringResource(Res.string.gallery_section_text_fields))
+        MTextField(plain, { plain = it }, label)
+        MTextField(withHelp, { withHelp = it }, label, help = help)
+        MTextField(invalid, { invalid = it }, label, error = error)
+        MTextField(TextFieldValue(label), {}, label, enabled = false)
+    }
+}
