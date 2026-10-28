@@ -2,4 +2,10 @@
 <!-- Strings of the design system components. English is the base; every key also exists in values-pt-rBR. -->
 <resources>
     <string name="ds_licenses_title">Open-source licenses</string>
+    <plurals name="ds_sets_count">
+        <item quantity="one">%1$d set</item>
+        <item quantity="other">%1$d sets</item>
+    </plurals>
+    <string name="ds_unit_kg_spoken">%1$s kilograms</string>
+    <string name="ds_unit_lb_spoken">%1$s pounds</string>
 </resources>

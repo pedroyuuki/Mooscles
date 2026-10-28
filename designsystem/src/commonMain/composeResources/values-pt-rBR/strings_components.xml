@@ -2,4 +2,10 @@
 <!-- Brazilian Portuguese translation of values/strings_components.xml, with the same keys and arguments. -->
 <resources>
     <string name="ds_licenses_title">Licenças de código aberto</string>
+    <plurals name="ds_sets_count">
+        <item quantity="one">%1$d série</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
+    <string name="ds_unit_kg_spoken">%1$s quilos</string>
+    <string name="ds_unit_lb_spoken">%1$s libras</string>
 </resources>
