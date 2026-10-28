@@ -60,10 +60,10 @@ Cada uma gera `research/` + `reports/` antes da spec da fase que depende dela.
 
 | # | Pergunta | Necessária antes de |
 | --- | --- | --- |
-| P1 | Referências de UX e identidade em apps de treino (Hevy, Strong, Fitbod, Ladder, Apple Fitness, Gymshark): padrões de registro rápido, timer, PR, progresso; o que copiar e o que evitar | Fase 2 |
-| P2 | Fonte de mídia dos exercícios: bancos abertos ou licenciáveis de imagens, GIFs e vídeos, licença comercial e de redistribuição, formato e tamanho (WebP animado, MP4 curto, Lottie), hospedagem gratuita para download sob demanda | Fase 4 |
-| P3 | Bibliotecas multiplataforma para gráficos, animações (Lottie no Compose Multiplatform), carregamento de imagens com cache e players de vídeo | Fases 2 e 4 |
-| P4 | Fontes e ícones com licença livre (OFL) que funcionem bem com números grandes e tabulares | Fase 2 |
+| P1 | Referências de UX e identidade em apps de treino (Hevy, Strong, Fitbod, Ladder, Apple Fitness, Gymshark): padrões de registro rápido, timer, PR, progresso; o que copiar e o que evitar | Fase 2 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-referencias-ux-apps-treino.md) (parcial: faltam avaliações reais e detalhes finos; coletar capturas antes da spec da fase 3) |
+| P2 | Fonte de mídia dos exercícios: bancos abertos ou licenciáveis de imagens, GIFs e vídeos, licença comercial e de redistribuição, formato e tamanho (WebP animado, MP4 curto, Lottie), hospedagem gratuita para download sob demanda | Fase 4 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-midia-exercicios.md) |
+| P3 | Bibliotecas multiplataforma para gráficos, animações (Lottie no Compose Multiplatform), carregamento de imagens com cache e players de vídeo | Fases 2 e 4 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-bibliotecas-cmp-graficos-animacao-midia.md) (5 spikes antes da spec) |
+| P4 | Fontes e ícones com licença livre (OFL) que funcionem bem com números grandes e tabulares | Fase 2 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-fontes-icones-livres.md) (confirmar `tnum` no iOS antes de escolher a fonte dos números) |
 
 ## Fases
 
