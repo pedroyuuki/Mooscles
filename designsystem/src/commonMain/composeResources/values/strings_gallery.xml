@@ -4,11 +4,13 @@
     <string name="gallery_title">Design gallery</string>
     <string name="gallery_back">Back</string>
     <string name="gallery_page_foundations">Foundations</string>
+    <string name="gallery_page_icons">Icons</string>
     <string name="gallery_section_colors">Colors and measured contrast</string>
     <string name="gallery_section_type">Typography</string>
     <string name="gallery_section_space">Space</string>
     <string name="gallery_section_radius">Radius</string>
     <string name="gallery_section_elevation">Elevation</string>
     <string name="gallery_section_motion">Motion</string>
+    <string name="gallery_section_icons">All icons at 16, 20, 24 and 28</string>
     <string name="gallery_sample_text">Heavy 82.5 kg × 8</string>
 </resources>
