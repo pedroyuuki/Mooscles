@@ -1,6 +1,6 @@
 # Mooscles — guia para agentes
 
-App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de treino. Os dados ficam só no aparelho, sem conta, backend ou analytics. A única rede é a descoberta e o download de atualizações em GitHub Releases públicas. UI, comentários e docs do repositório são em inglês: mantenha assim.
+App Android nativo (Kotlin, Jetpack Compose, Material 3, Room) de diário de treino. Dados, regras, preferências e a lógica das telas ficam num módulo Kotlin Multiplatform, `:shared` (Android, `iosArm64` e `iosSimulatorArm64`); o app iOS ainda não existe. Os dados ficam só no aparelho, sem conta, backend ou analytics. A única rede é a descoberta e o download de atualizações em GitHub Releases públicas. UI, comentários e docs do repositório são em inglês: mantenha assim.
 
 ## Ambiente e comandos
 
@@ -15,7 +15,12 @@ Toolchain: JDK 21 (Adoptium, declarado em `gradle/gradle-daemon-jvm.properties`)
 ./gradlew :app:assembleDebugAndroidTest
 ./gradlew :app:connectedDebugAndroidTest              # precisa de emulador ou aparelho
 ./gradlew :app:assemblePerformance                    # R8, não debuggable, profileable (ver PERFORMANCE.md)
+./gradlew :shared:testAndroidHostTest                 # testes do :shared na JVM: commonTest + androidHostTest (equivalência com a JVM e limites de tempo)
+./gradlew :shared:compileCommonMainKotlinMetadata     # prova local de que o commonMain compila sem API da JVM nem do Android
+./gradlew :shared:iosSimulatorArm64Test               # commonTest + iosTest no simulador iOS: só no CI (job `ios`) ou num Mac com Xcode
 ```
+
+O CI tem dois jobs em todo push e PR: `host` (`:app:testDebugUnitTest`, `:shared:testAndroidHostTest`, lint, `assembleDebug` e a conferência de que o build não muda `shared/schemas`) e `ios` (`macos-26`, Xcode 26.4: `:shared:compileKotlinIosArm64` e `:shared:iosSimulatorArm64Test`). O `release-script` (Linux e Windows) roda quando `tools/`, o `build.ps1`, o `app/build.gradle.kts` ou um workflow mudam, e em toda execução manual. Numa máquina sem Xcode, tudo o que é iOS só se prova no CI.
 
 `build.ps1` roda o conjunto padrão (testes, lint, debug, androidTest) e, depois do `assembleDebug`, chama `tools/prepare-release.ps1` para gerar o APK versionado, o `update.json` e o `.sha256`. Os relatórios ficam em `app/build/reports/`.
 
@@ -23,23 +28,33 @@ Fora da máquina que tem a chave original de assinatura, o `build.ps1` termina c
 
 ## Arquitetura
 
-Sem framework de DI. `MoosclesApplication` cria preguiçosamente os singletons: `WorkoutDatabase`, `WorkoutRepository`, `AppPreferences` (DataStore), `RestTimerController`, `UpdateManager` e um `trainingGate` (`Mutex`) compartilhado entre treino e instalação de atualização.
+Dois módulos. Os pacotes continuam os mesmos (`com.mooscles`, `.data`, `.domain`, `.backup`, `.timer`, `.ui`, `.updates`), e um pacote pode ter arquivos nos dois:
+
+- **`:shared`** (KMP, namespace `com.mooscles.shared`):
+  - `commonMain`: `data/` (entidades, DAO, migrações e `buildMooscles()` em `WorkoutDatabase.kt`, `WorkoutRepository`, catálogo, busca com `SearchFolding`), `domain/` (cálculos, `DecimalText`, `RestDuration`), `backup/` (formato, codec, `ImportPlanner`, `BackupDocumentStore`), `ui/UiContract.kt` e `ui/UpdateUi.kt` (`UiState`, `MoosclesActions`), `AppPreferences` (só a classe), `PreferencesBackup.kt`, `MoosclesStore` (o nome do arquivo de preferências), `timer/` (`RestTimer`, `RestTimerPersistence`, `RestTimerState`), `updates/UpdateCoordinator.kt`, `WorkoutPresentation`, `MoosclesViewModel`, `MoosclesServices` e `ViewModelPlatform`. Sem `java.*`, `android.*` nem `System.`: o `UUID`, o relógio, `ulp`, formatação e `Normalizer` têm substitutos em Kotlin puro, cada um com teste de equivalência contra a JVM;
+  - `androidMain`: só `WorkoutDatabase.open(context)` (`data/WorkoutDatabaseAndroid.kt`), com `AndroidSQLiteDriver` e `WorkoutDatabase.FILE_NAME = "mooscles.db"`. É o único `Context` do `:shared`;
+  - `iosMain`: `openWorkoutDatabase(directory)` (`BundledSQLiteDriver`) e `createMoosclesStore(directory)`, com o mesmo layout relativo do Android (`<dir>/datastore/local_preferences.preferences_pb`).
+- **`:app`**: `MoosclesApplication`, `MainActivity`, as telas (`ui/`), `AppViewModel`, `AndroidViewModelPlatform`, o delegate do DataStore (`AppPreferences.kt`), `timer/RestTimerController` (`AlarmManager` e notificação), `updates/` inteiro, `sharing/` e `backup/AndroidBackupDocuments` + `BackupDocuments` (SAF).
+
+O que é Android chega ao código comum por interfaces: `RestTimer` (implementada pelo `RestTimerController`), `UpdateCoordinator` (`UpdateManager`), `BackupDocumentStore` (`AndroidBackupDocuments`, que classifica `IOException` e `SecurityException` como falha de arquivo), `ViewModelPlatform` (`AndroidViewModelPlatform`: `Trace`, `Looper`) e `BackupApp` (com o `BuildConfig`). O `MoosclesViewModel` (comum, abstrato) recebe tudo num `MoosclesServices`. O `AppViewModel` do `:app` é a subclasse Android: implementa `install()` com `UpdateManager.requestInstall()` e entrega o `Intent` em `installIntents`, e a `MainActivity` o cria por `viewModels { AppViewModel.Factory }`. O `UpdateCoordinator` não expõe a instalação de propósito: ela só passa pelo `requestInstall()`, que respeita o `trainingGate` (`AppViewModelInstallHostTest`).
+
+Sem framework de DI. `MoosclesApplication` cria preguiçosamente os singletons: `WorkoutDatabase` (por `WorkoutDatabase.open(this)`), `WorkoutRepository`, `AppPreferences` (DataStore), `RestTimerController`, `UpdateManager` e um `trainingGate` (`Mutex`) compartilhado entre treino, import de backup e instalação de atualização. `services` junta todos num `MoosclesServices`.
 
 Fluxo de dados, todo unidirecional:
 
 - `WorkoutRepository.data` lê **todas** as tabelas numa única transação a cada invalidação e reaproveita listas iguais, para preservar identidade. Não otimize isso lendo só a tabela que mudou: o comentário no código explica a corrida.
-- `AppViewModel` (implementa `MoosclesActions`, de `ui/UiContract.kt`) serializa toda escrita num `Channel` de comandos (`act { … }`). Erros viram `UiState.error`, não exceções.
+- `MoosclesViewModel` (implementa `MoosclesActions`, de `ui/UiContract.kt`; o `AppViewModel` é a subclasse Android) serializa toda escrita num `Channel` de comandos (`act { … }`). Erros viram `UiState.error`, não exceções. Uma `CancellationException` que escapa de um comando é um comando que falhou (`SAVE_FAILED`), não o fim do loop: o loop só termina quando a própria corrotina dele é cancelada (ViewModel limpo), o que ele confere com `currentCoroutineContext().ensureActive()` no `catch`. Não troque isso por `throw e`, que derrubaria todos os comandos seguintes (`AppViewModelCommandLoopHostTest`).
 - `WorkoutPresentation.present()` converte `AppData` + preferências em `UiState` com caches internos. Roda no fluxo sequencial do ViewModel, num executor de fundo de uma thread só (`limitedParallelism(1)`), nunca dentro de composição.
 - As telas recebem `contentUi`. Só o dock do timer coleta `timerUi`, para que os ticks da contagem não recomponham as telas.
 - `ui/MoosclesApp.kt` define o `NavHost` com rotas em string (`routines`, `routine/{id}`, `workout`, `history`, `workoutDetail/{id}?summary=`, `library`, `exercise/{id}`, `records`, `settings`).
 
 Pacotes:
 
-- `data/`: entidades em `Models.kt`, DAO e migrações em `WorkoutDatabase.kt`, catálogo de exercícios embutido em `ExerciseCatalog.kt` (atualizado em `repository.initialize()`).
-- `domain/`: cálculos puros de PR, unidades e descanso. Pesos são sempre guardados em kg; só a entrada e a exibição usam a unidade escolhida.
-- `timer/`: timer de descanso com `AlarmManager` + `RestAlarmReceiver` + notificação, persistido no DataStore para sobreviver a reinício. Só existe com uma sessão de treino ativa e é limpo ao finalizar ou descartar.
-- `updates/`: checagem em primeiro plano e a cada ~6 h (WorkManager), download, `ApkVerifier` (package, `versionCode` maior, mesmo assinante, sha256) e instalação por `PackageInstaller`. A instalação espera não haver treino ativo nem timer rodando.
-- `sharing/`: renderiza o cartão do treino como PNG de 1080 px fora da thread de UI, em cache privado, compartilhado por `FileProvider` com permissão temporária. Exports com mais de 7 dias são apagados.
+- `data/` (`:shared`): entidades em `Models.kt`, DAO e migrações em `WorkoutDatabase.kt`, catálogo de exercícios embutido em `ExerciseCatalog.kt` (atualizado em `repository.initialize()`).
+- `domain/` (`:shared`): cálculos puros de PR, unidades e descanso. Pesos são sempre guardados em kg; só a entrada e a exibição usam a unidade escolhida.
+- `timer/`: timer de descanso com `AlarmManager` + `RestAlarmReceiver` + notificação (`RestTimerController`, no `:app`), persistido no DataStore por `RestTimerPersistence` (no `:shared`) para sobreviver a reinício. Só existe com uma sessão de treino ativa e é limpo ao finalizar ou descartar.
+- `updates/` (`:app`, menos a interface `UpdateCoordinator`): checagem em primeiro plano e a cada ~6 h (WorkManager), download, `ApkVerifier` (package, `versionCode` maior, mesmo assinante, sha256) e instalação por `PackageInstaller`. A instalação espera não haver treino ativo nem timer rodando.
+- `sharing/` (`:app`): renderiza o cartão do treino como PNG de 1080 px fora da thread de UI, em cache privado, compartilhado por `FileProvider` com permissão temporária. Exports com mais de 7 dias são apagados.
 
 O histórico (`workouts`, `workout_exercises`, `workout_sets`) é um snapshot independente das rotinas e do catálogo: apagar ou editar uma rotina nunca altera treinos concluídos.
 
@@ -54,7 +69,11 @@ Usuários reais atualizam APKs por cima, sem backup em servidor. Uma quebra aqui
 - **Transações** só por `WorkoutDatabase.writeTransaction { … }`. Não use `RoomDatabase.withTransaction` nem `openHelper` (com driver, os dois falham). Uma chamada aninhada roda direto na transação de fora, e a falha dela desfaz a transação inteira.
 - **Nunca capture exceção dentro de uma transação de escrita.** No Android (`AndroidSQLiteDriver`) o Room usa uma conexão passthrough, então as chamadas de DAO dentro da transação são transações aninhadas do framework: uma exceção de DAO capturada faz a transação inteira dar rollback em silêncio no fim. Com o `BundledSQLiteDriver` (iOS, etapa 1B) o trabalho aninhado usa SAVEPOINTs e o commit gravaria um estado pela metade. Nos dois casos, nunca capture: deixe a exceção sair do bloco.
 - Com o driver, o Room executa `PRAGMA synchronous = NORMAL` (com WAL) e `busy_timeout` de 3 s nas conexões que configura. Com WAL, `NORMAL` não corrompe o banco, mas uma queda de energia pode perder a última transação confirmada (depende do aparelho). No emulador Android 15, o framework já usava `NORMAL` antes da troca (ver o [relatório da fase 1A](docs/superpowers/reports/2026-10-27-phase1a-verificacao.md)).
-- Não renomeie nem mude o tipo de chave do DataStore em `AppPreferences.kt` ou `timer/RestTimerPersistence.kt`.
+- Não renomeie nem mude o tipo de chave do DataStore em `AppPreferences.kt` ou `timer/RestTimerPersistence.kt` (os dois no `:shared`).
+- **Um arquivo, dois donos:** `files/datastore/local_preferences.preferences_pb` (`MoosclesStore.NAME`) guarda as preferências (`pounds`, `theme`, `auto_rest`, `default_rest`, `selected_routine_folder`) e o timer (as chaves `timer_*`). O timer não tem arquivo próprio. O estado do updater fica em outro arquivo, `app_updates.preferences_pb`, no `:app`.
+- **DataStore único:** só pode haver uma instância de DataStore sobre `local_preferences` por processo, o delegate `val Context.moosclesStore by preferencesDataStore(…)` em `app/src/main/java/com/mooscles/AppPreferences.kt`. O código comum recebe esse `DataStore<Preferences>` pronto (`AppPreferences(store)`, `RestTimerPersistence(store, now)`) e nunca abre o próprio no Android: uma segunda instância derruba o app com "multiple DataStores active" ou perde escritas do timer. A fábrica `createMoosclesStore` é só do iOS. Os testes isolam o store por reflexão em `com.mooscles.AppPreferencesKt.moosclesStore$delegate`, então o delegate não muda de arquivo.
+- **Fachadas:** no mesmo pacote, um arquivo do `:shared` com declaração de nível superior não pode ter o mesmo nome de um arquivo do `:app` também com declaração de nível superior. Os dois gerariam a mesma classe `XxxKt`, e o D8 falha. Por isso o `AppPreferences.kt` do `:shared` tem só a classe, o `toBackup()` fica em `PreferencesBackup.kt`, e `com.mooscles.AppPreferencesKt` é do `:app`.
+- **Estabilidade do Compose:** as classes que vieram do `:app` e eram estáveis lá estão listadas, uma a uma e sem curinga, em `app/compose-stability.conf`. Classe nova do `:shared` usada como parâmetro de composable entra nessa lista só se for de fato imutável.
 - Identidade fixa: `applicationId = com.mooscles`, distribuição com o APK **debug** assinado pela chave debug local existente (fora do git). Trocar a chave impede atualizações. `versionCode` só cresce e nunca é reutilizado.
 - O `update.json` (`applicationId`, `versionCode`, `versionName`, `minSdk`, `apkFileName`, `apkSize`, `sha256`) e `ReleaseUrls.REPOSITORY = "ReiTut/Mooscles"` são contrato com builds já instalados: os apps procuram releases nesse repositório.
 

@@ -358,6 +358,8 @@ As decisões marcadas com **(minha escolha)** são as que a spec deixou em abert
   - o grep do código comum puro, vazio.
 - [ ] **Step 4:** Rodar o `compat-reviewer` (`SEGURO`; ele confere que o timer e o updater só ganharam `override`), fazer o commit com `app: shared presentation and view model logic, Android services behind interfaces` e o push.
 
+> **Nota de 2026-10-28 (desvio aprovado na revisão da Task 7).** O `AppViewModel` ganhou um `fun <T : Application> getApplication(): T` **público**, que devolve o `MoosclesApplication`, como o `AndroidViewModel.getApplication()` fazia antes. A lista de interfaces acima não o prevê. Ele existe para que o `UiFlowHostTest` continue sem nenhuma mudança, como manda o Step 1: o teste chama `getApplication<MoosclesApplication>()` no ViewModel. O revisor aprovou o desvio. Na mesma revisão, o `compat-reviewer` pediu um teste que prendesse o `install()` ao `UpdateManager.requestInstall()`; ele entrou na Task 10, como `AppViewModelInstallHostTest`.
+
 ### Task 8: Entradas iOS para banco e preferências, provadas no simulador
 
 **Files:**

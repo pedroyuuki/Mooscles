@@ -104,14 +104,13 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 **Andamento:**
 
 - [x] **Etapa 1A, ferramentas e Room KMP-ready** (concluída e na `main` do fork em 2026-10-27, CI verde: run 40616854260): Gradle 9.7.1, AGP 9.3.3 com Kotlin embutido, Kotlin 2.4.21, KSP 2.3.12, Compose BOM 2026.09.00, `compileSdk` 37; Room 2.8.5 com `AndroidSQLiteDriver`, migrações na API `SQLiteConnection` e transações por `WorkoutDatabase.writeTransaction`. Atualização por cima no emulador sem perda de dado. [Plano](plans/2026-10-27-phase1a-toolchain-room.md), [verificação](reports/2026-10-27-phase1a-verificacao.md). O driver ficou no SQLite do sistema (`AndroidSQLiteDriver`), e não no SQLite embutido que a entrega acima previa: ver a spec.
-- [ ] Etapa 1B, módulo `:shared`.
+- [x] **Etapa 1B, módulo `:shared`** (verificada no emulador em 2026-10-28, na branch `chore/phase1b-shared-module`; o merge na `main` do fork vem depois do `/code-review` e do CI verde): dados, domínio, backup, preferências, persistência do timer, contrato de UI, apresentação e a lógica do ViewModel no `:shared` (Android, `iosArm64`, `iosSimulatorArm64`), com Room KMP e os schemas em `shared/schemas/`; job `ios` no CI rodando `commonTest` no simulador; teste instrumentado que abre um banco e um DataStore gravados pela 1.4.5. Atualização por cima no emulador sem nenhuma diferença, APK debug +236 bytes. [Plano](plans/2026-10-27-phase1b-shared-module.md), [verificação](reports/2026-10-27-phase1b-verificacao.md).
 
 **Pronto quando:**
 
 - o `compat-reviewer` dá `SEGURO`;
 - um banco e as preferências da v1.5 abrem intactos;
 - o comportamento é idêntico ao da v1.5;
-- [ ] **Etapa 1B, módulo `:shared`**: [plano](plans/2026-10-27-phase1b-shared-module.md) pronto em 2026-10-27, implementação em andamento.
 - o job iOS do CI (compilação do `:shared` e `commonTest` no simulador) está verde, e os relatórios das etapas 1A e 1B estão em `reports/`.
 
 ### Fase 2 — Identidade visual e design system · v1.7 · 3–5 semanas
