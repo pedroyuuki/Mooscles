@@ -51,6 +51,30 @@ class RoomPersistenceTest {
         assertEquals(before, repo.snapshot())
     }
 
+    @Test fun aCaughtNestedFailureStillRollsBackTheOuterTransaction() = runBlocking {
+        val before = repo.snapshot()
+        val error = runCatching {
+            database.writeTransaction {
+                repo.createRoutine("A")
+                val nested = runCatching {
+                    database.writeTransaction {
+                        repo.createRoutine("B")
+                        error("Nested failure")
+                    }
+                }.exceptionOrNull()
+                assertEquals("Nested failure", nested?.message)
+                // The caller swallows the nested failure and returns normally.
+            }
+        }.exceptionOrNull()
+        assertTrue(error is IllegalStateException)
+        // Coroutine stack-trace recovery may wrap the exception in a copy, so walk the causes.
+        val causes = generateSequence(error) { it.cause }.map { it.message }.toList()
+        assertTrue(causes.toString(), "A nested write transaction failed, so the enclosing one is rolled back" in causes)
+        assertTrue(causes.toString(), "Nested failure" in causes)
+        assertEquals(before, repo.snapshot())
+        assertTrue(repo.snapshot().routines.none { it.name == "A" || it.name == "B" })
+    }
+
     /**
      * A nested command must run on the enclosing transaction's connection without starting its own
      * connection use: Room refreshes the invalidation tracker after every `useWriterConnection`, and

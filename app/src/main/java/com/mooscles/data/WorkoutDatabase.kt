@@ -194,11 +194,30 @@ abstract class WorkoutDatabase : RoomDatabase() {
  * transaction. It must not call `useWriterConnection` again: Room refreshes the invalidation
  * tracker after every such call, and each refresh would park a Room IO thread on the connection
  * pool until the outer commit. Like before, the outer commit is the only refresh.
+ *
+ * As with the framework's nested transactions, a failed nested call poisons the enclosing
+ * transaction: even if its caller catches the exception and returns normally, the top-level call
+ * throws instead of committing, so its writes and the nested writes are all rolled back.
  */
 suspend fun <R> WorkoutDatabase.writeTransaction(block: suspend () -> R): R {
-    if (currentCoroutineContext()[EnclosingWriteTransaction]?.database === this) return block()
+    val enclosing = currentCoroutineContext()[EnclosingWriteTransaction]
+    if (enclosing?.database === this) {
+        return try {
+            block()
+        } catch (failure: Throwable) {
+            enclosing.markFailed(failure)
+            throw failure
+        }
+    }
+    val transaction = EnclosingWriteTransaction(this)
     return useWriterConnection { connection ->
-        connection.immediateTransaction { withContext(EnclosingWriteTransaction(this@writeTransaction)) { block() } }
+        connection.immediateTransaction {
+            val result = withContext(transaction) { block() }
+            transaction.failure?.let { nested ->
+                throw IllegalStateException("A nested write transaction failed, so the enclosing one is rolled back", nested)
+            }
+            result
+        }
     }
 }
 
@@ -206,4 +225,12 @@ suspend fun <R> WorkoutDatabase.writeTransaction(block: suspend () -> R): R {
 private class EnclosingWriteTransaction(val database: WorkoutDatabase) :
     AbstractCoroutineContextElement(EnclosingWriteTransaction) {
     companion object Key : CoroutineContext.Key<EnclosingWriteTransaction>
+
+    /** The first nested failure; once set, the transaction can only roll back. */
+    @Volatile var failure: Throwable? = null
+        private set
+
+    @Synchronized fun markFailed(nested: Throwable) {
+        if (failure == null) failure = nested
+    }
 }
