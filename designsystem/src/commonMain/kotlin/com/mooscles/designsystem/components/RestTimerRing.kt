@@ -13,10 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.designsystem.tokens.MoosclesColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -53,12 +55,23 @@ fun ringProgress(remainingMs: Long, totalMs: Long, reduced: Boolean): Float {
 fun tickAngles(count: Int = 60): List<Float> =
     if (count <= 0) emptyList() else List(count) { it * 360f / count }
 
+/**
+ * The color of the progress arc: `timer.progress` while the timer runs or has finished, and
+ * `text.tertiary` while it is paused, so a held timer does not look like a running one. The paused
+ * arc stays at 3:1 or more against the dock (`bg.raised`: 5.96 light, 5.63 dark) and against the
+ * track (4.28 and 4.22); `border.strong` would be 2.53 against the dark track. The pause icon and
+ * the "Paused" label say it without color too.
+ */
+internal fun ringBarColor(phase: TimerPhase, colors: MoosclesColors): Color =
+    if (phase == TimerPhase.Paused) colors.textTertiary else colors.timerProgress
+
 private const val TURN = 360f
 private const val QUARTER_TURN = 90f
 
 /**
  * The plate-shaped ring: a track, the progress arc (`timer.track`, `timer.progress`) and, with
- * [ticks], the rim marks of a weight plate in `border.subtle`. [progress] is the share still to go;
+ * [ticks], the rim marks of a weight plate in `border.subtle`; the arc is drawn in [ringBarColor] for
+ * [phase]. [progress] is the share still to go;
  * it is read only while drawing, so a tick redraws the ring and recomposes nothing around it.
  * [content] sits in the middle.
  */
@@ -68,12 +81,13 @@ internal fun RestTimerRing(
     diameter: Dp,
     stroke: Dp,
     ticks: Boolean,
+    phase: TimerPhase,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit = {},
 ) {
     val colors = MTheme.colors
     val track = colors.timerTrack
-    val bar = colors.timerProgress
+    val bar = ringBarColor(phase, colors)
     val rim = colors.borderSubtle
     val sizes = MTheme.sizes
     val tickLength = sizes.tickLength

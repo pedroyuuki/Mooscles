@@ -13,8 +13,10 @@
     <string name="ds_error_prefix">Error</string>
     <string name="ds_close">Close</string>
     <string name="ds_dismiss">Dismiss</string>
-    <string name="ds_set_row_a11y">Set %1$d of %2$d, previous %3$s, load %4$s, %5$s, %6$s</string>
-    <string name="ds_set_row_a11y_no_previous">Set %1$d of %2$d, load %3$s, %4$s, %5$s</string>
+    <string name="ds_set_row_position">Set %1$d of %2$d</string>
+    <string name="ds_set_row_a11y">%1$s, previous %2$s, load %3$s, %4$s, %5$s</string>
+    <string name="ds_set_row_a11y_no_previous">%1$s, load %2$s, %3$s, %4$s</string>
+    <string name="ds_load_by_reps_spoken">%1$s by %2$d</string>
     <plurals name="ds_reps_count">
         <item quantity="one">%1$d rep</item>
         <item quantity="other">%1$d reps</item>
@@ -35,6 +37,9 @@
     <string name="ds_set_type_warmup_short">W</string>
     <string name="ds_set_type_drop_short">D</string>
     <string name="ds_set_type_failure_short">F</string>
+    <string name="ds_set_type_warmup_spoken">warm-up</string>
+    <string name="ds_set_type_drop_spoken">drop set</string>
+    <string name="ds_set_type_failure_spoken">to failure</string>
     <string name="ds_timer_rest">Rest</string>
     <string name="ds_timer_done">Rest complete</string>
     <string name="ds_timer_paused">Paused</string>

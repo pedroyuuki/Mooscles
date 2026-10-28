@@ -1,5 +1,6 @@
 package com.mooscles.designsystem.components
 
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -97,5 +98,18 @@ class MToastTest {
         mainClock.advanceTimeBy(MoosclesMotion().fast + 200L)
         onNodeWithTag(ToastTag).assertDoesNotExist()
         assertEquals(MToastResult.Dismissed, run.result)
+    }
+
+    @Test
+    fun errorToastShowsTheAlertIconAndInfoDoesNot() {
+        runComposeUiTest {
+            start(Run(), "Could not save", kind = MToastKind.Error)
+            onNodeWithTag(ToastErrorIconTag, useUnmergedTree = true).assertContentDescriptionEquals("Error")
+            onNodeWithTag(ToastTag).assertTextContains("Could not save")
+        }
+        runComposeUiTest {
+            start(Run(), "Saved")
+            onNodeWithTag(ToastErrorIconTag, useUnmergedTree = true).assertDoesNotExist()
+        }
     }
 }
