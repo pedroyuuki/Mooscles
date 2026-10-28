@@ -68,6 +68,7 @@ class IconsTest {
             "Rope", "Body",
         )
         assertEquals(expected, MIcons.all.map { it.first })
+        for ((name, icon) in MIcons.all) assertEquals(name, icon.name)
         assertEquals(38, MIcons.all.map { it.second }.toSet().size)
     }
 }
