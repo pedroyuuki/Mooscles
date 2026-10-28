@@ -27,6 +27,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -53,6 +54,7 @@ import com.mooscles.ui.DeveloperGallery
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.MoosclesApp
 import com.mooscles.ui.MoosclesTheme
+import com.mooscles.ui.SETTINGS_TOP_BAR_TAG
 import com.mooscles.ui.PreferencesUi
 import com.mooscles.ui.SettingsScreen
 import com.mooscles.ui.UiState
@@ -346,9 +348,12 @@ class SettingsScreenHostTest {
             }
         }
         val version = compose.onNodeWithTag("update-installed-version").performScrollTo()
-        // The tap target is a button of at least 48 dp, read with the version text.
+        // The tap target is at least 48 dp. Critique #8: it is read as plain text, one node with
+        // the version and no role or click action, since a tap shows nothing until the seventh.
         version.assertTouchTargetIsAtLeast48dp()
-        assertEquals(Role.Button, version.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Role))
+        val config = version.fetchSemanticsNode().config
+        assertEquals(null, config.getOrNull(SemanticsProperties.Role))
+        assertFalse("the version row must not offer a click action", config.contains(SemanticsActions.OnClick))
         version.assert(hasText("Installed 1.4.5 · build 16"))
         repeat(DeveloperGallery.TAPS - 1) {
             compose.onNodeWithTag("update-installed-version").performScrollTo().performClick()
@@ -357,6 +362,20 @@ class SettingsScreenHostTest {
         compose.onNodeWithTag("update-installed-version").performScrollTo().performClick()
         compose.onNodeWithTag("open-gallery").performScrollTo().assertIsDisplayed().assert(hasText("Component gallery")).performClick()
         compose.runOnIdle { assertEquals(1, opened) }
+    }
+
+    /** Critique #10: the top bar is a traversal group placed before the content, so Back and the title are read first. */
+    @Test
+    fun topBarIsReadBeforeTheContent() {
+        compose.setContent { MoosclesApp(UiState(loading = false, updates = installed), recording(mutableListOf())) }
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitForIdle()
+        val config = compose.onNodeWithTag(SETTINGS_TOP_BAR_TAG).fetchSemanticsNode().config
+        assertEquals(true, config.getOrNull(SemanticsProperties.IsTraversalGroup))
+        val index = config.getOrNull(SemanticsProperties.TraversalIndex)
+        assertTrue("traversal index $index must come before the content (0)", index != null && index < 0f)
+        compose.onNode(hasAnyAncestor(hasTestTag(SETTINGS_TOP_BAR_TAG)) and hasText("Settings") and isHeading()).assertExists()
+        compose.onNode(hasAnyAncestor(hasTestTag(SETTINGS_TOP_BAR_TAG)) and hasContentDescription("Back") and hasClickAction()).assertExists()
     }
 
     @Test

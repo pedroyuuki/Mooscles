@@ -3,20 +3,28 @@ package com.mooscles.designsystem.gallery
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_unit_kg_spoken
+import com.mooscles.designsystem.resources.gallery_controls_hide
+import com.mooscles.designsystem.resources.gallery_controls_show
+import com.mooscles.designsystem.resources.gallery_sample_previous_spoken
 import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
@@ -28,6 +36,8 @@ import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
+import com.mooscles.designsystem.theme.rememberSystemReducedMotion
+import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.resources.gallery_section_timer
 import com.mooscles.designsystem.resources.gallery_section_workout_inputs
@@ -202,5 +212,72 @@ class GallerySmokeTest {
             onNodeWithTag(GalleryTags.language(GalleryLanguage.System)).assertIsSelected()
         }
         assertFalse(LocalAppLocale.restore(), "Leaving must have restored the language already")
+    }
+
+    /** Critique #14: motion starts by following the system, and the choice can force it either way. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun motionFollowsTheSystemUntilChanged() = runComposeUiTest {
+        var system: Boolean? = null
+        withTheme {
+            system = rememberSystemReducedMotion()
+            GalleryScreen(onBack = {}, initialPage = GalleryPage.Foundations)
+        }
+        waitForIdle()
+        onNodeWithTag(GalleryTags.motion(GalleryMotion.System)).assertIsSelected()
+        onNodeWithText("reducedMotion: $system").assertExists()
+        onNodeWithTag(GalleryTags.motion(GalleryMotion.Reduced)).performClick()
+        waitForIdle()
+        onNodeWithText("reducedMotion: true").assertExists()
+        onNodeWithTag(GalleryTags.motion(GalleryMotion.Full)).performClick()
+        waitForIdle()
+        onNodeWithText("reducedMotion: false").assertExists()
+        onNodeWithTag(GalleryTags.motion(GalleryMotion.System)).performClick()
+        waitForIdle()
+        onNodeWithText("reducedMotion: $system").assertExists()
+    }
+
+    /** Critique #17: the controls fold into one row, which gives the page the rest of the screen. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun controlsFoldIntoOneRowAndComeBack() = runComposeUiTest {
+        withTheme { GalleryScreen(onBack = {}, initialPage = GalleryPage.Buttons) }
+        waitForIdle()
+        val pageTop = onNodeWithTag(galleryPageTag(GalleryPage.Buttons)).getUnclippedBoundsInRoot().top
+        onNodeWithTag(GalleryTags.CONTROLS_TOGGLE).assert(hasText(getString(Res.string.gallery_controls_hide))).performClick()
+        waitForIdle()
+        onNodeWithTag(GalleryTags.theme(dark = false)).assertDoesNotExist()
+        onNodeWithTag(GalleryTags.motion(GalleryMotion.System)).assertDoesNotExist()
+        onNodeWithTag(GalleryTags.CONTROLS_TOGGLE).assert(hasText(getString(Res.string.gallery_controls_show)))
+        val foldedTop = onNodeWithTag(galleryPageTag(GalleryPage.Buttons)).getUnclippedBoundsInRoot().top
+        assertTrue(foldedTop < pageTop, "the page must move up: $pageTop -> $foldedTop")
+        onNodeWithTag(GalleryTags.CONTROLS_TOGGLE).performClick()
+        waitForIdle()
+        onNodeWithTag(GalleryTags.theme(dark = false)).assertExists()
+    }
+
+    /** Critique #19: each entry of the page list is a full row, at least `rowMin` tall, with a chevron. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun pageListEntriesAreFullRows() = runComposeUiTest {
+        withTheme { GalleryScreen(onBack = {}) }
+        waitForIdle()
+        val rowMin = MoosclesSizes().rowMin
+        val screenWidth = onNodeWithTag(GalleryTags.SCREEN).getUnclippedBoundsInRoot().width
+        for (page in GalleryPage.entries) {
+            val bounds = onNodeWithTag(galleryEntryTag(page)).performScrollTo().getUnclippedBoundsInRoot()
+            assertTrue(bounds.height >= rowMin - 0.5.dp, "${page.name}: ${bounds.height} tall")
+            assertEquals(screenWidth, bounds.width, "${page.name} spans the screen")
+        }
+    }
+
+    /** Critique #22: the previous set is read with its reps ("anterior 80 quilos por 6"). */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun setRowSampleReadsThePreviousSetWithItsReps() = runComposeUiTest {
+        withTheme { GalleryPage.SetRow.Content() }
+        waitForIdle()
+        val previous = getString(Res.string.gallery_sample_previous_spoken, getString(Res.string.ds_unit_kg_spoken, "55"), 10)
+        onNode(hasContentDescription(previous, substring = true)).assertExists()
     }
 }

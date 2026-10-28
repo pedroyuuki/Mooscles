@@ -28,10 +28,7 @@ fun IconsPage() {
             .padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
     ) {
-        BasicText(
-            stringResource(Res.string.gallery_section_icons),
-            style = MTheme.type.titleMd.copy(color = MTheme.colors.textPrimary),
-        )
+        PageHeader(stringResource(Res.string.gallery_section_icons))
         for ((name, icon) in MIcons.all) {
             Row(
                 Modifier.fillMaxWidth(),

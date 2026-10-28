@@ -27,7 +27,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.RadioGroup
 import com.mooscles.designsystem.components.RadioRow
@@ -166,17 +168,29 @@ fun SettingsScreen(
     }
 }
 
-/** The top bar of the Settings route: back and the title, which is the only "Settings" text. */
+/**
+ * The top bar of the Settings route: back and the title, which is the only "Settings" text.
+ * The scaffold composes it after the content, so it is its own traversal group placed first:
+ * a screen reader reads Back and the title before the settings.
+ */
 @Composable
 fun SettingsTopBar(onBack: () -> Unit) {
     TopBar(
         stringResource(Res.string.settings_title),
         Modifier
+            .testTag(SETTINGS_TOP_BAR_TAG)
+            .semantics {
+                isTraversalGroup = true
+                traversalIndex = -1f
+            }
             .background(MTheme.colors.bgBase)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
         onBack = onBack,
     )
 }
+
+/** The tag of [SettingsTopBar]. */
+const val SETTINGS_TOP_BAR_TAG = "settings-top-bar"
 
 /** A secondary explanation under a group of settings. */
 @Composable

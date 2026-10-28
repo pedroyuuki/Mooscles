@@ -16,7 +16,6 @@ import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.RestTimerDock
 import com.mooscles.designsystem.components.RestTimerExpanded
 import com.mooscles.designsystem.components.RestTimerVisual
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.TimerPhase
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_timer_rest
@@ -42,7 +41,7 @@ fun TimerPage() {
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.space.s4),
     ) {
-        SectionHeader(stringResource(Res.string.gallery_section_timer))
+        PageHeader(stringResource(Res.string.gallery_section_timer))
         RestTimerDock(visual(TimerPhase.Running, remaining), { remaining = (remaining - STEP).coerceAtLeast(0) }, { remaining = (remaining + STEP).coerceAtMost(TOTAL) }, {})
         RestTimerDock(visual(TimerPhase.Paused, SAMPLE_REMAINING), {}, {}, {})
         if (finished) {
