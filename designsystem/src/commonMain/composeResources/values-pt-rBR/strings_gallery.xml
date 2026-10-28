@@ -26,4 +26,17 @@
     <string name="gallery_sample_row">Descanso automático</string>
     <string name="gallery_sample_subtitle">Começa depois de cada série</string>
     <string name="gallery_sample_icon_label">Adicionar</string>
+    <string name="gallery_page_fields">Campos</string>
+    <string name="gallery_page_states">Estados</string>
+    <string name="gallery_section_text_fields">Campos de texto</string>
+    <string name="gallery_section_states">Progresso, erros, vazio e carregamento</string>
+    <string name="gallery_sample_label">Nome do exercício</string>
+    <string name="gallery_sample_help">Aparece na sua biblioteca</string>
+    <string name="gallery_sample_error">Digite um nome</string>
+    <string name="gallery_sample_empty_title">Nenhum treino ainda</string>
+    <string name="gallery_sample_empty_body">Termine um treino e ele aparece aqui.</string>
+    <string name="gallery_sample_start">Iniciar um treino</string>
+    <string name="gallery_sample_not_now">Agora não</string>
+    <string name="gallery_sample_banner">Não foi possível salvar. Tente de novo.</string>
+    <string name="gallery_sample_retry">Tentar de novo</string>
 </resources>

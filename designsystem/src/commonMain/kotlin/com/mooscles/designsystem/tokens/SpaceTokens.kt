@@ -76,4 +76,7 @@ data class MoosclesSizes(
     val focusRingOffset: Dp = 2.dp,
     /** Share of the track the indeterminate progress bar fills while it moves (or rests). */
     val progressIndeterminateFraction: Float = 0.3f,
+    val progressBarHeight: Dp = 8.dp,
+    /** Lowest opacity of the skeleton pulse. */
+    val skeletonMinAlpha: Float = 0.5f,
 )

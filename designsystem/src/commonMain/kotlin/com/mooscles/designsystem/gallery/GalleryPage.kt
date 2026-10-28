@@ -6,15 +6,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.mooscles.designsystem.gallery.pages.ButtonsPage
 import com.mooscles.designsystem.gallery.pages.ChipsPage
+import com.mooscles.designsystem.gallery.pages.FieldsPage
 import com.mooscles.designsystem.gallery.pages.FoundationsPage
 import com.mooscles.designsystem.gallery.pages.IconsPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
+import com.mooscles.designsystem.gallery.pages.StatesPage
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_page_buttons
 import com.mooscles.designsystem.resources.gallery_page_chips
+import com.mooscles.designsystem.resources.gallery_page_fields
 import com.mooscles.designsystem.resources.gallery_page_foundations
 import com.mooscles.designsystem.resources.gallery_page_icons
 import com.mooscles.designsystem.resources.gallery_page_rows
+import com.mooscles.designsystem.resources.gallery_page_states
 import org.jetbrains.compose.resources.StringResource
 
 /** The pages of the design gallery. Each batch of components adds its own entry. */
@@ -24,6 +28,8 @@ enum class GalleryPage(val title: StringResource) {
     Buttons(Res.string.gallery_page_buttons),
     Chips(Res.string.gallery_page_chips),
     Rows(Res.string.gallery_page_rows),
+    Fields(Res.string.gallery_page_fields),
+    States(Res.string.gallery_page_states),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
@@ -40,6 +46,8 @@ fun GalleryPage.Content() {
             GalleryPage.Buttons -> ButtonsPage()
             GalleryPage.Chips -> ChipsPage()
             GalleryPage.Rows -> RowsPage()
+            GalleryPage.Fields -> FieldsPage()
+            GalleryPage.States -> StatesPage()
         }
     }
 }
