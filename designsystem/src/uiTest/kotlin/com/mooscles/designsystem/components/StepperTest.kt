@@ -1,6 +1,17 @@
 package com.mooscles.designsystem.components
 
 import com.mooscles.designsystem.format.NumberLocale
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -141,5 +152,90 @@ class StepperTest {
                 onNodeWithTag(StepperValueTag).assertTextEquals(expected)
             }
         }
+    }
+
+    /** A Stepper between two spacers in a scrolling column 300 dp tall, so a vertical drag on a button really scrolls. */
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.scrollingStepper(haptics: RecordingHaptics, onChange: (Double) -> Unit): () -> ScrollState {
+        var scroll: ScrollState? = null
+        var value by mutableStateOf(20.0)
+        withTheme(haptics = haptics) {
+            val state = rememberScrollState().also { scroll = it }
+            Column(Modifier.height(300.dp).verticalScroll(state)) {
+                Spacer(Modifier.height(100.dp))
+                Stepper(value, { value = it; onChange(it) }, step = 2.5, min = 0.0, display = "$value", decreaseLabel = "Decrease", increaseLabel = "Increase")
+                Spacer(Modifier.height(2000.dp))
+            }
+        }
+        waitForIdle()
+        return { scroll!! }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun fastFlickStartingOnAButtonScrollsWithoutAStep() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        val changes = mutableListOf<Double>()
+        val scroll = scrollingStepper(haptics) { changes += it }
+        for (tag in listOf(StepperIncreaseTag, StepperDecreaseTag)) {
+            onNodeWithTag(tag).performTouchInput {
+                swipeUp(startY = centerY, endY = centerY - 60.dp.toPx(), durationMillis = 100)
+            }
+            waitForIdle()
+        }
+        assertTrue(scroll().value > 0, "the drag did not scroll the column")
+        assertEquals(emptyList(), changes, "a flick that scrolled changed the value")
+        assertEquals(emptyList(), haptics.events.toList())
+    }
+
+    /** One second of slow drag, 20 ms per move, so the 400 ms hold delay passes while the finger is still down. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun slowDragStartingOnAButtonScrollsWithoutAStep() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        val changes = mutableListOf<Double>()
+        val scroll = scrollingStepper(haptics) { changes += it }
+        mainClock.autoAdvance = false
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
+        repeat(50) {
+            mainClock.advanceTimeBy(20, ignoreFrameDuration = true)
+            onNodeWithTag(StepperIncreaseTag).performTouchInput { moveBy(Offset(0f, -4f)) }
+        }
+        mainClock.advanceTimeBy(20, ignoreFrameDuration = true)
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
+        repeat(400) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertTrue(scroll().value > 0, "the drag did not scroll the column")
+        assertEquals(emptyList(), changes, "a slow drag that scrolled changed the value")
+        assertEquals(emptyList(), haptics.events.toList())
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun movingAwayDuringAHoldStopsTheRepeat() = runComposeUiTest {
+        val changes = mutableListOf<Double>()
+        scrollingStepper(RecordingHaptics()) { changes += it }
+        mainClock.autoAdvance = false
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
+        repeat(450) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(listOf(22.5), changes, "the hold did not step once at 400 ms")
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { moveBy(Offset(0f, -60.dp.toPx())) }
+        repeat(400) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
+        repeat(100) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(listOf(22.5), changes, "the repeat went on after the finger moved away")
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun tapWithAJitterUnderTouchSlopStillSteps() = runComposeUiTest {
+        val changes = mutableListOf<Double>()
+        scrollingStepper(RecordingHaptics()) { changes += it }
+        onNodeWithTag(StepperIncreaseTag).performTouchInput {
+            down(center)
+            moveBy(Offset(1f, -1f))
+            up()
+        }
+        waitForIdle()
+        assertEquals(listOf(22.5), changes)
     }
 }

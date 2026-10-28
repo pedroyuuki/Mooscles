@@ -39,8 +39,12 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.isOutOfBounds
+import androidx.compose.ui.input.pointer.positionChangedIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastAll
+import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -53,7 +57,9 @@ const val StepperValueTag = "stepper-value"
 /**
  * A value changed in steps of [step] with a button on each side (64 x 56 dp each, `num.lg` value
  * between). A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
- * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Every step gives the
+ * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Moving the finger past
+ * touch slop, off the button or into a scroll cancels the press (no step, no more repeats), so a scroll
+ * that starts on a button never changes the value. Every step gives the
  * `StepperStep` haptic. The value never goes below [min], where the decrease button is disabled.
  * [display] is the text of [value]; by default the domain's plain decimal ([MoosclesNumbers.plain],
  * `20`, `82.5`) with the separators of [numberLocale] (`82,5` in pt-BR), never `20.0`.
@@ -129,20 +135,32 @@ private fun StepperButton(
             .pointerInput(enabled, repeatDelay, repeatInterval) {
                 if (!enabled) return@pointerInput
                 // The timing starts at the finger going down and ends synchronously when it lifts,
-                // not at a recomposition. Initial pass: the press is seen whatever consumes it.
+                // not at a recomposition. The press ends without a step (and stops repeating) when
+                // the finger moves past touch slop, leaves the button, or a scrolling parent
+                // consumes the movement: a scroll that starts on a button never changes the value.
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val press = PressInteraction.Press(down.position)
                     source.tryEmit(press)
                     var released = false
                     try {
-                        if (withTimeoutOrNull(repeatDelay) { awaitRelease() } != null) {
-                            released = true
-                            currentStep()
+                        val first = withTimeoutOrNull(repeatDelay) { awaitReleaseOrCancel(down) }
+                        if (first != null) {
+                            if (first) {
+                                released = true
+                                currentStep()
+                            }
                         } else {
                             currentStep()
-                            while (withTimeoutOrNull(repeatInterval) { awaitRelease() } == null) currentStep()
-                            released = true
+                            while (true) {
+                                val end = withTimeoutOrNull(repeatInterval) { awaitReleaseOrCancel(down) }
+                                if (end == null) {
+                                    currentStep()
+                                } else {
+                                    released = end
+                                    break
+                                }
+                            }
                         }
                     } finally {
                         source.tryEmit(if (released) PressInteraction.Release(press) else PressInteraction.Cancel(press))
@@ -158,10 +176,26 @@ private fun StepperButton(
     }
 }
 
-/** Suspends until no pointer is down any more (lifted or cancelled). */
-private suspend fun AwaitPointerEventScope.awaitRelease() {
+/**
+ * Suspends until the press ends: `true` when every pointer lifted on the button, `false` when it is
+ * cancelled because a pointer moved past touch slop from [down], left the button, or had its
+ * movement consumed by another node (a scrolling parent consumes on the Main pass, after this
+ * child, so that is checked on the Final pass). A consumed down (a clickable parent) does not cancel.
+ */
+private suspend fun AwaitPointerEventScope.awaitReleaseOrCancel(down: PointerInputChange): Boolean {
+    val slop = viewConfiguration.touchSlop
     while (true) {
-        val event = awaitPointerEvent(PointerEventPass.Initial)
-        if (event.changes.fastAll { !it.pressed }) return
+        val event = awaitPointerEvent(PointerEventPass.Main)
+        if (event.changes.fastAll { !it.pressed }) {
+            return event.changes.fastAll { !it.isOutOfBounds(size, extendedTouchPadding) }
+        }
+        val cancelled = event.changes.fastAny {
+            it.isOutOfBounds(size, extendedTouchPadding) ||
+                (it.id == down.id && (it.position - down.position).getDistance() > slop) ||
+                (it.isConsumed && it.positionChangedIgnoreConsumed())
+        }
+        if (cancelled) return false
+        val final = awaitPointerEvent(PointerEventPass.Final)
+        if (final.changes.fastAny { it.isConsumed && it.positionChangedIgnoreConsumed() }) return false
     }
 }
