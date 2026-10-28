@@ -1,6 +1,6 @@
 # Fase 2: identidade visual e design system
 
-Data: 2026-10-27. Item da fase 2 do [ROADMAP](../ROADMAP.md). Direção visual: [LINK DO CANVAS] (6 pranchas: identidade e tokens, componentes, treino ativo escuro e claro, descanso com recorde, progresso).
+Data: 2026-10-27. Item da fase 2 do [ROADMAP](../ROADMAP.md). Direção visual: https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM (6 pranchas: identidade e tokens, componentes, treino ativo escuro e claro, descanso com recorde, progresso).
 
 O dono delegou a identidade inteira ("pode escolher, me surpreenda"). **Todas as decisões de estética e de sistema abaixo são minhas**, tomadas a partir das pesquisas [P1](../reports/2026-10-27-referencias-ux-apps-treino.md), [P2](../reports/2026-10-27-midia-exercicios.md), [P3](../reports/2026-10-27-bibliotecas-cmp-graficos-animacao-midia.md) e [P4](../reports/2026-10-27-fontes-icones-livres.md). A seção "Decisões para o dono revisar", no fim, lista o que ele deve confirmar antes do plano.
 
