@@ -39,4 +39,24 @@
     <string name="gallery_sample_not_now">Not now</string>
     <string name="gallery_sample_banner">Could not save. Try again.</string>
     <string name="gallery_sample_retry">Try again</string>
+    <string name="gallery_page_overlays">Overlays</string>
+    <string name="gallery_section_overlays">Dialogs, sheets and toasts</string>
+    <string name="gallery_open_dialog">Open dialog</string>
+    <string name="gallery_open_destructive_dialog">Open destructive dialog</string>
+    <string name="gallery_open_sheet">Open sheet</string>
+    <string name="gallery_show_toast">Show toast</string>
+    <string name="gallery_show_action_toast">Show toast with action</string>
+    <string name="gallery_show_error_toast">Show error toast</string>
+    <string name="gallery_dialog_title">Finish workout?</string>
+    <string name="gallery_dialog_text">Your sets are saved to the history.</string>
+    <string name="gallery_dialog_confirm">Finish</string>
+    <string name="gallery_dialog_cancel">Keep going</string>
+    <string name="gallery_dialog_destructive_title">Delete routine?</string>
+    <string name="gallery_dialog_destructive_text">Past workouts stay in the history.</string>
+    <string name="gallery_dialog_destructive_confirm">Delete</string>
+    <string name="gallery_sheet_text">A sheet holds a short task. Drag it down or tap outside to close it.</string>
+    <string name="gallery_toast_message">Routine saved</string>
+    <string name="gallery_toast_action_message">Set removed</string>
+    <string name="gallery_toast_action">Undo</string>
+    <string name="gallery_toast_error_message">Could not save the file</string>
 </resources>

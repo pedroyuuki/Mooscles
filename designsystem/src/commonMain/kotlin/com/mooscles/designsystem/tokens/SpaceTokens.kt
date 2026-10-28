@@ -81,4 +81,6 @@ data class MoosclesSizes(
     val progressBarHeight: Dp = 8.dp,
     /** Lowest opacity of the skeleton pulse. */
     val skeletonMinAlpha: Float = 0.5f,
+    /** Widest a dialog card gets; narrower screens keep `space.6` on each side instead. */
+    val dialogMaxWidth: Dp = 360.dp,
 )

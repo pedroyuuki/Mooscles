@@ -30,6 +30,8 @@ class SizesTimingElevationTest {
         // Added in phase 2 (spec silent): no existing token fit.
         assertEquals(8.dp, s.progressBarHeight)
         assertEquals(0.5f, s.skeletonMinAlpha)
+        // Not in decision 7: the dialog card width, added in Task 10 (the spec gives none).
+        assertEquals(360.dp, s.dialogMaxWidth)
     }
 
     @Test

@@ -9,6 +9,7 @@ import com.mooscles.designsystem.gallery.pages.ChipsPage
 import com.mooscles.designsystem.gallery.pages.FieldsPage
 import com.mooscles.designsystem.gallery.pages.FoundationsPage
 import com.mooscles.designsystem.gallery.pages.IconsPage
+import com.mooscles.designsystem.gallery.pages.OverlaysPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
 import com.mooscles.designsystem.gallery.pages.StatesPage
 import com.mooscles.designsystem.resources.Res
@@ -17,6 +18,7 @@ import com.mooscles.designsystem.resources.gallery_page_chips
 import com.mooscles.designsystem.resources.gallery_page_fields
 import com.mooscles.designsystem.resources.gallery_page_foundations
 import com.mooscles.designsystem.resources.gallery_page_icons
+import com.mooscles.designsystem.resources.gallery_page_overlays
 import com.mooscles.designsystem.resources.gallery_page_rows
 import com.mooscles.designsystem.resources.gallery_page_states
 import org.jetbrains.compose.resources.StringResource
@@ -30,6 +32,7 @@ enum class GalleryPage(val title: StringResource) {
     Rows(Res.string.gallery_page_rows),
     Fields(Res.string.gallery_page_fields),
     States(Res.string.gallery_page_states),
+    Overlays(Res.string.gallery_page_overlays),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
@@ -48,6 +51,7 @@ fun GalleryPage.Content() {
             GalleryPage.Rows -> RowsPage()
             GalleryPage.Fields -> FieldsPage()
             GalleryPage.States -> StatesPage()
+            GalleryPage.Overlays -> OverlaysPage()
         }
     }
 }

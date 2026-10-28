@@ -39,4 +39,24 @@
     <string name="gallery_sample_not_now">Agora não</string>
     <string name="gallery_sample_banner">Não foi possível salvar. Tente de novo.</string>
     <string name="gallery_sample_retry">Tentar de novo</string>
+    <string name="gallery_page_overlays">Sobreposições</string>
+    <string name="gallery_section_overlays">Diálogos, sheets e toasts</string>
+    <string name="gallery_open_dialog">Abrir diálogo</string>
+    <string name="gallery_open_destructive_dialog">Abrir diálogo destrutivo</string>
+    <string name="gallery_open_sheet">Abrir sheet</string>
+    <string name="gallery_show_toast">Mostrar toast</string>
+    <string name="gallery_show_action_toast">Mostrar toast com ação</string>
+    <string name="gallery_show_error_toast">Mostrar toast de erro</string>
+    <string name="gallery_dialog_title">Finalizar o treino?</string>
+    <string name="gallery_dialog_text">Suas séries ficam salvas no histórico.</string>
+    <string name="gallery_dialog_confirm">Finalizar</string>
+    <string name="gallery_dialog_cancel">Continuar</string>
+    <string name="gallery_dialog_destructive_title">Apagar a rotina?</string>
+    <string name="gallery_dialog_destructive_text">Os treinos já feitos continuam no histórico.</string>
+    <string name="gallery_dialog_destructive_confirm">Apagar</string>
+    <string name="gallery_sheet_text">Um sheet guarda uma tarefa curta. Arraste para baixo ou toque fora para fechar.</string>
+    <string name="gallery_toast_message">Rotina salva</string>
+    <string name="gallery_toast_action_message">Série removida</string>
+    <string name="gallery_toast_action">Desfazer</string>
+    <string name="gallery_toast_error_message">Não foi possível salvar o arquivo</string>
 </resources>

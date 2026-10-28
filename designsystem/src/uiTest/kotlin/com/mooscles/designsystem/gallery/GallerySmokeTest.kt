@@ -10,6 +10,7 @@ import com.mooscles.designsystem.resources.gallery_section_buttons
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.resources.gallery_section_icons
+import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
@@ -29,6 +30,7 @@ class GallerySmokeTest {
         GalleryPage.Rows to Res.string.gallery_section_rows,
         GalleryPage.Fields to Res.string.gallery_section_text_fields,
         GalleryPage.States to Res.string.gallery_section_states,
+        GalleryPage.Overlays to Res.string.gallery_section_overlays,
     )
 
     @OptIn(ExperimentalTestApi::class)

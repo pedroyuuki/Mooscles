@@ -11,4 +11,6 @@
     <string name="ds_back">Voltar</string>
     <string name="ds_loading">Carregando</string>
     <string name="ds_error_prefix">Erro</string>
+    <string name="ds_close">Fechar</string>
+    <string name="ds_dismiss">Dispensar</string>
 </resources>
