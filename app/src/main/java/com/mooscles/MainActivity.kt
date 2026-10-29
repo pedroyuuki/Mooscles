@@ -2,10 +2,14 @@ package com.mooscles
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,17 +22,33 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import com.mooscles.timer.RestNotifications
 import com.mooscles.updates.UpdateNotifications
+import com.mooscles.ui.AppThemeBars
 import com.mooscles.ui.MoosclesApp
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), AppThemeBars {
     private val vm: AppViewModel by viewModels { AppViewModel.Factory }
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private val updateApproval = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         lifecycleScope.launch { runCatching { (application as MoosclesApplication).updates.approvalReturned(result.resultCode == RESULT_CANCELED) } }
     }
+    // enableEdgeToEdge applies these styles now and again on every configuration change the
+    // Activity survives without being recreated (a 90° to 270° rotation, for one). They must ask the
+    // app's theme, not the system's night mode, or a dark app under a light system gets light bars.
+    // Until MoosclesTheme reports the theme, they follow the system, as the default styles do.
+    private var darkTheme: Boolean? = null
+    private fun barsDark(resources: Resources) = darkTheme
+        ?: ((resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
+    // The scrims are enableEdgeToEdge's defaults (EdgeToEdge.DefaultLightScrim and DefaultDarkScrim).
+    private val statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT, ::barsDark)
+    private val navigationBarStyle = SystemBarStyle.auto(Color.argb(0xe6, 0xFF, 0xFF, 0xFF), Color.argb(0x80, 0x1b, 0x1b, 0x1b), ::barsDark)
+    override fun appThemeResolved(dark: Boolean) {
+        if (darkTheme == dark) return
+        darkTheme = dark
+        enableEdgeToEdge(statusBarStyle, navigationBarStyle)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(statusBarStyle, navigationBarStyle)
         setContent {
             val state = vm.contentUi.collectAsStateWithLifecycle()
             val timer = vm.timerUi.collectAsStateWithLifecycle()
