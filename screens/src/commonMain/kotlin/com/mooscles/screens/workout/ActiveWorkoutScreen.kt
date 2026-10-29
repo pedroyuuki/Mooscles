@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.components.EmptyState
 import com.mooscles.designsystem.components.MButton
@@ -182,10 +183,13 @@ internal fun ActiveWorkoutScreen(
             )
         }
         val listState = rememberLazyListState()
+        // A traversal group of its own, so a screen reader reads the record toast (first in it,
+        // RecordReaction) before the cards, between the header and the rest timer.
         Box(
             Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .semantics { isTraversalGroup = true },
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

@@ -16,6 +16,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import com.mooscles.designsystem.components.PrToast
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.currentNumberLocale
@@ -162,6 +165,11 @@ internal fun RecordReaction(workout: WorkoutUi, pounds: Boolean, screen: ActiveW
     key(toast) { Box(
         modifier
             .testTag(RecordToastTag)
+            // Read before the cards it covers: first in the list's traversal group (ActiveWorkoutScreen).
+            .semantics {
+                isTraversalGroup = true
+                traversalIndex = -1f
+            }
             .widthIn(max = MTheme.sizes.contentMaxWidth)
             .fillMaxWidth()
             .pointerInput(toast) { detectTapGestures { dismiss() } },

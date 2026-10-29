@@ -43,19 +43,40 @@ fun ComposeUiTest.withScreen(
     content: @Composable () -> Unit,
 ) {
     val frame: @Composable () -> Unit = {
-        val screen = density ?: LocalDensity.current.density
-        CompositionLocalProvider(
-            LocalDensity provides Density(screen, fontScale),
-            LocalRecompositionProbe provides probe,
-        ) {
-            MoosclesDesignTheme(dark = dark, reducedMotion = reducedMotion, haptics = haptics) {
-                val sized: @Composable () -> Unit =
-                    if (size == null) content else ({ Box(Modifier.requiredSize(size)) { content() } })
-                if (locale == null) sized() else ProvideAppLocale(locale) { sized() }
-            }
-        }
+        ScreenFrame(dark, fontScale, reducedMotion, haptics, locale, size, density, probe, content)
     }
     if (restoration != null) restoration.setContent(frame) else setContent(frame)
+}
+
+/**
+ * The frame [withScreen] sets: the density (with [fontScale], and [density] when given), the probe,
+ * the design system theme, then [content] at exactly [size] when given, in [locale] when given. A
+ * test that changes the theme, the font scale or the size within one composition (the
+ * accessibility sweep) composes it with its values read from state.
+ */
+@Composable
+fun ScreenFrame(
+    dark: Boolean = false,
+    fontScale: Float = 1f,
+    reducedMotion: Boolean = false,
+    haptics: MoosclesHaptics = RecordingHaptics(),
+    locale: String? = null,
+    size: DpSize? = null,
+    density: Float? = null,
+    probe: ((String) -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val screen = density ?: LocalDensity.current.density
+    CompositionLocalProvider(
+        LocalDensity provides Density(screen, fontScale),
+        LocalRecompositionProbe provides probe,
+    ) {
+        MoosclesDesignTheme(dark = dark, reducedMotion = reducedMotion, haptics = haptics) {
+            val sized: @Composable () -> Unit =
+                if (size == null) content else ({ Box(Modifier.requiredSize(size)) { content() } })
+            if (locale == null) sized() else ProvideAppLocale(locale) { sized() }
+        }
+    }
 }
 
 /**

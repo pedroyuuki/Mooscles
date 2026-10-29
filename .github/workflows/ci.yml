@@ -346,8 +346,9 @@ jobs:
           # Phase 3 task 17 fix round 1: SetRowColumnsTest 2.
           # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1 (fix round 1: RestTimerCompactTest +1).
           # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
+          # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 285
+          MIN_DS_IOS_TESTS: 287
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -386,8 +387,9 @@ jobs:
           # CardExpansionTest +1, WorkoutTimerTest +3).
           # Task 21: RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1 (commonTest), RecordReactionTest 10 (uiTest).
           # Task 28: ActiveWorkoutFlowTest 2 (uiTest; the end-to-end proof of the workout on iOS, spec D6).
+          # Task 29: TapBudgetTest 11, WorkoutAccessibilitySweepTest 12 (uiTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 262
+          MIN_SCREENS_IOS_TESTS: 285
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

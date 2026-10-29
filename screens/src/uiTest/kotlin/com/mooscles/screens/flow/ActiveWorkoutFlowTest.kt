@@ -1,12 +1,8 @@
 package com.mooscles.screens.flow
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -25,24 +21,22 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.data.WorkoutRepository
-import com.mooscles.designsystem.components.ExerciseHeaderToggleTag
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.PrBadgeTag
-import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
-import com.mooscles.designsystem.components.SetRowRepsTag
 import com.mooscles.designsystem.components.StepperIncreaseTag
 import com.mooscles.designsystem.components.TimerCompactTag
 import com.mooscles.designsystem.components.TimerDockTag
 import com.mooscles.designsystem.components.TimerExpandedTag
-import com.mooscles.designsystem.components.TimerMinusTag
 import com.mooscles.designsystem.components.TimerOpenTag
 import com.mooscles.designsystem.components.TimerPlusTag
 import com.mooscles.designsystem.components.TimerSkipTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.domain.currentTimeMillis
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
+import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.assertNumbersWhole
+import com.mooscles.screens.assertWorkoutTargets
 import com.mooscles.screens.summary.SummaryRecordsTag
 import com.mooscles.screens.summary.SummaryStat
 import com.mooscles.screens.summary.SummaryStatsTag
@@ -53,20 +47,14 @@ import com.mooscles.screens.workout.ExerciseMenuTags
 import com.mooscles.screens.workout.ExercisePickerListTag
 import com.mooscles.screens.workout.RecordToastTag
 import com.mooscles.screens.workout.WorkoutHeaderTags
-import com.mooscles.screens.workout.exerciseColumnsTag
 import com.mooscles.screens.workout.exerciseHeaderTag
 import com.mooscles.screens.workout.exercisePickerRowTag
-import com.mooscles.screens.workout.workoutSetRowTag
 import com.mooscles.ui.RecordKind
-import com.mooscles.ui.SetUi
-import com.mooscles.ui.WorkoutExerciseUi
-import com.mooscles.ui.WorkoutUi
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -287,51 +275,6 @@ class ActiveWorkoutFlowTest {
         }
     }
 
-    // --- The view model's state ---------------------------------------------------------------
-
-    private fun active(vm: FlowViewModel): WorkoutUi = requireNotNull(vm.contentUi.value.active) { "No active workout" }
-
-    private fun entry(vm: FlowViewModel, id: String): WorkoutExerciseUi = active(vm).exercises.first { it.id == id }
-
-    private fun set(vm: FlowViewModel, id: String): SetUi? =
-        vm.contentUi.value.active?.exercises?.firstNotNullOfOrNull { e -> e.sets.firstOrNull { it.id == id } }
-
-    /** Waits, in real time, for [condition]: the view model and Room work on their own threads. */
-    private fun ComposeUiTest.await(what: String, condition: () -> Boolean) {
-        waitUntil(what, timeoutMillis = WAIT_MS, condition = condition)
-    }
-
-    // --- Finding and acting ---------------------------------------------------------------------
-
-    private fun ComposeUiTest.exists(matcher: SemanticsMatcher, unmerged: Boolean = false): Boolean =
-        onAllNodes(matcher, useUnmergedTree = unmerged).fetchSemanticsNodes().isNotEmpty()
-
-    private fun row(id: String): SemanticsMatcher = hasTestTag(workoutSetRowTag(id))
-
-    private fun ComposeUiTest.check(id: String): SemanticsNodeInteraction = onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(row(id)))
-
-    /** The editable text of [cell] (the load or reps tag) in the row of [id]. */
-    private fun ComposeUiTest.field(id: String, cell: String): SemanticsNodeInteraction =
-        onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(cell)) and hasAnyAncestor(row(id)), useUnmergedTree = true)
-
-    private fun ComposeUiTest.scrollToRow(id: String) {
-        onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(row(id))
-        waitForIdle()
-    }
-
-    /**
-     * Opens the card of [entryId] by its header's toggle when it is collapsed (the advance closes a
-     * card once its sets are all done). An open card shows its column titles right under the header.
-     */
-    private fun ComposeUiTest.openCard(entryId: String) {
-        onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(hasTestTag(exerciseHeaderTag(entryId)))
-        waitForIdle()
-        if (exists(hasTestTag(exerciseColumnsTag(entryId)), unmerged = true)) return
-        onNode(hasTestTag(ExerciseHeaderToggleTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag(entryId)))).performClick()
-        await("the card opens") { exists(hasTestTag(exerciseColumnsTag(entryId)), unmerged = true) }
-        waitForIdle()
-    }
-
     /** Taps [plus] and waits for the saved rest to grow by about 15 s. */
     private fun ComposeUiTest.plusFifteen(vm: FlowViewModel, plus: SemanticsNodeInteraction) {
         val before = vm.timerUi.value.remainingSeconds
@@ -361,47 +304,10 @@ class ActiveWorkoutFlowTest {
      */
     private fun ComposeUiTest.sweep(name: String, state: String, workout: Boolean = true) {
         waitForIdle()
-        // Every clickable, a 0-wide one too: a collapsed button is a defect, not a node to skip.
-        val clickable = onAllNodes(hasClickAction()).fetchSemanticsNodes()
-        assertTrue(clickable.isNotEmpty(), "$state: no clickable node")
-        for (node in clickable) {
-            assertTrue(label(node).isNotBlank(), "$state: a clickable node has no label: ${describe(node)}")
-            assertAtLeast(node, MIN_TARGET_DP, MIN_TARGET_DP, state)
-        }
-        if (workout) {
-            for (node in unmerged(hasTestTag(SetRowCheckTag))) assertAtLeast(node, WORKOUT_TARGET_DP, WORKOUT_TARGET_DP, state)
-            for (node in unmerged(hasTestTag(SetRowLoadTag) or hasTestTag(SetRowRepsTag))) assertAtLeast(node, 0f, WORKOUT_TARGET_DP, state)
-            val docked = (hasTestTag(TimerMinusTag) or hasTestTag(TimerPlusTag) or hasTestTag(TimerSkipTag)) and
-                hasAnyAncestor(hasTestTag(TimerDockTag) or hasTestTag(TimerCompactTag))
-            for (node in unmerged(docked)) assertAtLeast(node, WORKOUT_TARGET_DP, WORKOUT_TARGET_DP, state)
-            for (node in unmerged(hasTestTag(ActiveWorkoutTags.ADD_EXERCISE) or hasTestTag(ActiveWorkoutTags.FINISH_WORKOUT))) {
-                assertAtLeast(node, 0f, WORKOUT_TARGET_DP, state)
-            }
-        }
+        assertClickablesLabeledAndSized(state)
+        if (workout) assertWorkoutTargets(state)
         assertNumbersWhole()
         capture("$name-$state")
-    }
-
-    private fun ComposeUiTest.unmerged(matcher: SemanticsMatcher): List<SemanticsNode> =
-        onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes()
-
-    private fun label(node: SemanticsNode): String {
-        val description = node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" ").orEmpty()
-        val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text }.orEmpty()
-        return "$description $text".trim()
-    }
-
-    private fun describe(node: SemanticsNode): String =
-        "tag=${node.config.getOrNull(SemanticsProperties.TestTag)} label='${label(node)}' size=${node.size} config=${node.config}"
-
-    private fun ComposeUiTest.assertAtLeast(node: SemanticsNode, widthDp: Float, heightDp: Float, state: String) {
-        val px = density.density
-        val width = node.size.width / px
-        val height = node.size.height / px
-        assertTrue(
-            width + TOLERANCE_DP >= widthDp && height + TOLERANCE_DP >= heightDp,
-            "$state: ${width}x$height dp, at least ${widthDp}x$heightDp expected: ${describe(node)}",
-        )
     }
 
     /**
@@ -432,13 +338,8 @@ class ActiveWorkoutFlowTest {
 
         const val HOUR_MS = 3_600_000L
         const val WEEK_MS = 7 * 24 * HOUR_MS
-        const val WAIT_MS = 20_000L
         /** At most this many frames for the record toast to come in (a second of the effects' clock). */
         const val RECORD_FRAMES = 60
-
-        const val MIN_TARGET_DP = 48f
-        const val WORKOUT_TARGET_DP = 56f
-        const val TOLERANCE_DP = 0.5f
 
         const val NBSP = " "
 
