@@ -54,4 +54,48 @@
     <string name="workout_picker_all">Todos</string>
     <string name="workout_picker_meta">%1$s · %2$s</string>
     <string name="workout_picker_none">Nenhum exercício encontrado. Tente uma busca mais ampla.</string>
+    <!-- The active workout screen: header, end of the list, finish, discard, rename, no workout. -->
+    <string name="workout_minimize">Minimizar treino</string>
+    <string name="workout_more_options">Mais opções</string>
+    <!-- After the clock in the header: "42:18 · 9 de 15 séries". -->
+    <plurals name="workout_header_sets">
+        <item quantity="one">· %1$d de %2$d série</item>
+        <item quantity="other">· %1$d de %2$d séries</item>
+    </plurals>
+    <!-- How the clock is read: %1$s is the time in whole minutes, read aloud ("42 minutos"). -->
+    <string name="workout_clock_spoken">Tempo de treino, %1$s</string>
+    <string name="workout_finish">Finalizar</string>
+    <string name="workout_finish_workout">Finalizar treino</string>
+    <string name="workout_add_exercise">Adicionar exercício</string>
+    <string name="workout_menu_rename">Renomear treino</string>
+    <string name="workout_menu_discard">Descartar treino</string>
+    <string name="workout_finish_title">Finalizar treino?</string>
+    <!-- %1$s is workout_sets_count, %2$s workout_exercises_count, %3$s the duration ("42 min"). -->
+    <string name="workout_finish_summary">%1$s em %2$s · %3$s.</string>
+    <plurals name="workout_sets_count">
+        <item quantity="one">%1$d série</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
+    <plurals name="workout_exercises_count">
+        <item quantity="one">%1$d exercício</item>
+        <item quantity="other">%1$d exercícios</item>
+    </plurals>
+    <plurals name="workout_finish_pending">
+        <item quantity="one">%1$d série não concluída fica de fora.</item>
+        <item quantity="other">%1$d séries não concluídas ficam de fora.</item>
+    </plurals>
+    <string name="workout_discard_title">Descartar treino?</string>
+    <plurals name="workout_discard_text">
+        <item quantity="one">A %1$d série registrada será apagada.</item>
+        <item quantity="other">As %1$d séries registradas serão apagadas.</item>
+    </plurals>
+    <string name="workout_discard_nothing">Nada foi registrado ainda.</string>
+    <string name="workout_discard">Descartar</string>
+    <string name="workout_rename_field">Nome do treino</string>
+    <string name="workout_save">Salvar</string>
+    <string name="workout_none_title">Nenhum treino em andamento</string>
+    <string name="workout_none_body">Comece por uma rotina ou por um treino vazio.</string>
+    <string name="workout_choose_routine">Escolher rotina</string>
+    <string name="workout_empty_workout">Treino vazio</string>
+    <string name="workout_opening">Abrindo o treino</string>
 </resources>

@@ -172,9 +172,9 @@ private fun SheetTitle(text: String) {
     )
 }
 
-/** One item of the menu: an icon and a label in a 56 dp row, the whole row a button. */
+/** One item of a menu sheet: an icon and a label in a 56 dp row, the whole row a button. */
 @Composable
-private fun MenuItem(
+internal fun MenuItem(
     icon: ImageVector,
     label: String,
     tag: String,

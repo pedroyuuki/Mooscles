@@ -54,4 +54,48 @@
     <string name="workout_picker_all">All</string>
     <string name="workout_picker_meta">%1$s · %2$s</string>
     <string name="workout_picker_none">No matching exercises. Try a broader search.</string>
+    <!-- The active workout screen: header, end of the list, finish, discard, rename, no workout. -->
+    <string name="workout_minimize">Minimize workout</string>
+    <string name="workout_more_options">More options</string>
+    <!-- After the clock in the header: "42:18 · 9 of 15 sets". -->
+    <plurals name="workout_header_sets">
+        <item quantity="one">· %1$d of %2$d set</item>
+        <item quantity="other">· %1$d of %2$d sets</item>
+    </plurals>
+    <!-- How the clock is read: %1$s is the time in whole minutes, read aloud ("42 minutes"). -->
+    <string name="workout_clock_spoken">Workout time, %1$s</string>
+    <string name="workout_finish">Finish</string>
+    <string name="workout_finish_workout">Finish workout</string>
+    <string name="workout_add_exercise">Add exercise</string>
+    <string name="workout_menu_rename">Rename workout</string>
+    <string name="workout_menu_discard">Discard workout</string>
+    <string name="workout_finish_title">Finish workout?</string>
+    <!-- %1$s is workout_sets_count, %2$s workout_exercises_count, %3$s the duration ("42 min"). -->
+    <string name="workout_finish_summary">%1$s across %2$s · %3$s.</string>
+    <plurals name="workout_sets_count">
+        <item quantity="one">%1$d set</item>
+        <item quantity="other">%1$d sets</item>
+    </plurals>
+    <plurals name="workout_exercises_count">
+        <item quantity="one">%1$d exercise</item>
+        <item quantity="other">%1$d exercises</item>
+    </plurals>
+    <plurals name="workout_finish_pending">
+        <item quantity="one">%1$d incomplete set will be left out.</item>
+        <item quantity="other">%1$d incomplete sets will be left out.</item>
+    </plurals>
+    <string name="workout_discard_title">Discard workout?</string>
+    <plurals name="workout_discard_text">
+        <item quantity="one">The %1$d logged set will be deleted.</item>
+        <item quantity="other">The %1$d logged sets will be deleted.</item>
+    </plurals>
+    <string name="workout_discard_nothing">Nothing has been logged yet.</string>
+    <string name="workout_discard">Discard</string>
+    <string name="workout_rename_field">Workout name</string>
+    <string name="workout_save">Save</string>
+    <string name="workout_none_title">No workout in progress</string>
+    <string name="workout_none_body">Start from a routine or an empty workout.</string>
+    <string name="workout_choose_routine">Choose routine</string>
+    <string name="workout_empty_workout">Empty workout</string>
+    <string name="workout_opening">Opening the workout</string>
 </resources>
