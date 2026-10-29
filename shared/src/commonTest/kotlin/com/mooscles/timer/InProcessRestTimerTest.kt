@@ -93,7 +93,7 @@ class InProcessRestTimerTest {
         assertTrue(r.timer.ui.value.finished)
     }
 
-    @Test fun ticksAtZeroAttemptTheCompletionOncePerRest() = runTest {
+    @Test fun failedCompletionAttemptsAreRateLimited() = runTest {
         val store = InMemoryPreferencesStore()
         val clock = { epoch + testScheduler.currentTime }
         var lookups = 0
@@ -106,11 +106,26 @@ class InProcessRestTimerTest {
         settle(2_500)
         assertTrue(timer.ui.value.running)
         assertEquals(0, timer.ui.value.remainingSeconds)
-        assertEquals(1, lookups - before, "completion attempts while ten ticks found the rest at 0")
+        val attempts = lookups - before
+        assertTrue(attempts in 2..3, "completion attempts over 4.5 s of ticks at 0 (back-off 2 s): $attempts")
         assertEquals(RestTimerError.STORAGE_UNAVAILABLE, timer.errorCode.value)
         // A new rest is a new countdown: its end is claimed again.
         store.failWrites = false
         timer.start("Row", 1); settle(1_500)
+        assertTrue(timer.ui.value.finished)
+    }
+
+    @Test fun aFailedCompletionIsRetriedAndFinishesWhenStorageRecovers() = runTest {
+        val store = InMemoryPreferencesStore()
+        val clock = { epoch + testScheduler.currentTime }
+        val timer = InProcessRestTimer(RestTimerPersistence(store, clock), backgroundScope, { "w1" }, clock)
+        timer.start("Bench", 2); settle()
+        store.failWrites = true
+        settle(2_500)
+        assertTrue(timer.ui.value.running)
+        assertFalse(timer.ui.value.finished)
+        store.failWrites = false
+        settle(2_500)
         assertTrue(timer.ui.value.finished)
     }
 
