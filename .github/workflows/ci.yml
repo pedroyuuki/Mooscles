@@ -156,7 +156,8 @@ jobs:
           # Phase 3 task 16 (:screens commonTest): ActiveWorkoutScreenStateTest +2.
           # Phase 3 task 22 (:screens commonTest): SummaryStatsTest 6.
           # Phase 3 task 23 (:screens commonTest): WorkoutBarStateTest 2.
-          MIN_HOST_TESTS: 754
+          # Phase 3 task 18 (:screens commonTest): ExercisePickerTest 3, RestDraftTest 1.
+          MIN_HOST_TESTS: 758
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -362,8 +363,9 @@ jobs:
           # ScreensHelpersTest 4, DateTextsTest 5, WorkoutSetRowTest 13, SetEditingTest 23, SetTypeAndRemovalTest 14,
           # ShareCardPainterTest 4, ShareCardTextsTest 2, AppShellBottomTest 13 (uiTest).
           # Task 22: SummaryStatsTest 6 (commonTest), WorkoutSummaryScreenTest 11 (uiTest).
+          # Task 18: ExercisePickerTest 3, RestDraftTest 1 (commonTest), RestSheetTest 9, ExercisePickerSheetTest 6 (uiTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 141
+          MIN_SCREENS_IOS_TESTS: 160
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
