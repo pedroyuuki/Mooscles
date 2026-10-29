@@ -140,7 +140,10 @@ class RestTimerController(
     }
     /** Opens the workout; both rest notifications use it (decision 25). */
     private fun openWorkout() = PendingIntent.getActivity(context, OPEN_WORKOUT_REQUEST,
-        Intent(context, MainActivity::class.java).setAction(RestNotifications.OPEN_WORKOUT).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        // MainActivity has the standard launch mode: CLEAR_TOP with SINGLE_TOP returns to the instance
+        // already in the task (onNewIntent) instead of stacking a second one when it is not on top.
+        Intent(context, MainActivity::class.java).setAction(RestNotifications.OPEN_WORKOUT)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     /** An explicit, immutable broadcast to the receiver, which is not exported. */
     private fun action(name: String, request: Int) = PendingIntent.getBroadcast(context, request,
@@ -164,6 +167,7 @@ class RestTimerController(
             .addAction(0, texts.skip, action(RestNotifications.ACTION_SKIP, SKIP_REQUEST))
         // The system counts a running rest down itself: no service, and the app is not woken every second.
         if (s.running) builder.setShowWhen(true).setWhen(s.deadline).setUsesChronometer(true).setChronometerCountDown(true)
+            .setTimeoutAfter(s.remaining(now()) + RestNotifications.PROGRESS_TIMEOUT_MARGIN_MILLIS)
         else builder.setShowWhen(false).setSubText(texts.paused(s.pausedMillis))
         notifications.notify(RestNotifications.PROGRESS_ID, builder.build())
     }

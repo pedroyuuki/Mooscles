@@ -6,6 +6,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ComponentName
+import android.content.Intent
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
@@ -99,6 +100,24 @@ class RestProgressNotificationHostTest {
             assertEquals(name, intent.savedIntent.action)
             assertEquals(ComponentName(app, RestTimerActionReceiver::class.java), intent.savedIntent.component)
         }
+    }
+
+    @Test fun runningRestTimesOutJustAfterItsEnd() = runTest {
+        // With an inexact alarm and the process gone, the chronometer would count below zero: the
+        // system removes the notification a moment after the rest ends instead.
+        val timer = controller(persistence())
+        runCurrent()
+        timer.start("Bench press", 90, "entry")
+        settle()
+        assertEquals(90_000 + RestNotifications.PROGRESS_TIMEOUT_MARGIN_MILLIS, progress()!!.timeoutAfter)
+        now += 30_000
+        timer.adjust(15)
+        settle()
+        assertEquals(75_000 + RestNotifications.PROGRESS_TIMEOUT_MARGIN_MILLIS, progress()!!.timeoutAfter)
+        // A paused rest has no end, so it never times out.
+        timer.pause()
+        settle()
+        assertEquals(0L, progress()!!.timeoutAfter)
     }
 
     @Test fun withoutAPendingSetTheTextIsTheName() = runTest {
@@ -269,6 +288,9 @@ class RestProgressNotificationHostTest {
             assertTrue(open.flags and PendingIntent.FLAG_IMMUTABLE != 0)
             assertEquals(RestNotifications.OPEN_WORKOUT, open.savedIntent.action)
             assertEquals(ComponentName(app, MainActivity::class.java), open.savedIntent.component)
+            // Back to the Activity already in the task (no second instance), with the manifest's launch mode unchanged.
+            val flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            assertEquals(flags, open.savedIntent.flags and flags)
         }
     }
 

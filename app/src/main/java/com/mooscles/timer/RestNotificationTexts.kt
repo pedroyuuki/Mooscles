@@ -15,6 +15,11 @@ object RestNotifications {
     const val FINISHED_ID = 1
     /** Not 2: that id is the updater's (`UpdateNotifications`). */
     const val PROGRESS_ID = 3
+    /**
+     * How long after a running rest's end the system removes its notification. With an inexact alarm
+     * and no process left, the chronometer would otherwise go on counting below zero.
+     */
+    const val PROGRESS_TIMEOUT_MARGIN_MILLIS = 2_000L
     const val OPEN_WORKOUT = "com.mooscles.timer.OPEN_WORKOUT"
     const val ACTION_MINUS = "com.mooscles.timer.MINUS15"
     const val ACTION_PLUS = "com.mooscles.timer.PLUS15"

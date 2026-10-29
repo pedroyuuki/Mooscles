@@ -120,6 +120,24 @@ class RestTimerActionsHostTest {
         assertEquals(15_000.0, (persistence.snapshot().deadline - before.deadline).toDouble(), 1_000.0)
     }
 
+    @Test fun aGateHeldTooLongDropsTheNotificationAction() = runTest {
+        val gate = Mutex()
+        val calls = mutableListOf<String>()
+        val actions = RestTimerActions(gate, RecordingUpdates(calls), RecordingTimer(gate, calls))
+        gate.lock() // An import or an installation holds the gate past the broadcast's budget.
+        val started = testScheduler.currentTime
+        actions.perform(RestNotifications.ACTION_PLUS)
+        // Dropped within the goAsync budget, without throwing and without taking the gate from its holder.
+        assertEquals(RestTimerActions.RECEIVER_TIMEOUT_MILLIS, testScheduler.currentTime - started)
+        assertTrue(RestTimerActions.RECEIVER_TIMEOUT_MILLIS < 10_000)
+        assertEquals(emptyList<String>(), calls)
+        assertTrue(gate.isLocked)
+        gate.unlock()
+        assertFalse(gate.isLocked)
+        actions.perform(RestNotifications.ACTION_PLUS)
+        assertEquals(listOf("assertTrainingMayStart", "adjust:15:locked"), calls)
+    }
+
     @Test fun skipCallsOnTrainingChanged() = runTest {
         val gate = Mutex()
         val calls = mutableListOf<String>()
