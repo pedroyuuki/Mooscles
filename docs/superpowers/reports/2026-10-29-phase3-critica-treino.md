@@ -92,3 +92,7 @@ Depois do último commit de correção (`b097cd0`), no `emulator-5556`:
 ## Estado do emulador
 
 Restaurado no fim: escala de fonte 1,0, modo noturno do sistema desligado, idioma do app sem escolha própria (segue o sistema), e no app tema Escuro, Libras e descanso automático desligado (o que estava antes), sem treino ativo. Ficaram: dois treinos finalizados e dois descartados a mais no histórico do emulador, e os dados do Gboard apagados (`pm clear`): o Gboard do emulador passa para o modo "teclado físico" depois de um `input keyevent` e para de desenhar o teclado, e só volta limpando os dados.
+
+## Nota posterior
+
+- **2026-10-29, M4 corrigido em `2ff31b4`.** Depois deste relatório, o controlador decidiu o M4 sem código por plataforma: o nó de anúncio do timer só tem texto durante um anúncio e é limpo depois de `timing.timerAnnounceHold` (1.500 ms, token novo com teste). Entre anúncios ele não tem texto, descrição nem foco, então não é uma parada do leitor de tela e não lê um tempo velho. Testes: `RestTimerDockTest.announcerIsNotAStopBetweenAnnouncements` e `announcerClearsAfterAnnouncing`. Conferido só pela semântica; o efeito com o TalkBack real continua para a sessão no aparelho. A tabela acima ficou como estava na hora da crítica.

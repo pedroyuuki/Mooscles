@@ -41,6 +41,6 @@ O dono ainda não respondeu à pergunta 2 da spec (instalar o `preview` no próp
 
 ## Candidatas para a sessão com TalkBack
 
-1. **O nó de anúncio do dock é uma parada** (item 7 da Task 31). Ele guarda o último anúncio ("Descanso, tempo restante: 2 minutos") e, ao chegar nele com o dedo ou deslizando, o TalkBack lê esse valor, que já pode estar velho. Não foi corrigido: ver a crítica (`2026-10-29-phase3-critica-treino.md`, M4).
+1. **O nó de anúncio do dock é uma parada** (item 7 da Task 31). Ele guarda o último anúncio ("Descanso, tempo restante: 2 minutos") e, ao chegar nele com o dedo ou deslizando, o TalkBack lê esse valor, que já pode estar velho. Não foi corrigido: ver a crítica (`2026-10-29-phase3-critica-treino.md`, M4). **2026-10-29, depois:** corrigido em `2ff31b4` (o nó só tem texto durante o anúncio; ver a nota no fim da crítica). Falta ouvir com o TalkBack real.
 2. **O expandido tem um nó raiz focável** (o `focusable()` que recebe o "voltar" e o Esc). No dump ele aparece como uma parada com todo o texto da tela ("Descanso · Barbell bench press · série 1 de 3 · Descanso · 1:38 · de 2:00 · A seguir · …"). Pode ser só o dump juntando o texto de um nó sem rótulo; se o TalkBack também parar nele, vale tirá-lo da leitura.
 3. **"A 1 série registrada será apagada."** (diálogo de descartar, singular): a frase é lida assim; ver a crítica, L7.

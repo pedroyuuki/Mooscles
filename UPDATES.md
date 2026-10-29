@@ -10,6 +10,10 @@ Downloads contain only APK release assets. No workout data is uploaded. Offline 
 
 A phone running a version without this updater must install the first updater-enabled APK once. Future discovery only works for releases that contain both the APK and the generated `update.json`. An older release without metadata is skipped.
 
+## The `preview` build does not update
+
+`./gradlew :app:assemblePreview` builds **Mooscles Preview** (`com.mooscles.preview`, version name with a `-preview` suffix), a side-by-side build for checking TalkBack, haptics, notifications and performance on a real phone without touching the installed app or its data. Its updater is switched off at build time (`BuildConfig.UPDATER_ENABLED = false`): it schedules no background work, never checks GitHub and never downloads or installs anything, and it can never update or replace `com.mooscles`. The Settings update section is still shown in it but does nothing. To move a preview to a newer build, install the new preview APK by hand over it (`adb install -r`). It is signed with the local debug key of the machine that built it, so it is never a release asset and never goes into `update.json`. The `debug` (distributed) and `performance` builds keep the updater on.
+
 ## Build and prepare the required assets
 
 Keep `applicationId = "com.mooscles"`. Increase `versionCode` for each distributed update, even if its version name or tag does not change. Preserve the existing signing key. Do not uninstall the app, clear app storage, use destructive Room migrations, or generate another key to work around an update failure. A different signing key cannot update existing installations unless Android accepts a deliberately configured compatible signing lineage.

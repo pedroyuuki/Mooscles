@@ -175,7 +175,11 @@ jobs:
           # Task 25 fix round 1: RestProgressNotificationHostTest +1 (timeout after the end),
           # RestTimerActionsHostTest +1 (gate held past the receiver's budget). 802 + 2 = 804.
           # Phase 3 task 31 (:screens commonTest): ShareCardDataTest +1. 804 + 1 = 805.
-          MIN_HOST_TESTS: 806
+          # The CI run on task 31 (run 40937989893, 5d94a7f) counted 806: one earlier test was added
+          # without raising the minimum. Timer announcer fix (2ff31b4, :designsystem commonTest):
+          # SizesTimingElevationTest +1. 806 + 1 = 807.
+          # Phase 3 end, the real count (F25): 807 = :app 416 + :shared 240 + :designsystem 70 + :screens 81.
+          MIN_HOST_TESTS: 807
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -353,8 +357,11 @@ jobs:
           # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
           # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1 (fix round 1: StepperTest +2).
           # Phase 3 task 31 (screen critique): SetCheckTest +1, RestTimerExpandedTest +1.
+          # Timer announcer fix (2ff31b4): RestTimerDockTest +2 (uiTest), SizesTimingElevationTest +1
+          # (commonTest). 291 (counted by run 40937989893 on 5d94a7f) + 3 = 294, the number of @Test in
+          # commonTest, uiTest and iosTest at the phase 3 end (that count matched the CI at 53b13ba and 5d94a7f).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 293
+          MIN_DS_IOS_TESTS: 294
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
