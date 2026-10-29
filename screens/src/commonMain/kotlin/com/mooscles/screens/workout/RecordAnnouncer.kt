@@ -1,15 +1,21 @@
 package com.mooscles.screens.workout
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import com.mooscles.designsystem.components.PrToast
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.currentNumberLocale
@@ -23,13 +29,16 @@ import com.mooscles.screens.resources.workout_record_weight_detail
 import com.mooscles.screens.resources.workout_record_weight_title
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.SetRecordUi
+import com.mooscles.ui.WorkoutExerciseUi
 import com.mooscles.ui.WorkoutUi
 import org.jetbrains.compose.resources.stringResource
 
+/** The test tag of the slot the record toast sits in, at the top of the list. */
+internal const val RecordToastTag = "workout-record-toast"
+
 /**
  * A record to announce: the set [setId] of [exerciseName], done at [weightKg] × [reps] (exact kg),
- * beat [record]. [key] is `"<setId>:<weightKg>:<reps>:<kind>"`: the same set at the same value is
- * announced once; at a new value (edited, or beating the record again), once more.
+ * beat [record]. [key] is `"<setId>:<weightKg>:<reps>:<kind>"`.
  */
 data class RecordEvent(
     val key: String,
@@ -40,71 +49,130 @@ data class RecordEvent(
     val reps: Int,
 )
 
+/** The best record announced in one category ([RecordAnnouncer.category]) this session. */
+data class RecordBest(val weightKg: Double, val reps: Int)
+
 /**
- * Which record the active workout announces (spec D17, D18). The record is the presentation's
- * (`SetUi.record`, chosen by the domain), never the screen's guess; the screen only decides
- * whether to celebrate it.
+ * What one emission of the workout settles ([RecordAnnouncer.step]): the checks it [consumed] (their
+ * completion arrived), the records to [announce] and the best announced per category after them.
+ */
+data class RecordStep(val consumed: Set<String>, val announce: List<RecordEvent>, val announced: Map<String, RecordBest>)
+
+/**
+ * Which record the active workout celebrates (spec D17, D18): only a set the person just completed
+ * here. The record is the presentation's (`SetUi.record`, chosen by the domain), never the screen's
+ * guess; the screen only decides whether to celebrate it.
  */
 object RecordAnnouncer {
     /** The key of [record] on the set [setId] done at [weightKg] × [reps]. */
     fun key(setId: String, weightKg: Double, reps: Int, record: SetRecordUi): String = "$setId:$weightKg:$reps:${record.kind}"
 
     /**
-     * The first record of [workout] to announce, or null: on a set done with a record, completed
-     * on this screen ([completedHere]) and whose [key] is not in [announced]. A record already in
-     * the state when the screen opened (a resumed workout) is on a set not completed here, so it
-     * only shows its badge. A first record has no `SetUi.record` (D18), and a record that stops
-     * holding just leaves the set: neither says anything.
+     * The category a record competes in: the exercise and its convention (records are kept per
+     * both, across the entries of the same exercise) and the kind; a reps record also by its load,
+     * since it is "most reps at this load".
      */
-    fun next(workout: WorkoutUi, completedHere: Set<String>, announced: Set<String>): RecordEvent? {
-        if (completedHere.isEmpty()) return null
+    fun category(entry: WorkoutExerciseUi, record: SetRecordUi, weightKg: Double): String {
+        val base = "${entry.exercise.id}|${entry.exercise.convention}|${record.kind}"
+        return if (record.kind == RecordKind.REPS) "$base|$weightKg" else base
+    }
+
+    /**
+     * Whether [weightKg] × [reps] strictly beats [best]: a weight record by a heavier load, or the
+     * same load with more reps; a reps record (same load, by its category) by more reps.
+     */
+    fun beats(kind: RecordKind, weightKg: Double, reps: Int, best: RecordBest?): Boolean = when {
+        best == null -> true
+        kind == RecordKind.WEIGHT -> weightKg > best.weightKg || (weightKg == best.weightKg && reps > best.reps)
+        else -> reps > best.reps
+    }
+
+    /**
+     * Settles one emission of [workout]. Each set of [checkedHere] (checked here, its completion not
+     * seen yet) that is now done is consumed: this is the echo of that check, and the only moment
+     * it can be celebrated. It is announced when it carries a record that strictly beats the best
+     * of its category in [announced]. So a record already there when the screen opened (a resumed
+     * workout), one inherited when another set is unchecked or removed, one kept while a done set is
+     * corrected or typed into, and a first record (no `SetUi.record`, D18) say nothing; a later set
+     * beating the record again says it once more, with the new value.
+     */
+    fun step(workout: WorkoutUi, checkedHere: Set<String>, announced: Map<String, RecordBest>): RecordStep {
+        if (checkedHere.isEmpty()) return RecordStep(emptySet(), emptyList(), announced)
+        val consumed = HashSet<String>()
+        val events = ArrayList<RecordEvent>()
+        var best = announced
         for (entry in workout.exercises) {
             for (set in entry.sets) {
+                if (!set.completed || set.id !in checkedHere) continue
+                consumed += set.id
                 val record = set.record ?: continue
-                if (!set.completed || set.id !in completedHere) continue
-                val key = key(set.id, set.weightKg, set.reps, record)
-                if (key !in announced) return RecordEvent(key, set.id, entry.exercise.name, record, set.weightKg, set.reps)
+                val category = category(entry, record, set.weightKg)
+                if (!beats(record.kind, set.weightKg, set.reps, best[category])) continue
+                best = best + (category to RecordBest(set.weightKg, set.reps))
+                events += RecordEvent(key(set.id, set.weightKg, set.reps, record), set.id, entry.exercise.name, record, set.weightKg, set.reps)
             }
         }
-        return null
+        return RecordStep(consumed, events, best)
     }
 }
 
 /**
  * The record reaction of the active workout (spec D17, decision 15), put once over the top of the
- * list, under the header. When [RecordAnnouncer] finds a record to announce, it is marked
- * announced ([ActiveWorkoutScreenState.announced], saved, so a scroll, a recreation or a resumed
- * workout never plays it again), the `PersonalRecord` haptic plays (a frame later, so after the
- * tap's `SetCompleted`, which the row plays: the workout rows pass `recordHaptic = false`) and the
- * [PrToast] shows "New weight record" or "New reps record" with the set and the record it beat,
- * for `timing.prToast`, read politely. While a row is in edit the toast waits, so it never covers
- * it, and shows when the edit ends. The badge is the row's ([WorkoutSetRow]).
+ * list, under the header. Each emission goes through [RecordAnnouncer.step]; when it consumes a
+ * check, a frame later (so after the tap's `SetCompleted`, which the row plays: the workout rows
+ * pass `recordHaptic = false`) the screen state takes the step (saved, so a scroll, a recreation
+ * or a resumed workout never plays a record again) and, with records to announce, the
+ * `PersonalRecord` haptic plays once and their toasts queue.
  *
- * A record arriving while the person has just unchecked its set (the optimistic state says
- * pending) is not announced: the next echo takes the record away.
+ * The [PrToast] shows "New weight record" or "New reps record" with the set and what it beat, for
+ * `timing.prToast`, read politely, one record after another. A toast not shown yet waits while a
+ * row is in edit, so it never covers it; one already shown that an edit hides is dropped, so it is
+ * read once. A tap on it dismisses it (it never reaches the row under it). A queued toast whose set
+ * left the workout is dropped. The queue is not saved: after a recreation the badge stays, and
+ * nothing is shown or read again. The badge is the row's ([WorkoutSetRow]).
  */
 @Composable
 internal fun RecordReaction(workout: WorkoutUi, pounds: Boolean, screen: ActiveWorkoutScreenState, modifier: Modifier = Modifier) {
     val haptics = MTheme.haptics
-    var shown by remember(workout.id) { mutableStateOf<RecordEvent?>(null) }
-    val event = RecordAnnouncer.next(workout, screen.completedHere, screen.announced)
-        ?.takeUnless { screen.optimistic[it.setId] == false }
-    LaunchedEffect(event) {
-        val found = event ?: return@LaunchedEffect
-        // The row plays the check's haptic from its own effect; this one comes after it.
+    var queue by remember(workout.id) { mutableStateOf(emptyList<RecordEvent>()) }
+    LaunchedEffect(workout) {
+        val ids = workout.exercises.flatMapTo(HashSet()) { e -> e.sets.map { it.id } }
+        if (queue.any { it.setId !in ids }) queue = queue.filter { it.setId in ids }
+        if (RecordAnnouncer.step(workout, screen.checkedHere, screen.announced).consumed.isEmpty()) return@LaunchedEffect
+        // The row plays the check's haptic from its own effect; this one comes after it. Nothing
+        // suspends after the frame, so a newer emission cannot cut the step in half.
         withFrameNanos { }
-        screen.announce(found.key)
-        haptics.perform(HapticEvent.PersonalRecord)
-        shown = found
+        val step = RecordAnnouncer.step(workout, screen.checkedHere, screen.announced)
+        screen.settleRecords(step)
+        if (step.announce.isNotEmpty()) {
+            haptics.perform(HapticEvent.PersonalRecord)
+            queue = queue + step.announce
+        }
     }
-    val toast = shown ?: return
-    PrToast(
-        title = recordTitle(toast.record.kind),
-        detail = recordDetail(toast, pounds),
-        visible = screen.editing == null,
-        onDismiss = { if (shown == toast) shown = null },
-        modifier = modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxWidth(),
-    )
+    val toast = queue.firstOrNull() ?: return
+    val dismiss = { if (queue.firstOrNull() == toast) queue = queue.drop(1) }
+    // Whether this toast has been on screen: then an edit drops it instead of holding it.
+    val displayed = remember(toast) { booleanArrayOf(false) }
+    if (screen.editing != null) {
+        if (displayed[0]) LaunchedEffect(toast) { dismiss() }
+        return
+    }
+    SideEffect { displayed[0] = true }
+    // One PrToast per record, so each starts its own entrance and hold, even with the same text.
+    key(toast) { Box(
+        modifier
+            .testTag(RecordToastTag)
+            .widthIn(max = MTheme.sizes.contentMaxWidth)
+            .fillMaxWidth()
+            .pointerInput(toast) { detectTapGestures { dismiss() } },
+    ) {
+        PrToast(
+            title = recordTitle(toast.record.kind),
+            detail = recordDetail(toast, pounds),
+            visible = true,
+            onDismiss = dismiss,
+        )
+    } }
 }
 
 /** "New weight record" or "New reps record". */

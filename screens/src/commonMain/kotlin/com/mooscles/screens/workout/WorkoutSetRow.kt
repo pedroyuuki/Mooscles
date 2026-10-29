@@ -173,8 +173,8 @@ internal fun WorkoutSetRow(
         )
         if (now.reps in 1..MAX_REPS) {
             screen.expect(set.id, true)
-            // Its record, once the presentation confirms it, is announced ([RecordReaction]).
-            screen.completedHere(set.id)
+            // Its completion, once the state shows it, may be celebrated ([RecordReaction]).
+            screen.checkedHere(set.id)
             screen.editing = null
             // An empty or invalid draft gave way to the value sent; the echo shows that value.
             for (field in SetField.entries) {
@@ -189,6 +189,7 @@ internal fun WorkoutSetRow(
     }
     val uncheck: () -> Unit = {
         screen.expect(set.id, false)
+        screen.uncheckedHere(set.id)
         screen.editing = null
         editor.send(editor.current(SetField.REPS).toInt(), editor.current(SetField.LOAD), completed = false)
     }

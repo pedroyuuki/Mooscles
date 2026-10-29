@@ -54,8 +54,8 @@ data class SetEditTarget(
  * - [typeSheetFor]: the set whose type sheet is open ([SetTypeSheetHost]);
  * - [expanded] and [manual]: which exercise cards are open, by entry id, and which of them the
  *   person opened or closed by hand ([CardExpansion], spec D9);
- * - [completedHere] and [announced]: the sets completed on this screen and the records already
- *   announced, by [RecordEvent.key] ([RecordReaction], spec D17).
+ * - [checkedHere] and [announced]: the sets checked on this screen whose completion has not come
+ *   back yet, and the best record announced per category ([RecordReaction], spec D17).
  */
 @Stable
 class ActiveWorkoutScreenState(
@@ -69,8 +69,8 @@ class ActiveWorkoutScreenState(
     typeSheetFor: String? = null,
     expanded: Map<String, Boolean> = emptyMap(),
     manual: Set<String> = emptySet(),
-    completedHere: Set<String> = emptySet(),
-    announced: Set<String> = emptySet(),
+    checkedHere: Set<String> = emptySet(),
+    announced: Map<String, RecordBest> = emptyMap(),
 ) {
     var cleared: Set<Pair<String, SetField>> by mutableStateOf(cleared)
         internal set
@@ -105,25 +105,35 @@ class ActiveWorkoutScreenState(
         internal set
 
     /**
-     * The ids of the sets the person completed on this screen (a check, a swipe), in this use of
-     * it: only their records are announced. A record already in the state when the screen opened
-     * (a resumed workout, a restarted app) is on a set not in it, so it only shows its badge.
+     * The ids of the sets the person checked on this screen (a tap, a swipe) whose completion the
+     * state has not shown yet. The first emission with the set done consumes it ([settleRecords]):
+     * only then can its record be celebrated. A record already in the state when the screen opened
+     * (a resumed workout, a restarted app), inherited or kept through an edit is on no set here.
      */
-    var completedHere: Set<String> by mutableStateOf(completedHere)
+    var checkedHere: Set<String> by mutableStateOf(checkedHere)
         internal set
 
-    /** The [RecordEvent.key]s announced already: each plays its haptic and its toast once. */
-    var announced: Set<String> by mutableStateOf(announced)
+    /**
+     * The best record announced this session in each category ([RecordAnnouncer.category]): a
+     * record is announced only when it strictly beats it, so none plays twice.
+     */
+    var announced: Map<String, RecordBest> by mutableStateOf(announced)
         internal set
 
-    /** Notes that the person completed [setId] here, so its record, once confirmed, is announced. */
-    internal fun completedHere(setId: String) {
-        if (setId !in completedHere) completedHere = completedHere + setId
+    /** Notes that the person checked [setId] here, so its completion, once seen, may be celebrated. */
+    internal fun checkedHere(setId: String) {
+        if (setId !in checkedHere) checkedHere = checkedHere + setId
     }
 
-    /** Marks the record [key] as announced. */
-    internal fun announce(key: String) {
-        if (key !in announced) announced = announced + key
+    /** The person unchecked [setId] (or it went): a completion still on its way is not celebrated. */
+    internal fun uncheckedHere(setId: String) {
+        if (setId in checkedHere) checkedHere = checkedHere - setId
+    }
+
+    /** Takes [step]: its checks are consumed and its best records kept. */
+    internal fun settleRecords(step: RecordStep) {
+        if (step.consumed.isNotEmpty()) checkedHere = checkedHere - step.consumed
+        if (step.announced != announced) announced = step.announced
     }
 
     /** Opens or closes the card of [entryId], shown [open] now, by the person's hand. */
@@ -180,7 +190,7 @@ class ActiveWorkoutScreenState(
         actions.removeSet(removed.set.id)
     }
 
-    /** Forgets the drafts, awaited writes, cleared fields, optimistic state, edit and type sheet of [setId]. */
+    /** Forgets the drafts, awaited writes, cleared fields, optimistic state, edit, type sheet and pending check of [setId]. */
     internal fun forget(setId: String) {
         if (drafts.keys.any { it.first == setId }) drafts = drafts.filterKeys { it.first != setId }
         if (sent.keys.any { it.first == setId }) sent = sent.filterKeys { it.first != setId }
@@ -188,6 +198,7 @@ class ActiveWorkoutScreenState(
         if (setId in optimistic) optimistic = optimistic - setId
         if (editing?.setId == setId) editing = null
         if (typeSheetFor == setId) typeSheetFor = null
+        uncheckedHere(setId)
     }
 
     /**
@@ -355,8 +366,8 @@ class ActiveWorkoutScreenState(
          * target as [setId, field, keyboard, error], a draft as [field, setId, text] and its
          * awaited writes as [field, setId, values], the last removal as [entryId, position, number,
          * setId, reps, weightKg, completed, warmup, assistance], the type sheet's set id, the open
-         * cards as [entryId, open], the entries toggled by hand, the sets completed here and the
-         * records announced.
+         * cards as [entryId, open], the entries toggled by hand, the sets checked here and the best
+         * records announced as [category, weightKg, reps].
          * [optimistic] is left out on purpose: a write lost with the process must not come back as
          * a full disc. So is the removed set's record: the record is the presentation's, computed
          * again once the set is back.
@@ -378,8 +389,8 @@ class ActiveWorkoutScreenState(
                     state.typeSheetFor,
                     ArrayList(state.expanded.map { (id, open) -> arrayListOf<Any>(id, open) }),
                     ArrayList(state.manual),
-                    ArrayList(state.completedHere),
-                    ArrayList(state.announced),
+                    ArrayList(state.checkedHere),
+                    ArrayList(state.announced.map { (category, best) -> arrayListOf<Any>(category, best.weightKg, best.reps) }),
                 )
             },
             restore = { saved ->
@@ -412,9 +423,9 @@ class ActiveWorkoutScreenState(
                 @Suppress("UNCHECKED_CAST")
                 val manual = (saved.getOrNull(8) as List<String>?).orEmpty().toSet()
                 @Suppress("UNCHECKED_CAST")
-                val completedHere = (saved.getOrNull(9) as List<String>?).orEmpty().toSet()
-                @Suppress("UNCHECKED_CAST")
-                val announced = (saved.getOrNull(10) as List<String>?).orEmpty().toSet()
+                val checkedHere = (saved.getOrNull(9) as List<String>?).orEmpty().toSet()
+                val announced = (saved.getOrNull(10) as List<*>?).orEmpty().filterIsInstance<List<*>>()
+                    .associate { it[0] as String to RecordBest(it[1] as Double, it[2] as Int) }
                 ActiveWorkoutScreenState(
                     cleared = cleared,
                     editing = editing,
@@ -425,7 +436,7 @@ class ActiveWorkoutScreenState(
                     typeSheetFor = saved.getOrNull(6) as String?,
                     expanded = expanded,
                     manual = manual,
-                    completedHere = completedHere,
+                    checkedHere = checkedHere,
                     announced = announced,
                 )
             },

@@ -74,18 +74,22 @@ class ActiveWorkoutScreenStateTest {
 
     @Test
     fun saverKeepsTheSetsCompletedHereAndTheRecordsAnnounced() {
-        // A recreation or a process death must neither replay a record nor forget which sets
-        // were completed here (their later records are still announced).
-        val state = ActiveWorkoutScreenState(completedHere = setOf("s:1", "s2"), announced = setOf("s:1:87.5:6:WEIGHT"))
-        state.completedHere("s3")
-        state.announce("s2:80.0:8:REPS")
+        // A recreation or a process death must neither replay a record nor forget a check whose
+        // completion is still on its way (its record is still celebrated).
+        val state = ActiveWorkoutScreenState(checkedHere = setOf("s:1", "s2"), announced = mapOf("bench|Total load|WEIGHT" to RecordBest(87.5, 6)))
+        state.checkedHere("s3")
+        state.uncheckedHere("s2")
+        state.settleRecords(RecordStep(setOf("s:1"), emptyList(), state.announced + ("row|Total load|REPS|80.0" to RecordBest(80.0, 8))))
         val restored = roundTrip(state)
-        assertEquals(setOf("s:1", "s2", "s3"), restored.completedHere)
-        assertEquals(setOf("s:1:87.5:6:WEIGHT", "s2:80.0:8:REPS"), restored.announced)
+        assertEquals(setOf("s3"), restored.checkedHere)
+        assertEquals(mapOf("bench|Total load|WEIGHT" to RecordBest(87.5, 6), "row|Total load|REPS|80.0" to RecordBest(80.0, 8)), restored.announced)
+        // Removing a set forgets its pending check.
+        restored.forget("s3")
+        assertEquals(emptySet(), restored.checkedHere)
 
         val empty = roundTrip(ActiveWorkoutScreenState())
-        assertEquals(emptySet(), empty.completedHere)
-        assertEquals(emptySet(), empty.announced)
+        assertEquals(emptySet(), empty.checkedHere)
+        assertEquals(emptyMap(), empty.announced)
     }
 
     @Test
