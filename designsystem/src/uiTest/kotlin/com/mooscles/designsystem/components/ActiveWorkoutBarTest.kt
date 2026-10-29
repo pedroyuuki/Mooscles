@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
@@ -201,7 +202,11 @@ class ActiveWorkoutBarTest {
                         val where = "$width at $scale, rest=$rest"
                         val name = layoutOf(WorkoutBarNameTag)
                         assertEquals(1, name.lineCount, where)
-                        assertTrue(name.isLineEllipsized(0), "$where: the long name ends in an ellipsis")
+                        // isLineEllipsized is false on iOS for this node (its layout result comes
+                        // from a relayout at the parent's width), so check what it needs and how it ends.
+                        assertEquals(TextOverflow.Ellipsis, name.layoutInput.overflow, where)
+                        val needed = name.multiParagraph.intrinsics.maxIntrinsicWidth
+                        assertTrue(needed > name.size.width, "$where: the long name needs $needed px, has ${name.size.width}")
                         assertShownWhole(layoutOf(WorkoutBarTimeTag), "time $where")
                         assertShownWhole(layoutOf(if (rest) WorkoutBarRestTag else WorkoutBarSetsTag), "$where")
                     }

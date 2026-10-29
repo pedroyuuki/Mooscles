@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
+import com.mooscles.designsystem.INJECTS_TOUCH_CANCEL
 import com.mooscles.designsystem.withTheme
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import androidx.compose.runtime.getValue
@@ -235,6 +236,8 @@ class SetRowSwipeTest {
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun cancelledDragPastTheThresholdDoesNothing() = runComposeUiTest {
+        // Only the emulator can send a cancel; on the iOS simulator this is proven nowhere yet.
+        if (!INJECTS_TOUCH_CANCEL) return@runComposeUiTest
         val haptics = RecordingHaptics()
         val calls = Calls()
         val left = swipeRow(haptics, calls)
