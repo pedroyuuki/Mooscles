@@ -260,7 +260,7 @@ class ActiveWorkoutFlowTest {
             onNodeWithTag(summaryStatTag(SummaryStat.EXERCISES)).assertTextEquals("Exercises", "1")
             onNode(hasTestTag(summaryStatTag(SummaryStat.VOLUME)) and hasText("1,560", substring = true)).assertExists()
             val records = hasAnyAncestor(hasTestTag(SummaryRecordsTag))
-            onNode(hasText("87.5${NBSP}kg × 6", substring = true) and records).assertExists()
+            onNode(hasText("87.5${NBSP}kg${NBSP}×${NBSP}6", substring = true) and records).assertExists()
             onNode(hasText("before 85${NBSP}kg", substring = true) and records).assertExists()
             assertEquals(1, onAllNodes(hasTestTag(PrBadgeTag) and records, useUnmergedTree = true).fetchSemanticsNodes().size)
             sweep(name, "summary", workout = false)

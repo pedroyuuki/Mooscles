@@ -105,7 +105,7 @@
     <string name="workout_record_weight_title">New weight record</string>
     <string name="workout_record_reps_title">New reps record</string>
     <!-- %1$s is the set's load with its unit ("87.5 kg"), %2$d its reps, %3$s the history's best load ("85 kg"). -->
-    <string name="workout_record_weight_detail">%1$s × %2$d · before %3$s</string>
+    <string name="workout_record_weight_detail">%1$s&#160;×&#160;%2$d · before %3$s</string>
     <!-- %1$s is the set's load with its unit ("80 kg"), %2$d its reps, %3$d the history's most reps at that load. -->
-    <string name="workout_record_reps_detail">%1$s × %2$d · before %1$s × %3$d</string>
+    <string name="workout_record_reps_detail">%1$s&#160;×&#160;%2$d · before %1$s&#160;×&#160;%3$d</string>
 </resources>

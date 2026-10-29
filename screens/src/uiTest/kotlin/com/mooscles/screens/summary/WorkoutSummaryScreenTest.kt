@@ -167,8 +167,8 @@ class WorkoutSummaryScreenTest {
         summary()
         val records = hasAnyAncestor(hasTestTag(SummaryRecordsTag))
         onNode(hasText("Recordes") and records).shown()
-        onNode(hasText("Supino reto · 87,5\u00A0kg × 6 · antes 85\u00A0kg") and records).shown()
-        onNode(hasText("Agachamento · 80\u00A0kg × 8 · antes 80\u00A0kg × 6") and records).shown()
+        onNode(hasText("Supino reto · 87,5\u00A0kg\u00A0×\u00A06 · antes 85\u00A0kg") and records).shown()
+        onNode(hasText("Agachamento · 80\u00A0kg\u00A0×\u00A08 · antes 80\u00A0kg\u00A0×\u00A06") and records).shown()
         assertEquals(2, onAllNodes(hasTestTag(PrBadgeTag) and records, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
@@ -177,7 +177,7 @@ class WorkoutSummaryScreenTest {
         summary(workout(records = listOf(firstRecord)))
         val first = hasAnyAncestor(hasTestTag(SummaryFirstRecordsTag))
         onNode(hasText("Primeiros registros") and first).shown()
-        onNode(hasText("Remada curvada · 82,5\u00A0kg × 8") and first).shown()
+        onNode(hasText("Remada curvada · 82,5\u00A0kg\u00A0×\u00A08") and first).shown()
         assertEquals(1, onAllNodes(hasTestTag(PrBadgeTag) and first, useUnmergedTree = true).fetchSemanticsNodes().size)
         // Only first records: no "Records" heading with nothing beaten under it.
         assertEquals(0, onAllNodes(hasTestTag(SummaryRecordsTag)).fetchSemanticsNodes().size)

@@ -10,9 +10,9 @@
     <string name="summary_first_records">Primeiros registros</string>
     <!-- "Supino reto · 87,5 kg × 6 · antes 85 kg". -->
     <string name="summary_record_line">%1$s · %2$s</string>
-    <string name="summary_weight_record">%1$s × %2$d · antes %3$s</string>
-    <string name="summary_reps_record">%1$s × %2$d · antes %1$s × %3$d</string>
-    <string name="summary_set">%1$s × %2$d</string>
+    <string name="summary_weight_record">%1$s&#160;×&#160;%2$d · antes %3$s</string>
+    <string name="summary_reps_record">%1$s&#160;×&#160;%2$d · antes %1$s&#160;×&#160;%3$d</string>
+    <string name="summary_set">%1$s&#160;×&#160;%2$d</string>
     <string name="summary_bodyweight">Peso corporal</string>
     <string name="summary_assistance_load">%1$s de assistência</string>
     <plurals name="summary_consistency">

@@ -187,9 +187,9 @@ class RecordReactionTest {
         badge("s1").assertExists()
         badge("s2").assertDoesNotExist()
         toastText("Novo recorde de carga").assertExists()
-        toastText("87,5${NBSP}kg × 6 · antes 85${NBSP}kg").assertExists()
+        toastText("87,5${NBSP}kg${NBSP}×${NBSP}6 · antes 85${NBSP}kg").assertExists()
         assertShownWhole(toastText("Novo recorde de carga").layout(), "title")
-        assertShownWhole(toastText("87,5${NBSP}kg × 6 · antes 85${NBSP}kg").layout(), "detail")
+        assertShownWhole(toastText("87,5${NBSP}kg${NBSP}×${NBSP}6 · antes 85${NBSP}kg").layout(), "detail")
         // At the top of the list, under the header: the toast's slot (the toast's own node starts
         // inside its paddings).
         toast().assertIsDisplayed()
@@ -208,8 +208,8 @@ class RecordReactionTest {
         show(fake, haptics)
         check("s1")
         toastText("Novo recorde de repetições").assertExists()
-        toastText("80${NBSP}kg × 8 · antes 80${NBSP}kg × 6").assertExists()
-        assertShownWhole(toastText("80${NBSP}kg × 8 · antes 80${NBSP}kg × 6").layout(), "detail")
+        toastText("80${NBSP}kg${NBSP}×${NBSP}8 · antes 80${NBSP}kg${NBSP}×${NBSP}6").assertExists()
+        assertShownWhole(toastText("80${NBSP}kg${NBSP}×${NBSP}8 · antes 80${NBSP}kg${NBSP}×${NBSP}6").layout(), "detail")
         assertEquals(listOf(HapticEvent.SetCompleted, HapticEvent.PersonalRecord), haptics.events.toList())
         badge("s1").assertExists()
     }
@@ -381,7 +381,7 @@ class RecordReactionTest {
         fake.complete("s2", weightRecord) { it.copy(weightKg = 90.0) }
         waitForIdle()
         // The system's language: only the new load is checked.
-        onNode(hasText("90${NBSP}kg × 6", substring = true) and hasAnyAncestor(hasTestTag(PrToastTag)), useUnmergedTree = true).assertExists()
+        onNode(hasText("90${NBSP}kg${NBSP}×${NBSP}6", substring = true) and hasAnyAncestor(hasTestTag(PrToastTag)), useUnmergedTree = true).assertExists()
         assertEquals(
             listOf(
                 HapticEvent.SetCompleted, HapticEvent.PersonalRecord, HapticEvent.SetCompleted,
