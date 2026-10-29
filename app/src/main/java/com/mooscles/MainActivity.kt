@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import com.mooscles.timer.RestNotifications
 import com.mooscles.updates.UpdateNotifications
 import com.mooscles.ui.MoosclesApp
 
@@ -31,12 +32,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state = vm.contentUi.collectAsStateWithLifecycle()
             val timer = vm.timerUi.collectAsStateWithLifecycle()
-            MoosclesApp(state.value, vm, timer)
+            val workoutRequest = vm.workoutRequest.collectAsStateWithLifecycle()
+            MoosclesApp(state.value, vm, timer, workoutRequest.value)
         }
-        // Only a fresh launch from the notification asks for the updates: a recreated Activity
+        // Only a fresh launch from a notification asks for its screen: a recreated Activity
         // (rotation, process restore) keeps the same intent, and asking again would navigate
         // away from wherever the user went since. A new notification tap arrives in onNewIntent.
-        if (savedInstanceState == null && intent?.action == UpdateNotifications.OPEN_UPDATES) vm.openUpdateSettings()
+        if (savedInstanceState == null) openFrom(intent)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.installIntents.collect { intent ->
@@ -55,6 +57,12 @@ class MainActivity : ComponentActivity() {
     }
     override fun onStart() { super.onStart(); (application as MoosclesApplication).timer.foreground = true }
     override fun onResume() { super.onResume(); (application as MoosclesApplication).appScope.launch { (application as MoosclesApplication).updates.onForeground() } }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (intent.action == UpdateNotifications.OPEN_UPDATES) vm.openUpdateSettings() }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); openFrom(intent) }
+    private fun openFrom(intent: Intent?) {
+        when (intent?.action) {
+            UpdateNotifications.OPEN_UPDATES -> vm.openUpdateSettings()
+            RestNotifications.OPEN_WORKOUT -> vm.openWorkout()
+        }
+    }
     override fun onStop() { (application as MoosclesApplication).timer.foreground = false; super.onStop() }
 }

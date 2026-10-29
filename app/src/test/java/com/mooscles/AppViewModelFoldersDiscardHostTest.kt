@@ -15,6 +15,7 @@ import com.mooscles.data.RoutineFolder
 import com.mooscles.data.WorkoutDatabase
 import com.mooscles.data.WorkoutRepository
 import com.mooscles.data.open
+import com.mooscles.timer.RestNotifications
 import com.mooscles.timer.RestTimerPersistence
 import com.mooscles.ui.UiState
 import kotlinx.coroutines.Dispatchers
@@ -143,7 +144,11 @@ class AppViewModelFoldersDiscardHostTest {
             }
             notifications.notify(1, Notification.Builder(app, "rest")
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("Rest complete").build())
-            assertEquals(1, shadowOf(notifications).allNotifications.size)
+            // No Activity is in front here, so the running rest also has its ongoing notification (D16).
+            awaitCondition({ "Expected the finished and the progress notifications" }) {
+                shadowOf(notifications).getNotification(RestNotifications.PROGRESS_ID) != null
+            }
+            assertEquals(2, shadowOf(notifications).allNotifications.size)
 
             repeat(15) { model.discardWorkout() }
             awaitUi(model) { !it.discardingWorkout && it.active == null &&
