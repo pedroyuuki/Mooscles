@@ -2,7 +2,9 @@ package com.mooscles.designsystem.components
 
 import com.mooscles.designsystem.format.NumberLocale
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -32,6 +34,9 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.withTheme
+import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
+import com.mooscles.designsystem.assertShownWhole
+import androidx.compose.ui.text.TextLayoutResult
 import com.mooscles.designsystem.interaction.FocusRingVisible
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.focus.FocusRequester
@@ -125,6 +130,35 @@ class StepperTest {
             assertTrue(touch.height >= height - 0.5f, "$tag height ${touch.height} < $height")
             assertTrue(touch.width >= width - 0.5f, "$tag width ${touch.width} < $width")
         }
+    }
+
+    /**
+     * At 200% in a narrow place (the set edit panel beside its keyboard button), the value used to
+     * take the room of the increase button, which collapsed to 0 wide (found by the active workout
+     * flow, Task 28). The buttons keep their 64 x 56 dp and the value steps down to the largest of
+     * `num.lg`, `num.md` and `num.sm` that it fits in, whole.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun buttonsKeepTheirSizeWhenTheValueIsWide() = runComposeUiTest {
+        withTheme(fontScale = LINEAR_TWO_X_FONT_SCALE) {
+            Box(Modifier.width(260.dp)) {
+                Stepper(87.5, {}, step = 2.5, min = 0.0, display = "87.5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase")
+            }
+        }
+        waitForIdle()
+        val sizes = MoosclesSizes()
+        for (tag in listOf(StepperDecreaseTag, StepperIncreaseTag)) {
+            val bounds = onNodeWithTag(tag).fetchSemanticsNode().size
+            val width = with(density) { sizes.stepperButtonWidth.toPx() }
+            val height = with(density) { sizes.stepperButtonHeight.toPx() }
+            assertTrue(bounds.width >= width - 0.5f && bounds.height >= height - 0.5f, "$tag is $bounds px, at least $width x $height expected")
+        }
+        val results = mutableListOf<TextLayoutResult>()
+        val layout = onNodeWithTag(StepperValueTag, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action
+        assertTrue(layout?.invoke(results) == true && results.isNotEmpty(), "the value has no text layout")
+        assertShownWhole(results.first(), "stepper value")
+        onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("87.5 kg")
     }
 
     @OptIn(ExperimentalTestApi::class)

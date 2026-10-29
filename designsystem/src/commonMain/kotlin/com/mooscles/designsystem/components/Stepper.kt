@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.format.currentNumberLocale
@@ -57,8 +59,9 @@ const val StepperIncreaseTag = "stepper-increase"
 const val StepperValueTag = "stepper-value"
 
 /**
- * A value changed in steps of [step] with a button on each side (64 x 56 dp each, `num.lg` value
- * between). A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
+ * A value changed in steps of [step] with a button on each side (64 x 56 dp each, always) and the
+ * value between, in `num.lg`, or `num.md` or `num.sm` when that is all the room left fits (large text
+ * in a narrow place). A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
  * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Moving the finger past
  * touch slop, off the button or into a scroll cancels the press (no step, no more repeats), so a scroll
  * that starts on a button never changes the value. Every step gives the
@@ -124,8 +127,27 @@ fun Stepper(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StepperButton(MIcons.Minus, decreaseLabel, enabled = value > min, tag = StepperDecreaseTag, step = { change(-1) }, finished = finished)
-        MText(display, MTheme.type.numLg, modifier = Modifier.testTag(StepperValueTag))
+        // Weighted, so the buttons are measured first and keep their size; the value takes what is left.
+        StepperValue(display, Modifier.weight(1f, fill = false))
         StepperButton(MIcons.Plus, increaseLabel, enabled = value < max, tag = StepperIncreaseTag, step = { change(1) }, finished = finished)
+    }
+}
+
+/**
+ * The value between the buttons, on one line in the largest of `num.lg`, `num.md` and `num.sm` that
+ * fits the room the buttons leave ([modifier] gives it that room), `num.sm` when none does. At
+ * large text in a narrow place the value steps down instead of pushing the increase button out.
+ */
+@Composable
+private fun StepperValue(display: String, modifier: Modifier) {
+    val type = MTheme.type
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val room = constraints.maxWidth
+        val candidates = listOf(type.numLg, type.numMd, type.numSm)
+        val style = candidates.firstOrNull { measurer.measure(display, it, softWrap = false, maxLines = 1).size.width <= room }
+            ?: candidates.last()
+        MText(display, style, modifier = Modifier.testTag(StepperValueTag), softWrap = false, maxLines = 1)
     }
 }
 

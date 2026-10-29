@@ -10,6 +10,8 @@ import androidx.compose.ui.text.TextLayoutResult
 import com.mooscles.designsystem.assertShownWhole
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isFocused
@@ -129,5 +131,18 @@ class MDialogTest {
         assertTrue(confirm.top >= dismiss.bottom || confirm.left >= dismiss.right, "the confirmation is not last: $dismiss, $confirm")
         assertShownWhole(labelLayout("Continue training"), "dismiss")
         assertShownWhole(labelLayout("Discard workout"), "confirm")
+    }
+
+    /**
+     * The scrim is clickable, so it is named ("Dismiss", as Material's "Close sheet"): a screen
+     * reader never lands on a nameless control. It is read after the content (traversal index 1).
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun scrimIsNamedDismissAndReadLast() = runComposeUiTest {
+        withTheme { MDialog("Finish?", "Saved.", "Finish", onConfirm = {}, onDismiss = {}) }
+        waitForIdle()
+        onNodeWithTag(DialogScrimTag).assertContentDescriptionEquals("Dismiss")
+        assertEquals(1f, onNodeWithTag(DialogScrimTag).fetchSemanticsNode().config[SemanticsProperties.TraversalIndex])
     }
 }
