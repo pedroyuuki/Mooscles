@@ -372,6 +372,7 @@ class SetTypeAndRemovalTest {
         swipeLeft("s4")
         onNodeWithText("Set 4 removed", useUnmergedTree = true).assertIsDisplayed()
         val editing = shown.screen?.editing
+        assertEquals("s1", editing?.setId, "a row is in edit before the recreation")
         val removed = shown.screen?.lastRemoved
 
         restoration.emulateSaveAndRestore()
