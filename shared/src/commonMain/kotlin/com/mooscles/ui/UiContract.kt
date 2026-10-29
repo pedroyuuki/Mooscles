@@ -77,7 +77,15 @@ data class UiState(
     val discardingWorkout: Boolean = false, val discardNavigationRequest: Long = 0,
     val routineFolders: List<RoutineFolderUi> = listOf(RoutineFolderUi("default", "My routines")),
     val backup: BackupUi = BackupUi(),
+    /** Why [error] is set, for screens that show their own localized copy instead of [error]'s text. */
+    val errorCode: UiError? = null,
 )
+
+/** What went wrong, as the new screens word it. [UiErrors] translates failures into it. */
+enum class UiError {
+    SAVE_FAILED, TIMER_STORAGE, LOCAL_DATA_UNAVAILABLE, BLOCKED_BY_UPDATE, SET_GONE, EXERCISE_GONE, WORKOUT_GONE,
+    SET_LIMIT, INVALID_VALUE, NEEDS_COMPLETED_SET, SET_NOT_RESTORED, GENERIC,
+}
 
 /**
  * [pendingImport] is the summary of a read file waiting for confirmation; [message] reports the last outcome

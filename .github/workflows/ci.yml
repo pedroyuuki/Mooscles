@@ -136,7 +136,10 @@ jobs:
         env:
           # The host total before :shared existed. Moving tests between the two
           # modules must never lose any, so the sum may not drop below it.
-          MIN_HOST_TESTS: 600
+          # Raised to the real count after phase 2: 624 (:app 377, :shared 181, :designsystem 66).
+          # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7, WorkoutRepositoryErrorTypesTest +5,
+          # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
+          MIN_HOST_TESTS: 644
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -254,7 +257,8 @@ jobs:
           # The common tests in :shared (156) plus the iOS-only entry point tests
           # (6). Raise it when tests move into commonTest or iosTest, so a silently
           # skipped class fails the job.
-          MIN_IOS_TESTS: 162
+          # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
+          MIN_IOS_TESTS: 172
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()

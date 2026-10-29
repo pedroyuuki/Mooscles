@@ -36,8 +36,10 @@ class RestTimerController(
     private val notifications = context.getSystemService(NotificationManager::class.java)
     private var activeTone: ToneGenerator? = null
     private val problem = MutableStateFlow<String?>(null)
+    private val problemCode = MutableStateFlow<RestTimerError?>(null)
     override val error: StateFlow<String?> = problem.asStateFlow()
-    override fun clearError() { problem.value = null }
+    override val errorCode: StateFlow<RestTimerError?> = problemCode.asStateFlow()
+    override fun clearError() { problem.value = null; problemCode.value = null }
     var foreground: Boolean = false
     // Reading errors never replace the on-disk store. Retain the last good state (or the
     // initial idle state) while retrying, allowing recovery from transient storage failures.
@@ -85,6 +87,8 @@ class RestTimerController(
     }
     private fun report(failure: Throwable) {
         if (failure is CancellationException) throw failure
+        // Every failure reported here is a storage access. The code goes first, so the text never appears without it.
+        problemCode.value = RestTimerError.STORAGE_UNAVAILABLE
         problem.value = "Unable to access the rest timer: ${failure.message ?: "local storage is unavailable"}. Your workout data is saved separately."
     }
     private suspend fun safely(block: suspend () -> Unit) {

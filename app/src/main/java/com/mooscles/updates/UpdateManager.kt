@@ -81,7 +81,7 @@ class UpdateManager(
     }
 
     override suspend fun assertTrainingMayStart() {
-        require(store.snapshot().phase != UpdatePhase.INSTALLING) { "An update is being installed. Training will be available again shortly." }
+        if (store.snapshot().phase == UpdatePhase.INSTALLING) throw TrainingBlockedException("An update is being installed. Training will be available again shortly.")
     }
 
     private fun schedulePeriodic() {
