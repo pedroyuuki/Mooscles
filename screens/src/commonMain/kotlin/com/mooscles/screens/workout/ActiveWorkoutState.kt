@@ -53,7 +53,9 @@ data class SetEditTarget(
  * - [lastRemoved]: the set removed last, whose "Undo" toast is up ([UndoRemovalToast]);
  * - [typeSheetFor]: the set whose type sheet is open ([SetTypeSheetHost]);
  * - [expanded] and [manual]: which exercise cards are open, by entry id, and which of them the
- *   person opened or closed by hand ([CardExpansion], spec D9).
+ *   person opened or closed by hand ([CardExpansion], spec D9);
+ * - [completedHere] and [announced]: the sets completed on this screen and the records already
+ *   announced, by [RecordEvent.key] ([RecordReaction], spec D17).
  */
 @Stable
 class ActiveWorkoutScreenState(
@@ -67,6 +69,8 @@ class ActiveWorkoutScreenState(
     typeSheetFor: String? = null,
     expanded: Map<String, Boolean> = emptyMap(),
     manual: Set<String> = emptySet(),
+    completedHere: Set<String> = emptySet(),
+    announced: Set<String> = emptySet(),
 ) {
     var cleared: Set<Pair<String, SetField>> by mutableStateOf(cleared)
         internal set
@@ -99,6 +103,28 @@ class ActiveWorkoutScreenState(
     /** The entries whose card the person opened or closed by hand: the advance never changes them (D9). */
     var manual: Set<String> by mutableStateOf(manual)
         internal set
+
+    /**
+     * The ids of the sets the person completed on this screen (a check, a swipe), in this use of
+     * it: only their records are announced. A record already in the state when the screen opened
+     * (a resumed workout, a restarted app) is on a set not in it, so it only shows its badge.
+     */
+    var completedHere: Set<String> by mutableStateOf(completedHere)
+        internal set
+
+    /** The [RecordEvent.key]s announced already: each plays its haptic and its toast once. */
+    var announced: Set<String> by mutableStateOf(announced)
+        internal set
+
+    /** Notes that the person completed [setId] here, so its record, once confirmed, is announced. */
+    internal fun completedHere(setId: String) {
+        if (setId !in completedHere) completedHere = completedHere + setId
+    }
+
+    /** Marks the record [key] as announced. */
+    internal fun announce(key: String) {
+        if (key !in announced) announced = announced + key
+    }
 
     /** Opens or closes the card of [entryId], shown [open] now, by the person's hand. */
     internal fun toggleCard(entryId: String, open: Boolean) {
@@ -329,7 +355,8 @@ class ActiveWorkoutScreenState(
          * target as [setId, field, keyboard, error], a draft as [field, setId, text] and its
          * awaited writes as [field, setId, values], the last removal as [entryId, position, number,
          * setId, reps, weightKg, completed, warmup, assistance], the type sheet's set id, the open
-         * cards as [entryId, open] and the entries toggled by hand.
+         * cards as [entryId, open], the entries toggled by hand, the sets completed here and the
+         * records announced.
          * [optimistic] is left out on purpose: a write lost with the process must not come back as
          * a full disc. So is the removed set's record: the record is the presentation's, computed
          * again once the set is back.
@@ -351,6 +378,8 @@ class ActiveWorkoutScreenState(
                     state.typeSheetFor,
                     ArrayList(state.expanded.map { (id, open) -> arrayListOf<Any>(id, open) }),
                     ArrayList(state.manual),
+                    ArrayList(state.completedHere),
+                    ArrayList(state.announced),
                 )
             },
             restore = { saved ->
@@ -382,6 +411,10 @@ class ActiveWorkoutScreenState(
                 val expanded = (saved.getOrNull(7) as List<List<Any>>?).orEmpty().associate { it[0] as String to it[1] as Boolean }
                 @Suppress("UNCHECKED_CAST")
                 val manual = (saved.getOrNull(8) as List<String>?).orEmpty().toSet()
+                @Suppress("UNCHECKED_CAST")
+                val completedHere = (saved.getOrNull(9) as List<String>?).orEmpty().toSet()
+                @Suppress("UNCHECKED_CAST")
+                val announced = (saved.getOrNull(10) as List<String>?).orEmpty().toSet()
                 ActiveWorkoutScreenState(
                     cleared = cleared,
                     editing = editing,
@@ -392,6 +425,8 @@ class ActiveWorkoutScreenState(
                     typeSheetFor = saved.getOrNull(6) as String?,
                     expanded = expanded,
                     manual = manual,
+                    completedHere = completedHere,
+                    announced = announced,
                 )
             },
         )

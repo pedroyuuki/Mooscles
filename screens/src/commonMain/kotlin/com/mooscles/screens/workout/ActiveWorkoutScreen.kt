@@ -207,6 +207,8 @@ internal fun ActiveWorkoutScreen(
                     )
                 }
             }
+            // Over the top of the list, under the header: the record toast (D17).
+            RecordReaction(workout, pounds, screen, Modifier.align(Alignment.TopCenter))
         }
         CardAdvance(workout.exercises, screen, listState, firstIndex = 0)
     }

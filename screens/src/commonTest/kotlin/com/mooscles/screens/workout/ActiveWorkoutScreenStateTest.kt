@@ -73,6 +73,22 @@ class ActiveWorkoutScreenStateTest {
     }
 
     @Test
+    fun saverKeepsTheSetsCompletedHereAndTheRecordsAnnounced() {
+        // A recreation or a process death must neither replay a record nor forget which sets
+        // were completed here (their later records are still announced).
+        val state = ActiveWorkoutScreenState(completedHere = setOf("s:1", "s2"), announced = setOf("s:1:87.5:6:WEIGHT"))
+        state.completedHere("s3")
+        state.announce("s2:80.0:8:REPS")
+        val restored = roundTrip(state)
+        assertEquals(setOf("s:1", "s2", "s3"), restored.completedHere)
+        assertEquals(setOf("s:1:87.5:6:WEIGHT", "s2:80.0:8:REPS"), restored.announced)
+
+        val empty = roundTrip(ActiveWorkoutScreenState())
+        assertEquals(emptySet(), empty.completedHere)
+        assertEquals(emptySet(), empty.announced)
+    }
+
+    @Test
     fun forgettingASetDropsWhatWasKeptForItAlone() {
         val state = ActiveWorkoutScreenState(
             cleared = setOf("s4" to SetField.REPS, "s1" to SetField.REPS),

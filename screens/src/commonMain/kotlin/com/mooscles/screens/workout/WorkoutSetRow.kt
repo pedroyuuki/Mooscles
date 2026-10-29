@@ -96,7 +96,10 @@ internal fun workoutSetRowTag(setId: String): String = "workout-set-$setId"
  * invalid draft is neither sent nor lost, and switching kg and lb rewrites the draft from its exact
  * kg ([ActiveWorkoutScreenState.echo], [ActiveWorkoutScreenState.useUnit]).
  *
- * The record haptic stays off: the screen plays it from its own record event. [onCells] gets
+ * The record haptic stays off: the screen plays it from its own record event ([RecordReaction]),
+ * once per record, so a row scrolled away and back or recreated never plays it again. The badge
+ * is the row's: `CompletedRecord` while the set is done with a `SetUi.record`, entering with
+ * `spring.pr` only when this row sees the record arrive. [onCells] gets
  * where the row's cells sit after each layout, for the card's column titles ([SetRowColumns]).
  */
 @Composable
@@ -170,6 +173,8 @@ internal fun WorkoutSetRow(
         )
         if (now.reps in 1..MAX_REPS) {
             screen.expect(set.id, true)
+            // Its record, once the presentation confirms it, is announced ([RecordReaction]).
+            screen.completedHere(set.id)
             screen.editing = null
             // An empty or invalid draft gave way to the value sent; the echo shows that value.
             for (field in SetField.entries) {
