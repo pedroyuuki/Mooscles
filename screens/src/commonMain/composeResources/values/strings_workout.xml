@@ -43,4 +43,15 @@
     <string name="workout_remove">Remove</string>
     <string name="workout_swap">Swap</string>
     <string name="workout_keep_training">Keep training</string>
+    <!-- The exercise's rest sheet (D14). -->
+    <string name="workout_rest_title">Rest</string>
+    <string name="workout_field_rest">rest</string>
+    <string name="workout_rest_note">Applies to this exercise's next rests; the current rest keeps its own time.</string>
+    <string name="workout_rest_start_now">Start rest now</string>
+    <!-- The exercise picker. -->
+    <string name="workout_picker_search">Search exercises</string>
+    <string name="workout_picker_recent">Recent</string>
+    <string name="workout_picker_all">All</string>
+    <string name="workout_picker_meta">%1$s · %2$s</string>
+    <string name="workout_picker_none">No matching exercises. Try a broader search.</string>
 </resources>

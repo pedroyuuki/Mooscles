@@ -43,4 +43,15 @@
     <string name="workout_remove">Remover</string>
     <string name="workout_swap">Trocar</string>
     <string name="workout_keep_training">Continuar treinando</string>
+    <!-- The exercise's rest sheet (D14). -->
+    <string name="workout_rest_title">Descanso</string>
+    <string name="workout_field_rest">descanso</string>
+    <string name="workout_rest_note">Vale para os próximos descansos deste exercício; o descanso atual mantém o próprio tempo.</string>
+    <string name="workout_rest_start_now">Iniciar descanso agora</string>
+    <!-- The exercise picker. -->
+    <string name="workout_picker_search">Buscar exercício</string>
+    <string name="workout_picker_recent">Recentes</string>
+    <string name="workout_picker_all">Todos</string>
+    <string name="workout_picker_meta">%1$s · %2$s</string>
+    <string name="workout_picker_none">Nenhum exercício encontrado. Tente uma busca mais ampla.</string>
 </resources>
