@@ -14,19 +14,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.roundToInt
 import com.mooscles.domain.RestDuration
 
 fun kgToDisplay(kg: Double, pounds: Boolean) = if (pounds) kg * 2.2046226218487757 else kg
@@ -136,11 +131,6 @@ fun RestDurationField(
         colors = trainingFieldColors())
 }
 
-private fun restClock(seconds: Int): String {
-    val safe = seconds.coerceAtLeast(0)
-    return "${safe / 60}:${(safe % 60).toString().padStart(2, '0')}"
-}
-
 @Composable
 fun PageHeading(eyebrow: String, title: String, subtitle: String? = null, trailing: @Composable (() -> Unit)? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
@@ -202,57 +192,5 @@ fun OrderButtons(upEnabled: Boolean, downEnabled: Boolean, onMove: (Int) -> Unit
     Row {
         IconButton(onClick = { onMove(-1) }, enabled = upEnabled) { Icon(Icons.Outlined.KeyboardArrowUp, "Move up") }
         IconButton(onClick = { onMove(1) }, enabled = downEnabled) { Icon(Icons.Outlined.KeyboardArrowDown, "Move down") }
-    }
-}
-
-@Composable
-fun TimerPanel(timer: TimerUi, actions: MoosclesActions, defaultSeconds: Int, compact: Boolean = false) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = if (compact) 10.dp else 16.dp,
-            vertical = if (compact) 6.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 9.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Timer, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(if (timer.finished) "Rest complete" else timer.exerciseName, style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (!compact) Text(if (timer.running) "Breathe. Your next set is coming." else if (timer.paused) "Timer paused" else "Ready when you are", style = MaterialTheme.typography.labelSmall)
-                }
-                Text("${restClock(timer.remainingSeconds)} min", style = MaterialTheme.typography.headlineSmall)
-            }
-            val progress = timer.progress.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
-            LinearProgressIndicator(progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(5.dp).testTag("rest-timer-progress").semantics {
-                    contentDescription = "Rest timer progress"
-                    stateDescription = "${(progress * 100).roundToInt()}% remaining${if (timer.paused) ", paused" else ""}"
-                }, color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.16f),
-                gapSize = 0.dp, drawStopIndicator = {})
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { actions.adjustTimer(-15) }, enabled = timer.remainingSeconds > 0,
-                    modifier = Modifier.weight(1f), contentPadding = PaddingValues(2.dp)) { Text("−0:15", maxLines = 1) }
-                if (compact) {
-                    val toggle = if (timer.running) actions::pauseTimer else if (timer.paused) actions::resumeTimer
-                        else { { actions.startTimer(timer.exerciseName, (if (timer.exerciseName == "Rest timer") defaultSeconds else timer.durationSeconds).coerceIn(0, RestDuration.MAX_SECONDS)) } }
-                    FilledTonalIconButton(onClick = toggle, modifier = Modifier.weight(1f)) {
-                        Icon(if (timer.running) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                            if (timer.running) "Pause rest timer" else if (timer.paused) "Resume rest timer" else "Start rest timer")
-                    }
-                }
-                else if (timer.running) FilledTonalButton(onClick = actions::pauseTimer, modifier = Modifier.weight(2f), contentPadding = PaddingValues(6.dp)) { Icon(Icons.Outlined.Pause, "Pause rest timer", Modifier.size(18.dp)); Text("Pause") }
-                else if (timer.paused) FilledTonalButton(onClick = actions::resumeTimer, modifier = Modifier.weight(2f), contentPadding = PaddingValues(6.dp)) { Icon(Icons.Outlined.PlayArrow, null, Modifier.size(18.dp)); Text("Resume") }
-                else FilledTonalButton(onClick = { actions.startTimer(timer.exerciseName, (if (timer.exerciseName == "Rest timer") defaultSeconds else timer.durationSeconds).coerceIn(0, RestDuration.MAX_SECONDS)) }, modifier = Modifier.weight(2f), contentPadding = PaddingValues(6.dp)) { Icon(Icons.Outlined.PlayArrow, null, Modifier.size(18.dp)); Text("Start") }
-                TextButton(onClick = { actions.adjustTimer(15) }, enabled = timer.remainingSeconds < RestDuration.MAX_SECONDS,
-                    modifier = Modifier.weight(1f), contentPadding = PaddingValues(2.dp)) { Text("+0:15", maxLines = 1) }
-                if (compact) {
-                    IconButton(onClick = actions::resetTimer, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.RestartAlt, "Reset rest timer") }
-                    IconButton(onClick = actions::skipTimer, modifier = Modifier.weight(1f)) { Icon(Icons.Outlined.SkipNext, "Skip rest timer") }
-                }
-            }
-            if (!compact) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = actions::resetTimer) { Icon(Icons.Outlined.RestartAlt, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Reset") }
-                TextButton(onClick = actions::skipTimer) { Text("Skip rest"); Spacer(Modifier.width(4.dp)); Icon(Icons.Outlined.SkipNext, null, Modifier.size(18.dp)) }
-            }
-        }
     }
 }

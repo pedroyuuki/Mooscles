@@ -3,8 +3,11 @@ package com.mooscles.screens.workout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
+import com.mooscles.designsystem.components.MToastHost
 import com.mooscles.designsystem.components.MToastHostState
 import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.screens.resources.Res
@@ -73,4 +76,22 @@ internal fun WorkoutErrorToast(
         actions.clearError()
         scope.launch { host.show(message, MToastKind.Error) }
     }
+}
+
+/**
+ * For a screen that has no toast host of its own (the summary): shows [errorCode] in the app's
+ * language as an error toast over [modifier]'s area, and hands it back with `clearError()`, as the
+ * workout does (plan decision 19). Never `UiState.error`.
+ */
+@Composable
+fun ScreenErrorToast(errorCode: UiError?, actions: MoosclesActions, modifier: Modifier = Modifier) {
+    val host = remember { MToastHostState() }
+    val text = errorCode?.let { uiErrorText(it) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(errorCode) {
+        val message = text ?: return@LaunchedEffect
+        actions.clearError()
+        scope.launch { host.show(message, MToastKind.Error) }
+    }
+    MToastHost(host, modifier)
 }
