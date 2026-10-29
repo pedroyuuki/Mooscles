@@ -155,9 +155,9 @@ jobs:
           # WorkoutCardRendererTest +4 (5 -> 9); :screens commonTest ShareCardDataTest 23, ShareCardColorsTest 1.
           # Phase 3 task 16 (:screens commonTest): ActiveWorkoutScreenStateTest +2.
           # Phase 3 task 22 (:screens commonTest): SummaryStatsTest 6.
-          # Phase 3 task 18 (:screens commonTest): ExercisePickerTest 3. Real count 755
-          # (:app 389, :shared 240, :designsystem 69, :screens 57).
-          MIN_HOST_TESTS: 755
+          # Phase 3 task 18 (:screens commonTest): ExercisePickerTest 3, RestDraftTest 1. Real count 756
+          # (:app 389, :shared 240, :designsystem 69, :screens 58).
+          MIN_HOST_TESTS: 756
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -363,9 +363,9 @@ jobs:
           # DateTextsTest 5, WorkoutSetRowTest 13, SetEditingTest 23, SetTypeAndRemovalTest 14, ShareCardPainterTest 4,
           # ShareCardTextsTest 2 (uiTest).
           # Task 22: SummaryStatsTest 6 (commonTest), WorkoutSummaryScreenTest 11 (uiTest).
-          # Task 18: ExercisePickerTest 3 (commonTest), RestSheetTest 8, ExercisePickerSheetTest 5 (uiTest).
+          # Task 18: ExercisePickerTest 3, RestDraftTest 1 (commonTest), RestSheetTest 9, ExercisePickerSheetTest 6 (uiTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 142
+          MIN_SCREENS_IOS_TESTS: 145
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

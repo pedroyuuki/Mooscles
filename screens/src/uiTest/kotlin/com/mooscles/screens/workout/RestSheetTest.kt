@@ -30,6 +30,7 @@ import com.mooscles.designsystem.components.StepperIncreaseTag
 import com.mooscles.designsystem.components.StepperValueTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.screens.RecordingActions
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -57,7 +58,7 @@ class RestSheetTest {
     /** Records every call; with [echo], `updateWorkoutExerciseRest` changes [exercises] as the database emission would. */
     private class Actions(
         val exercises: MutableState<List<WorkoutExerciseUi>>,
-        val echo: Boolean = true,
+        var echo: Boolean = true,
         val recording: RecordingActions = RecordingActions(),
     ) : MoosclesActions by recording {
         val calls: List<String> get() = recording.calls
@@ -294,6 +295,38 @@ class RestSheetTest {
         value().assertDoesNotExist()
         assertNull(open.value)
         assertEquals(2, actions.calls.size, actions.calls.toString())
+    }
+
+    @Test
+    fun recreationKeepsOnlyTheSettledRest() = runComposeUiTest {
+        // No forced language: the restoration tester loses the saved state when the language override rebuilds the tree.
+        val exercises = mutableStateOf(listOf(entry(rest = 120)))
+        val actions = Actions(exercises)
+        val open = mutableStateOf<String?>("e1")
+        val restoration = screenRestoration()
+        withScreen(restoration = restoration) {
+            RestSheetHost(exercises.value, open.value, actions, onClose = { open.value = null })
+        }
+        waitForIdle()
+        tap(StepperIncreaseTag)
+        value().assertTextEquals("2:15")
+        assertEquals(135, exercises.value.single().restSeconds, "2:15 reached the database")
+        // 2:30 is written, but the process dies before it lands.
+        actions.echo = false
+        tap(StepperIncreaseTag)
+        value().assertTextEquals("2:30")
+
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        // The sheet is back with the rest the database holds; the lost write is not awaited.
+        value().assertTextEquals("2:15")
+        tap(StepperIncreaseTag)
+        value().assertTextEquals("2:30")
+        assertEquals(
+            listOf("updateWorkoutExerciseRest:e1,135", "updateWorkoutExerciseRest:e1,150", "updateWorkoutExerciseRest:e1,150"),
+            actions.calls,
+            "asked again after the recreation, the sheet writes 2:30 again",
+        )
     }
 
     private companion object {

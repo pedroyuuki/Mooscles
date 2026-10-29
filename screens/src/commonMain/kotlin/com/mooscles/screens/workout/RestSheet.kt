@@ -76,12 +76,15 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
         value = seconds
     }
 
-    /** Writes [value] as the exercise's rest, unless it is the rest the database has or will have once every write is done. */
-    fun commit(entryId: String, actions: MoosclesActions) {
+    /**
+     * Writes [value] as the exercise's rest through [write] (`updateWorkoutExerciseRest`), unless
+     * it is the rest the database has or will have once every write is done.
+     */
+    fun commit(write: (seconds: Int) -> Unit) {
         val expected = pending.lastOrNull() ?: saved
         if (value == expected) return
         pending = pending + value
-        actions.updateWorkoutExerciseRest(entryId, value)
+        write(value)
     }
 
     /** The database now holds [rest]. */
@@ -96,10 +99,15 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
     }
 
     companion object {
-        /** Saves [value], [saved] and [pending] as one list of numbers. */
+        /**
+         * Saves [value] and [saved] only. The writes in flight are left out on purpose: one lost
+         * with the process must not come back as awaited, or its rest would stay on screen against
+         * the database's and writing it again would be skipped. After a recreation the first echo
+         * shows the rest the database holds, and a step or shortcut writes again.
+         */
         val Saver: Saver<RestDraft, Any> = listSaver(
-            save = { listOf(it.value, it.saved) + it.pending },
-            restore = { RestDraft(it[0], it[1], it.drop(2)) },
+            save = { listOf(it.value, it.saved) },
+            restore = { RestDraft(it[0], it[1]) },
         )
     }
 }
@@ -111,8 +119,9 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
  *
  * Every run of steps, once it ends (`onValueChangeFinished`), and every shortcut write
  * `updateWorkoutExerciseRest(entry.id, seconds)`; the rest the database already has is not written
- * again. The value shown is the one stepped or chosen even before the database echoes it, and it
- * survives recreation. 0:00 turns the exercise's rest off (a set completed then starts no rest),
+ * again. The value shown is the one stepped or chosen even before the database echoes it. Across
+ * recreation the sheet keeps only what the database settled: a rest written and not yet seen back
+ * gives way to the saved one ([RestDraft.Saver]). 0:00 turns the exercise's rest off (a set completed then starts no rest),
  * and then there is no rest to start: "Start rest now" is disabled (F19). "Start rest now" starts
  * `startTimer(entry.exercise.name, seconds)` with the rest shown and closes the sheet through
  * [onDismiss], which is also the close without a choice (the scrim, Back, a drag down). Nothing
@@ -151,11 +160,13 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
                 decreaseLabel = stringResource(DsRes.string.ds_stepper_decrease, rest, step),
                 increaseLabel = stringResource(DsRes.string.ds_stepper_increase, rest, step),
                 display = RestDuration.format(seconds),
-                onValueChangeFinished = { draft.commit(entry.id, actions) },
+                onValueChangeFinished = { draft.commit { actions.updateWorkoutExerciseRest(entry.id, it) } },
             )
             FlowRow(
                 Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap, Alignment.CenterHorizontally),
+                // Wrapped rows of chips (large text, a narrow screen) keep the gap between targets too.
+                verticalArrangement = Arrangement.spacedBy(MTheme.space.s2),
             ) {
                 for (shortcut in RestShortcuts) {
                     MChip(
@@ -163,7 +174,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
                         selected = seconds == shortcut,
                         onClick = {
                             draft.show(shortcut)
-                            draft.commit(entry.id, actions)
+                            draft.commit { actions.updateWorkoutExerciseRest(entry.id, it) }
                         },
                         modifier = Modifier.testTag(restShortcutTag(shortcut)),
                         kind = MChipKind.SetType,

@@ -8,13 +8,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,7 +69,7 @@ internal fun exercisePickerRowTag(exerciseId: String, recent: Boolean) =
  * A tap on a row reports the exercise to [onPick] and then closes the picker through [onDismiss],
  * once: the caller turns the pick into `addWorkoutExercise` or `replaceWorkoutExercise` and drops
  * the sheet in [onDismiss], which is also the close without a choice (the scrim, Back, a drag
- * down). The search survives recreation. [imeInsets] keeps the end of the list above the keyboard.
+ * down). The search survives recreation.
  */
 @Composable
 internal fun ExercisePickerSheet(
@@ -81,7 +77,6 @@ internal fun ExercisePickerSheet(
     history: List<WorkoutUi>,
     onPick: (ExerciseUi) -> Unit,
     onDismiss: () -> Unit,
-    imeInsets: WindowInsets = WindowInsets.ime,
 ) {
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
     var picked by remember { mutableStateOf(false) }
@@ -133,7 +128,6 @@ internal fun ExercisePickerSheet(
                     )
                 }
             }
-            item(key = "ime") { Spacer(Modifier.windowInsetsBottomHeight(imeInsets)) }
         }
     }
 }

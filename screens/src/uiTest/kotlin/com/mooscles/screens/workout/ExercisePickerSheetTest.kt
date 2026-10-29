@@ -2,6 +2,7 @@ package com.mooscles.screens.workout
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -24,6 +25,8 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.i18n.LocalAppLocale
+import com.mooscles.screens.ScreenRestoration
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.WorkoutExerciseUi
@@ -66,10 +69,11 @@ class ExercisePickerSheetTest {
     private fun ComposeUiTest.showPicker(
         history: MutableState<List<WorkoutUi>> = mutableStateOf(this@ExercisePickerSheetTest.history),
         open: MutableState<Boolean> = mutableStateOf(true),
-        locale: String = "pt-BR",
+        locale: String? = "pt-BR",
+        restoration: ScreenRestoration? = null,
     ): Picks {
         val picks = Picks()
-        withScreen(locale = locale) {
+        withScreen(locale = locale, restoration = restoration) {
             if (open.value) {
                 ExercisePickerSheet(
                     exercises = exercises,
@@ -188,5 +192,23 @@ class ExercisePickerSheetTest {
         search("")
         onNodeWithText("Recentes").assertIsDisplayed()
         pickerRow(curl, recent = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun searchSurvivesRecreation() = runComposeUiTest {
+        // No forced language: the restoration tester loses the saved state when the language override rebuilds the tree.
+        val restoration = screenRestoration()
+        val picks = showPicker(locale = null, restoration = restoration)
+        search("supino")
+        pickerRow(bench).assertIsDisplayed()
+
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        assertEquals("supino", onNode(hasSetTextAction()).fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+        pickerRow(bench).assertIsDisplayed()
+        onNodeWithTag(exercisePickerRowTag(squat.id, recent = false)).assertDoesNotExist()
+        onNodeWithTag(exercisePickerRowTag(row.id, recent = true)).assertDoesNotExist()
+        assertEquals(emptyList(), picks.picked)
+        assertEquals(0, picks.dismissed)
     }
 }
