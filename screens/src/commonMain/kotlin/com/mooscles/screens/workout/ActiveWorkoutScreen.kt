@@ -8,17 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +56,7 @@ import com.mooscles.screens.resources.workout_none_body
 import com.mooscles.screens.resources.workout_none_title
 import com.mooscles.screens.resources.workout_opening
 import com.mooscles.ui.MoosclesActions
+import com.mooscles.ui.TimerUi
 import com.mooscles.ui.UiError
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.WorkoutUi
@@ -99,7 +97,8 @@ private const val PICK_TO_ADD = ""
  *
  * It takes the parts of the state it shows, not the whole `UiState`, so an emission that changes
  * something else (the updater, the backup) does not recompose it. [catalog] and [history] are
- * the exercise picker's.
+ * the exercise picker's. Under the list, [WorkoutTimerLayer] holds the rest timer, the only part
+ * that reads [timer], and the keyboard's room: the list ends above both.
  */
 @Composable
 internal fun ActiveWorkoutScreen(
@@ -118,6 +117,7 @@ internal fun ActiveWorkoutScreen(
     onExerciseHistory: (exerciseId: String) -> Unit,
     imeInsets: WindowInsets,
     nowMillis: () -> Long,
+    timer: State<TimerUi>,
 ) {
     val space = MTheme.space
     val haptics = MTheme.haptics
@@ -182,8 +182,7 @@ internal fun ActiveWorkoutScreen(
         Box(
             Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .windowInsetsPadding(imeInsets.only(WindowInsetsSides.Bottom)),
+                .fillMaxWidth(),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(
@@ -209,6 +208,8 @@ internal fun ActiveWorkoutScreen(
                 }
             }
         }
+        // Under the list: the rest timer and the keyboard's room.
+        WorkoutTimerLayer(timer, workout, pounds, actions, imeInsets)
         CardAdvance(workout.exercises, screen, listState, firstIndex = 0)
     }
 

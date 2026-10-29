@@ -93,4 +93,8 @@
     <string name="workout_choose_routine">Escolher rotina</string>
     <string name="workout_empty_workout">Treino vazio</string>
     <string name="workout_opening">Abrindo o treino</string>
+    <!-- The rest timer of the workout: the dock's name, the expanded timer's title and what comes next. -->
+    <string name="workout_timer_title">Descanso · %1$s · série %2$d de %3$d</string>
+    <string name="workout_timer_title_short">Descanso · %1$s</string>
+    <string name="workout_up_next_value">série %1$d · %2$s × %3$d</string>
 </resources>

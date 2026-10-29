@@ -93,4 +93,10 @@
     <string name="workout_choose_routine">Choose routine</string>
     <string name="workout_empty_workout">Empty workout</string>
     <string name="workout_opening">Opening the workout</string>
+    <!-- The rest timer of the workout: the dock's name, the expanded timer's title and what comes next. -->
+    <!-- %1$s is the exercise ("Bench press"); %2$d its completed sets, %3$d all its sets. -->
+    <string name="workout_timer_title">Rest · %1$s · set %2$d of %3$d</string>
+    <string name="workout_timer_title_short">Rest · %1$s</string>
+    <!-- Under the expanded timer's "Up next": %1$d the set, %2$s its load without the unit, %3$d its reps. -->
+    <string name="workout_up_next_value">set %1$d · %2$s × %3$d</string>
 </resources>

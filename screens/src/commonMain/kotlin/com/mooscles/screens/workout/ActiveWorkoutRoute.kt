@@ -42,13 +42,14 @@ import com.mooscles.ui.UiState
  * Confirming "Finish" keeps the workout's id ([rememberSaveable], so it survives recreation) and
  * calls `finishWorkout`; once the workout is in [UiState.history], [onOpenSummary] gets its id.
  * Meanwhile the finish buttons show their loading state; an error gives them back. [timer] is not
- * read here yet: the rest surfaces read it (Task 20). [imeInsets] is the keyboard, which the list
- * and the toasts keep clear of; [nowMillis] is the clock the header's time reads.
+ * read here: only the screen's rest timer reads it ([WorkoutTimerLayer]). [imeInsets] is the
+ * keyboard, which the list, the timer and the toasts keep clear of; [nowMillis] is the clock the
+ * header's time reads.
  */
 @Composable
 fun ActiveWorkoutRoute(
     state: UiState,
-    @Suppress("UNUSED_PARAMETER") timer: State<TimerUi>,
+    timer: State<TimerUi>,
     actions: MoosclesActions,
     onMinimize: () -> Unit,
     onOpenSummary: (workoutId: String) -> Unit,
@@ -101,6 +102,7 @@ fun ActiveWorkoutRoute(
                 onExerciseHistory = onExerciseHistory,
                 imeInsets = imeInsets,
                 nowMillis = nowMillis,
+                timer = timer,
             )
             // Finished: blank once the history has the workout (the summary opens) and while the app
             // moves there, so "No workout in progress" never flashes. A workout that left without

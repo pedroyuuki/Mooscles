@@ -56,6 +56,7 @@ private class RunningSeen {
  * rest is on; Done for `timing.timerDoneHold` after this composition saw the timer go from
  * running to finished, then nothing, so the sets come back. A timer already finished when the bar
  * is first composed (the app opening, a recreation, a return from the workout) shows no rest.
+ * The workout screen's timer (`WorkoutTimerLayer`) follows the same rule through this function.
  */
 @Composable
 internal fun rememberBarRestPhase(timer: TimerUi): TimerPhase? {
