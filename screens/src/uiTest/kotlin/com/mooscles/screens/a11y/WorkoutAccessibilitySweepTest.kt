@@ -3,6 +3,8 @@ package com.mooscles.screens.a11y
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.widthIn
 import com.mooscles.designsystem.components.RestTimerExpanded
 import com.mooscles.designsystem.components.RestTimerVisual
@@ -482,8 +484,14 @@ class WorkoutAccessibilitySweepTest {
     @Test
     fun readingOrderIsHeaderToastCardsDock() = runComposeUiTest(testTimeout = 2.minutes) {
         val fake = Fake(stateOf(workout))
-        // Tall enough for the three cards (the list composes only what its viewport shows).
-        setContent { ScreenFrame(locale = "pt-BR", size = DpSize(412.dp, 1200.dp)) { WorkoutRoute(fake, resting) } }
+        // Tall enough for the three cards (the list composes only what its viewport shows), from the
+        // window's top: a taller frame is centered and would put the header and the toast above a
+        // smaller window (the iOS simulator's), where the toast is not displayed.
+        setContent {
+            ScreenFrame(locale = "pt-BR") {
+                Box(Modifier.wrapContentSize(Alignment.TopStart, unbounded = true).requiredSize(412.dp, 1200.dp)) { WorkoutRoute(fake, resting) }
+            }
+        }
         waitForIdle()
         mainClock.autoAdvance = false
         try {

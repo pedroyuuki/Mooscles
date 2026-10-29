@@ -111,7 +111,8 @@ private val buttonText = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
  *
  * A wrapping text's real line count is not in its layout result (`GetTextLayoutResult` lays it out
  * again at the parent's width), so the lines it needs at its own width are bounded from below by
- * its max intrinsic width over that width (with 5% for the spaces a line break drops).
+ * its max intrinsic width over that width (with 5% for the spaces a line break drops); the height
+ * they need may exceed the text's by a quarter of a line (the platforms round it differently).
  */
 @OptIn(ExperimentalTestApi::class)
 fun ComposeUiTest.assertButtonTextsWhole(where: String): Int {
@@ -141,13 +142,16 @@ fun assertTextNotCut(layout: TextLayoutResult, where: String) {
     val lines = maxOf(1, ceil(needed / (width * WRAP_SLACK)).toInt())
     assertTrue(lines <= input.maxLines, "$where \"$text\" needs at least $lines lines at $width px, may have ${input.maxLines}")
     val lineHeight = layout.multiParagraph.getLineBottom(0) - layout.multiParagraph.getLineTop(0)
+    // A quarter of a line of slack: Skia on iOS rounds the laid out height down a pixel from the
+    // line's (19 px for a 20 px line), while a line cut by a fixed height loses far more.
     assertTrue(
-        lines * lineHeight <= layout.size.height + 0.5f,
+        lines * lineHeight <= layout.size.height + lineHeight * LINE_SLACK,
         "$where \"$text\" needs at least $lines lines of $lineHeight px at $width px, has ${layout.size.height} px",
     )
 }
 
 private const val WRAP_SLACK = 1.05f
+private const val LINE_SLACK = 0.25f
 
 // --- The screen reader's order ------------------------------------------------------------------
 
