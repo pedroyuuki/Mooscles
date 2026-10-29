@@ -19,4 +19,28 @@
     <string name="workout_remove_set">Remover série</string>
     <string name="workout_set_removed">Série %1$d removida</string>
     <string name="workout_undo">Desfazer</string>
+    <string name="workout_card_meta">%1$s · %2$s · série %3$d de %4$d</string>
+    <string name="workout_card_meta_short">%1$s · %2$s</string>
+    <string name="workout_rest_chip">Descanso %1$s</string>
+    <string name="workout_previous_date">Anterior: %1$s</string>
+    <string name="workout_first_time">Primeira vez</string>
+    <string name="workout_col_set">Série</string>
+    <string name="workout_col_previous">Anterior</string>
+    <string name="workout_col_reps">Reps</string>
+    <string name="workout_col_kg_assisted">kg assist.</string>
+    <string name="workout_col_lb_assisted">lb assist.</string>
+    <string name="workout_menu_history">Histórico do exercício</string>
+    <string name="workout_menu_swap">Trocar exercício</string>
+    <string name="workout_menu_move_up">Mover para cima</string>
+    <string name="workout_menu_move_down">Mover para baixo</string>
+    <string name="workout_menu_how_to_log">Como registrar</string>
+    <string name="workout_menu_remove">Remover exercício</string>
+    <plurals name="workout_remove_exercise_text">
+        <item quantity="one">Remover %1$s? A %2$d série dele sai deste treino.</item>
+        <item quantity="other">Remover %1$s? As %2$d séries dele saem deste treino.</item>
+    </plurals>
+    <string name="workout_swap_exercise_text">Trocar %1$s? As séries registradas dele saem deste treino.</string>
+    <string name="workout_remove">Remover</string>
+    <string name="workout_swap">Trocar</string>
+    <string name="workout_keep_training">Continuar treinando</string>
 </resources>

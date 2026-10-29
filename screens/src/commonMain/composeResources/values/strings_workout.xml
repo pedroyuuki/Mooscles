@@ -19,4 +19,28 @@
     <string name="workout_remove_set">Remove set</string>
     <string name="workout_set_removed">Set %1$d removed</string>
     <string name="workout_undo">Undo</string>
+    <string name="workout_card_meta">%1$s · %2$s · set %3$d of %4$d</string>
+    <string name="workout_card_meta_short">%1$s · %2$s</string>
+    <string name="workout_rest_chip">Rest %1$s</string>
+    <string name="workout_previous_date">Previous: %1$s</string>
+    <string name="workout_first_time">First time</string>
+    <string name="workout_col_set">Set</string>
+    <string name="workout_col_previous">Previous</string>
+    <string name="workout_col_reps">Reps</string>
+    <string name="workout_col_kg_assisted">kg assist.</string>
+    <string name="workout_col_lb_assisted">lb assist.</string>
+    <string name="workout_menu_history">Exercise history</string>
+    <string name="workout_menu_swap">Swap exercise</string>
+    <string name="workout_menu_move_up">Move up</string>
+    <string name="workout_menu_move_down">Move down</string>
+    <string name="workout_menu_how_to_log">How to log</string>
+    <string name="workout_menu_remove">Remove exercise</string>
+    <plurals name="workout_remove_exercise_text">
+        <item quantity="one">Remove %1$s? Its %2$d set leaves this workout.</item>
+        <item quantity="other">Remove %1$s? Its %2$d sets leave this workout.</item>
+    </plurals>
+    <string name="workout_swap_exercise_text">Swap %1$s? Its logged sets leave this workout.</string>
+    <string name="workout_remove">Remove</string>
+    <string name="workout_swap">Swap</string>
+    <string name="workout_keep_training">Keep training</string>
 </resources>

@@ -43,6 +43,7 @@ import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.mFocusRing
+import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_add_set
 import com.mooscles.designsystem.resources.ds_card_collapse
@@ -229,6 +230,8 @@ private fun CardHeader(
             val label = stringResource(if (collapsed) Res.string.ds_card_expand else Res.string.ds_card_collapse)
             Modifier
                 .testTag(ExerciseHeaderToggleTag)
+                // indication = null: the press shows as the design system's scale, as on a button.
+                .mPressScale(source, enabled = true)
                 .clickable(interactionSource = source, indication = null, onClickLabel = label, role = Role.Button, onClick = onToggle)
                 .mFocusRing(RoundedCornerShape(MTheme.radius.md), source)
         } else {

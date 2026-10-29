@@ -15,6 +15,7 @@ import com.mooscles.domain.WeightUnits
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.SetField
 import com.mooscles.ui.SetUi
+import com.mooscles.ui.WorkoutExerciseUi
 
 /**
  * The field of a set row being edited. [keyboard] is true while the field has the keyboard (a
@@ -48,7 +49,9 @@ data class SetEditTarget(
  *   since it was entered and not yet seen back ([echo]), so a late echo of an older write cannot
  *   erase a newer draft, and the unit the load drafts are written in ([useUnit]);
  * - [lastRemoved]: the set removed last, whose "Undo" toast is up ([UndoRemovalToast]);
- * - [typeSheetFor]: the set whose type sheet is open ([SetTypeSheetHost]).
+ * - [typeSheetFor]: the set whose type sheet is open ([SetTypeSheetHost]);
+ * - [expanded] and [manual]: which exercise cards are open, by entry id, and which of them the
+ *   person opened or closed by hand ([CardExpansion], spec D9).
  */
 @Stable
 class ActiveWorkoutScreenState(
@@ -60,6 +63,8 @@ class ActiveWorkoutScreenState(
     draftsPounds: Boolean? = null,
     lastRemoved: RemovedSet? = null,
     typeSheetFor: String? = null,
+    expanded: Map<String, Boolean> = emptyMap(),
+    manual: Set<String> = emptySet(),
 ) {
     var cleared: Set<Pair<String, SetField>> by mutableStateOf(cleared)
         internal set
@@ -80,6 +85,37 @@ class ActiveWorkoutScreenState(
     /** The id of the set whose type sheet is open, if any ([openTypeSheet]). */
     var typeSheetFor: String? by mutableStateOf(typeSheetFor)
         internal set
+
+    /**
+     * Whether each exercise card is open, by entry id, as last decided: by the person
+     * ([toggleCard]) or by the advance to the next exercise ([advanceCards]). An entry not in it
+     * follows the current exercise ([CardExpansion.isOpen]).
+     */
+    var expanded: Map<String, Boolean> by mutableStateOf(expanded)
+        internal set
+
+    /** The entries whose card the person opened or closed by hand: the advance never changes them (D9). */
+    var manual: Set<String> by mutableStateOf(manual)
+        internal set
+
+    /** Opens or closes the card of [entryId], shown [open] now, by the person's hand. */
+    internal fun toggleCard(entryId: String, open: Boolean) {
+        manual = manual + entryId
+        expanded = expanded + (entryId to !open)
+    }
+
+    /**
+     * Applies the advance of D9 to [exercises] ([CardExpansion.advance]) and forgets the entries
+     * no longer in the workout. Returns the entries it opened: closed before, open now.
+     */
+    internal fun advanceCards(exercises: List<WorkoutExerciseUi>): Set<String> {
+        val before = exercises.filter { CardExpansion.isOpen(it.id, exercises, expanded, manual) }.mapTo(HashSet()) { it.id }
+        val ids = exercises.mapTo(HashSet()) { it.id }
+        if (manual.any { it !in ids }) manual = manual.filterTo(HashSet()) { it in ids }
+        val next = CardExpansion.advance(exercises, expanded, manual)
+        if (next != expanded) expanded = next
+        return next.filterValues { it }.keys - before
+    }
 
     /** Opens the type sheet of [setId], as a tap on the set's number does. */
     fun openTypeSheet(setId: String) {
@@ -276,7 +312,8 @@ class ActiveWorkoutScreenState(
          * keep: a cleared pair as "FIELD:setId" (the field name has no colon; an id may), the edit
          * target as [setId, field, keyboard, error], a draft as [field, setId, text] and its
          * awaited writes as [field, setId, values], the last removal as [entryId, position, number,
-         * setId, reps, weightKg, completed, warmup, assistance] and the type sheet's set id.
+         * setId, reps, weightKg, completed, warmup, assistance], the type sheet's set id, the open
+         * cards as [entryId, open] and the entries toggled by hand.
          * [optimistic] is left out on purpose: a write lost with the process must not come back as
          * a full disc. So is the removed set's record: the record is the presentation's, computed
          * again once the set is back.
@@ -296,6 +333,8 @@ class ActiveWorkoutScreenState(
                         )
                     },
                     state.typeSheetFor,
+                    ArrayList(state.expanded.map { (id, open) -> arrayListOf<Any>(id, open) }),
+                    ArrayList(state.manual),
                 )
             },
             restore = { saved ->
@@ -323,6 +362,10 @@ class ActiveWorkoutScreenState(
                         number = it[2] as Int,
                     )
                 }
+                @Suppress("UNCHECKED_CAST")
+                val expanded = (saved.getOrNull(7) as List<List<Any>>?).orEmpty().associate { it[0] as String to it[1] as Boolean }
+                @Suppress("UNCHECKED_CAST")
+                val manual = (saved.getOrNull(8) as List<String>?).orEmpty().toSet()
                 ActiveWorkoutScreenState(
                     cleared = cleared,
                     editing = editing,
@@ -331,6 +374,8 @@ class ActiveWorkoutScreenState(
                     draftsPounds = saved.getOrNull(4) as Boolean?,
                     lastRemoved = lastRemoved,
                     typeSheetFor = saved.getOrNull(6) as String?,
+                    expanded = expanded,
+                    manual = manual,
                 )
             },
         )
