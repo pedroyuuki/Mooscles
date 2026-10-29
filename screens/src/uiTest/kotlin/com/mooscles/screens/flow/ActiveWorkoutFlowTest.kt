@@ -164,18 +164,31 @@ class ActiveWorkoutFlowTest {
             onNodeWithTag(StepperIncreaseTag).performClick()
             await("set 2's load is saved at 87.5") { set(vm, s2)?.weightKg == 87.5 }
             assertEquals(false, set(vm, s2)!!.completed)
-            check(s2).performClick()
-            await("set 2 is saved done with the record") { set(vm, s2)?.completed == true && set(vm, s2)?.record != null }
-            val record = set(vm, s2)!!.record!!
-            assertEquals(RecordKind.WEIGHT, record.kind)
-            assertEquals(85.0, record.previousKg)
-            await("the record toast shows") { exists(hasTestTag(RecordToastTag)) }
-            onNode(hasText("New weight record") and hasAnyAncestor(hasTestTag(RecordToastTag)), useUnmergedTree = true).assertIsDisplayed()
-            onNode(hasTestTag(PrBadgeTag) and hasAnyAncestor(row(s2)), useUnmergedTree = true).assertExists()
-            sweep(name, "record")
-            // A tap on the toast dismisses it (it would otherwise cover the top of the list for its hold).
-            // Unless its hold (`timing.prToast`) ran out meanwhile: waits advance the effects' clock too.
-            if (exists(hasTestTag(RecordToastTag))) onNodeWithTag(RecordToastTag).performClick()
+            // The toast holds for `timing.prToast` on the effects' clock, which waits advance: freeze the
+            // clock from the check until the toast is swept and dismissed, and step it frame by frame.
+            mainClock.autoAdvance = false
+            try {
+                check(s2).performClick()
+                await("set 2 is saved done with the record") { set(vm, s2)?.completed == true && set(vm, s2)?.record != null }
+                val record = set(vm, s2)!!.record!!
+                assertEquals(RecordKind.WEIGHT, record.kind)
+                assertEquals(85.0, record.previousKg)
+                // A few frames bring the emission's toast in, far within its hold (4 s, 250 frames).
+                var frames = 0
+                while (!exists(hasTestTag(RecordToastTag)) && frames < RECORD_FRAMES) {
+                    mainClock.advanceTimeByFrame()
+                    waitForIdle()
+                    frames++
+                }
+                onNode(hasText("New weight record") and hasAnyAncestor(hasTestTag(RecordToastTag)), useUnmergedTree = true).assertIsDisplayed()
+                onNode(hasTestTag(PrBadgeTag) and hasAnyAncestor(row(s2)), useUnmergedTree = true).assertExists()
+                sweep(name, "record")
+                // A tap on the toast dismisses it (it would otherwise cover the top of the list for its hold).
+                onNodeWithTag(RecordToastTag).performClick()
+                mainClock.advanceTimeByFrame()
+            } finally {
+                mainClock.autoAdvance = true
+            }
             await("the record toast leaves") { !exists(hasTestTag(RecordToastTag)) }
 
             // 3. The empty set, done from its suggestion: the set above, 87.5 × 6.
@@ -348,7 +361,8 @@ class ActiveWorkoutFlowTest {
      */
     private fun ComposeUiTest.sweep(name: String, state: String, workout: Boolean = true) {
         waitForIdle()
-        val clickable = onAllNodes(hasClickAction()).fetchSemanticsNodes().filter { it.size.width > 0 && it.size.height > 0 }
+        // Every clickable, a 0-wide one too: a collapsed button is a defect, not a node to skip.
+        val clickable = onAllNodes(hasClickAction()).fetchSemanticsNodes()
         assertTrue(clickable.isNotEmpty(), "$state: no clickable node")
         for (node in clickable) {
             assertTrue(label(node).isNotBlank(), "$state: a clickable node has no label: ${describe(node)}")
@@ -398,12 +412,14 @@ class ActiveWorkoutFlowTest {
         val roots = onAllNodes(isRoot())
         val count = roots.fetchSemanticsNodes().size
         for (i in 0 until count) {
-            try {
-                saveFlowCapture(if (i == 0) state else "$state-$i", roots[i].captureToImage())
+            // Only the capture may be unsupported; a failure to encode or write the PNG fails the flow.
+            val image = try {
+                roots[i].captureToImage()
             } catch (failure: Throwable) {
                 println("FLOW capture unsupported ($state): ${failure.message}")
                 return
             }
+            saveFlowCapture(if (i == 0) state else "$state-$i", image)
         }
     }
 
@@ -417,6 +433,8 @@ class ActiveWorkoutFlowTest {
         const val HOUR_MS = 3_600_000L
         const val WEEK_MS = 7 * 24 * HOUR_MS
         const val WAIT_MS = 20_000L
+        /** At most this many frames for the record toast to come in (a second of the effects' clock). */
+        const val RECORD_FRAMES = 60
 
         const val MIN_TARGET_DP = 48f
         const val WORKOUT_TARGET_DP = 56f

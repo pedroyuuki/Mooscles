@@ -50,16 +50,20 @@ internal fun openFlowStore(directory: String, scope: CoroutineScope): DataStore<
  * Writes [image] as `screens/build/ios-captures/<name>.png`, for the CI to upload. The simulator
  * runs the host's test binary in place (`screens/build/bin/iosSimulatorArm64/debugTest/test.kexe`),
  * so the module's build directory is found from the executable's own path; elsewhere the PNG goes
- * to the temporary directory. Best effort: a capture never fails the flow.
+ * to the temporary directory. A PNG that cannot be encoded or written fails the flow: only the
+ * capture itself may be unsupported (the caller handles that).
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal fun saveFlowCapture(name: String, image: ImageBitmap) {
-    val png = Image.makeFromBitmap(image.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)?.bytes ?: return
+    val png = checkNotNull(Image.makeFromBitmap(image.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)?.bytes) {
+        "FLOW capture $name could not be encoded as PNG"
+    }
     val executable = NSProcessInfo.processInfo.arguments.firstOrNull() as? String
     val build = executable?.takeIf { "/build/bin/" in it }?.substringBefore("/build/bin/")?.let { "$it/build" }
     val directory = (build ?: NSTemporaryDirectory().trimEnd('/')) + "/ios-captures"
     NSFileManager.defaultManager.createDirectoryAtPath(directory, withIntermediateDirectories = true, attributes = null, error = null)
     val data = png.usePinned { NSData.create(bytes = it.addressOf(0), length = png.size.toULong()) }
     val path = "$directory/$name.png"
-    println(if (data.writeToFile(path, atomically = true)) "FLOW capture $path" else "FLOW capture not written: $path")
+    check(data.writeToFile(path, atomically = true)) { "FLOW capture not written: $path" }
+    println("FLOW capture $path")
 }

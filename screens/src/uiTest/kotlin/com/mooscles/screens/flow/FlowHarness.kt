@@ -33,7 +33,9 @@ import com.mooscles.updates.UpdateCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
@@ -99,11 +101,17 @@ internal class FlowHarness {
     fun createViewModel(): FlowViewModel =
         ViewModelProvider.create(viewModels, viewModelFactory { initializer { FlowViewModel(services) } })[FlowViewModel::class]
 
-    /** Clears the view model (cancelling its scope), stops the timer and the store, then deletes the files. */
+    /**
+     * Clears the view model (cancelling its scope), stops the timer and the store and waits for
+     * their work to end (a tick or a write must not hit a closed database or a deleted file), then
+     * closes the database and deletes the files.
+     */
     fun close() {
         viewModels.clear()
-        timerScope.cancel()
-        storeScope.cancel()
+        runBlocking {
+            timerScope.coroutineContext.job.cancelAndJoin()
+            storeScope.coroutineContext.job.cancelAndJoin()
+        }
         database.close()
         deleteFlowDirectory(directory)
     }

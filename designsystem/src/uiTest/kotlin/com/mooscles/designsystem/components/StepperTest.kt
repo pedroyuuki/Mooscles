@@ -140,25 +140,43 @@ class StepperTest {
      */
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun buttonsKeepTheirSizeWhenTheValueIsWide() = runComposeUiTest {
-        withTheme(fontScale = LINEAR_TWO_X_FONT_SCALE) {
-            Box(Modifier.width(260.dp)) {
-                Stepper(87.5, {}, step = 2.5, min = 0.0, display = "87.5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase")
+    fun buttonsKeepTheirSizeWhenTheValueIsWide() {
+        var narrow = 0f
+        runComposeUiTest {
+            withTheme(fontScale = LINEAR_TWO_X_FONT_SCALE) {
+                Box(Modifier.width(260.dp)) {
+                    Stepper(87.5, {}, step = 2.5, min = 0.0, display = "87.5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase")
+                }
             }
+            waitForIdle()
+            val sizes = MoosclesSizes()
+            for (tag in listOf(StepperDecreaseTag, StepperIncreaseTag)) {
+                val bounds = onNodeWithTag(tag).fetchSemanticsNode().size
+                val width = with(density) { sizes.stepperButtonWidth.toPx() }
+                val height = with(density) { sizes.stepperButtonHeight.toPx() }
+                assertTrue(bounds.width >= width - 0.5f && bounds.height >= height - 0.5f, "$tag is $bounds px, at least $width x $height expected")
+            }
+            val layout = valueLayout()
+            assertShownWhole(layout, "stepper value")
+            onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("87.5 kg")
+            narrow = layout.layoutInput.style.fontSize.value
         }
-        waitForIdle()
-        val sizes = MoosclesSizes()
-        for (tag in listOf(StepperDecreaseTag, StepperIncreaseTag)) {
-            val bounds = onNodeWithTag(tag).fetchSemanticsNode().size
-            val width = with(density) { sizes.stepperButtonWidth.toPx() }
-            val height = with(density) { sizes.stepperButtonHeight.toPx() }
-            assertTrue(bounds.width >= width - 0.5f && bounds.height >= height - 0.5f, "$tag is $bounds px, at least $width x $height expected")
+        // With room, the value stays num.lg (44 sp); the narrow one above stepped down from it.
+        runComposeUiTest {
+            withTheme { Stepper(87.5, {}, step = 2.5, min = 0.0, display = "87.5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase") }
+            waitForIdle()
+            val roomy = valueLayout().layoutInput.style.fontSize.value
+            assertEquals(44f, roomy, "num.lg with room")
+            assertTrue(narrow < roomy, "the narrow value stepped down: $narrow sp")
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.valueLayout(): TextLayoutResult {
         val results = mutableListOf<TextLayoutResult>()
         val layout = onNodeWithTag(StepperValueTag, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action
         assertTrue(layout?.invoke(results) == true && results.isNotEmpty(), "the value has no text layout")
-        assertShownWhole(results.first(), "stepper value")
-        onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("87.5 kg")
+        return results.first()
     }
 
     @OptIn(ExperimentalTestApi::class)

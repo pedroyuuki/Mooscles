@@ -137,6 +137,7 @@ fun Stepper(
  * The value between the buttons, on one line in the largest of `num.lg`, `num.md` and `num.sm` that
  * fits the room the buttons leave ([modifier] gives it that room), `num.sm` when none does. At
  * large text in a narrow place the value steps down instead of pushing the increase button out.
+ * `BoxWithConstraints` has no intrinsic measurement: keep the stepper out of `IntrinsicSize` parents.
  */
 @Composable
 private fun StepperValue(display: String, modifier: Modifier) {
