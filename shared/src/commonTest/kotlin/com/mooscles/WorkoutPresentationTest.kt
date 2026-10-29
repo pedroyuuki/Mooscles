@@ -424,10 +424,14 @@ class WorkoutPresentationTest {
         assertEquals(2000L, entry.previousDate)
         // In pounds the sets stay in exact kg; only the text follows the unit.
         assertEquals(entry.previousSets, present(previousData(), pounds = true).active!!.exercises.single().previousSets)
-        // A finished session's own previous comes from the session before it, the same pass that builds its text.
-        val latest = ui.history.single { it.id == "latest" }.exercises.single()
-        assertEquals(listOf(PreviousSetUi(60.0, 5, false, false)), latest.previousSets)
-        assertEquals(1000L, latest.previousDate)
+    }
+
+    /** Only the active workout suggests from the session before; a finished one keeps just the "previous" text. */
+    @Test fun historyEntriesCarryNoPreviousSets() {
+        val latest = present(previousData()).history.single { it.id == "latest" }.exercises.single()
+        assertEquals(emptyList(), latest.previousSets)
+        assertNull(latest.previousDate)
+        assertEquals("60 kg × 5", latest.previous)
     }
 
     @Test fun noHistoryHasNoPreviousSets() {

@@ -22,12 +22,16 @@ internal class WorkoutPresentation {
     private var catalogUi = emptyList<ExerciseUi>()
     /** Every exercise/convention's finished history, rebuilt from one index whenever the history changes. */
     private var previousPerformances = emptyMap<Pair<String, LoadConvention>, List<ExercisePerformance>>()
-    /** Keyed by exercise, convention and the session's start: the text, sets and date of the session before it. */
-    private val previousDescriptions = mutableMapOf<Triple<String, LoadConvention, Long>, PreviousSession>()
+    /** Keyed by exercise, convention, the session's start and whether it is the active one: the session before it. */
+    private val previousDescriptions = mutableMapOf<PreviousKey, PreviousSession>()
     private var previousActive: WorkoutUi? = null
 
-    /** The latest earlier session of one exercise and convention, built once per history change and reused. */
+    /**
+     * The latest earlier session of one exercise and convention, built once per history change and reused. Only the
+     * active workout suggests from its [sets] and shows its [date]; a finished workout's carries the text alone.
+     */
     private class PreviousSession(val text: String?, val sets: List<PreviousSetUi>, val date: Long?)
+    private data class PreviousKey(val exerciseId: String, val convention: LoadConvention, val startedAt: Long, val active: Boolean)
 
     companion object {
         private val NO_PREVIOUS = PreviousSession(null, emptyList(), null)
@@ -71,7 +75,7 @@ internal class WorkoutPresentation {
         fun snapshot(e: WorkoutExercise) = ExerciseUi(e.exerciseId, e.name, e.muscle.label, e.equipment.label, e.convention.label, exercises[e.exerciseId]?.custom ?: false)
         // Records are always passed in: the history's come from one chronological pass, and only the active
         // session is compared on its own, so no caller can fall back to a per-workout pass by omission.
-        fun workout(w: Workout, workoutEntries: List<WorkoutExercise>, prs: List<WeightPr>, repsPrs: List<RepsPr>): WorkoutUi {
+        fun workout(w: Workout, workoutEntries: List<WorkoutExercise>, prs: List<WeightPr>, repsPrs: List<RepsPr>, active: Boolean): WorkoutUi {
             val oldEntries = previousActive?.takeIf { it.id == w.id }?.exercises?.associateBy { it.id }.orEmpty()
             val records = prs.map { p ->
                 val e = workoutEntries.first { it.exerciseId == p.exerciseId && it.convention == p.convention }
@@ -83,7 +87,7 @@ internal class WorkoutPresentation {
             }
             val setRecords = setRecords(prs, repsPrs)
             val entries = workoutEntries.map { e ->
-                val previous = previousDescriptions.getOrPut(Triple(e.exerciseId, e.convention, w.startedAt)) {
+                val previous = previousDescriptions.getOrPut(PreviousKey(e.exerciseId, e.convention, w.startedAt, active)) {
                     val performance = previousPerformances[e.exerciseId to e.convention].orEmpty()
                         .firstOrNull { it.workout.id != w.id && it.workout.startedAt < w.startedAt }
                     if (performance == null) NO_PREVIOUS
@@ -91,8 +95,8 @@ internal class WorkoutPresentation {
                         val load = if (it.weightKg == 0.0 && !it.assistance && e.convention != LoadConvention.ASSISTANCE) "Bodyweight"
                         else "${if (it.assistance || e.convention == LoadConvention.ASSISTANCE) "Assistance " else ""}${DecimalText.fixed2(WeightUnits.fromKg(it.weightKg, prefs.pounds)).trimEnd('0').trimEnd('.')} ${if (prefs.pounds) "lb" else "kg"}"
                         "$load × ${it.reps}"
-                    }, performance.sets.map { PreviousSetUi(it.weightKg, it.reps, it.warmup, it.assistance) },
-                        performance.workout.startedAt)
+                    }, if (active) performance.sets.map { PreviousSetUi(it.weightKg, it.reps, it.warmup, it.assistance) } else emptyList(),
+                        performance.workout.startedAt.takeIf { active })
                 }
                 val pr = prs.firstOrNull { it.exerciseId == e.exerciseId && it.convention == e.convention }
                 val savedSets = allSetsByEntry[e.id].orEmpty()
@@ -133,7 +137,7 @@ internal class WorkoutPresentation {
             }
             val historyRecords = WorkoutCalculations.historyRecords(historical)
             historyUi = finished.sortedByDescending { it.startedAt }.map {
-                workout(it, items(it.id), historyRecords.weight.getValue(it.id), historyRecords.reps.getValue(it.id))
+                workout(it, items(it.id), historyRecords.weight.getValue(it.id), historyRecords.reps.getValue(it.id), active = false)
             }
             historySource = historical
             historyPounds = prefs.pounds
@@ -152,7 +156,7 @@ internal class WorkoutPresentation {
         }
         val active = data.activeWorkout?.let {
             workout(it, data.workoutItems(it.id), WorkoutCalculations.prsForWorkout(data, it.id),
-                WorkoutCalculations.repsPrsForWorkout(data, it.id))
+                WorkoutCalculations.repsPrsForWorkout(data, it.id), active = true)
         }
         previousActive = previousActive?.takeIf { it == active } ?: active
         val folders = data.routineFolders.sortedBy { it.position }.map { RoutineFolderUi(it.id, it.name) }
