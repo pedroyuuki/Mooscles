@@ -1,8 +1,11 @@
 package com.mooscles.screens.workout
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.MutableState
@@ -128,7 +131,9 @@ class SetTypeAndRemovalTest {
     /**
      * The sets of [entry] as [WorkoutSetRow]s in a lazy list, with the footer under them, and the
      * type sheet and the undo toast the screen puts beside the list. A tap on a set's number opens
-     * its sheet; a removal from the row goes the screen's way, with its [RemovedSet].
+     * its sheet; a removal from the row goes the screen's way, with its [RemovedSet]. Everything
+     * keeps clear of the system bars and the keyboard ([WindowInsets.safeDrawing]), so a test that
+     * types sees the same layout whether or not a soft keyboard opens.
      */
     private fun ComposeUiTest.showList(
         entry: MutableState<WorkoutExerciseUi>,
@@ -144,7 +149,10 @@ class SetTypeAndRemovalTest {
             val current = entry.value
             val suggestions = SetSuggestions.forExercise(current.sets, current.previousSets, current.exercise.convention, screen.cleared)
             val previous = SetSuggestions.pairPrevious(current.sets, current.previousSets)
-            Box(Modifier.fillMaxSize()) {
+            // Clear of the system bars and the keyboard, as the screen is: a focused field under the
+            // status bar makes the emulator pan the window down when the soft keyboard opens, and a
+            // toast at the very bottom then falls off the screen.
+            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 LazyColumn(Modifier.width(412.dp)) {
                     itemsIndexed(current.sets, key = { _, set -> "row-${set.id}" }) { i, set ->
                         WorkoutSetRow(
