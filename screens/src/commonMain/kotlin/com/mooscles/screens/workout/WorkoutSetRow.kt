@@ -38,6 +38,7 @@ import com.mooscles.designsystem.components.ExerciseCardFooter
 import com.mooscles.designsystem.components.NumericField
 import com.mooscles.designsystem.components.NumericKind
 import com.mooscles.designsystem.components.SetRow
+import com.mooscles.designsystem.components.SetRowCells
 import com.mooscles.designsystem.components.SetRowState
 import com.mooscles.designsystem.components.SetStatus
 import com.mooscles.designsystem.components.setRowSwipe
@@ -95,7 +96,8 @@ internal fun workoutSetRowTag(setId: String): String = "workout-set-$setId"
  * invalid draft is neither sent nor lost, and switching kg and lb rewrites the draft from its exact
  * kg ([ActiveWorkoutScreenState.echo], [ActiveWorkoutScreenState.useUnit]).
  *
- * The record haptic stays off: the screen plays it from its own record event.
+ * The record haptic stays off: the screen plays it from its own record event. [onCells] gets
+ * where the row's cells sit after each layout, for the card's column titles ([SetRowColumns]).
  */
 @Composable
 internal fun WorkoutSetRow(
@@ -111,6 +113,7 @@ internal fun WorkoutSetRow(
     onChangeType: (SetUi) -> Unit,
     onRemove: (SetUi, Int) -> Unit,
     modifier: Modifier = Modifier,
+    onCells: ((SetRowCells) -> Unit)? = null,
 ) {
     RecompositionProbe("row-${set.id}")
     val haptics = MTheme.haptics
@@ -336,6 +339,7 @@ internal fun WorkoutSetRow(
             onEditRow = { editFromReader(SetField.LOAD) },
             onCopyPrevious = copyPrevious,
             recordHaptic = false,
+            onCells = onCells,
         )
         if (editing != null) SetEditPanel(editing, number, editor)
     }

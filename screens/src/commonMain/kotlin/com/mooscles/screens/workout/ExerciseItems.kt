@@ -3,14 +3,10 @@ package com.mooscles.screens.workout
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -23,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import com.mooscles.data.LoadConvention
@@ -34,6 +29,7 @@ import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonSize
 import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.components.SetRowColumns
 import com.mooscles.designsystem.components.setsDoneOf
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.icons.MIcons
@@ -134,7 +130,7 @@ internal fun LazyListScope.exerciseItems(
     }
     if (!open) return
     item(key = "cols-${entry.id}", contentType = "exercise-columns") {
-        ExerciseCardSegment(setRowItemMotion().testTag(exerciseColumnsTag(entry.id))) { ColumnHeader(entry, pounds) }
+        ColumnTitles(entry, pounds, screen, setRowItemMotion().testTag(exerciseColumnsTag(entry.id)))
     }
     val suggestions = SetSuggestions.forExercise(entry.sets, entry.previousSets, entry.exercise.convention, screen.cleared)
     val previous = SetSuggestions.pairPrevious(entry.sets, entry.previousSets)
@@ -152,6 +148,7 @@ internal fun LazyListScope.exerciseItems(
                 actions = actions,
                 onChangeType = { callbacks.onChangeType(it, entry) },
                 onRemove = { snapshot, position -> callbacks.onRemoveSet(RemovedSet(entry.id, position, snapshot, position + 1)) },
+                onCells = if (i == 0) ({ cells -> screen.reportColumns(entry.id, cells) }) else null,
             )
         }
     }
@@ -202,8 +199,9 @@ private fun ExerciseHeaderItem(
         onToggle = { screen.toggleCard(entry.id, open) },
         modifier = modifier
             .testTag(exerciseHeaderTag(entry.id))
-            .then(if (open) Modifier else Modifier.padding(bottom = MTheme.space.s3))
-            .animateContentSize(if (reduced) snap() else spring<IntSize>(snappy.dampingRatio, snappy.stiffness)),
+            // The gap under a collapsed card animates with the card.
+            .animateContentSize(if (reduced) snap() else spring<IntSize>(snappy.dampingRatio, snappy.stiffness))
+            .then(if (open) Modifier else Modifier.padding(bottom = MTheme.space.s3)),
         progress = setsDoneOf(done, total),
         done = total > 0 && done == total,
         caption = conventionCaption(entry.exercise.convention),
@@ -221,7 +219,8 @@ private fun ExerciseHeaderItem(
             },
             onSwap = {
                 menu = false
-                if (entry.sets.any { it.completed }) confirm = ExerciseConfirm.SWAP.name else callbacks.onSwap(entry)
+                // As drawn: a check the database has not echoed yet counts too.
+                if (entry.sets.any { screen.completedOf(it) }) confirm = ExerciseConfirm.SWAP.name else callbacks.onSwap(entry)
             },
             onMove = { direction ->
                 menu = false
@@ -276,32 +275,6 @@ private fun RowScope.SupportLine(entry: WorkoutExerciseUi, callbacks: ExerciseCa
     )
 }
 
-/**
- * The column header of the set rows (`label.caps`): Set · Previous · kg (lb; "kg assist." in
- * the Assistance convention) · Reps, over the cells of [com.mooscles.designsystem.components.SetRow].
- * Hidden from screen readers: each row already reads its values with their names.
- */
-@Composable
-private fun ColumnHeader(entry: WorkoutExerciseUi, pounds: Boolean) {
-    val unit = columnUnit(entry.exercise.convention, pounds)
-    val targets = MTheme.targets
-    val field = MTheme.sizes.numericFieldWidth
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clearAndSetSemantics {}
-            .padding(horizontal = MTheme.space.s2),
-        horizontalArrangement = Arrangement.spacedBy(targets.gap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ColumnLabel(stringResource(Res.string.workout_col_set), Modifier.widthIn(min = targets.min), TextAlign.Center)
-        ColumnLabel(stringResource(Res.string.workout_col_previous), Modifier.weight(1f), TextAlign.Start)
-        ColumnLabel(unit, Modifier.widthIn(min = field), TextAlign.Center)
-        ColumnLabel(stringResource(Res.string.workout_col_reps), Modifier.widthIn(min = field), TextAlign.Center)
-        Spacer(Modifier.width(targets.workout))
-    }
-}
-
 /** The load column's title: "kg" or "lb", and "kg assist." or "lb assist." in the Assistance convention. */
 @Composable
 internal fun columnUnit(convention: String, pounds: Boolean): String = when {
@@ -310,7 +283,27 @@ internal fun columnUnit(convention: String, pounds: Boolean): String = when {
     else -> stringResource(Res.string.workout_col_kg_assisted)
 }
 
+/**
+ * The column titles of the card of [entry] (Set · Previous · kg (lb; "kg assist." in the Assistance
+ * convention) · Reps), over the cells of its first set row as that row was laid out
+ * ([ActiveWorkoutScreenState.columns]). Only over a one-line row: with large text or a narrow
+ * screen the row is two lines, and then the item draws nothing (0 tall). Hidden from screen
+ * readers ([SetRowColumns]).
+ */
 @Composable
-private fun ColumnLabel(text: String, modifier: Modifier, align: TextAlign) {
-    MText(text, MTheme.type.labelCaps.copy(textAlign = align), color = MTheme.colors.textSecondary, modifier = modifier, caps = true)
+private fun ColumnTitles(entry: WorkoutExerciseUi, pounds: Boolean, screen: ActiveWorkoutScreenState, modifier: Modifier) {
+    val cells = screen.columns[entry.id]?.takeIf { it.oneLine && entry.sets.isNotEmpty() }
+    Box(modifier.fillMaxWidth()) {
+        if (cells != null) {
+            ExerciseCardSegment {
+                SetRowColumns(
+                    set = stringResource(Res.string.workout_col_set),
+                    previous = stringResource(Res.string.workout_col_previous),
+                    load = columnUnit(entry.exercise.convention, pounds),
+                    reps = stringResource(Res.string.workout_col_reps),
+                    cells = cells,
+                )
+            }
+        }
+    }
 }

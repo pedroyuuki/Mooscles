@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -11,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mooscles.designsystem.components.NumericInput
+import com.mooscles.designsystem.components.SetRowCells
 import com.mooscles.domain.WeightUnits
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.SetField
@@ -109,12 +111,26 @@ class ActiveWorkoutScreenState(
      * no longer in the workout. Returns the entries it opened: closed before, open now.
      */
     internal fun advanceCards(exercises: List<WorkoutExerciseUi>): Set<String> {
+        // No exercises is a workout still loading (after a process death, say), not one emptied:
+        // what was restored stays until the exercises arrive.
+        if (exercises.isEmpty()) return emptySet()
         val before = exercises.filter { CardExpansion.isOpen(it.id, exercises, expanded, manual) }.mapTo(HashSet()) { it.id }
         val ids = exercises.mapTo(HashSet()) { it.id }
         if (manual.any { it !in ids }) manual = manual.filterTo(HashSet()) { it in ids }
         val next = CardExpansion.advance(exercises, expanded, manual)
         if (next != expanded) expanded = next
         return next.filterValues { it }.keys - before
+    }
+
+    /**
+     * Where the cells of the first set row of each exercise sat in its last layout, by entry id,
+     * for the column titles of the card ([SetRowColumns]). Not saved: the rows report it again.
+     */
+    internal val columns = mutableStateMapOf<String, SetRowCells>()
+
+    /** Keeps [cells] as the layout of the first row of [entryId], when it changed. */
+    internal fun reportColumns(entryId: String, cells: SetRowCells) {
+        if (columns[entryId] != cells) columns[entryId] = cells
     }
 
     /** Opens the type sheet of [setId], as a tap on the set's number does. */

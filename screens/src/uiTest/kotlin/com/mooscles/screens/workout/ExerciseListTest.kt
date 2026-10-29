@@ -12,6 +12,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlin.math.abs
+import com.mooscles.screens.assertShownWhole
+import com.mooscles.designsystem.components.setRowColumnTag
+import com.mooscles.designsystem.components.SetRowPreviousTag
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -82,17 +89,19 @@ class ExerciseListTest {
     private val pullUp = ExerciseUi("apu", "Barra assistida", "Back", "Selectorized machine", convention = "Assistance")
 
     /**
-     * Records every call and, like the database emission, writes `updateSet` into [exercises] and
-     * drops the entry of `removeWorkoutExercise`.
+     * Records every call and, like the database emission, writes `updateSet` into [exercises]
+     * (only with [echo]) and drops the entry of `removeWorkoutExercise`.
      */
     private class Actions(
         val exercises: MutableState<List<WorkoutExerciseUi>>,
+        val echo: Boolean = true,
         val recording: RecordingActions = RecordingActions(),
     ) : MoosclesActions by recording {
         val calls: List<String> get() = recording.calls
 
         override fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean) {
             recording.updateSet(setId, reps, weightKg, completed, warmup, assistance)
+            if (!echo) return
             exercises.value = exercises.value.map { entry ->
                 entry.copy(
                     sets = entry.sets.map {
@@ -127,10 +136,11 @@ class ExerciseListTest {
         reducedMotion: Boolean = false,
         pounds: Boolean = false,
         size: DpSize = DpSize(412.dp, 800.dp),
+        fontScale: Float = 1f,
         probe: ((String) -> Unit)? = null,
     ): Shown {
         val shown = Shown()
-        withScreen(locale = locale, reducedMotion = reducedMotion, size = size, probe = probe) {
+        withScreen(locale = locale, reducedMotion = reducedMotion, size = size, fontScale = fontScale, probe = probe) {
             val screen = rememberActiveWorkoutScreenState()
             val list = rememberLazyListState()
             shown.screen = screen
@@ -207,6 +217,41 @@ class ExerciseListTest {
     private fun ComposeUiTest.isOpen(entryId: String): Boolean =
         onAllNodesWithTag(exerciseColumnsTag(entryId)).fetchSemanticsNodes().isNotEmpty()
 
+    /**
+     * Checks the column titles of [entryId] against its row [setId] and returns whether they are
+     * shown. Shown, the row is one line and each title is whole (one line, as wide as it needs)
+     * over its cell: the set's before the previous cell, the previous one at its start, the load and
+     * the reps centered. Hidden, the item is 0 tall. Over a two-line row they must be hidden.
+     */
+    private fun ComposeUiTest.columnsShownAndAligned(entryId: String, setId: String): Boolean {
+        waitForIdle()
+        fun cell(tag: String): Rect = onNode(hasTestTag(tag) and hasAnyAncestor(row(setId)), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val previous = cell(SetRowPreviousTag)
+        val load = cell(SetRowLoadTag)
+        val reps = cell(SetRowRepsTag)
+        val oneLine = load.top < previous.bottom
+        val columns = onNodeWithTag(exerciseColumnsTag(entryId), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        if (columns.height == 0f) {
+            return false
+        }
+        assertTrue(oneLine, "titles over a two-line row: previous $previous, load $load")
+        val titles = (0..3).map {
+            onNode(hasTestTag(setRowColumnTag(it)) and hasAnyAncestor(hasTestTag(exerciseColumnsTag(entryId))), useUnmergedTree = true).fetchSemanticsNode()
+        }
+        for (node in titles) {
+            val results = mutableListOf<TextLayoutResult>()
+            val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action
+            assertTrue(action != null && action(results) && results.isNotEmpty(), "a column title has no layout")
+            assertShownWhole(results.first(), "column title")
+        }
+        val (set, prev, unit, repsTitle) = titles.map { it.boundsInRoot }
+        assertTrue(set.right <= previous.left, "the set title stays over the index cell: $set, $previous")
+        assertTrue(abs(prev.left - previous.left) < 1f, "previous starts with its cell: $prev, $previous")
+        assertTrue(abs(unit.center.x - load.center.x) < 1f, "load centered: $unit, $load")
+        assertTrue(abs(repsTitle.center.x - reps.center.x) < 1f, "reps centered: $repsTitle, $reps")
+        return true
+    }
+
     @Test
     fun largeExerciseComposesOnlyVisibleRows() = runComposeUiTest {
         val rows = HashSet<String>()
@@ -227,13 +272,14 @@ class ExerciseListTest {
     /** Review Focus 3: the same exercise twice keeps its own values, record and previous pairs. */
     @Test
     fun repeatedInstancesKeepTheirOwnValues() = runComposeUiTest {
-        val previous = listOf(PreviousSetUi(80.0, 5, false, false), PreviousSetUi(82.5, 5, false, false))
+        val previous = listOf(PreviousSetUi(40.0, 10, true, false), PreviousSetUi(80.0, 5, false, false), PreviousSetUi(82.5, 5, false, false))
         val record = SetRecordUi(RecordKind.WEIGHT, previousKg = 85.0)
         val exercises = mutableStateOf(
             listOf(
                 WorkoutExerciseUi(
                     "e1", bench,
-                    sets = listOf(SetUi("a1", reps = 5, weightKg = 90.0), SetUi("a2", reps = 5, weightKg = 90.0)),
+                    // A warm-up first here and not in e2: each instance pairs by its own sets.
+                    sets = listOf(SetUi("a0", reps = 10, weightKg = 40.0, warmup = true), SetUi("a1", reps = 5, weightKg = 90.0), SetUi("a2", reps = 5, weightKg = 90.0)),
                     previousSets = previous,
                 ),
                 WorkoutExerciseUi(
@@ -251,6 +297,7 @@ class ExerciseListTest {
         toggle("e1")
 
         // Each instance pairs the previous session with its own sets.
+        assertTrue("40 quilos por 10" in rowDescription("a0"), rowDescription("a0"))
         assertTrue("80 quilos por 5" in rowDescription("a1"), rowDescription("a1"))
         assertTrue("82,5 quilos por 5" in rowDescription("a2"), rowDescription("a2"))
         scrollTo(workoutSetRowTag("b2"))
@@ -265,7 +312,7 @@ class ExerciseListTest {
         waitForIdle()
         check("a1").performClick()
         waitForIdle()
-        assertEquals(SetUi("a1", reps = 12, weightKg = 90.0, completed = true), exercises.value[0].sets[0])
+        assertEquals(SetUi("a1", reps = 12, weightKg = 90.0, completed = true), exercises.value[0].sets[1])
         assertEquals(listOf(SetUi("b1", reps = 5, weightKg = 90.0, completed = true, record = record), SetUi("b2", reps = 5, weightKg = 90.0)), exercises.value[1].sets)
 
         // Reordered (as moving it does), each instance keeps its own rows.
@@ -335,18 +382,53 @@ class ExerciseListTest {
     fun columnHeaderIsHiddenFromScreenReaders() = runComposeUiTest {
         val exercises = mutableStateOf(listOf(WorkoutExerciseUi("e1", bench, sets = sets("s", 2))))
         showList(exercises, Actions(exercises))
-        val columns = onNodeWithTag(exerciseColumnsTag("e1"), useUnmergedTree = true)
-        columns.assertIsDisplayed()
-        assertTrue(columns.fetchSemanticsNode().size.height > 0, "the column header is drawn")
+        assertTrue(columnsShownAndAligned("e1", "s1"), "412 dp at 1x: one-line rows, with titles")
         // The merged tree is what a screen reader walks: a cleared node's children are not in it.
         val inside = SemanticsMatcher("text") { it.config.getOrNull(SemanticsProperties.Text) != null } and
             hasAnyAncestor(hasTestTag(exerciseColumnsTag("e1")))
         assertEquals(0, onAllNodes(inside).fetchSemanticsNodes().size, "no column title reaches a screen reader")
-        for (title in listOf("Série", "Anterior", "Reps", "kg")) {
+        for (title in listOf("SÉRIE", "ANTERIOR", "REPS", "KG")) {
             assertEquals(0, onAllNodes(hasText(title)).fetchSemanticsNodes().size, title)
         }
         // Drawn, though: the titles are there below the cleared node.
         assertEquals(4, onAllNodes(inside, useUnmergedTree = true).fetchSemanticsNodes().size)
+    }
+
+    /** Sets with a previous result of [previousKg] × [previousReps], as a returning exercise has. */
+    private fun withPrevious(prefix: String, count: Int, previousKg: Double = 82.5, previousReps: Int = 10) = WorkoutExerciseUi(
+        "e1", bench, sets = sets(prefix, count),
+        previousSets = List(count) { PreviousSetUi(previousKg, previousReps, false, false) },
+    )
+
+    @Test
+    fun columnTitlesAt412FollowTheRow() {
+        // A first-time exercise ("—" as previous) is one line at 412 dp; "82,5 kg × 10" is not
+        // (the row has 340 dp and the fixed cells take 280), and then the titles go.
+        for ((exercise, shown) in listOf(
+            WorkoutExerciseUi("e1", bench, sets = sets("s", 2)) to true,
+            withPrevious("s", 2) to false,
+        )) runComposeUiTest {
+            val exercises = mutableStateOf(listOf(exercise))
+            showList(exercises, Actions(exercises), size = DpSize(412.dp, 800.dp))
+            assertEquals(shown, columnsShownAndAligned("e1", "s1"), "previous sets: ${exercise.previousSets}")
+        }
+    }
+
+    @Test
+    fun columnTitlesAt320AreHiddenOrWhole() {
+        for (locale in listOf("pt-BR", "en")) runComposeUiTest {
+            val exercises = mutableStateOf(listOf(withPrevious("s", 2)))
+            showList(exercises, Actions(exercises), locale = locale, size = DpSize(320.dp, 800.dp))
+            // Either answer is right, as long as it matches the row: titles only over one line.
+            columnsShownAndAligned("e1", "s1")
+        }
+    }
+
+    @Test
+    fun columnTitlesHideWhenRowsAreTwoLines() = runComposeUiTest {
+        val exercises = mutableStateOf(listOf(withPrevious("s", 2)))
+        showList(exercises, Actions(exercises), size = DpSize(412.dp, 800.dp), fontScale = 1.5f)
+        assertFalse(columnsShownAndAligned("e1", "s1"), "at 1.5x the rows are two lines, so no titles")
     }
 
     @Test
@@ -402,11 +484,13 @@ class ExerciseListTest {
     }
 
     @Test
-    fun reducedMotionSwitchesInstantly() = runComposeUiTest {
+    fun reducedMotionWaitsThenSwitchesWithoutAnimation() = runComposeUiTest {
         val exercises = mutableStateOf(
             listOf(
                 WorkoutExerciseUi("e1", bench, sets = sets("s", 8, done = 7)),
                 WorkoutExerciseUi("e2", curl, sets = sets("c", 6)),
+                // Below e2, so the list can bring e2's header to the top.
+                WorkoutExerciseUi("e3", pullUp, sets = sets("p", 2)),
             ),
         )
         val shown = showList(exercises, Actions(exercises), reducedMotion = true, size = DpSize(412.dp, 640.dp))
@@ -414,8 +498,16 @@ class ExerciseListTest {
 
         mainClock.autoAdvance = false
         check("s8").performClick()
-        repeat(4) { mainClock.advanceTimeByFrame() }
-        // Well under timing.cardAdvance: no wait and no scroll animation.
+        mainClock.advanceTimeByFrame()
+        mainClock.advanceTimeByFrame()
+        mainClock.advanceTimeBy(MoosclesTiming().cardAdvance - 100)
+        // The wait is time to see the check, not motion: it stays.
+        assertTrue(isOpen("e1"), "e1 stays open during timing.cardAdvance")
+        assertFalse(isOpen("e2"))
+
+        // Then the switch and the jump take a couple of frames, with no animation to wait for.
+        mainClock.advanceTimeBy(200)
+        repeat(3) { mainClock.advanceTimeByFrame() }
         assertFalse(isOpen("e1"))
         assertTrue(isOpen("e2"))
         assertEquals(1, shown.list.firstVisibleItemIndex)
@@ -495,6 +587,14 @@ class ExerciseListTest {
         showList(exercises, actions)
         val text = "Remover Supino reto? As 3 séries dele saem deste treino."
 
+        // One set: the singular.
+        openMenu("e2")
+        onNodeWithTag(ExerciseMenuTags.REMOVE).performClick()
+        waitForIdle()
+        onNodeWithText("Remover Rosca alternada? A 1 série dele sai deste treino.").assertIsDisplayed()
+        onNodeWithText("Continuar treinando").performClick()
+        waitForIdle()
+
         // "Keep training" leaves the exercise in the workout.
         openMenu("e1")
         onNodeWithTag(ExerciseMenuTags.REMOVE).performClick()
@@ -529,6 +629,22 @@ class ExerciseListTest {
         waitForIdle()
         assertEquals(listOf("swap:e1"), shown.callbacks)
         assertEquals(emptyList(), actions.calls, "the picker writes the swap, not the menu")
+    }
+
+    @Test
+    fun swapAsksWhileACheckIsNotSavedYet() = runComposeUiTest {
+        val exercises = mutableStateOf(listOf(WorkoutExerciseUi("e1", bench, sets = sets("s", 3))))
+        // No echo: the check is drawn done, the database still says pending.
+        val actions = Actions(exercises, echo = false)
+        val shown = showList(exercises, actions)
+        check("s1").performClick()
+        waitForIdle()
+        assertTrue(shown.screen.completedOf(exercises.value[0].sets[0]))
+        openMenu("e1")
+        onNodeWithTag(ExerciseMenuTags.SWAP).performClick()
+        waitForIdle()
+        onNodeWithText("Trocar Supino reto? As séries registradas dele saem deste treino.").assertIsDisplayed()
+        assertEquals(emptyList(), shown.callbacks)
     }
 
     @Test

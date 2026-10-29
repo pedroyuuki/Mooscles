@@ -73,9 +73,12 @@ object CardExpansion {
  * it waits `timing.cardAdvance` and then collapses the cards that are no longer current and opens
  * the new current one ([ActiveWorkoutScreenState.advanceCards]); the list items enter and move
  * with `spring.snappy` ([setRowItemMotion]). If that opened the new current card, the list scrolls
- * to its header. With reduced motion there is no wait and the list jumps instead of scrolling.
+ * to its header. With reduced motion the wait stays (it is the time to see the check) and the
+ * switch is instant: the items fade in `motion.fast` without sliding and the list jumps.
  *
- * The first run (the screen shown, or recreated) applies the advance at once, without scrolling.
+ * The first run with exercises (the screen shown, or recreated) applies the advance at once,
+ * without scrolling. While the list is empty (still loading) nothing is applied, so the restored
+ * choices are kept.
  */
 @Composable
 internal fun CardAdvance(
@@ -90,9 +93,12 @@ internal fun CardAdvance(
     val wait = MTheme.timing.cardAdvance
     val started = remember(screen) { booleanArrayOf(false) }
     LaunchedEffect(screen, current) {
+        // A workout still loading has no exercises: what was restored waits for them.
+        if (latest.isEmpty()) return@LaunchedEffect
         val first = !started[0]
         started[0] = true
-        if (!first && !reduced) delay(wait)
+        // The wait is time to see the check, not motion: reduced motion keeps it.
+        if (!first) delay(wait)
         val opened = screen.advanceCards(latest)
         val target = CardExpansion.current(latest)
         if (first || target == null || target !in opened) return@LaunchedEffect

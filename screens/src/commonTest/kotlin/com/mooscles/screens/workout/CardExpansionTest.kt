@@ -76,6 +76,21 @@ class CardExpansionTest {
     }
 
     @Test
+    fun advanceWithNoExercisesKeepsRestoredChoices() {
+        // Restored after a process death, while the workout is still loading.
+        val screen = ActiveWorkoutScreenState(expanded = mapOf("e1" to false, "e2" to true), manual = setOf("e2"))
+        assertEquals(emptySet(), screen.advanceCards(emptyList()))
+        assertEquals(mapOf("e1" to false, "e2" to true), screen.expanded)
+        assertEquals(setOf("e2"), screen.manual)
+
+        // Once the exercises arrive, the choice by hand still holds.
+        val workout = listOf(entry("e1", false), entry("e2", true))
+        screen.advanceCards(workout)
+        assertEquals(mapOf("e1" to true, "e2" to true), screen.expanded)
+        assertEquals(setOf("e2"), screen.manual)
+    }
+
+    @Test
     fun openCardsSurviveTheSaver() {
         val scope = SaverScope { true }
         val state = ActiveWorkoutScreenState(expanded = mapOf("e:1" to true, "e2" to false), manual = setOf("e2"))

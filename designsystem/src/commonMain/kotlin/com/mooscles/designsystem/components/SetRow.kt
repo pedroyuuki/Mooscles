@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -143,6 +144,9 @@ private const val TWO_LINE_FONT_SCALE = 1.5f
  * record confirmed later gives nothing, so the screen can play it from its own record event);
  * back to pending the unchecked one. Losing a record (`CompletedRecord` to `Completed`) and
  * [SetRowState.editing] never vibrate. Removing with "undo" is up to the caller (a toast).
+ *
+ * With [onCells], the row reports where its cells sit after each layout ([SetRowCells]), so a
+ * [SetRowColumns] header can draw the column titles over them, and only on one line.
  */
 @Composable
 fun SetRow(
@@ -158,6 +162,7 @@ fun SetRow(
     onEditRow: (() -> Unit)? = null,
     onCopyPrevious: (() -> Unit)? = null,
     recordHaptic: Boolean = true,
+    onCells: ((SetRowCells) -> Unit)? = null,
 ) {
     val colors = MTheme.colors
     val haptics = MTheme.haptics
@@ -227,6 +232,7 @@ fun SetRow(
     val alwaysTwoLines = LocalDensity.current.fontScale >= TWO_LINE_FONT_SCALE
     val gap = with(LocalDensity.current) { MTheme.targets.gap.roundToPx() }
     val measurePolicy = remember(alwaysTwoLines, gap) { SetRowMeasurePolicy(alwaysTwoLines, gap) }
+    val reportCells by rememberUpdatedState(onCells)
 
     Layout(
         content = {
@@ -246,6 +252,7 @@ fun SetRow(
             .fillMaxWidth()
             .background(background, shape)
             .padding(horizontal = MTheme.space.s2)
+            .then(if (onCells != null) Modifier.onPlaced { measurePolicy.cells?.let { reportCells?.invoke(it) } } else Modifier)
             .semantics(mergeDescendants = true) {
                 contentDescription = description
                 if (onEditRow != null) onClick(label = labelEditSet) { onEditRow(); true }
@@ -278,6 +285,10 @@ fun SetRow(
  * cell starts the next line. A line of only the check puts it at the end, where it always is.
  */
 private class SetRowMeasurePolicy(private val alwaysTwoLines: Boolean, private val gap: Int) : MeasurePolicy {
+    /** Where the cells sat in the last measure, for [SetRow]'s `onCells`. Not state: read after placement. */
+    var cells: SetRowCells? = null
+        private set
+
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
         val needs = IntArray(measurables.size) { i ->
             if (i == LOAD || i == REPS) {
@@ -315,6 +326,7 @@ private class SetRowMeasurePolicy(private val alwaysTwoLines: Boolean, private v
             height += lineHeight
         }
         val lineOf = IntArray(measurables.size).also { of -> lines.forEachIndexed { line, cells -> cells.forEach { of[it] = line } } }
+        cells = SetRowCells(single, offsets.toList(), placeables.map { it?.width ?: 0 })
         return layout(available.coerceIn(constraints.minWidth, constraints.maxWidth), height.coerceIn(constraints.minHeight, constraints.maxHeight)) {
             placeables.forEachIndexed { cell, placeable -> placeable?.placeRelative(offsets[cell], tops[lineOf[cell]]) }
         }
