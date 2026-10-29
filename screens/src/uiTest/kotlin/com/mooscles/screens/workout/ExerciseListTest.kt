@@ -402,11 +402,14 @@ class ExerciseListTest {
 
     @Test
     fun columnTitlesAt412FollowTheRow() {
-        // A first-time exercise ("—" as previous) is one line at 412 dp; "82,5 kg × 10" is not
-        // (the row has 340 dp and the fixed cells take 280), and then the titles go.
+        // The row has 340 dp at 412 dp and the fixed cells take 280. A first-time exercise ("—" as
+        // previous) is one line, and so is the usual returning one: the previous result is shown
+        // without its unit ("82,5 × 10", the title says "kg"), as on the board. Only a much wider
+        // previous result ("1002,75 × 100") makes the row two lines, and then the titles go.
         for ((exercise, shown) in listOf(
             WorkoutExerciseUi("e1", bench, sets = sets("s", 2)) to true,
-            withPrevious("s", 2) to false,
+            withPrevious("s", 2) to true,
+            withPrevious("s", 2, previousKg = 1002.75, previousReps = 100) to false,
         )) runComposeUiTest {
             val exercises = mutableStateOf(listOf(exercise))
             showList(exercises, Actions(exercises), size = DpSize(412.dp, 800.dp))

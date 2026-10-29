@@ -34,14 +34,14 @@ internal fun loadSpoken(weightKg: Double, pounds: Boolean): String =
     stringResource(if (pounds) Res.string.ds_unit_lb_spoken else Res.string.ds_unit_kg_spoken, loadText(weightKg, pounds))
 
 /**
- * The previous session's set as the "previous" column shows it: "80 kg × 6". A set without a pair
- * passes null to the row, which draws the design system's "—" and leaves "previous" out of its reading.
+ * The previous session's set as the "previous" column shows it: "80 × 6", without the unit, as on
+ * the board "Treino ativo" (the column title carries "kg" or "lb", and the reading keeps it: see
+ * [previousSpoken]). Without the unit the row fits one line on a 412 dp phone at 1.0 for the usual
+ * values ("82,5 × 10"), so the column titles show. A set without a pair passes null to the row,
+ * which draws the design system's "—" and leaves "previous" out of its reading.
  */
 @Composable
-internal fun previousText(previous: PreviousSetUi, pounds: Boolean): String {
-    val plain = MoosclesNumbers.plain(WeightUnits.fromKg(previous.weightKg, pounds))
-    return MoosclesNumbers.setText(plain, unitSymbol(pounds), previous.reps, currentNumberLocale())
-}
+internal fun previousText(previous: PreviousSetUi, pounds: Boolean): String = "${loadText(previous.weightKg, pounds)} × ${previous.reps}"
 
 /** The previous session's set as read aloud: "80 quilos por 6". */
 @Composable
