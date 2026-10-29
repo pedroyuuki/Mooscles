@@ -59,4 +59,47 @@ class ActiveWorkoutScreenStateTest {
         assertEquals(emptyMap(), state.optimistic)
         assertTrue(state.completedOf(done))
     }
+
+    @Test
+    fun saverKeepsTheLastRemovalAndTheTypeSheet() {
+        val removed = RemovedSet("e:1", 3, SetUi("s:4", reps = 6, weightKg = 82.5, completed = true, warmup = true, assistance = true), 4)
+        val restored = roundTrip(ActiveWorkoutScreenState(lastRemoved = removed, typeSheetFor = "s:2"))
+        assertEquals(removed, restored.lastRemoved)
+        assertEquals("s:2", restored.typeSheetFor)
+
+        val empty = roundTrip(ActiveWorkoutScreenState())
+        assertNull(empty.lastRemoved)
+        assertNull(empty.typeSheetFor)
+    }
+
+    @Test
+    fun forgettingASetDropsWhatWasKeptForItAlone() {
+        val state = ActiveWorkoutScreenState(
+            cleared = setOf("s4" to SetField.REPS, "s1" to SetField.REPS),
+            optimistic = mapOf("s4" to true, "s1" to true),
+            editing = SetEditTarget("s4", SetField.LOAD, keyboard = true),
+            drafts = mapOf(("s4" to SetField.LOAD) to "82,", ("s1" to SetField.LOAD) to "80"),
+            sent = mapOf(("s4" to SetField.REPS) to listOf(0.0), ("s1" to SetField.LOAD) to listOf(80.0)),
+            typeSheetFor = "s4",
+        )
+        state.forget("s4")
+        assertEquals(setOf("s1" to SetField.REPS), state.cleared)
+        assertEquals(mapOf("s1" to true), state.optimistic)
+        assertNull(state.editing)
+        assertEquals(mapOf(("s1" to SetField.LOAD) to "80"), state.drafts)
+        assertEquals(80.0, state.expected("s1", SetField.LOAD, 0.0), "another set's awaited write stays")
+        assertEquals(6.0, state.expected("s4", SetField.REPS, 6.0), "the removed set's awaited write is gone")
+        assertNull(state.typeSheetFor)
+
+        // Another set's edit and sheet are not touched.
+        val other = ActiveWorkoutScreenState(editing = SetEditTarget("s1", SetField.REPS), typeSheetFor = "s1")
+        other.forget("s4")
+        assertEquals(SetEditTarget("s1", SetField.REPS), other.editing)
+        assertEquals("s1", other.typeSheetFor)
+
+        // Closing the undo leaves nothing to undo.
+        state.lastRemoved = RemovedSet("e1", 3, SetUi("s4"), 4)
+        state.closeUndo()
+        assertNull(state.lastRemoved)
+    }
 }

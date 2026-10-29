@@ -3,11 +3,13 @@ package com.mooscles.screens.workout
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,13 +34,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntSize
-import com.mooscles.data.LoadConvention
+import com.mooscles.designsystem.components.ExerciseCardFooter
 import com.mooscles.designsystem.components.NumericField
 import com.mooscles.designsystem.components.NumericKind
 import com.mooscles.designsystem.components.SetRow
 import com.mooscles.designsystem.components.SetRowState
 import com.mooscles.designsystem.components.SetStatus
-import com.mooscles.designsystem.components.SetType
 import com.mooscles.designsystem.components.setRowSwipe
 import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -73,8 +74,11 @@ internal fun workoutSetRowTag(setId: String): String = "workout-set-$setId"
  * - unchecking sends the same set with `completed = false`;
  * - tapping the previous result of a pending set copies it (load and reps, not done) with the
  *   `StepperStep` haptic; on a done set it is not a target;
- * - swiping right is the check (only for a pending set); swiping left asks [onRemove] with the
- *   set's position in [entry];
+ * - tapping the set's number (or the "change type" action) asks [onChangeType] for its type
+ *   sheet ([SetTypeSheetHost]);
+ * - swiping right is the check (only for a pending set); swiping left (or the "remove" action)
+ *   asks [onRemove] with the set as it stands now ([SetRowEditor.snapshot]: what "Undo" puts
+ *   back) and its position in [entry];
  * - each valid value typed or stepped in a field is written; emptying a field marks it in
  *   [ActiveWorkoutScreenState.cleared], so it gets no suggestion again.
  *
@@ -242,12 +246,7 @@ internal fun WorkoutSetRow(
         set.completed && set.record != null -> SetStatus.CompletedRecord
         else -> SetStatus.Completed
     }
-    // In the Assistance convention every set is assisted, so none is marked (F29).
-    val type = when {
-        set.warmup -> SetType.Warmup
-        set.assistance && entry.exercise.convention != LoadConvention.ASSISTANCE.label -> SetType.Assisted
-        else -> SetType.Normal
-    }
+    val type = setTypeOf(set, entry.exercise.convention)
     val state = SetRowState(
         index = number,
         total = total,
@@ -286,14 +285,14 @@ internal fun WorkoutSetRow(
             onEditLoad = { editFromReader(SetField.LOAD) },
             onEditReps = { editFromReader(SetField.REPS) },
             onChangeType = { onChangeType(set) },
-            onRemove = { onRemove(set, position) },
+            onRemove = { onRemove(editor.snapshot(), position) },
             modifier = Modifier
                 .testTag(workoutSetRowTag(set.id))
                 .setRowSwipe(
                     completeEnabled = !done,
                     removeEnabled = true,
                     onComplete = complete,
-                    onRemove = { onRemove(set, position) },
+                    onRemove = { onRemove(editor.snapshot(), position) },
                 ),
             loadField = {
                 FieldTapGuard(
@@ -339,5 +338,39 @@ internal fun WorkoutSetRow(
             recordHaptic = false,
         )
         if (editing != null) SetEditPanel(editing, number, editor)
+    }
+}
+
+/**
+ * The bottom of an exercise card: "Add set", which sends `addSet` (the repository copies the
+ * last set's load and assistance), disabled once the exercise has [MAX_SETS] sets.
+ */
+@Composable
+internal fun AddSetFooter(entry: WorkoutExerciseUi, actions: MoosclesActions, modifier: Modifier = Modifier) {
+    ExerciseCardFooter(
+        onAddSet = { actions.addSet(entry.id) },
+        modifier = modifier,
+        addEnabled = entry.sets.size < MAX_SETS,
+    )
+}
+
+/**
+ * How a set row's list item enters and moves: a new row (an added set, a set put back) fades in
+ * and the rows around it slide with `spring.snappy`; with reduced motion, a `motion.fast` fade
+ * and no slide. A removed row leaves at once: the undo toast is its feedback, and a row fading
+ * out would still take touches.
+ */
+@Composable
+internal fun LazyItemScope.setRowItemMotion(): Modifier {
+    val motion = MTheme.motion
+    val snappy = motion.springSnappy
+    return if (MTheme.reducedMotion) {
+        Modifier.animateItem(fadeInSpec = tween(motion.fast, easing = motion.easeOut), placementSpec = null, fadeOutSpec = null)
+    } else {
+        Modifier.animateItem(
+            fadeInSpec = spring(snappy.dampingRatio, snappy.stiffness),
+            placementSpec = spring(snappy.dampingRatio, snappy.stiffness),
+            fadeOutSpec = null,
+        )
     }
 }
