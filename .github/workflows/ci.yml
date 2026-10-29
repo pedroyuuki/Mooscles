@@ -147,7 +147,8 @@ jobs:
           # DesignSystemResourcesHostTest +1 (:app).
           # Phase 3 task 10 (:screens): ScreenDatesTest 4 (commonTest), ScreenDatesJvmEquivalenceTest 2.
           # Phase 3 task 11 (:designsystem commonTest): IconsTest +1, SizesTimingElevationTest +1.
-          MIN_HOST_TESTS: 722
+          # Phase 3 task 27 (:app): UpdaterDisabledHostTest 2, LauncherIconHostTest 1.
+          MIN_HOST_TESTS: 725
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

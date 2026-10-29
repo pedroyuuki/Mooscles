@@ -31,6 +31,8 @@ class UpdateManager(
     private val trainingBusy: suspend () -> Boolean,
     val store: UpdateStore = UpdateStore(context.updateStore),
     private val client: ReleaseClient = ReleaseClient(),
+    /** False in the side-by-side `preview` build: it never checks, downloads or installs anything. */
+    private val enabled: Boolean = BuildConfig.UPDATER_ENABLED,
     private val now: () -> Long = System::currentTimeMillis,
 ) : UpdateCoordinator {
     private val checkGate = Mutex()
@@ -52,6 +54,7 @@ class UpdateManager(
     }.flowOn(Dispatchers.IO)
 
     suspend fun onForeground() = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext
         try {
             reconcile()
             schedulePeriodic()
@@ -71,6 +74,7 @@ class UpdateManager(
     }
 
     override suspend fun onTrainingChanged() {
+        if (!enabled) return
         val state = store.snapshot()
         if (state.phase == UpdatePhase.DEFERRED && !trainingBusy()) {
             store.change { if (it.phase == UpdatePhase.DEFERRED) it.copy(
@@ -92,6 +96,7 @@ class UpdateManager(
     }
 
     override suspend fun requestCheck(manual: Boolean) {
+        if (!enabled) return
         val s = store.snapshot()
         if (!UpdatePolicy.canCheck(s, manual, now())) {
             if (manual) store.change { it.copy(message = if (now() < it.retryAt)
@@ -109,6 +114,7 @@ class UpdateManager(
 
     /** Foreground, periodic and manual work share one gate and the persisted throttle. */
     suspend fun check(manual: Boolean): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext false
         if (!checkGate.tryLock()) return@withContext false
         try {
             val old = store.snapshot()
@@ -182,6 +188,7 @@ class UpdateManager(
     }
 
     override suspend fun enqueueDownload(manual: Boolean) {
+        if (!enabled) return
         val state = store.snapshot()
         val candidate = state.available ?: return
         if (candidate.metadata.versionCode <= installedVersion(context).first) { reconcile(); return }
@@ -202,6 +209,7 @@ class UpdateManager(
     }
 
     suspend fun download(runAttempt: Int, expectedGeneration: Long): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext false
         downloadGate.withLock {
             val initial = store.snapshot()
             currentCoroutineContext().ensureActive()
@@ -264,6 +272,7 @@ class UpdateManager(
 
     /** User gesture only. Returns a system Settings/approval activity; never opens it itself. */
     suspend fun requestInstall(): Intent? = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext null
         installGate.withLock {
             if (trainingBusy()) { defer(); return@withContext null }
             val s = store.snapshot()
@@ -303,6 +312,7 @@ class UpdateManager(
         message = "Update ready. Installation will wait until your workout is saved and your rest timer has stopped.") }
 
     private suspend fun attemptInstall(userInitiated: Boolean) = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext
         if (!installGate.tryLock()) return@withContext
         var preparedSession = -1
         try {
