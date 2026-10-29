@@ -333,8 +333,9 @@ jobs:
           # Phase 3 task 13: ExerciseCardTest +5, RestTimerDockTest +2, RestTimerExpandedTest +4, RestTimerCompactTest 3,
           # SizesTimingElevationTest +1. Swipe settle restart fix: SetRowSwipeTest +1.
           # Phase 3 task 17 fix round 1: SetRowColumnsTest 2.
+          # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 277
+          MIN_DS_IOS_TESTS: 281
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

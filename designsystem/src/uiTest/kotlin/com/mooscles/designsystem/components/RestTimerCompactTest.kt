@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionEquals
@@ -89,5 +91,22 @@ class RestTimerCompactTest {
         onNodeWithTag(TimerMinusTag).assertDoesNotExist()
         onNodeWithTag(TimerPlusTag).assertDoesNotExist()
         onNodeWithTag(TimerSkipTag).assertExists()
+    }
+
+    /** Task 13 review M1, on the compact timer: paused or done, the open button says so. */
+    @Test
+    fun openLabelReadsPausedAndDone() {
+        val cases = listOf(
+            visual(84, TimerPhase.Paused) to ("Open rest timer, 1 minute and 24 seconds remaining" to "Paused"),
+            visual(0, TimerPhase.Done) to ("Open rest timer" to "Rest complete"),
+        )
+        for ((shown, expected) in cases) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale("en") { RestTimerCompact(shown, {}, onOpen = {}) } }
+                waitForIdle()
+                val body = onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals(expected.first)
+                assertEquals(expected.second, body.fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription))
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import com.mooscles.designsystem.format.MoosclesNumbers
+import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.resources.Res
@@ -48,6 +49,7 @@ const val TimerTitleTag = "timer-title"
 const val TimerTotalTag = "timer-total"
 const val TimerPauseResumeTag = "timer-pause-resume"
 const val TimerRestartTag = "timer-restart"
+const val TimerDoneCheckTag = "timer-done-check"
 
 /** The widest time the expanded timer shows; the size of the digits is chosen for it. */
 private const val EXPANDED_WIDEST_TIME = "00:00"
@@ -61,8 +63,9 @@ private const val EXPANDED_WIDEST_TIME = "00:00"
  * under the component's own "Up next"), "Skip rest" (tonal), "Pause"/"Resume" ([onPauseResume],
  * secondary; disabled once done) and "Restart" ([onRestart], text). It fills the height it is given
  * and scrolls when the content is taller (large text). Same phases, haptics and live region as
- * [RestTimerDock]; presentational too. The time stays on one line inside the clear middle of the
- * ring: when the font scale would make it wider, it shrinks to fit, but never below `num.lg`.
+ * [RestTimerDock]; presentational too. Done, a check takes the time's place under "Rest complete",
+ * in the full ring. The time stays on one line inside the clear middle of the ring: when the font
+ * scale would make it wider, it shrinks to fit, but never below `num.lg`.
  */
 @Composable
 fun RestTimerExpanded(
@@ -156,14 +159,24 @@ fun RestTimerExpanded(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             MText(status, MTheme.type.labelLg, color = colors.textSecondary)
-                            MText(
-                                MoosclesNumbers.clock(visual.remainingSeconds),
-                                timeStyle,
-                                modifier = Modifier.testTag(TimerTimeTag),
-                                color = if (paused) colors.textSecondary else colors.textPrimary,
-                                softWrap = false,
-                                maxLines = 1,
-                            )
+                            if (done) {
+                                // Done: the check where the time was, in the full ring (spec "Expandido");
+                                // "0:00" would say nothing more, and the ring keeps its room at large text.
+                                MIcon(
+                                    MIcons.CircleCheck, contentDescription = null,
+                                    modifier = Modifier.testTag(TimerDoneCheckTag),
+                                    size = sizes.checkDisc, tint = colors.timerProgress,
+                                )
+                            } else {
+                                MText(
+                                    MoosclesNumbers.clock(visual.remainingSeconds),
+                                    timeStyle,
+                                    modifier = Modifier.testTag(TimerTimeTag),
+                                    color = if (paused) colors.textSecondary else colors.textPrimary,
+                                    softWrap = false,
+                                    maxLines = 1,
+                                )
+                            }
                             if (total != null) {
                                 MText(
                                     total, MTheme.type.labelLg.tabular(),

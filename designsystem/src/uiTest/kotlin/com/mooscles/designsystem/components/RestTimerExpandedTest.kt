@@ -9,6 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
@@ -21,6 +24,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.assertShownWhole
@@ -246,5 +250,42 @@ class RestTimerExpandedTest {
         onNodeWithTag(TimerMinusTag).assertIsEnabled()
         waitForIdle()
         assertEquals(0, plus)
+    }
+
+    /** Spec "Expandido": done, the full ring shows the check, inside the ring even with iOS-sized 2x text. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun doneShowsTheCheckInsideTheRing() {
+        for ((phase, check) in listOf(TimerPhase.Running to false, TimerPhase.Paused to false, TimerPhase.Done to true)) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale("en") { Expanded(RestTimerVisual(if (check) 0 else 84, 120, phase, "Rest")) } }
+                waitForIdle()
+                val node = onNodeWithTag(TimerDoneCheckTag, useUnmergedTree = true)
+                if (check) node.assertExists() else node.assertDoesNotExist()
+            }
+        }
+        for ((scale, density) in listOf(1f to null, 2f to null, LINEAR_TWO_X_FONT_SCALE to 1f)) {
+            runComposeUiTest {
+                withTheme(fontScale = scale, density = density) {
+                    ProvideAppLocale("pt-BR") { Box(Modifier.width(360.dp)) { Expanded(RestTimerVisual(0, 120, TimerPhase.Done, "Rest")) } }
+                }
+                waitForIdle()
+                val ring = onNodeWithTag(TimerRingTag).fetchSemanticsNode().boundsInRoot
+                val status = onNode(hasText("Descanso concluído") and hasAnyAncestor(hasTestTag(TimerRingTag)), useUnmergedTree = true)
+                    .fetchSemanticsNode().boundsInRoot
+                val check = onNodeWithTag(TimerDoneCheckTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                val total = onNodeWithTag(TimerTotalTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                // The check stands for the time, and the ring's middle (status to total) stays within its clear circle.
+                onNodeWithTag(TimerTimeTag, useUnmergedTree = true).assertDoesNotExist()
+                // In the content's density (1 for the iOS-sized case), not the device's.
+                val px = density ?: this.density.density
+                val sizes = MoosclesSizes()
+                val clear = ring.height / 2f - (sizes.tickLength + 4.dp + sizes.expandedRingStroke).value * px
+                val center = ring.center
+                assertTrue(status.bottom <= check.top + 0.5f && check.bottom <= total.top + 0.5f, "scale $scale: order $status, $check, $total")
+                assertTrue(center.y - status.top <= clear, "scale $scale: status $status above the clear circle of $ring")
+                assertTrue(total.bottom - center.y <= clear, "scale $scale: total $total below the clear circle of $ring")
+            }
+        }
     }
 }

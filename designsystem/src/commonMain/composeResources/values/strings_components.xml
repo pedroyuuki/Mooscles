@@ -79,6 +79,8 @@
     <string name="ds_action_edit_set">Edit set</string>
     <string name="ds_action_copy_previous">Copy previous</string>
     <string name="ds_timer_open">Open rest timer, %1$s remaining</string>
+    <!-- The open label once the rest is over, when no time is left to read. -->
+    <string name="ds_timer_open_done">Open rest timer</string>
     <string name="ds_timer_of">of %1$s</string>
     <string name="ds_timer_pause">Pause</string>
     <string name="ds_timer_resume">Resume</string>

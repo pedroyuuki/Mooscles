@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import com.mooscles.designsystem.tokens.MoosclesMotion
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -261,5 +264,42 @@ class RestTimerDockTest {
         onNodeWithTag(TimerPlusTag).assertIsEnabled().performClick()
         waitForIdle()
         assertEquals(1, plus)
+    }
+
+    /** Task 13 review M1: paused or done, the open button says so instead of only "… remaining". */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun openLabelReadsPausedAndDone() {
+        val cases = listOf(
+            visual(84) to ("Abrir timer de descanso, 1 minuto e 24 segundos restantes" to null),
+            visual(84, TimerPhase.Paused) to ("Abrir timer de descanso, 1 minuto e 24 segundos restantes" to "Pausado"),
+            visual(0, TimerPhase.Done) to ("Abrir timer de descanso" to "Descanso concluído"),
+        )
+        for ((shown, expected) in cases) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale("pt-BR") { RestTimerDock(shown, {}, {}, {}, onOpen = {}) } }
+                waitForIdle()
+                val body = onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals(expected.first)
+                val state = body.fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription)
+                assertEquals(expected.second, state, "${shown.phase}")
+            }
+        }
+    }
+
+    /** Task 13 review M2: the body that opens the timer answers a press, like the other controls. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun bodyPressScales() = runComposeUiTest {
+        withTheme { Box(Modifier.width(412.dp)) { RestTimerDock(visual(84), {}, {}, {}, onOpen = {}) } }
+        waitForIdle()
+        val rest = onNodeWithTag(TimerOpenTag).fetchSemanticsNode().boundsInRoot
+        mainClock.autoAdvance = false
+        onNodeWithTag(TimerOpenTag).performTouchInput { down(center) }
+        mainClock.advanceTimeBy(MoosclesMotion().press + 100L)
+        val pressed = onNodeWithTag(TimerOpenTag).fetchSemanticsNode().boundsInRoot
+        onNodeWithTag(TimerOpenTag).performTouchInput { cancel() }
+        mainClock.autoAdvance = true
+        val expected = rest.width * MoosclesMotion().pressScale
+        assertTrue(kotlin.math.abs(pressed.width - expected) < 2f, "pressed ${pressed.width}, at rest ${rest.width}, expected $expected")
     }
 }

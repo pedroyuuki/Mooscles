@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.pluralCount
@@ -52,6 +53,7 @@ import com.mooscles.designsystem.resources.ds_timer_done
 import com.mooscles.designsystem.resources.ds_timer_minus15
 import com.mooscles.designsystem.resources.ds_timer_minus15_short
 import com.mooscles.designsystem.resources.ds_timer_open
+import com.mooscles.designsystem.resources.ds_timer_open_done
 import com.mooscles.designsystem.resources.ds_timer_paused
 import com.mooscles.designsystem.resources.ds_timer_plus15
 import com.mooscles.designsystem.resources.ds_timer_plus15_short
@@ -214,15 +216,27 @@ internal fun TimerAdjustButton(
  * The part of a timer that opens the expanded one: with [onOpen] one button named "Open rest
  * timer, 1 minute and 24 seconds remaining" (the name stands for the texts merged into it), without
  * it plain content. The texts are merged, not cleared, so they stay in the tree for the tests.
+ * Paused or done, the name alone would hide what the merged status line says, so the button also
+ * reads that state ("Paused", "Rest complete"); done, the name drops the "0 seconds remaining".
+ * A press scales the body like the other workout controls (`motion.pressScale`).
  */
 @Composable
 internal fun Modifier.timerOpener(visual: RestTimerVisual, onOpen: (() -> Unit)?): Modifier {
     val tagged = testTag(TimerOpenTag)
     if (onOpen == null) return tagged
-    val label = stringResource(Res.string.ds_timer_open, spokenDuration(visual.remainingSeconds))
+    val label = if (visual.phase == TimerPhase.Done) {
+        stringResource(Res.string.ds_timer_open_done)
+    } else {
+        stringResource(Res.string.ds_timer_open, spokenDuration(visual.remainingSeconds))
+    }
+    val state = if (visual.phase == TimerPhase.Running) null else timerStatus(visual)
     val source = remember { MutableInteractionSource() }
     return tagged
-        .semantics(mergeDescendants = true) { contentDescription = label }
+        .mPressScale(source, enabled = true)
+        .semantics(mergeDescendants = true) {
+            contentDescription = label
+            if (state != null) stateDescription = state
+        }
         .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onOpen)
         .mFocusRing(RoundedCornerShape(MTheme.radius.md), source)
 }
