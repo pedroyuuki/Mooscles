@@ -245,7 +245,11 @@ private fun ExerciseHeaderItem(
             onConfirm = {
                 confirm = null
                 when (kind) {
-                    ExerciseConfirm.REMOVE -> actions.removeWorkoutExercise(entry.id)
+                    ExerciseConfirm.REMOVE -> {
+                        // A removed set of this exercise has nowhere to go back to.
+                        screen.closeUndoFor(entry.id)
+                        actions.removeWorkoutExercise(entry.id)
+                    }
                     ExerciseConfirm.SWAP -> callbacks.onSwap(entry)
                 }
             },

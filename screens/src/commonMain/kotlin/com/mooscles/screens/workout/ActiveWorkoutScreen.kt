@@ -249,6 +249,8 @@ internal fun ActiveWorkoutScreen(
                 if (request == PICK_TO_ADD) {
                     actions.addWorkoutExercise(workout.id, exercise.id)
                 } else {
+                    // The removed set of this entry cannot come back into the new exercise.
+                    screen.closeUndoFor(request)
                     actions.replaceWorkoutExercise(request, exercise.id)
                 }
             },

@@ -84,7 +84,8 @@ class ActiveWorkoutScreenState(
 
     /**
      * The set removed last, with what "Undo" puts back, while its toast is up. Only this one can
-     * be undone (D13): another removal replaces it and [closeUndo] (finishing, discarding) ends it.
+     * be undone (D13): another removal replaces it, [closeUndo] (finishing, discarding) ends it, and
+     * so does [closeUndoFor] when its exercise is swapped or removed.
      */
     var lastRemoved: RemovedSet? by mutableStateOf(lastRemoved)
         internal set
@@ -178,6 +179,15 @@ class ActiveWorkoutScreenState(
     /** Closes the "Undo" toast of the last removal, if it is up, so the removal can no longer be undone. */
     fun closeUndo() {
         lastRemoved = null
+    }
+
+    /**
+     * [closeUndo] when the set removed last was in the exercise [entryId], as that exercise is
+     * swapped or removed: its set has nowhere to go back to (the entry now holds another
+     * exercise, or is gone), so "Undo" must not put it there.
+     */
+    fun closeUndoFor(entryId: String) {
+        if (lastRemoved?.entryId == entryId) lastRemoved = null
     }
 
     /**

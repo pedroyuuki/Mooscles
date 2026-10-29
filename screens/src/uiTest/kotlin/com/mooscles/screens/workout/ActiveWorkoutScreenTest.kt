@@ -660,6 +660,48 @@ class ActiveWorkoutScreenTest {
         assertFalse(fake.calls.any { it.startsWith("addWorkoutExercise") })
     }
 
+    private fun ComposeUiTest.openCardMenuItem(entryId: String, tag: String) {
+        onNode(hasTestTag(ExerciseMenuTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag(entryId))), useUnmergedTree = true).performClick()
+        waitForIdle()
+        onNodeWithTag(tag).performClick()
+        waitForIdle()
+    }
+
+    @Test
+    fun swappingTheExerciseClosesTheUndoOfItsSet() = runComposeUiTest {
+        val fake = Fake(stateOf(nothingDone))
+        show(fake)
+        swipeLeft("e1s3")
+        toast("Série 3 removida").assertIsDisplayed()
+        // Swapping another exercise leaves the undo up: the set still has its own entry to go back to.
+        openCardMenuItem("e2", ExerciseMenuTags.SWAP)
+        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        waitForIdle()
+        assertEquals("replaceWorkoutExercise:e2,curl", fake.calls.last())
+        toast("Série 3 removida").assertExists()
+        // Swapping its own exercise closes it: "Undo" would put the bench set into the new exercise.
+        openCardMenuItem("e1", ExerciseMenuTags.SWAP)
+        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        waitForIdle()
+        assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
+        toast("Série 3 removida").assertDoesNotExist()
+        assertFalse(fake.calls.any { it.startsWith("restoreSet") })
+    }
+
+    @Test
+    fun removingTheExerciseClosesTheUndoOfItsSet() = runComposeUiTest {
+        val fake = Fake(stateOf(nothingDone))
+        show(fake)
+        swipeLeft("e1s3")
+        toast("Série 3 removida").assertIsDisplayed()
+        openCardMenuItem("e1", ExerciseMenuTags.REMOVE)
+        dialogButton("Remover").performClick()
+        waitForIdle()
+        assertEquals("removeWorkoutExercise:e1", fake.calls.last())
+        toast("Série 3 removida").assertDoesNotExist()
+        assertFalse(fake.calls.any { it.startsWith("restoreSet") })
+    }
+
     @Test
     fun restChipOpensTheRestSheet() = runComposeUiTest {
         show(Fake(stateOf(nothingDone)))
