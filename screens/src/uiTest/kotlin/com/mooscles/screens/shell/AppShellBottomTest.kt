@@ -41,6 +41,7 @@ import com.mooscles.designsystem.components.WorkoutBarTimeTag
 import com.mooscles.designsystem.components.tabTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.assertNumbersWhole
@@ -235,6 +236,79 @@ class AppShellBottomTest {
         )
         onNodeWithTag(WorkoutBarSkipTag).assertContentDescriptionEquals("Pular descanso").performClick()
         assertEquals(listOf("skipTimer:"), actions.calls)
+    }
+
+    @Test
+    fun pausedRestStaysOnTheBar() = runComposeUiTest {
+        val paused = TimerUi("Supino", remainingSeconds = 84, durationSeconds = 120, paused = true)
+        shell(timer = mutableStateOf(paused))
+        assertEquals("1:24", textOf(WorkoutBarRestTag))
+        onNodeWithTag(WorkoutBarSetsTag, useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag(WorkoutBarSkipTag).assertExists()
+        onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals(
+            "Treino em andamento, Treino A, 42 minutos. Descanso, 1 minuto e 24 segundos, pausado",
+        )
+        // A pause has no end of its own: it is still there well past the done hold.
+        mainClock.advanceTimeBy(MoosclesTiming().timerDoneHold + 1_000L)
+        waitForIdle()
+        assertEquals("1:24", textOf(WorkoutBarRestTag))
+        onNodeWithTag(WorkoutBarSkipTag).assertExists()
+    }
+
+    @Test
+    fun finishedRestShowsDoneThenGoesBack() = runComposeUiTest {
+        val timer = mutableStateOf(resting.copy(remainingSeconds = 1))
+        shell(timer = timer)
+        assertEquals("0:01", textOf(WorkoutBarRestTag))
+        val hold = MoosclesTiming().timerDoneHold
+        mainClock.autoAdvance = false
+        // The bar sees the rest end: the end shows for the hold.
+        runOnUiThread { timer.value = TimerUi("Supino", remainingSeconds = 0, durationSeconds = 120, finished = true) }
+        mainClock.advanceTimeByFrame()
+        mainClock.advanceTimeByFrame()
+        assertEquals("0:00", textOf(WorkoutBarRestTag))
+        onNodeWithTag(WorkoutBarSetsTag, useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals("Treino em andamento, Treino A, 42 minutos. Descanso, concluído")
+        mainClock.advanceTimeBy(hold - 200L)
+        onNodeWithTag(WorkoutBarRestTag, useUnmergedTree = true).assertExists()
+        // After the hold the sets come back, and the bar no longer reads a rest.
+        mainClock.advanceTimeBy(400L)
+        mainClock.advanceTimeByFrame()
+        onNodeWithTag(WorkoutBarRestTag, useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag(WorkoutBarSkipTag).assertDoesNotExist()
+        assertEquals("9 de 15 séries", textOf(WorkoutBarSetsTag))
+        onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals("Treino em andamento, Treino A, 42 minutos")
+        mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun alreadyFinishedRestIsNotShownOnOpen() = runComposeUiTest {
+        // As after opening the app or coming back from the workout: the end happened while the bar was not there.
+        shell(timer = mutableStateOf(TimerUi("Supino", remainingSeconds = 0, durationSeconds = 120, finished = true)))
+        onNodeWithTag(WorkoutBarRestTag, useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag(WorkoutBarSkipTag).assertDoesNotExist()
+        assertEquals("9 de 15 séries", textOf(WorkoutBarSetsTag))
+        onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals("Treino em andamento, Treino A, 42 minutos")
+    }
+
+    @Test
+    fun elapsedIsReadUnderAMinuteAndWithHours() {
+        // Under a minute the bar does not read "0 seconds"; from 60 minutes it reads hours (ruling F5).
+        val cases = listOf(
+            35_000L to ("0:35" to "Treino em andamento, Treino A, menos de um minuto"),
+            (62 * 60 + 5) * 1_000L to ("1:02:05" to "Treino em andamento, Treino A, 1 hora e 2 minutos"),
+        )
+        for ((since, expected) in cases) {
+            runComposeUiTest {
+                shell(now = { startedAt + since })
+                onNodeWithTag(WorkoutBarTimeTag, useUnmergedTree = true).assertTextEquals(expected.first)
+                onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals(expected.second)
+            }
+        }
+        runComposeUiTest {
+            shell(locale = "en", now = { startedAt + 35_000L })
+            onNodeWithTag(WorkoutBarTag).assertContentDescriptionEquals("Workout in progress, Treino A, less than a minute")
+        }
     }
 
     @Test

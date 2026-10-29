@@ -94,7 +94,7 @@ private fun ShellWorkoutBar(
     RecompositionProbe("bar")
     val elapsed by rememberElapsedSeconds(workout.startedAt, nowMillis)
     ActiveWorkoutBar(
-        state = workoutBarState(workout, elapsed, timer.value),
+        state = workoutBarState(workout, elapsed, timer.value, rememberBarRestPhase(timer.value)),
         onOpen = onOpen,
         onSkipRest = onSkipRest,
         modifier = Modifier.testTag(ShellWorkoutBarTag),
