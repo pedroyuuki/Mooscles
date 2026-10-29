@@ -22,8 +22,29 @@ internal class WorkoutPresentation {
     private var catalogUi = emptyList<ExerciseUi>()
     /** Every exercise/convention's finished history, rebuilt from one index whenever the history changes. */
     private var previousPerformances = emptyMap<Pair<String, LoadConvention>, List<ExercisePerformance>>()
-    private val previousDescriptions = mutableMapOf<Triple<String, LoadConvention, Long>, String?>()
+    /** Keyed by exercise, convention and the session's start: the text, sets and date of the session before it. */
+    private val previousDescriptions = mutableMapOf<Triple<String, LoadConvention, Long>, PreviousSession>()
     private var previousActive: WorkoutUi? = null
+
+    /** The latest earlier session of one exercise and convention, built once per history change and reused. */
+    private class PreviousSession(val text: String?, val sets: List<PreviousSetUi>, val date: Long?)
+
+    companion object {
+        private val NO_PREVIOUS = PreviousSession(null, emptyList(), null)
+
+        /**
+         * Each record beaten (never a first record) keyed by the set the domain chose for it. A set holding both
+         * records shows the weight one (plan decision 5). Set ids are unique, so the set's own entry is the one with
+         * the record's exercise and convention.
+         */
+        internal fun setRecords(weight: List<WeightPr>, reps: List<RepsPr>): Map<String, SetRecordUi> {
+            if (weight.all { it.firstRecord } && reps.all { it.firstRecord }) return emptyMap()
+            val result = HashMap<String, SetRecordUi>()
+            reps.forEach { if (!it.firstRecord) result[it.setId] = SetRecordUi(RecordKind.REPS, previousReps = it.previousReps) }
+            weight.forEach { if (!it.firstRecord) result[it.setId] = SetRecordUi(RecordKind.WEIGHT, previousKg = it.previousWeightKg) }
+            return result
+        }
+    }
 
     private fun Exercise.toUi() = ExerciseUi(id, name, muscle.label, equipment.label, convention.label, custom)
     fun present(data: AppData, prefs: PreferencesUi): UiState {
@@ -60,25 +81,29 @@ internal class WorkoutPresentation {
                 RecordUi(snapshot(e), p.weightKg, p.newReps, workoutId = w.id, date = w.endedAt ?: w.startedAt,
                     kind = RecordKind.REPS, previousReps = p.previousReps, assistance = p.assistance)
             }
+            val setRecords = setRecords(prs, repsPrs)
             val entries = workoutEntries.map { e ->
                 val previous = previousDescriptions.getOrPut(Triple(e.exerciseId, e.convention, w.startedAt)) {
-                    previousPerformances[e.exerciseId to e.convention].orEmpty()
-                        .firstOrNull { it.workout.id != w.id && it.workout.startedAt < w.startedAt }?.sets?.joinToString(" · ") {
+                    val performance = previousPerformances[e.exerciseId to e.convention].orEmpty()
+                        .firstOrNull { it.workout.id != w.id && it.workout.startedAt < w.startedAt }
+                    if (performance == null) NO_PREVIOUS
+                    else PreviousSession(performance.sets.joinToString(" · ") {
                         val load = if (it.weightKg == 0.0 && !it.assistance && e.convention != LoadConvention.ASSISTANCE) "Bodyweight"
                         else "${if (it.assistance || e.convention == LoadConvention.ASSISTANCE) "Assistance " else ""}${DecimalText.fixed2(WeightUnits.fromKg(it.weightKg, prefs.pounds)).trimEnd('0').trimEnd('.')} ${if (prefs.pounds) "lb" else "kg"}"
                         "$load × ${it.reps}"
-                    }
+                    }, performance.sets.map { PreviousSetUi(it.weightKg, it.reps, it.warmup, it.assistance) },
+                        performance.workout.startedAt)
                 }
                 val pr = prs.firstOrNull { it.exerciseId == e.exerciseId && it.convention == e.convention }
                 val savedSets = allSetsByEntry[e.id].orEmpty()
                 val old = oldEntries[e.id]
                 val oldSets = old?.sets?.associateBy { it.id }.orEmpty()
                 val sets = savedSets.map {
-                    val row = SetUi(it.id, it.reps, it.weightKg, it.completed, it.warmup, it.assistance)
+                    val row = SetUi(it.id, it.reps, it.weightKg, it.completed, it.warmup, it.assistance, setRecords[it.id])
                     oldSets[it.id]?.takeIf { previous -> previous == row } ?: row
                 }
                 val entry = WorkoutExerciseUi(e.id, snapshot(e), old?.sets?.takeIf { it == sets } ?: sets,
-                    e.restSeconds, previous, pr?.newWeightKg, pr?.firstRecord ?: false,
+                    e.restSeconds, previous.text, pr?.newWeightKg, pr?.firstRecord ?: false,
                     records.filter { record ->
                         record.exercise.id == e.exerciseId && record.exercise.convention == e.convention.label &&
                             savedSets.any { set ->
@@ -89,7 +114,7 @@ internal class WorkoutPresentation {
                                     if (record.kind == RecordKind.WEIGHT) !assisted
                                     else assisted == record.assistance && set.reps == record.reps
                             }
-                    })
+                    }, previous.sets, previous.date)
                 old?.takeIf { it == entry } ?: entry
             }
             return WorkoutUi(w.id, w.name, w.startedAt, w.endedAt, entries, records, sourceRoutineId = w.sourceRoutineId)

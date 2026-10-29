@@ -139,7 +139,8 @@ jobs:
           # Raised to the real count after phase 2: 624 (:app 377, :shared 181, :designsystem 66).
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7, WorkoutRepositoryErrorTypesTest +5,
           # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
-          MIN_HOST_TESTS: 644
+          # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
+          MIN_HOST_TESTS: 661
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -258,7 +259,8 @@ jobs:
           # (6). Raise it when tests move into commonTest or iosTest, so a silently
           # skipped class fails the job.
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
-          MIN_IOS_TESTS: 172
+          # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
+          MIN_IOS_TESTS: 189
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
