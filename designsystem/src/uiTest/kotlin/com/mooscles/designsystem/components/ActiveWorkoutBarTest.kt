@@ -36,7 +36,8 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class ActiveWorkoutBarTest {
-    private val longName = "Upper body strength and conditioning, heavy week"
+    /** Long enough to overflow 412 dp at 1.0 on every platform (iOS fonts are narrower than Android's). */
+    private val longName = "Upper body strength and conditioning, heavy week: bench press, weighted pull-ups, overhead press, barbell rows and face pulls to finish"
 
     @AfterTest
     fun restoreSystemLanguage() {
