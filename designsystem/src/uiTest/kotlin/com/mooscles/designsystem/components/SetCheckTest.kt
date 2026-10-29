@@ -7,6 +7,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.i18n.ProvideAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -40,6 +42,36 @@ class SetCheckTest {
         onNodeWithTag("c").performClick()
         waitForIdle()
         onNodeWithTag("c").assertIsOn()
+    }
+
+    /**
+     * Done, the check says so: its name becomes "Set 4 completed" and its double tap reads as
+     * "mark set as not done", so a screen reader never offers "Complete set 4" on a set that is
+     * already complete, where the tap would undo it.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun nameAndActionFollowTheState() {
+        for ((language, texts) in listOf(
+            "en" to listOf("Complete set 4", "Complete set", "Set 4 completed", "Mark set as not done"),
+            "pt-BR" to listOf("Concluir série 4", "Concluir série", "Série 4 concluída", "Marcar série como não feita"),
+        )) {
+            runComposeUiTest {
+                var checked by mutableStateOf(false)
+                withTheme { ProvideAppLocale(language) { SetCheck(checked, { checked = it }, setNumber = 4, modifier = Modifier.testTag("c")) } }
+                waitForIdle()
+                fun clickLabel() = onNodeWithTag("c").fetchSemanticsNode().config[SemanticsActions.OnClick].label
+                onNodeWithTag("c").assertContentDescriptionEquals(texts[0]).assertIsOff()
+                assertEquals(texts[1], clickLabel(), language)
+                onNodeWithTag("c").performClick()
+                waitForIdle()
+                onNodeWithTag("c").assertContentDescriptionEquals(texts[2]).assertIsOn()
+                assertEquals(texts[3], clickLabel(), language)
+                onNodeWithTag("c").performSemanticsAction(SemanticsActions.OnClick)
+                waitForIdle()
+                onNodeWithTag("c").assertContentDescriptionEquals(texts[0]).assertIsOff()
+            }
+        }
     }
 
     @OptIn(ExperimentalTestApi::class)

@@ -30,6 +30,7 @@
     <string name="ds_action_change_type">Change type</string>
     <string name="ds_action_remove_set">Remove set</string>
     <string name="ds_complete_set_n">Complete set %1$d</string>
+    <string name="ds_set_n_completed">Set %1$d completed</string>
     <string name="ds_stepper_increase">Increase %1$s by %2$s</string>
     <string name="ds_stepper_decrease">Decrease %1$s by %2$s</string>
     <string name="ds_pr_label">PR</string>

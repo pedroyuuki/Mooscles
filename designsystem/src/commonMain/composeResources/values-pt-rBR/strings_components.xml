@@ -30,6 +30,7 @@
     <string name="ds_action_change_type">Mudar tipo</string>
     <string name="ds_action_remove_set">Remover série</string>
     <string name="ds_complete_set_n">Concluir série %1$d</string>
+    <string name="ds_set_n_completed">Série %1$d concluída</string>
     <string name="ds_stepper_increase">Aumentar %1$s em %2$s</string>
     <string name="ds_stepper_decrease">Diminuir %1$s em %2$s</string>
     <string name="ds_pr_label">PR</string>
