@@ -43,6 +43,9 @@ kotlin {
             api("org.jetbrains.compose.ui:ui:1.12.2")
             api("org.jetbrains.compose.animation:animation:1.12.2")
             api("org.jetbrains.compose.components:components-resources:1.12.2")
+            // Time zone and calendar math only (decision 10); every text comes from our own strings.
+            // 0.8.0 is the stable line (the -0.6.x-compat builds keep the old Instant, unused here).
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
         }
         // Pure tests (mappings, formatting, rules): the JVM host and the iOS simulator.
         commonTest.dependencies {
