@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.mooscles.designsystem.components.MButton
+import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.SetRow
 import com.mooscles.designsystem.components.SetRowState
 import com.mooscles.designsystem.components.SetStatus
@@ -22,6 +24,7 @@ import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_unit_kg_spoken
+import com.mooscles.designsystem.resources.gallery_restore_set
 import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
@@ -57,9 +60,9 @@ private fun SetSample.state(index: Int, locale: NumberLocale, spoken: (String) -
 )
 
 /**
- * A set row in every status and type. The first one can be checked and unchecked, and swiped
- * (right completes, left unchecks); the one with suggestions turns them into saved values when its
- * previous result is tapped.
+ * A set row in every status and type. The first one can be checked and unchecked, and swiped: right
+ * completes a pending set (a done one does not move right), left removes it, with a button to bring
+ * it back. The one with suggestions turns them into saved values when its previous result is tapped.
  */
 @Composable
 fun SetRowPage() {
@@ -68,6 +71,7 @@ fun SetRowPage() {
     val spoken: (String) -> String = { spokenTemplate.replace("%", it) }
     var first by remember { mutableStateOf(SetStatus.Pending) }
     var copied by remember { mutableStateOf(false) }
+    var removed by remember { mutableStateOf(false) }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap),
@@ -84,6 +88,10 @@ fun SetRowPage() {
             SetSample("70", 12, SetType.Failure, SetStatus.Pending, "65"),
         ).mapIndexed { position, sample -> sample.state(position + 1, locale, spoken) }
         for ((position, row) in rows.withIndex()) {
+            if (position == 0 && removed) {
+                MButton(stringResource(Res.string.gallery_restore_set), onClick = { removed = false }, variant = MButtonVariant.Secondary)
+                continue
+            }
             SetRow(
                 state = row,
                 onCompleteChange = { if (position == 0) first = if (it) SetStatus.Completed else SetStatus.Pending },
@@ -92,7 +100,12 @@ fun SetRowPage() {
                 onChangeType = {},
                 onRemove = {},
                 modifier = if (position == 0) {
-                    Modifier.setRowSwipe(enabled = true, onComplete = { first = SetStatus.Completed }, onRemove = { first = SetStatus.Pending })
+                    Modifier.setRowSwipe(
+                        completeEnabled = first == SetStatus.Pending,
+                        removeEnabled = true,
+                        onComplete = { first = SetStatus.Completed },
+                        onRemove = { removed = true },
+                    )
                 } else {
                     Modifier
                 },

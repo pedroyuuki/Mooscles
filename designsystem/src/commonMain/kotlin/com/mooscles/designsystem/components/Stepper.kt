@@ -71,8 +71,8 @@ const val StepperValueTag = "stepper-value"
  * that saves on every step can instead save only here.
  *
  * [contentDescription] names the whole stepper ("Editing load of set 4"); with [focusRequester]
- * the stepper itself is focusable, so the caller can move focus to it (its buttons stay focusable
- * on their own). [display] is the text of [value]; by default the domain's plain decimal
+ * the stepper itself is focusable and draws the focus ring when focused, so the caller can move
+ * focus to it (its buttons stay focusable on their own, each with its ring). [display] is the text of [value]; by default the domain's plain decimal
  * ([MoosclesNumbers.plain], `20`, `82.5`) with the separators of [numberLocale] (`82,5` in pt-BR),
  * never `20.0`.
  */
@@ -108,9 +108,16 @@ fun Stepper(
         }
     }
     val finished = { currentOnFinished() }
+    val groupSource = remember { MutableInteractionSource() }
     var group: Modifier = Modifier
     if (contentDescription != null) group = group.semantics { this.contentDescription = contentDescription }
-    if (focusRequester != null) group = group.focusRequester(focusRequester).focusable()
+    // A focusable group draws the focus ring like every other focusable (WCAG 2.4.7).
+    if (focusRequester != null) {
+        group = group
+            .focusRequester(focusRequester)
+            .focusable(interactionSource = groupSource)
+            .mFocusRing(RoundedCornerShape(MTheme.radius.md), groupSource)
+    }
     Row(
         modifier.then(group),
         horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap),

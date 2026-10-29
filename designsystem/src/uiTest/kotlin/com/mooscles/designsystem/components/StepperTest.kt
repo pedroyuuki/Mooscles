@@ -32,6 +32,8 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.withTheme
+import com.mooscles.designsystem.interaction.FocusRingVisible
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
@@ -351,5 +353,46 @@ class StepperTest {
         onNodeWithContentDescription("Editing load of set 4").assertIsFocused()
         onNodeWithContentDescription("Increase").assertExists()
         onNodeWithContentDescription("Decrease").assertExists()
+    }
+
+    /** Review M4: holding up to [max] ends the run there, with one finish, and lifting adds none. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun holdToTheMaxFinishesOnce() = runComposeUiTest {
+        val log = mutableListOf<String>()
+        loggingStepper(log, start = 295.0, max = 300.0)
+        mainClock.autoAdvance = false
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
+        repeat(700) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
+        repeat(200) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(listOf("change:297.5", "change:300.0", "finished"), log)
+        onNodeWithTag(StepperIncreaseTag).assertIsNotEnabled()
+    }
+
+    /** Review M3: the focusable group and each button draw the focus ring when focused (WCAG 2.4.7). */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun focusedGroupAndButtonsDrawTheRing() = runComposeUiTest {
+        val focus = FocusRequester()
+        withTheme {
+            Stepper(
+                85.0, {}, step = 2.5, min = 0.0, decreaseLabel = "Decrease", increaseLabel = "Increase",
+                focusRequester = focus, contentDescription = "Editing load of set 4",
+            )
+        }
+        waitForIdle()
+        fun ring(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.fetchSemanticsNode().config.getOrNull(FocusRingVisible)
+        val group = onNodeWithContentDescription("Editing load of set 4")
+        assertEquals(false, ring(group))
+        runOnUiThread { focus.requestFocus() }
+        waitForIdle()
+        assertEquals(true, ring(group))
+        for (tag in listOf(StepperIncreaseTag, StepperDecreaseTag)) {
+            onNodeWithTag(tag).requestFocus()
+            waitForIdle()
+            assertEquals(true, ring(onNodeWithTag(tag)), tag)
+            assertEquals(false, ring(group), "the group keeps its ring while $tag has focus")
+        }
     }
 }

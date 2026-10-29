@@ -107,4 +107,5 @@
     <string name="gallery_sample_workout">Workout A</string>
     <string name="gallery_sample_long_workout">Upper body strength, heavy week</string>
     <string name="gallery_sample_sets_done">9 of 15 sets</string>
+    <string name="gallery_restore_set">Restore the set</string>
 </resources>

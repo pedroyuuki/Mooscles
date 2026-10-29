@@ -308,11 +308,16 @@ class SetRowTest {
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun assertNumbersWholeOn320dp(density: Float? = null, fontScale: Float = 2f, fields: Boolean = false) = runComposeUiTest {
+    private fun assertNumbersWholeOn320dp(
+        density: Float? = null,
+        fontScale: Float = 2f,
+        fields: Boolean = false,
+        type: SetType = SetType.Normal,
+    ) = runComposeUiTest {
         withTheme(fontScale = fontScale, density = density) {
             Box(Modifier.width(320.dp)) {
                 ProvideAppLocale("en") {
-                    val row = state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12")
+                    val row = state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12", type = type)
                     if (fields) {
                         SetRow(
                             row.copy(status = SetStatus.Pending, editing = true, reps = 12), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
@@ -568,17 +573,10 @@ class SetRowTest {
                 onNodeWithTag("row").assertContentDescriptionEquals(expected)
             }
         }
-        // The two letters stay whole where text is largest: iOS's 2x on a 320 dp screen.
-        runComposeUiTest {
-            withTheme(fontScale = LINEAR_TWO_X_FONT_SCALE, density = 1f) {
-                Box(Modifier.width(320.dp)) { ProvideAppLocale("en") { Row(state(type = SetType.Assisted, load = "187.5")) } }
-            }
-            waitForIdle()
-            val node = onNodeWithTag(SetRowTypeTag, useUnmergedTree = true).fetchSemanticsNode()
-            val results = mutableListOf<TextLayoutResult>()
-            runOnUiThread { node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results) }
-            assertShownWhole(results.single())
-        }
+        // With the wider "AS" pill, every text (the letters, previous, load and reps) stays whole
+        // where text is largest: iOS's 2x on a 320 dp screen, with numbers and with fields.
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE, type = SetType.Assisted)
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE, fields = true, type = SetType.Assisted)
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -633,9 +631,11 @@ class SetRowTest {
                     waitForIdle()
                     assertEquals(1, copies, "\"$previous\" tap")
                     val actions = onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty()
-                    assertEquals(label, actions.last().label)
                     assertEquals(6, actions.size)
-                    runOnUiThread { actions.last().action() }
+                    // Copy comes before the destructive "Remove set", which stays last.
+                    assertEquals(label, actions[4].label)
+                    assertEquals(if (lang == "en") "Remove set" else "Remover série", actions.last().label)
+                    runOnUiThread { actions[4].action() }
                     assertEquals(2, copies, "\"$previous\" action")
                 }
             }
@@ -702,5 +702,29 @@ class SetRowTest {
         waitForIdle()
         assertEquals(listOf(HapticEvent.SetCompleted), haptics.events.toList())
         onNodeWithTag(PrBadgeTag, useUnmergedTree = true).assertExists()
+    }
+
+    /** Review M2: a suggested load with saved reps names the load as the suggestion, not the reps. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun onlyLoadSuggestedSaysSuggestedLoad() {
+        for ((lang, spoken, expected) in listOf(
+            Triple(
+                "pt-BR", state(previousSpoken = "80 quilos por 6", load = "82,5", loadSpoken = "82,5 quilos", reps = 8, loadSuggested = true),
+                "Série 4 de 5, anterior 80 quilos por 6, sugestão de carga 82,5 quilos, 8 repetições, não concluída",
+            ),
+            Triple(
+                "en", state(load = "82.5", loadSpoken = "82.5 kilograms", reps = 8, loadSuggested = true),
+                "Set 4 of 5, previous 80 kilograms by 6, suggested load 82.5 kilograms, 8 reps, not completed",
+            ),
+        )) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+                assertEquals(MoosclesColors.Light.textSecondary, colorOf(spoken.load, SetRowLoadTag))
+                assertEquals(MoosclesColors.Light.textPrimary, colorOf("8", SetRowRepsTag))
+            }
+        }
     }
 }

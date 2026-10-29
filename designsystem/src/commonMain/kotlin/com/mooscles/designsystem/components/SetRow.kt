@@ -49,6 +49,7 @@ import com.mooscles.designsystem.resources.ds_action_remove_set
 import com.mooscles.designsystem.resources.ds_action_uncomplete_set
 import com.mooscles.designsystem.resources.ds_load_by_reps_spoken
 import com.mooscles.designsystem.resources.ds_load_spoken
+import com.mooscles.designsystem.resources.ds_load_suggestion_spoken
 import com.mooscles.designsystem.resources.ds_pr_label
 import com.mooscles.designsystem.resources.ds_pr_spoken
 import com.mooscles.designsystem.resources.ds_reps_count
@@ -133,7 +134,8 @@ private const val TWO_LINE_FONT_SCALE = 1.5f
  * tap on the row calls it instead of tapping whatever cell is under the node's center. It is an
  * accessibility action only; a finger on the gaps between cells does nothing. With
  * [onCopyPrevious], the previous result is a target of at least 48 dp that calls it, and the row
- * gains the "Copy previous" action.
+ * gains the "Copy previous" action (before "Remove set", which stays last). Pass null when there is
+ * no previous result or the set is done: the row does not check either.
  *
  * The haptics follow [SetRowState.status]: pending to `Completed` gives the plain one; pending to
  * `CompletedRecord` the record one instead, and `Completed` to `CompletedRecord` the record one,
@@ -183,10 +185,15 @@ fun SetRow(
         SetType.Assisted -> stringResource(Res.string.ds_set_type_assisted_spoken)
     }
     val heading = if (typeSpoken != null) "$position, $typeSpoken" else position
-    // "load 85 kilograms, 6 reps"; a suggested load: "suggestion 82.5 kilograms, 8 reps"; only the
-    // reps suggested: "load 85 kilograms, suggestion 8 reps". One "suggestion" covers both values.
+    // Saved: "load 85 kilograms, 6 reps". Both suggested: "suggestion 82.5 kilograms, 8 reps" (one
+    // word covers both). Only the load: "suggested load 82.5 kilograms, 8 reps", so the saved reps
+    // are not heard as part of the suggestion. Only the reps: "load 85 kilograms, suggestion 8 reps".
     val loadPhrase = stringResource(
-        if (state.loadSuggested) Res.string.ds_suggestion_spoken else Res.string.ds_load_spoken,
+        when {
+            state.loadSuggested && state.repsSuggested -> Res.string.ds_suggestion_spoken
+            state.loadSuggested -> Res.string.ds_load_suggestion_spoken
+            else -> Res.string.ds_load_spoken
+        },
         state.loadSpoken,
     )
     val repsPhrase = if (state.repsSuggested && !state.loadSuggested) {
@@ -247,8 +254,9 @@ fun SetRow(
                     CustomAccessibilityAction(labelLoad) { onEditLoad(); true },
                     CustomAccessibilityAction(labelReps) { onEditReps(); true },
                     CustomAccessibilityAction(labelType) { onChangeType(); true },
-                    CustomAccessibilityAction(labelRemove) { onRemove(); true },
                     onCopyPrevious?.let { copy -> CustomAccessibilityAction(labelCopy) { copy(); true } },
+                    // The destructive action stays last.
+                    CustomAccessibilityAction(labelRemove) { onRemove(); true },
                 )
             },
         measurePolicy = measurePolicy,

@@ -73,6 +73,7 @@
     <string name="ds_workout_bar_rest_spoken">%1$s. Descanso, %2$s</string>
     <string name="ds_load_spoken">carga %1$s</string>
     <string name="ds_suggestion_spoken">sugestão %1$s</string>
+    <string name="ds_load_suggestion_spoken">sugestão de carga %1$s</string>
     <string name="ds_set_type_assisted_short">AS</string>
     <string name="ds_set_type_assisted_spoken">série assistida</string>
     <string name="ds_action_edit_set">Editar série</string>

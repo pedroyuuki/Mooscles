@@ -318,8 +318,9 @@ jobs:
           # Set row density fix: SetRowTest +4.
           # Phase 3 task 11: IconsTest +1, SizesTimingElevationTest +1, MTabBarTest 8, ActiveWorkoutBarTest 7.
           # Phase 3 task 12: SetRowTest +9, SetRowSwipeTest 5, NumericFieldTest +3, StepperTest +6.
+          # Task 12 review fixes: SetRowSwipeTest +7, StepperTest +2, NumericFieldTest +2, SetRowTest +1.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 244
+          MIN_DS_IOS_TESTS: 256
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
