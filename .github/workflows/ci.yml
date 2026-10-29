@@ -141,7 +141,7 @@ jobs:
           # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
           # Phase 3 task 6: WorkoutSetRestoreTest +8, AppViewModelRestoreHostTest +5.
-          MIN_HOST_TESTS: 674
+          MIN_HOST_TESTS: 689
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -261,7 +261,7 @@ jobs:
           # commonTest or iosTest, so a silently skipped class fails the job.
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
-          MIN_IOS_TESTS: 189
+          MIN_IOS_TESTS: 204
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
