@@ -174,7 +174,8 @@ jobs:
           # MainActivityOpenWorkoutHostTest +4. 781 + 21 = 802.
           # Task 25 fix round 1: RestProgressNotificationHostTest +1 (timeout after the end),
           # RestTimerActionsHostTest +1 (gate held past the receiver's budget). 802 + 2 = 804.
-          MIN_HOST_TESTS: 804
+          # Phase 3 task 31 (:screens commonTest): ShareCardDataTest +1. 804 + 1 = 805.
+          MIN_HOST_TESTS: 805
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -351,8 +352,9 @@ jobs:
           # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1 (fix round 1: RestTimerCompactTest +1).
           # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
           # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1 (fix round 1: StepperTest +2).
+          # Phase 3 task 31 (screen critique): SetCheckTest +1, RestTimerExpandedTest +1.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 289
+          MIN_DS_IOS_TESTS: 291
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -392,8 +394,9 @@ jobs:
           # Task 21: RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1 (commonTest), RecordReactionTest 10 (uiTest).
           # Task 28: ActiveWorkoutFlowTest 2 (uiTest; the end-to-end proof of the workout on iOS, spec D6).
           # Task 29: TapBudgetTest 11, WorkoutAccessibilitySweepTest 12, ScreensHelpersTest +1 (uiTest).
+          # Task 31 (screen critique): ShareCardDataTest +1 (commonTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 286
+          MIN_SCREENS_IOS_TESTS: 287
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
