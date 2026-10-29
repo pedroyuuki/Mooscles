@@ -252,6 +252,46 @@ class RestTimerExpandedTest {
         assertEquals(0, plus)
     }
 
+    /**
+     * The board "Descanso e recorde": inside the ring, only the phase ("Rest", "Paused", "Rest
+     * complete"); the exercise is in the title. A screen's dock label ("Rest · Barbell bench
+     * press") drawn there ran over the ring's stroke. Every corner of the status stays within the
+     * ring's clear circle, in both languages, at 1.0 and 2.0.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun ringShowsOnlyThePhaseInsideItsClearCircle() {
+        val long = "Rest · Barbell bench press with a long name"
+        for ((language, words) in listOf(
+            "en" to listOf("Rest", "Paused", "Rest complete"),
+            "pt-BR" to listOf("Descanso", "Pausado", "Descanso concluído"),
+        )) {
+            for ((phase, word) in listOf(TimerPhase.Running, TimerPhase.Paused, TimerPhase.Done).zip(words)) {
+                for (scale in listOf(1f, 2f)) {
+                    runComposeUiTest {
+                        withTheme(fontScale = scale) {
+                            ProvideAppLocale(language) {
+                                Box(Modifier.width(360.dp)) { Expanded(RestTimerVisual(if (phase == TimerPhase.Done) 0 else 84, 120, phase, long)) }
+                            }
+                        }
+                        waitForIdle()
+                        val inRing = hasAnyAncestor(hasTestTag(TimerRingTag))
+                        onNode(hasText(long, substring = true) and inRing, useUnmergedTree = true).assertDoesNotExist()
+                        val status = onNode(hasText(word) and inRing, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                        val ring = onNodeWithTag(TimerRingTag).fetchSemanticsNode().boundsInRoot
+                        val sizes = MoosclesSizes()
+                        val clear = ring.height / 2f - with(density) { (sizes.tickLength + 4.dp + sizes.expandedRingStroke).toPx() }
+                        val center = ring.center
+                        for ((x, y) in listOf(status.left to status.top, status.right to status.top, status.left to status.bottom, status.right to status.bottom)) {
+                            val distance = kotlin.math.hypot(x - center.x, y - center.y)
+                            assertTrue(distance <= clear + 1f, "$language $phase $scale: corner ($x, $y) of $status outside the clear circle $clear")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /** Spec "Expandido": done, the full ring shows the check, inside the ring even with iOS-sized 2x text. */
     @OptIn(ExperimentalTestApi::class)
     @Test

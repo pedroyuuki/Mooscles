@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -26,6 +27,7 @@ import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_timer_rest
 import com.mooscles.designsystem.resources.ds_timer_close
 import com.mooscles.designsystem.resources.ds_timer_minus15
 import com.mooscles.designsystem.resources.ds_timer_minus15_short
@@ -55,6 +57,12 @@ const val TimerDoneCheckTag = "timer-done-check"
 private const val EXPANDED_WIDEST_TIME = "00:00"
 
 /**
+ * The share of the ring's clear middle the phase over the time may take; a longer one ("Descanso
+ * concluído" at 2x) wraps. Over the time, that width's corners stay inside the clear circle.
+ */
+private const val RING_STATUS_SHARE = 0.7f
+
+/**
  * The full-screen rest timer. At the top, "Close timer" (`ChevronDown`, [onClose]) and the [title]
  * ("Rest · Bench press · set 4 of 5"); below, a 280 dp plate ring with 60 rim marks, the time in
  * `num.display` and "of 2:00" ([totalText], the full rest; none, no line). The controls sit in the
@@ -64,7 +72,8 @@ private const val EXPANDED_WIDEST_TIME = "00:00"
  * secondary; disabled once done) and "Restart" ([onRestart], text). It fills the height it is given
  * and scrolls when the content is taller (large text). Same phases, haptics and live region as
  * [RestTimerDock]; presentational too. Done, a check takes the time's place under "Rest complete",
- * in the full ring. The time stays on one line inside the clear middle of the ring: when the font
+ * in the full ring. Over the time, the ring names only the phase ("Rest", "Paused", "Rest
+ * complete"), never [RestTimerVisual.label]: the exercise is in the [title]. The time stays on one line inside the clear middle of the ring: when the font
  * scale would make it wider, it shrinks to fit, but never below `num.lg`.
  */
 @Composable
@@ -88,7 +97,12 @@ fun RestTimerExpanded(
     val space = MTheme.space
     val progress = rememberRingProgress(visual)
     val announcement = rememberTimerAnnouncement(visual)
-    val status = timerStatus(visual)
+    // Inside the ring, only the phase (board "Descanso e recorde"): the title already names the
+    // exercise, and a dock label ("Rest · Bench press") is wider than the ring's clear middle.
+    val status = when (visual.phase) {
+        TimerPhase.Running -> stringResource(Res.string.ds_timer_rest)
+        else -> timerStatus(visual)
+    }
     val done = visual.phase == TimerPhase.Done
     val paused = visual.phase == TimerPhase.Paused
     RestFinishedHaptic(done)
@@ -158,7 +172,10 @@ fun RestTimerExpanded(
                         modifier = Modifier.testTag(TimerRingTag),
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            MText(status, MTheme.type.labelLg, color = colors.textSecondary)
+                            MText(
+                                status, MTheme.type.labelLg.copy(textAlign = TextAlign.Center),
+                                modifier = Modifier.widthIn(max = inner * RING_STATUS_SHARE), color = colors.textSecondary,
+                            )
                             if (done) {
                                 // Done: the check where the time was, in the full ring (spec "Expandido");
                                 // "0:00" would say nothing more, and the ring keeps its room at large text.
