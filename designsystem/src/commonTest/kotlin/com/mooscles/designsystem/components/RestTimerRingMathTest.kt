@@ -1,7 +1,10 @@
 package com.mooscles.designsystem.components
 
+import androidx.compose.ui.geometry.Size
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class RestTimerRingMathTest {
     @Test
@@ -32,5 +35,18 @@ class RestTimerRingMathTest {
         assertEquals(0f, angles.first())
         for (i in 1 until angles.size) assertEquals(6f, angles[i] - angles[i - 1])
         assertEquals(354f, angles.last())
+    }
+
+    @Test
+    fun stackFitsInCircleChecksEveryCorner() {
+        // One row centered on the circle: its corner is at (30, 40), 50 from the center.
+        assertTrue(stackFitsInCircle(listOf(Size(60f, 80f)), 50f))
+        assertFalse(stackFitsInCircle(listOf(Size(62f, 80f)), 50f))
+        // Stacked, the narrow top row sits farther out: (30, 40) fits 50, (30, 41) does not.
+        assertTrue(stackFitsInCircle(listOf(Size(60f, 20f), Size(80f, 40f), Size(60f, 20f)), 50f))
+        assertFalse(stackFitsInCircle(listOf(Size(60f, 21f), Size(80f, 40f), Size(60f, 21f)), 50f))
+        // A wide middle row fails on its own corners, whatever the rows around it: (45, 25) is 51.5 out.
+        assertFalse(stackFitsInCircle(listOf(Size(10f, 10f), Size(90f, 50f), Size(10f, 10f)), 50f))
+        assertTrue(stackFitsInCircle(emptyList(), 0f))
     }
 }

@@ -182,7 +182,9 @@ jobs:
           # Phase 3 final review fixes: :screens commonTest RecordAnnouncerTest +1, RestDraftTest +2;
           # :app ShellNavigationHostTest +2, WorkoutSharePreviewHostTest -1; :shared WorkoutPresentationTest +1,
           # InProcessRestTimerTest +1. 807 + 3 + 1 + 2 = 813.
-          MIN_HOST_TESTS: 813
+          # Ring iOS fix (:designsystem commonTest): RestTimerRingMathTest +1.
+          # Merged with the ring fix: 813 + 1 = 814.
+          MIN_HOST_TESTS: 814
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -364,8 +366,9 @@ jobs:
           # Timer announcer fix (2ff31b4): RestTimerDockTest +2 (uiTest), SizesTimingElevationTest +1
           # (commonTest). 291 (counted by run 40937989893 on 5d94a7f) + 3 = 294, the number of @Test in
           # commonTest, uiTest and iosTest at the phase 3 end (that count matched the CI at 53b13ba and 5d94a7f).
+          # Ring iOS fix: RestTimerRingMathTest +1. Run 40944220889 counted 295 (294 + 1).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 294
+          MIN_DS_IOS_TESTS: 295
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -21,7 +21,12 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.geometry.Size
+import androidx.compose.runtime.remember
+import kotlin.math.abs
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
@@ -58,9 +63,30 @@ private const val EXPANDED_WIDEST_TIME = "00:00"
 
 /**
  * The share of the ring's clear middle the phase over the time may take; a longer one ("Descanso
- * concluído" at 2x) wraps. Over the time, that width's corners stay inside the clear circle.
+ * concluído" at 2x) wraps. Whether the wrapped phase still fits is up to [stackFitsInCircle].
  */
 private const val RING_STATUS_SHARE = 0.7f
+
+/**
+ * Whether [rows], stacked top to bottom with no gap and each centered on the middle of a circle
+ * of [radius] (the stack too), keep every corner within that circle. It is how the expanded ring
+ * chooses the type of its middle: a row's farthest corners are its half width across and its edge
+ * farthest from the center, so the top and bottom rows usually decide it.
+ */
+internal fun stackFitsInCircle(rows: List<Size>, radius: Float): Boolean {
+    var top = -rows.fold(0f) { sum, row -> sum + row.height } / 2f
+    for (row in rows) {
+        val bottom = top + row.height
+        val y = maxOf(abs(top), abs(bottom))
+        val x = row.width / 2f
+        if (x * x + y * y > radius * radius) return false
+        top = bottom
+    }
+    return true
+}
+
+/** The type of the ring's middle: [time] for the clock, [label] for the phase and the total. */
+private data class RingType(val time: TextStyle, val label: TextStyle)
 
 /**
  * The full-screen rest timer. At the top, "Close timer" (`ChevronDown`, [onClose]) and the [title]
@@ -73,8 +99,12 @@ private const val RING_STATUS_SHARE = 0.7f
  * and scrolls when the content is taller (large text). Same phases, haptics and live region as
  * [RestTimerDock]; presentational too. Done, a check takes the time's place under "Rest complete",
  * in the full ring. Over the time, the ring names only the phase ("Rest", "Paused", "Rest
- * complete"), never [RestTimerVisual.label]: the exercise is in the [title]. The time stays on one line inside the clear middle of the ring: when the font
- * scale would make it wider, it shrinks to fit, but never below `num.lg`.
+ * complete"), never [RestTimerVisual.label]: the exercise is in the [title]. The phase, the time
+ * (one line) and the total stay inside the ring's clear circle, corners included: when the font
+ * scale would take them past it (iOS scales text linearly, so its 2x is larger than Android's),
+ * the time steps down from `num.display` to `num.lg`, `num.md` and `num.sm`, and at each of those
+ * the phase and the total from `label.lg` to `label.md` and `caption`, until the stack fits
+ * ([stackFitsInCircle]); the largest time comes first.
  */
 @Composable
 fun RestTimerExpanded(
@@ -120,21 +150,35 @@ fun RestTimerExpanded(
     val measurer = rememberTextMeasurer()
     val direction = LocalLayoutDirection.current
     val sizes = MTheme.sizes
-    val full = MTheme.type.numDisplay
+    val type = MTheme.type
     val inner = sizes.expandedRing - (sizes.tickLength + MTheme.space.s1 + sizes.expandedRingStroke) * 2
-    // The shrink is worked out on the drawn size (dp), not on sp: with Android's nonlinear font
-    // scaling a smaller sp grows by a larger factor, so scaling the sp would not shrink the width
-    // by the same share.
-    val timeStyle = with(density) {
-        val smallest = MTheme.type.numLg.fontSize.toDp() / full.fontSize.toDp()
-        val width = measurer.measure(
-            EXPANDED_WIDEST_TIME, full, softWrap = false, maxLines = 1, layoutDirection = direction, density = density,
-        ).size.width.toDp()
-        val fit = (inner / width).coerceIn(smallest, 1f)
-        if (fit < 1f) {
-            full.copy(fontSize = (full.fontSize.toDp() * fit).toSp(), lineHeight = (full.lineHeight.toDp() * fit).toSp())
-        } else {
-            full
+    val statusWidth = inner * RING_STATUS_SHARE
+    val check = sizes.checkDisc
+    // Measured as drawn (px, after the platform's font scaling), so the choice holds for Android's
+    // nonlinear scaling and iOS's linear one alike. The widest time stands for every time.
+    val ringType = remember(status, total, done, type, density, direction, inner, statusWidth, check) {
+        with(density) {
+            val radius = inner.toPx() / 2f
+            val statusConstraints = Constraints(maxWidth = statusWidth.roundToPx())
+            fun row(text: String, style: TextStyle, constraints: Constraints = Constraints()): Size {
+                val size = measurer.measure(
+                    text, style, softWrap = constraints.hasBoundedWidth, maxLines = if (constraints.hasBoundedWidth) Int.MAX_VALUE else 1,
+                    constraints = constraints, layoutDirection = direction, density = density,
+                ).size
+                return Size(size.width.toFloat(), size.height.toFloat())
+            }
+            val candidates = listOf(type.numDisplay, type.numLg, type.numMd, type.numSm).flatMap { time ->
+                listOf(type.labelLg, type.labelMd, type.caption).map { RingType(time, it) }
+            }
+            candidates.firstOrNull { candidate ->
+                val middle = if (done) Size(check.toPx(), check.toPx()) else row(EXPANDED_WIDEST_TIME, candidate.time)
+                val rows = listOfNotNull(
+                    row(status, candidate.label.copy(textAlign = TextAlign.Center), statusConstraints),
+                    middle,
+                    total?.let { row(it, candidate.label.tabular()) },
+                )
+                stackFitsInCircle(rows, radius)
+            } ?: candidates.last()
         }
     }
 
@@ -173,8 +217,8 @@ fun RestTimerExpanded(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             MText(
-                                status, MTheme.type.labelLg.copy(textAlign = TextAlign.Center),
-                                modifier = Modifier.widthIn(max = inner * RING_STATUS_SHARE), color = colors.textSecondary,
+                                status, ringType.label.copy(textAlign = TextAlign.Center),
+                                modifier = Modifier.widthIn(max = statusWidth), color = colors.textSecondary,
                             )
                             if (done) {
                                 // Done: the check where the time was, in the full ring (spec "Expandido");
@@ -187,7 +231,7 @@ fun RestTimerExpanded(
                             } else {
                                 MText(
                                     MoosclesNumbers.clock(visual.remainingSeconds),
-                                    timeStyle,
+                                    ringType.time,
                                     modifier = Modifier.testTag(TimerTimeTag),
                                     color = if (paused) colors.textSecondary else colors.textPrimary,
                                     softWrap = false,
@@ -196,7 +240,7 @@ fun RestTimerExpanded(
                             }
                             if (total != null) {
                                 MText(
-                                    total, MTheme.type.labelLg.tabular(),
+                                    total, ringType.label.tabular(),
                                     modifier = Modifier.testTag(TimerTotalTag), color = colors.textSecondary,
                                     softWrap = false, maxLines = 1,
                                 )
