@@ -20,7 +20,8 @@ object SetSuggestions {
     /** 0 kg is empty only for the regular load conventions; Added weight and Assistance treat 0 as a real value. */
     fun loadIsEmpty(weightKg: Double, convention: String): Boolean = weightKg == 0.0 && convention in commonLoad
 
-    /** Pairs by kind (warm-up vs working, assisted counts as working), then by order. Unpaired sets get null. */
+    /** Pairs by kind (warm-up vs working, assisted counts as working), then by order. [previous] holds only the completed
+     * sets of the earlier session, in order. Unpaired sets get null. */
     fun pairPrevious(sets: List<SetUi>, previous: List<PreviousSetUi>): List<PreviousSetUi?> {
         val warm = previous.filter { it.warmup }
         val work = previous.filter { !it.warmup }

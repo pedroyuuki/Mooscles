@@ -59,8 +59,7 @@ class SetSuggestionsTest {
     @Test fun aWarmupAboveDoesNotFeedAWorkingSet() =
         assertEquals(SetSuggestion(80.0, 8), one(listOf(s("w", 40.0, 10, true, w = true), s("a")), listOf(p(80.0, 8)), total, 1))
 
-    @Test fun poundsKeepTheExactSourceKg() =
-        assertEquals(36.287389, one(listOf(s("a")), listOf(p(36.287389, 8)), total, 0).weightKg)
+    // The exact-kg-in-pounds rule has no failing case in this layer (nothing converts); it is covered where the screen writes values.
 
     @Test fun aClearedFieldGetsNoSuggestion() {
         val r = one(listOf(s("s1", 82.5, 8, true), s("s2")), prev, total, 1, setOf("s2" to SetField.LOAD))
@@ -78,4 +77,35 @@ class SetSuggestionsTest {
 
     @Test fun nothingWithoutASource() =
         assertEquals(SetSuggestion.None, one(listOf(s("a")), emptyList(), total, 0))
+
+    @Test fun anEmptyCompletedAboveFallsThroughToThePreviousSessionLoad() {
+        val r = one(listOf(s("a", 0.0, 8, true), s("b")), prev, total, 1)
+        assertEquals(SetSuggestion(80.0, 8), r)
+    }
+
+    @Test fun aZeroRepsCompletedAboveFallsThroughToThePreviousSessionReps() {
+        val r = one(listOf(s("a", 82.5, 0, true), s("b")), prev, total, 1)
+        assertEquals(SetSuggestion(82.5, 8), r)
+    }
+
+    @Test fun aWarmupsOnlyPreviousSessionGivesNothingToWorkingSets() {
+        val previous = listOf(p(40.0, 10, w = true))
+        assertEquals(listOf(null, null), SetSuggestions.pairPrevious(listOf(s("1"), s("2")), previous))
+        assertEquals(SetSuggestion.None, one(listOf(s("1")), previous, total, 0))
+    }
+
+    @Test fun pairingIgnoresTheOrderOfKindsInThePreviousList() {
+        val previous = listOf(p(80.0, 8), p(40.0, 10, w = true))
+        assertEquals(listOf(previous[1], previous[0]), SetSuggestions.pairPrevious(listOf(s("1", w = true), s("2")), previous))
+    }
+
+    @Test fun aCompletedWarmupAboveFeedsTheNextWarmup() {
+        val sets = listOf(s("1", 40.0, 10, true, w = true), s("2", w = true))
+        assertEquals(SetSuggestion(40.0, 10), one(sets, listOf(p(20.0, 12, w = true)), total, 1))
+    }
+
+    @Test fun aClearedRepsFieldGetsNoSuggestion() {
+        val r = one(listOf(s("s1", 82.5, 8, true), s("s2")), prev, total, 1, setOf("s2" to SetField.REPS))
+        assertEquals(82.5, r.weightKg); assertNull(r.reps)
+    }
 }
