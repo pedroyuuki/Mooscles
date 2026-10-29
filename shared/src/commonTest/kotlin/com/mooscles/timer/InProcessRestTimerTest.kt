@@ -93,6 +93,27 @@ class InProcessRestTimerTest {
         assertTrue(r.timer.ui.value.finished)
     }
 
+    @Test fun ticksAtZeroAttemptTheCompletionOncePerRest() = runTest {
+        val store = InMemoryPreferencesStore()
+        val clock = { epoch + testScheduler.currentTime }
+        var lookups = 0
+        val timer = InProcessRestTimer(RestTimerPersistence(store, clock), backgroundScope, { lookups++; "w1" }, clock)
+        timer.start("Bench", 2); settle()
+        // The claim cannot be written, so the rest stays running at 0 while the ticks (every 250 ms) go on.
+        store.failWrites = true
+        val before = lookups
+        settle(2_000)
+        settle(2_500)
+        assertTrue(timer.ui.value.running)
+        assertEquals(0, timer.ui.value.remainingSeconds)
+        assertEquals(1, lookups - before, "completion attempts while ten ticks found the rest at 0")
+        assertEquals(RestTimerError.STORAGE_UNAVAILABLE, timer.errorCode.value)
+        // A new rest is a new countdown: its end is claimed again.
+        store.failWrites = false
+        timer.start("Row", 1); settle(1_500)
+        assertTrue(timer.ui.value.finished)
+    }
+
     @Test fun clearForSessionEndRemovesTheTimer() = runTest {
         val r = rig()
         r.timer.start("Bench", 60); settle()

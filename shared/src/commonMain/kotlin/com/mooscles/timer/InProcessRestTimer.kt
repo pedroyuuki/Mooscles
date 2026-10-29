@@ -47,9 +47,19 @@ class InProcessRestTimer(
     }.stateIn(scope, SharingStarted.Eagerly, RestTimerState())
     private val ticks = flow { while (true) { emit(Unit); delay(tickMillis) } }
 
+    /**
+     * The countdown whose completion was last asked for: every tick that finds it at 0 would ask
+     * again, so each one is claimed once. A new rest (a new token or deadline) is a new state.
+     * Read and written only by the [ui] collector, one tick at a time.
+     */
+    private var completing: RestTimerState? = null
+
     override val ui: StateFlow<TimerUi> = combine(state, ticks) { s, _ ->
         val current = now()
-        if (s.running && s.remaining(current) == 0L) scope.launch { complete(s.token) }
+        if (s.running && s.remaining(current) == 0L && s != completing) {
+            completing = s
+            scope.launch { complete(s.token) }
+        }
         TimerUi(s.exerciseName, ceil(s.remaining(current) / 1000.0).toInt(), (s.durationMillis / 1000).toInt(),
             s.running, s.paused, s.finished, progress = s.progress(current), workoutExerciseId = s.workoutExerciseId)
     }.stateIn(scope, SharingStarted.Eagerly, TimerUi())
