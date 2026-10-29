@@ -59,8 +59,10 @@ internal fun FinishDialog(
         pluralCount(Res.plurals.workout_exercises_count, counts.doneExercises),
         durationText(elapsed),
     )
+    // The pending sets on a line of their own: run on after "42 min.", the count read as part of
+    // the duration ("12 min. 7 / incomplete sets").
     val text = if (counts.pendingSets > 0) {
-        summary + " " + pluralCount(Res.plurals.workout_finish_pending, counts.pendingSets)
+        summary + "\n" + pluralCount(Res.plurals.workout_finish_pending, counts.pendingSets)
     } else {
         summary
     }

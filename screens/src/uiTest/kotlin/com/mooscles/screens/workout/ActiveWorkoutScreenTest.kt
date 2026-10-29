@@ -348,7 +348,7 @@ class ActiveWorkoutScreenTest {
         waitForIdle()
         onNodeWithText("Finalizar treino?").assertIsDisplayed()
         onNodeWithText("9 séries em 4 exercícios · 42 min.", substring = true).assertIsDisplayed()
-        onNodeWithText("3 séries não concluídas ficam de fora.", substring = true).assertIsDisplayed()
+        onNodeWithText("9 séries em 4 exercícios · 42 min.\n3 séries não concluídas ficam de fora.").assertIsDisplayed()
         assertEquals(listOf("Continuar treinando", "Finalizar"), dialogButtons())
         dialogButton("Continuar treinando").performClick()
         waitForIdle()
@@ -360,7 +360,7 @@ class ActiveWorkoutScreenTest {
         show(Fake(stateOf(workout(sets = listOf(1, 1, 1, 1), done = listOf(1, 1, 1, 0)))))
         onNodeWithTag(WorkoutHeaderTags.FINISH).performClick()
         waitForIdle()
-        onNodeWithText("3 séries em 3 exercícios · 42 min. 1 série não concluída fica de fora.").assertIsDisplayed()
+        onNodeWithText("3 séries em 3 exercícios · 42 min.\n1 série não concluída fica de fora.").assertIsDisplayed()
     }
 
     @Test
