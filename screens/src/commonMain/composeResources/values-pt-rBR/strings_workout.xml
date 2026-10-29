@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brazilian Portuguese translation of values/strings_workout.xml, with the same keys and arguments. -->
+<resources>
+    <string name="workout_enter_reps">Informe as repetições</string>
+    <string name="workout_load_of_set">Carga da série %1$d</string>
+    <string name="workout_reps_of_set">Repetições da série %1$d</string>
+</resources>

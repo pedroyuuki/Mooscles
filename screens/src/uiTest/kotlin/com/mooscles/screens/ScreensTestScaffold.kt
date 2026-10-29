@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import com.mooscles.designsystem.i18n.ProvideAppLocale
@@ -25,7 +26,9 @@ import com.mooscles.screens.workout.LocalRecompositionProbe
  * [ProvideAppLocale]; a class that passes it should call `LocalAppLocale.restore()` in an
  * `@AfterTest`, so a failure cannot leak the language into the next test. [size] gives the screen
  * exactly that size, as a phone of that width would. [probe] receives every key reported by
- * `RecompositionProbe`. v2 queues the composition: call `waitForIdle()`.
+ * `RecompositionProbe`. With [restoration], the content is set through that tester, so
+ * `emulateSaveAndRestore()` can recreate it from its saved state. v2 queues the composition: call
+ * `waitForIdle()`.
  */
 @OptIn(ExperimentalTestApi::class)
 fun ComposeUiTest.withScreen(
@@ -37,9 +40,10 @@ fun ComposeUiTest.withScreen(
     size: DpSize? = null,
     density: Float? = null,
     probe: ((String) -> Unit)? = null,
+    restoration: StateRestorationTester? = null,
     content: @Composable () -> Unit,
 ) {
-    setContent {
+    val frame: @Composable () -> Unit = {
         val screen = density ?: LocalDensity.current.density
         CompositionLocalProvider(
             LocalDensity provides Density(screen, fontScale),
@@ -52,6 +56,7 @@ fun ComposeUiTest.withScreen(
             }
         }
     }
+    if (restoration != null) restoration.setContent(frame) else setContent(frame)
 }
 
 /**

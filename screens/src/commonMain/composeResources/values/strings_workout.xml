@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the active workout screen. English is the base; every key also exists in values-pt-rBR. -->
+<resources>
+    <string name="workout_enter_reps">Enter the reps</string>
+    <string name="workout_load_of_set">Load of set %1$d</string>
+    <string name="workout_reps_of_set">Reps of set %1$d</string>
+</resources>
