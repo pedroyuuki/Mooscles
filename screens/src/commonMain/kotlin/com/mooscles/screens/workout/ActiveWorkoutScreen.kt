@@ -207,6 +207,8 @@ internal fun ActiveWorkoutScreen(
                     )
                 }
             }
+            // Over the top of the list, under the header: the record toast (D17).
+            RecordReaction(workout, pounds, screen, Modifier.align(Alignment.TopCenter))
         }
         // Under the list: the rest timer and the keyboard's room.
         WorkoutTimerLayer(timer, workout, pounds, actions, imeInsets)

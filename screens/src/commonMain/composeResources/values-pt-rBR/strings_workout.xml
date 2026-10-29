@@ -97,4 +97,8 @@
     <string name="workout_timer_title">Descanso · %1$s · série %2$d de %3$d</string>
     <string name="workout_timer_title_short">Descanso · %1$s</string>
     <string name="workout_up_next_value">série %1$d · %2$s × %3$d</string>
+    <string name="workout_record_weight_title">Novo recorde de carga</string>
+    <string name="workout_record_reps_title">Novo recorde de repetições</string>
+    <string name="workout_record_weight_detail">%1$s × %2$d · antes %3$s</string>
+    <string name="workout_record_reps_detail">%1$s × %2$d · antes %1$s × %3$d</string>
 </resources>
