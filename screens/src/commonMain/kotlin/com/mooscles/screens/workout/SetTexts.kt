@@ -14,6 +14,12 @@ import org.jetbrains.compose.resources.stringResource
 // The texts of a set: loads in the chosen unit, with the language's decimal separator. The value
 // stays in exact kg everywhere else; these only show it.
 
+/** Whether a saved load is shown blank: 0 is no load, and the set row's field shows nothing. */
+internal fun blankLoad(weightKg: Double): Boolean = weightKg == 0.0
+
+/** Whether saved reps are shown blank: 0 is none yet, and the set row's field shows nothing. */
+internal fun blankReps(reps: Int): Boolean = reps == 0
+
 /** The unit symbol, the same in every language. */
 internal fun unitSymbol(pounds: Boolean): String = if (pounds) "lb" else "kg"
 

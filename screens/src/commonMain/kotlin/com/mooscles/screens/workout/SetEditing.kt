@@ -98,8 +98,8 @@ internal class SetRowEditor(
 
     /** The saved value as a field shows it; nothing for 0. */
     fun savedText(field: SetField): String = when (field) {
-        SetField.LOAD -> if (set.weightKg == 0.0) "" else loadText(set.weightKg)
-        SetField.REPS -> if (set.reps == 0) "" else set.reps.toString()
+        SetField.LOAD -> if (blankLoad(set.weightKg)) "" else loadText(set.weightKg)
+        SetField.REPS -> if (blankReps(set.reps)) "" else set.reps.toString()
     }
 
     fun draft(field: SetField): String? = screen.drafts[set.id to field]

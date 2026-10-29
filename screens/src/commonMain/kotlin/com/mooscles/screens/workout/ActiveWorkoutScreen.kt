@@ -98,7 +98,9 @@ private const val PICK_TO_ADD = ""
  * It takes the parts of the state it shows, not the whole `UiState`, so an emission that changes
  * something else (the updater, the backup) does not recompose it. [catalog] and [history] are
  * the exercise picker's. Under the list, [WorkoutTimerLayer] holds the rest timer, the only part
- * that reads [timer], and the keyboard's room: the list ends above both.
+ * that reads [timer], and the keyboard's room: the list ends above both. When the expanded timer
+ * closes after the rest, the list goes back to the next set ([returnToSet]); [onTimerHeight]
+ * gets the timer's height, so the route's toasts sit above it.
  */
 @Composable
 internal fun ActiveWorkoutScreen(
@@ -118,6 +120,7 @@ internal fun ActiveWorkoutScreen(
     imeInsets: WindowInsets,
     nowMillis: () -> Long,
     timer: State<TimerUi>,
+    onTimerHeight: (Int) -> Unit = {},
 ) {
     val space = MTheme.space
     val haptics = MTheme.haptics
@@ -210,8 +213,14 @@ internal fun ActiveWorkoutScreen(
             // Over the top of the list, under the header: the record toast (D17).
             RecordReaction(workout, pounds, screen, Modifier.align(Alignment.TopCenter))
         }
-        // Under the list: the rest timer and the keyboard's room.
-        WorkoutTimerLayer(timer, workout, pounds, actions, imeInsets)
+        // Under the list: the rest timer and the keyboard's room. After the rest, back to the next set.
+        val reduced = MTheme.reducedMotion
+        val exercises by rememberUpdatedState(workout.exercises)
+        WorkoutTimerLayer(
+            timer, workout, pounds, actions, imeInsets,
+            onRestOver = { setId -> scope.launch { returnToSet(setId, exercises, screen, listState, reduced, firstIndex = 0) } },
+            onHeightChanged = onTimerHeight,
+        )
         CardAdvance(workout.exercises, screen, listState, firstIndex = 0)
     }
 

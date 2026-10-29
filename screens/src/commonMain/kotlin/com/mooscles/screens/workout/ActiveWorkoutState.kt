@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mooscles.designsystem.components.NumericInput
 import com.mooscles.designsystem.components.SetRowCells
@@ -226,6 +227,12 @@ class ActiveWorkoutScreenState(
 
     /** Where each composed row (and its edit panel) is, for [endsSetEditingOnOutsideTap]. Not state. */
     internal val rowAreas = HashMap<String, LayoutCoordinates>()
+
+    /**
+     * The focus of each composed row, so the screen can hand the keyboard's focus to the next set
+     * when the rest timer closes after the rest ([WorkoutTimerLayer]). Not state.
+     */
+    internal val rowFocus = HashMap<String, FocusRequester>()
 
     /** Where the editing scope is, for the same. Not state. */
     internal var scopeArea: LayoutCoordinates? = null

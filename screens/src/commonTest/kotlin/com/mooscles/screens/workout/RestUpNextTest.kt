@@ -36,13 +36,13 @@ class RestUpNextTest {
     @Test
     fun nextPendingOfTheTimerExercise() {
         // The timer's exercise comes first, even when an earlier one still has a pending set.
-        assertEquals(UpNext(setNumber = 5, weightKg = 85.0, reps = 6), RestUpNext.of(workout, "e2"))
-        assertEquals(UpNext(setNumber = 2, weightKg = 60.0, reps = 8), RestUpNext.of(workout, "e1"))
+        assertEquals(UpNext(setId = "e2s5", setNumber = 5, weightKg = 85.0, reps = 6), RestUpNext.of(workout, "e2"))
+        assertEquals(UpNext(setId = "e1s2", setNumber = 2, weightKg = 60.0, reps = 8), RestUpNext.of(workout, "e1"))
     }
 
     @Test
     fun fallsBackToTheFirstPendingOfTheWorkout() {
-        val first = UpNext(setNumber = 2, weightKg = 60.0, reps = 8)
+        val first = UpNext(setId = "e1s2", setNumber = 2, weightKg = 60.0, reps = 8)
         // The timer's exercise is done, it left the workout, or the rest came from the rest sheet (no entry).
         assertEquals(first, RestUpNext.of(workout, "e3"))
         assertEquals(first, RestUpNext.of(workout, "gone"))
@@ -55,5 +55,17 @@ class RestUpNextTest {
         assertNull(RestUpNext.of(done, "e2"))
         assertNull(RestUpNext.of(done, null))
         assertNull(RestUpNext.of(workout.copy(exercises = emptyList()), null))
+    }
+
+    /** Review M3: a 0 the set row leaves blank is never named ("série 2 · 0 × 12", "série 2 · 0 × 0"). */
+    @Test
+    fun blankPartsAreLeftOut() {
+        fun parts(weightKg: Double, reps: Int) = UpNext("s", 2, weightKg, reps).parts
+        assertEquals(UpNextParts.LoadAndReps, parts(85.0, 6))
+        // Added weight without a load: only the reps.
+        assertEquals(UpNextParts.Reps, parts(0.0, 12))
+        // No reps yet (a set just added, before a suggestion): only the set, with or without a load.
+        assertEquals(UpNextParts.SetOnly, parts(0.0, 0))
+        assertEquals(UpNextParts.SetOnly, parts(85.0, 0))
     }
 }

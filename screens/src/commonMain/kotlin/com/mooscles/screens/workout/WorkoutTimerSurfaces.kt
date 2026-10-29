@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -42,6 +43,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.paneTitle
@@ -54,17 +56,22 @@ import com.mooscles.designsystem.components.RestTimerExpanded
 import com.mooscles.designsystem.components.RestTimerVisual
 import com.mooscles.designsystem.components.TimerPhase
 import com.mooscles.designsystem.format.MoosclesNumbers
+import com.mooscles.designsystem.format.pluralCount
+import com.mooscles.designsystem.resources.ds_reps_count
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.RestDuration
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_timer_title
 import com.mooscles.screens.resources.workout_timer_title_short
+import com.mooscles.screens.resources.workout_up_next_reps
+import com.mooscles.screens.resources.workout_up_next_set
 import com.mooscles.screens.resources.workout_up_next_value
 import com.mooscles.screens.shell.rememberBarRestPhase
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.TimerUi
 import com.mooscles.ui.WorkoutUi
 import org.jetbrains.compose.resources.stringResource
+import com.mooscles.designsystem.resources.Res as DsRes
 
 /** The test tags of the rest timer on the workout screen. */
 internal object WorkoutTimerTags {
@@ -100,11 +107,13 @@ private class LastRest {
  *   with the workout's id ([rememberSaveable]); the dock leaves while it is open, so one timer
  *   speaks and gives the end's haptic once. Closing it ("Close timer" or back) gives the focus
  *   back to the dock's body. It closes on its own once there is no rest left (after the done
- *   hold, a skip, the end of the session).
+ *   hold, a skip, the end of the session). After the done hold it hands back to the next set
+ *   ([onRestOver], with the set [RestUpNext] finds): the screen brings that set into view.
  * - +15 s stops at the 5:00 ceiling (`canAdd`).
  *
  * The screen lays it under the list, not over it, so an edited row is brought into view above the
- * timer and the keyboard ([pounds] is the up next load's unit).
+ * timer and the keyboard ([pounds] is the up next load's unit). [onHeightChanged] gets the height
+ * of the timer (0 without one, the keyboard's room left out), so the toasts can sit above it.
  */
 @Composable
 internal fun WorkoutTimerLayer(
@@ -114,6 +123,8 @@ internal fun WorkoutTimerLayer(
     actions: MoosclesActions,
     imeInsets: WindowInsets,
     modifier: Modifier = Modifier,
+    onRestOver: (setId: String) -> Unit = {},
+    onHeightChanged: (Int) -> Unit = {},
 ) {
     val current = timer.value
     val phase = rememberBarRestPhase(current)
@@ -134,7 +145,17 @@ internal fun WorkoutTimerLayer(
     val shown = visual ?: last.visual
     val canAdd = current.remainingSeconds < RestDuration.MAX_SECONDS
 
-    LaunchedEffect(visual == null) { if (visual == null) expanded = false }
+    val restOver by rememberUpdatedState(onRestOver)
+    val height by rememberUpdatedState(onHeightChanged)
+    LaunchedEffect(visual == null) {
+        if (visual != null) return@LaunchedEffect
+        // Closed by the end of the done hold, not by a skip: back to the set that comes next.
+        if (expanded && last.visual?.phase == TimerPhase.Done) {
+            RestUpNext.of(workout, current.workoutExerciseId)?.let { restOver(it.setId) }
+        }
+        expanded = false
+    }
+    DisposableEffect(Unit) { onDispose { height(0) } }
     LaunchedEffect(focusReturns) {
         if (focusReturns == 0) return@LaunchedEffect
         // Once the dock is back in the layout.
@@ -147,30 +168,33 @@ internal fun WorkoutTimerLayer(
     val space = MTheme.space
     // The keyboard's room is reserved here, under the timer, also when there is no rest.
     Column(modifier.fillMaxWidth().windowInsetsPadding(imeInsets.only(WindowInsetsSides.Bottom))) {
-        AnimatedVisibility(
-            visible = visual != null && !expanded,
-            modifier = Modifier.fillMaxWidth().testTag(WorkoutTimerTags.LAYER),
-            enter = if (reduced) fadeIn(tween(motion.fast)) else slideInVertically(tween(motion.base, easing = motion.easeOut)) { it },
-            exit = if (reduced) fadeOut(tween(motion.fast)) else slideOutVertically(tween(motion.fast, easing = motion.easeOut)) { it },
-        ) {
-            if (shown != null) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = space.s4, end = space.s4, top = space.s2)
-                        // On the keyboard, nothing between them; otherwise a margin from the screen's edge.
-                        .then(if (keyboard) Modifier else Modifier.padding(bottom = space.s3)),
-                    contentAlignment = Alignment.TopCenter,
-                ) {
-                    DockedRest(
-                        visual = shown,
-                        compact = compact,
-                        canAdd = canAdd,
-                        actions = actions,
-                        onOpen = { expanded = true },
-                        // A request on the group goes to its first focusable child: the body.
-                        modifier = Modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxWidth().focusRequester(dockFocus).focusGroup(),
-                    )
+        // Always there (0 tall without a rest), so the height it reports goes back to 0.
+        Column(Modifier.fillMaxWidth().onSizeChanged { height(it.height) }) {
+            AnimatedVisibility(
+                visible = visual != null && !expanded,
+                modifier = Modifier.fillMaxWidth().testTag(WorkoutTimerTags.LAYER),
+                enter = if (reduced) fadeIn(tween(motion.fast)) else slideInVertically(tween(motion.base, easing = motion.easeOut)) { it },
+                exit = if (reduced) fadeOut(tween(motion.fast)) else slideOutVertically(tween(motion.fast, easing = motion.easeOut)) { it },
+            ) {
+                if (shown != null) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = space.s4, end = space.s4, top = space.s2)
+                            // On the keyboard, nothing between them; otherwise a margin from the screen's edge.
+                            .then(if (keyboard) Modifier else Modifier.padding(bottom = space.s3)),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        DockedRest(
+                            visual = shown,
+                            compact = compact,
+                            canAdd = canAdd,
+                            actions = actions,
+                            onOpen = { expanded = true },
+                            // A request on the group goes to its first focusable child: the body.
+                            modifier = Modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxWidth().focusRequester(dockFocus).focusGroup(),
+                        )
+                    }
                 }
             }
         }
@@ -242,7 +266,7 @@ private fun ExpandedRest(
         stringResource(Res.string.workout_timer_title_short, timer.exerciseName)
     }
     val next = remember(workout, timer.workoutExerciseId) { RestUpNext.of(workout, timer.workoutExerciseId) }
-    val upNext = next?.let { stringResource(Res.string.workout_up_next_value, it.setNumber, loadText(it.weightKg, pounds), it.reps) }
+    val upNext = next?.let { upNextText(it, pounds) }
 
     val motion = MTheme.motion
     val reduced = MTheme.reducedMotion
@@ -292,4 +316,12 @@ private fun ExpandedRest(
             )
         }
     }
+}
+
+/** What [next] is, as "Up next" names it ([UpNext.parts]): "set 5 · 85 × 6", "set 2 · 12 reps" or "set 2". */
+@Composable
+internal fun upNextText(next: UpNext, pounds: Boolean): String = when (next.parts) {
+    UpNextParts.LoadAndReps -> stringResource(Res.string.workout_up_next_value, next.setNumber, loadText(next.weightKg, pounds), next.reps)
+    UpNextParts.Reps -> stringResource(Res.string.workout_up_next_reps, next.setNumber, pluralCount(DsRes.plurals.ds_reps_count, next.reps))
+    UpNextParts.SetOnly -> stringResource(Res.string.workout_up_next_set, next.setNumber)
 }

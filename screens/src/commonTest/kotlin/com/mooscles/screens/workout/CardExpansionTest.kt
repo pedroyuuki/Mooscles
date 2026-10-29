@@ -76,6 +76,22 @@ class CardExpansionTest {
     }
 
     @Test
+    fun rowIndexCountsTheItemsBeforeTheRow() {
+        // e1 done and collapsed (1 item); e2 open: header, column header, then its rows.
+        val workout = listOf(entry("e1", true, true), entry("e2", true, false, false), entry("e3", false))
+        assertEquals(1 + 2 + 0, CardExpansion.rowIndex("e2-s0", workout, emptyMap(), emptySet()))
+        assertEquals(1 + 2 + 2, CardExpansion.rowIndex("e2-s2", workout, emptyMap(), emptySet()))
+        // From the list's first card index, as the screen lays them out.
+        assertEquals(3 + 1 + 2 + 1, CardExpansion.rowIndex("e2-s1", workout, emptyMap(), emptySet(), first = 3))
+        // A collapsed card has no rows: the set's header.
+        assertEquals(1 + (3 + 3), CardExpansion.rowIndex("e3-s0", workout, emptyMap(), emptySet()))
+        assertEquals(0, CardExpansion.rowIndex("e1-s1", workout, emptyMap(), emptySet()))
+        // Opened by hand, the done card's rows count.
+        assertEquals(2 + 1, CardExpansion.rowIndex("e1-s1", workout, mapOf("e1" to true), setOf("e1")))
+        assertNull(CardExpansion.rowIndex("gone", workout, emptyMap(), emptySet()))
+    }
+
+    @Test
     fun advanceWithNoExercisesKeepsRestoredChoices() {
         // Restored after a process death, while the workout is still loading.
         val screen = ActiveWorkoutScreenState(expanded = mapOf("e1" to false, "e2" to true), manual = setOf("e2"))

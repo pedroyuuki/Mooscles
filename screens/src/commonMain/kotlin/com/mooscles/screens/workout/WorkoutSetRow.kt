@@ -6,6 +6,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -249,6 +251,12 @@ internal fun WorkoutSetRow(
         if (editing != null) snapshotFlow { ime.getBottom(density) to height }.collect { bringIntoView.bringIntoView() }
     }
     DisposableEffect(screen, set.id) { onDispose { screen.rowAreas.remove(set.id) } }
+    // A request on the row goes to its first focusable control (the set's number), never a field.
+    val rowFocus = remember { FocusRequester() }
+    DisposableEffect(screen, set.id) {
+        screen.rowFocus[set.id] = rowFocus
+        onDispose { if (screen.rowFocus[set.id] === rowFocus) screen.rowFocus.remove(set.id) }
+    }
 
     val status = when {
         !done -> SetStatus.Pending
@@ -283,6 +291,8 @@ internal fun WorkoutSetRow(
     Column(
         modifier
             .onGloballyPositioned { screen.rowAreas[set.id] = it }
+            .focusRequester(rowFocus)
+            .focusGroup()
             .onSizeChanged { height = it.height }
             .bringIntoViewRequester(bringIntoView)
             .background(background, RoundedCornerShape(MTheme.radius.md))

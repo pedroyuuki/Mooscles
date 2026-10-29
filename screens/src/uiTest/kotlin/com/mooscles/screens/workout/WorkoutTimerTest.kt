@@ -3,6 +3,7 @@ package com.mooscles.screens.workout
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -15,23 +16,28 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.DpSize
@@ -257,7 +263,7 @@ class WorkoutTimerTest {
     fun bodyTapOpensTheExpanded() = runComposeUiTest {
         show(mutableStateOf(running))
         onNodeWithTag(TimerExpandedTag).assertDoesNotExist()
-        onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals("Abrir timer de descanso, 1 minuto e 30 segundos restantes")
+        onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals("Abrir timer de descanso, tempo restante: 1 minuto e 30 segundos")
         openExpanded()
         // The expanded timer is the one timer on screen: the dock waits under it.
         onNodeWithTag(TimerDockTag).assertDoesNotExist()
@@ -355,6 +361,111 @@ class WorkoutTimerTest {
         onNodeWithTag(TimerExpandedTag).assertDoesNotExist()
         assertNoTimer()
         onNodeWithTag(ActiveWorkoutTags.LIST).assertIsDisplayed()
+    }
+
+    /**
+     * Spec "Expandido": after the done hold it closes on its own "e volta para a série seguinte":
+     * the list brings the set "Up next" named into view, and that row takes the focus (its first
+     * control, not a field). Focus is the keyboard's, so the test runs in keyboard mode, as
+     * [closingTheExpandedReturnsFocusToTheDock] does.
+     */
+    @Test
+    fun doneHoldReturnsToTheNextSet() = try {
+        returnAndCheckTheNextSet()
+    } finally {
+        restoreTouchMode()
+    }
+
+    private fun returnAndCheckTheNextSet() = runComposeUiTest {
+        val long = workout.copy(
+            exercises = listOf(
+                WorkoutExerciseUi("e1", bench, sets = (1..12).map { n -> SetUi("e1s$n", reps = 6, weightKg = 85.0, completed = n <= 4) }),
+                workout.exercises[1],
+            ),
+        )
+        val modes = InputModes()
+        val timer = mutableStateOf(running.copy(remainingSeconds = 1))
+        show(timer, shown = long, size = DpSize(412.dp, 640.dp), inputModes = modes)
+        runOnUiThread { modes.manager?.requestInputMode(InputMode.Keyboard) }
+        waitForIdle()
+        assertEquals(InputMode.Keyboard, modes.manager?.inputMode, "keyboard mode")
+        val next = workoutSetRowTag("e1s5")
+        // The control: the list is at its end, the next set far above the viewport.
+        onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(hasTestTag(ActiveWorkoutTags.FINISH_WORKOUT))
+        waitForIdle()
+        assertFalse(wholeInTheList(next), "the next set is on screen before the rest ends")
+        onNodeWithTag(TimerOpenTag).performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        tag(TimerUpNextTag).assertExists()
+        onNode(hasText("série 5 · 85 × 6") and hasAnyAncestor(hasTestTag(TimerUpNextTag)), useUnmergedTree = true).assertExists()
+        mainClock.autoAdvance = false
+        val end = mainClock.currentTime
+        runOnUiThread { timer.value = finished }
+        mainClock.advanceTimeByFrame()
+        advanceTo(end + hold + fast + 100L)
+        mainClock.advanceTimeByFrame()
+        mainClock.autoAdvance = true
+        waitForIdle()
+        onNodeWithTag(TimerExpandedTag).assertDoesNotExist()
+        assertTrue(wholeInTheList(next), "the next set is not in view: ${bounds(next)}, list ${bounds(ActiveWorkoutTags.LIST)}")
+        val inRow = hasTestTag(next) or hasAnyAncestor(hasTestTag(next))
+        onNode(isFocused() and inRow, useUnmergedTree = true).assertExists("the next set does not have the focus")
+        // Its first control, never a field: the keyboard does not open on its own.
+        onAllNodes(isFocused() and hasSetTextAction(), useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    /** Whether the node of [tag] is whole inside the list's viewport. */
+    private fun ComposeUiTest.wholeInTheList(tag: String): Boolean {
+        val node = onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().firstOrNull() ?: return false
+        val list = bounds(ActiveWorkoutTags.LIST)
+        val rect = node.boundsInRoot
+        return rect.height >= node.size.height - 0.5f && rect.top >= list.top - 0.5f && rect.bottom <= list.bottom + 0.5f
+    }
+
+    /** Review M3: "Up next" never names a 0 the row leaves blank. */
+    @Test
+    fun upNextLeavesOutBlankParts() {
+        val cases = listOf(
+            // Added weight without a load: only the reps.
+            SetUi("e2s1", reps = 12, weightKg = 0.0) to "série 1 · 12 repetições",
+            SetUi("e2s1", reps = 1, weightKg = 0.0) to "série 1 · 1 repetição",
+            // A set still blank, with or without a load: only the set.
+            SetUi("e2s1", reps = 0, weightKg = 0.0) to "série 1",
+            SetUi("e2s1", reps = 0, weightKg = 60.0) to "série 1",
+            SetUi("e2s1", reps = 10, weightKg = 62.5) to "série 1 · 62,5 × 10",
+        )
+        for ((set, expected) in cases) {
+            runComposeUiTest {
+                val shown = workout.copy(exercises = listOf(workout.exercises[0], workout.exercises[1].copy(sets = listOf(set))))
+                show(mutableStateOf(running.copy(workoutExerciseId = "e2")), shown = shown)
+                openExpanded()
+                onNode(hasText(expected) and hasAnyAncestor(hasTestTag(TimerUpNextTag)), useUnmergedTree = true).assertExists("up next for $set")
+                onAllNodes(hasText(" 0 ", substring = true) and hasAnyAncestor(hasTestTag(TimerUpNextTag)), useUnmergedTree = true).assertCountEquals(0)
+            }
+        }
+    }
+
+    /** Review M4: the undo toast sits above the rest timer, never over −15 s, +15 s or skip. */
+    @Test
+    fun undoToastSitsAboveTheDock() = runComposeUiTest {
+        val actions = RecordingActions()
+        show(mutableStateOf(running), actions = actions)
+        val row = workoutSetRowTag("e1s5")
+        onNodeWithTag(row).performTouchInput { click(Offset(width * 0.05f, centerY)) }
+        waitForIdle()
+        onNodeWithText("Remover série").performClick()
+        waitForIdle()
+        val toast = onNodeWithText("Série 5 removida").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        onNodeWithText("Desfazer", useUnmergedTree = true).assertIsDisplayed()
+        val dock = bounds(TimerDockTag)
+        assertTrue(toast.bottom <= dock.top + 0.5f, "toast $toast over the dock $dock")
+        for (control in listOf(TimerMinusTag, TimerPlusTag, TimerSkipTag)) {
+            assertFalse(toast.overlaps(bounds(control)), "toast $toast over $control ${bounds(control)}")
+        }
+        // The dock still takes the taps while the toast is up.
+        onNodeWithTag(TimerSkipTag).performClick()
+        waitForIdle()
+        assertEquals(listOf("removeSet:e1s5", "skipTimer:"), actions.calls)
     }
 
     @Test
@@ -527,13 +638,13 @@ class WorkoutTimerTest {
             assertEquals(announced, announcement())
             tag(TimerPausedIconTag).let { if (paused) it.assertExists() else it.assertDoesNotExist() }
         }
-        expect("1:30", "Abrir timer de descanso, 1 minuto e 30 segundos restantes", null, "Descanso, 1 minuto e 30 segundos restantes", paused = false)
+        expect("1:30", "Abrir timer de descanso, tempo restante: 1 minuto e 30 segundos", null, "Descanso, tempo restante: 1 minuto e 30 segundos", paused = false)
         timer.value = running.copy(running = false, paused = true)
-        expect("1:30", "Abrir timer de descanso, 1 minuto e 30 segundos restantes", "Pausado", "Pausado", paused = true)
+        expect("1:30", "Abrir timer de descanso, tempo restante: 1 minuto e 30 segundos", "Pausado", "Pausado", paused = true)
         timer.value = running.copy(remainingSeconds = 60)
-        expect("1:00", "Abrir timer de descanso, 1 minuto restantes", null, "Descanso, 1 minuto restantes", paused = false)
+        expect("1:00", "Abrir timer de descanso, tempo restante: 1 minuto", null, "Descanso, tempo restante: 1 minuto", paused = false)
         timer.value = running.copy(remainingSeconds = 120)
-        expect("2:00", "Abrir timer de descanso, 2 minutos restantes", null, "Descanso, 2 minutos restantes", paused = false)
+        expect("2:00", "Abrir timer de descanso, tempo restante: 2 minutos", null, "Descanso, tempo restante: 2 minutos", paused = false)
         timer.value = finished
         expect("0:00", "Abrir timer de descanso", "Descanso concluído", "Descanso concluído", paused = false)
     }

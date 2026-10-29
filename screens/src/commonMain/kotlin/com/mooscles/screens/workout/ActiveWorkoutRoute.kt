@@ -7,17 +7,21 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import com.mooscles.designsystem.components.MToastHost
 import com.mooscles.designsystem.components.MToastHostState
@@ -42,9 +46,9 @@ import com.mooscles.ui.UiState
  * Confirming "Finish" keeps the workout's id ([rememberSaveable], so it survives recreation) and
  * calls `finishWorkout`; once the workout is in [UiState.history], [onOpenSummary] gets its id.
  * Meanwhile the finish buttons show their loading state; an error gives them back. [timer] is not
- * read here: only the screen's rest timer reads it ([WorkoutTimerLayer]). [imeInsets] is the
- * keyboard, which the list, the timer and the toasts keep clear of; [nowMillis] is the clock the
- * header's time reads.
+ * read here: only the screen's rest timer reads it ([WorkoutTimerLayer]); the toasts sit above
+ * it ([WorkoutToastHost]). [imeInsets] is the keyboard, which the list, the timer and the toasts
+ * keep clear of; [nowMillis] is the clock the header's time reads.
  */
 @Composable
 fun ActiveWorkoutRoute(
@@ -62,6 +66,8 @@ fun ActiveWorkoutRoute(
 ) {
     val screen = rememberActiveWorkoutScreenState()
     val host = remember { MToastHostState() }
+    // The rest timer's height, from the screen, for the toasts. Read only by WorkoutToastHost.
+    val timerHeight = remember { mutableIntStateOf(0) }
     var finishingId by rememberSaveable { mutableStateOf<String?>(null) }
     var summaryOpened by rememberSaveable { mutableStateOf<String?>(null) }
     val openSummary by rememberUpdatedState(onOpenSummary)
@@ -103,6 +109,7 @@ fun ActiveWorkoutRoute(
                 imeInsets = imeInsets,
                 nowMillis = nowMillis,
                 timer = timer,
+                onTimerHeight = { timerHeight.intValue = it },
             )
             // Finished: blank once the history has the workout (the summary opens) and while the app
             // moves there, so "No workout in progress" never flashes. A workout that left without
@@ -111,7 +118,18 @@ fun ActiveWorkoutRoute(
             state.loading || state.startingWorkout -> WorkoutSkeleton(skeletonCards, onMinimize)
             else -> NoWorkout(onChooseRoutine, onEmptyWorkout = { actions.startWorkout(null) })
         }
-        MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(imeInsets.only(WindowInsetsSides.Bottom)))
+        WorkoutToastHost(host, timerHeight, imeInsets)
     }
     UndoRemovalToast(screen, host, actions)
+}
+
+/**
+ * The route's toasts, above the keyboard and above the rest timer ([timerHeight], in pixels, 0
+ * without one), so the undo toast never covers −15 s, +15 s or skip (review M4). It reads the
+ * height alone, so a change of it recomposes only this host.
+ */
+@Composable
+private fun WorkoutToastHost(host: MToastHostState, timerHeight: IntState, imeInsets: WindowInsets) {
+    val above = with(LocalDensity.current) { timerHeight.intValue.toDp() }
+    MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(imeInsets.only(WindowInsetsSides.Bottom)).padding(bottom = above))
 }

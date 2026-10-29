@@ -99,6 +99,9 @@
     <string name="workout_timer_title_short">Rest · %1$s</string>
     <!-- Under the expanded timer's "Up next": %1$d the set, %2$s its load without the unit, %3$d its reps. -->
     <string name="workout_up_next_value">set %1$d · %2$s × %3$d</string>
+    <!-- The same without a load (0, left blank in the row): %1$d the set, %2$s its reps ("12 reps"); without reps, the set alone. -->
+    <string name="workout_up_next_reps">set %1$d · %2$s</string>
+    <string name="workout_up_next_set">set %1$d</string>
     <string name="workout_record_weight_title">New weight record</string>
     <string name="workout_record_reps_title">New reps record</string>
     <!-- %1$s is the set's load with its unit ("87.5 kg"), %2$d its reps, %3$s the history's best load ("85 kg"). -->

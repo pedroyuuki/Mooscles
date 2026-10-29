@@ -1,5 +1,6 @@
 package com.mooscles.screens.workout
 
+import androidx.compose.foundation.lazy.LazyListLayoutInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +59,28 @@ object CardExpansion {
         return null
     }
 
+    /**
+     * The list index of the row of [setId], laid out as for [headerIndex]: the header, the column
+     * header, then a row per set. A set whose card is collapsed has no row: its header's index.
+     * Null when no entry of [exercises] has the set.
+     */
+    fun rowIndex(
+        setId: String,
+        exercises: List<WorkoutExerciseUi>,
+        expanded: Map<String, Boolean>,
+        manual: Set<String>,
+        first: Int = 0,
+    ): Int? {
+        var index = first
+        for (entry in exercises) {
+            val open = isOpen(entry.id, exercises, expanded, manual)
+            val position = entry.sets.indexOfFirst { it.id == setId }
+            if (position >= 0) return if (open) index + 2 + position else index
+            index += itemCount(entry, open)
+        }
+        return null
+    }
+
     /** The number of list items [exerciseItems] gives [entry]. */
     internal fun itemCount(entry: WorkoutExerciseUi, open: Boolean): Int = if (open) entry.sets.size + 3 else 1
 
@@ -107,4 +130,35 @@ internal fun CardAdvance(
         val index = CardExpansion.headerIndex(target, latest, screen.expanded, screen.manual, firstIndex) ?: return@LaunchedEffect
         if (reduced) listState.scrollToItem(index) else listState.animateScrollToItem(index)
     }
+}
+
+/**
+ * Back to the set [setId] after a rest (spec "Expandido": it closes on its own "e volta para a
+ * série seguinte"): the list, laid out from [firstIndex] as for [CardAdvance], scrolls to its row
+ * unless the row is already whole on screen (a jump with [reduced] motion), and then the row takes
+ * the focus ([ActiveWorkoutScreenState.rowFocus], its first control, never a field). In touch mode
+ * the focus request does nothing, which is what is wanted; a set whose card is collapsed brings
+ * its header into view, with no focus.
+ */
+internal suspend fun returnToSet(
+    setId: String,
+    exercises: List<WorkoutExerciseUi>,
+    screen: ActiveWorkoutScreenState,
+    listState: LazyListState,
+    reduced: Boolean,
+    firstIndex: Int = 0,
+) {
+    val index = CardExpansion.rowIndex(setId, exercises, screen.expanded, screen.manual, firstIndex) ?: return
+    if (!listState.layoutInfo.showsWhole(index)) {
+        if (reduced) listState.scrollToItem(index) else listState.animateScrollToItem(index)
+    }
+    // Once the list has composed the row where it now shows it.
+    withFrameNanos { }
+    screen.rowFocus[setId]?.requestFocus()
+}
+
+/** Whether the item at [index] is laid out wholly inside the viewport. */
+private fun LazyListLayoutInfo.showsWhole(index: Int): Boolean {
+    val item = visibleItemsInfo.firstOrNull { it.index == index } ?: return false
+    return item.offset >= viewportStartOffset && item.offset + item.size <= viewportEndOffset
 }
