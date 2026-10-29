@@ -113,6 +113,22 @@ class SetDraftsTest {
         assertEquals("22.5", state.drafts["s1" to SetField.LOAD])
     }
 
+    /** Review M1: after a failed write, nothing is awaited any more, so the next value is written again. */
+    @Test
+    fun droppingPendingWritesForgetsWhatWasAwaited() {
+        val state = typed("90", 90.0)
+        state.sent("s2", SetField.REPS, 9.0)
+        assertEquals(90.0, state.expected("s1", SetField.LOAD, 85.0))
+        state.dropPendingWrites()
+        assertEquals(emptyMap(), state.sent)
+        assertEquals(85.0, state.expected("s1", SetField.LOAD, 85.0), "the database's value stands")
+        assertEquals("90", state.drafts[load], "what the person typed stays")
+        // The screen drops every optimistic value on an error; that forgets the awaited writes too.
+        state.sent("s1", SetField.LOAD, 90.0)
+        state.dropAllOptimistic()
+        assertEquals(emptyMap(), state.sent)
+    }
+
     @Test
     fun saverKeepsDraftsTheirWritesAndTheirUnit() {
         val state = ActiveWorkoutScreenState(

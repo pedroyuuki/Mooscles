@@ -3,6 +3,7 @@ package com.mooscles.screens.workout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -66,10 +67,22 @@ class ActiveWorkoutScreenState(
 
     /**
      * The values (kg or reps) written for a field while its draft was held, oldest first, until
-     * the database shows them. Read only in callbacks and effects, so it is not snapshot state.
+     * the database shows them. Snapshot state: a row reads it while composing the value of a
+     * draft (the exact kg of a converted draft, the value standing for an invalid one).
      */
-    internal var sent: Map<Pair<String, SetField>, List<Double>> = sent
+    internal var sent: Map<Pair<String, SetField>, List<Double>> by mutableStateOf(sent)
         private set
+
+    /** Counts a screen reader's requests to edit a field, so repeating one moves the focus to the stepper again (D21). */
+    internal var stepperFocusRequests: Int by mutableIntStateOf(0)
+        private set
+
+    /** Puts [field] of [setId] in edit from a screen reader's action, keeping the row's error, and focuses its stepper. */
+    internal fun editFromReader(setId: String, field: SetField) {
+        val error = editing?.takeIf { it.setId == setId && it.field == field }?.error == true
+        editing = SetEditTarget(setId, field, error = error, stepperFocus = true)
+        stepperFocusRequests++
+    }
 
     /** The unit the load drafts are written in; null until a row first reports it. */
     internal var draftsPounds: Boolean? = draftsPounds
@@ -107,9 +120,25 @@ class ActiveWorkoutScreenState(
         if (setId in optimistic) optimistic = optimistic - setId
     }
 
-    /** [dropOptimistic] for every set, as when an error arrives and the screen cannot tell which write failed. */
+    /**
+     * [dropOptimistic] for every set, as when an error arrives and the screen cannot tell which
+     * write failed. It also forgets the writes still awaited ([dropPendingWrites]): a failed write
+     * sends no echo either.
+     */
     fun dropAllOptimistic() {
         if (optimistic.isNotEmpty()) optimistic = emptyMap()
+        dropPendingWrites()
+    }
+
+    /**
+     * Forgets every value written and not yet seen back, for a write that failed or was lost
+     * (Task 19 calls it with [dropAllOptimistic] when an error arrives). The drafts stay, so the
+     * field still shows what the person entered; with nothing awaited, the database's value is
+     * what stands, and the next step or key writes that draft again instead of taking it as
+     * already sent.
+     */
+    fun dropPendingWrites() {
+        if (sent.isNotEmpty()) sent = emptyMap()
     }
 
     /** Holds [text] as the draft of [field] of [setId]. */

@@ -1,5 +1,6 @@
 package com.mooscles.screens.workout
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -123,6 +124,8 @@ internal fun WorkoutSetRow(
 
     val locale = currentNumberLocale()
     val editor = SetRowEditor(set, pounds, suggestion, screen, actions, locale)
+    // First, so the echoes below read drafts already in the shown unit.
+    LaunchedEffect(pounds, locale) { screen.useUnit(pounds) { kg, unit -> editor.loadText(kg, unit) } }
     // The values the database held before, to tell a change from elsewhere (NaN: not seen yet).
     val seen = remember(set.id) { doubleArrayOf(Double.NaN, Double.NaN) }
     LaunchedEffect(set.id, set.weightKg) {
@@ -133,7 +136,6 @@ internal fun WorkoutSetRow(
         editor.echo(SetField.REPS, seen[1].takeUnless { it.isNaN() })
         seen[1] = set.reps.toDouble()
     }
-    LaunchedEffect(pounds, locale) { screen.useUnit(pounds) { kg, unit -> editor.loadText(kg, unit) } }
     LaunchedEffect(set.id, editing == null) {
         if (editing == null) {
             editor.settleDraft(SetField.LOAD)
@@ -222,7 +224,7 @@ internal fun WorkoutSetRow(
     // A field's first tap edits without the keyboard; with the keyboard open, the row's other field takes it at once.
     val armed: (SetField) -> Boolean = { field -> !(editing != null && (editing.field == field || editing.keyboard)) }
     val edit: (SetField) -> Unit = { field -> screen.editing = SetEditTarget(set.id, field) }
-    val editFromReader: (SetField) -> Unit = { field -> screen.editing = SetEditTarget(set.id, field, stepperFocus = true) }
+    val editFromReader: (SetField) -> Unit = { field -> screen.editFromReader(set.id, field) }
 
     // The row in edit, with its panel, stays in view: when it enters the edit, when the panel
     // grows and when the keyboard (or anything at the bottom) changes the space.
@@ -263,14 +265,19 @@ internal fun WorkoutSetRow(
     )
     val position = number - 1
     val motion = MTheme.motion
-    val resize = if (MTheme.reducedMotion) snap<IntSize>() else tween(motion.base, easing = motion.easeOut)
+    val reduced = MTheme.reducedMotion
+    val resize = if (reduced) snap<IntSize>() else tween(motion.base, easing = motion.easeOut)
+    val background by animateColorAsState(
+        if (editing != null) MTheme.colors.bgInset else Color.Transparent,
+        if (reduced) snap() else tween(motion.base, easing = motion.easeOut),
+    )
     // The row and its panel share the edit background (bg.inset, F38), so they read as one block.
     Column(
         modifier
             .onGloballyPositioned { screen.rowAreas[set.id] = it }
             .onSizeChanged { height = it.height }
             .bringIntoViewRequester(bringIntoView)
-            .background(if (editing != null) MTheme.colors.bgInset else Color.Transparent, RoundedCornerShape(MTheme.radius.md))
+            .background(background, RoundedCornerShape(MTheme.radius.md))
             .animateContentSize(resize),
     ) {
         SetRow(

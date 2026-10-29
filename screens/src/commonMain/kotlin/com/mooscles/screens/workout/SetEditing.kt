@@ -73,8 +73,8 @@ internal fun stepperPlain(value: Double): String = MoosclesNumbers.plain(value).
  * the saved text is the saved kg, the text of a value written for it is that value, so "80" lb
  * stays the 36.287389 kg it came from and a converted draft keeps its kg. Each valid value typed
  * or stepped is written ([save]) unless the database will already hold it; an invalid draft is
- * never written and the last valid value stands. A done set with no reps waits as a draft, as
- * the database would refuse it.
+ * never written and the last valid value stands. Reps of 0 on a done set wait as a draft, as
+ * the database would refuse them, and the last valid reps are written with the other field.
  */
 internal class SetRowEditor(
     val set: SetUi,
@@ -123,7 +123,11 @@ internal class SetRowEditor(
     /** What [field] stands for now: the shown value, or the last valid one when the draft is invalid. */
     fun current(field: SetField): Double = value(field, shown(field)) ?: expected(field)
 
-    private fun done(): Boolean = screen.completedOf(set)
+    /** Whether the set is drawn as done (the optimistic value first). */
+    fun done(): Boolean = screen.completedOf(set)
+
+    /** The screen reader's requests to edit, for the stepper's focus. */
+    val stepperFocusRequests: Int get() = screen.stepperFocusRequests
 
     /** [text] typed in [field]: held as the draft and, when valid, written. */
     fun type(field: SetField, text: String) {
@@ -159,11 +163,14 @@ internal class SetRowEditor(
         }
     }
 
-    /** Writes the shown values, unless the database will already hold them or a done set would have no reps. */
+    /**
+     * Writes the shown values, unless the database will already hold them. A done set with no
+     * reps would be refused: like an invalid draft, those reps wait and the last valid ones are
+     * written, so a new load on that set is still saved (D12: the last valid value is written).
+     */
     fun save() {
         val kg = current(SetField.LOAD)
-        val reps = current(SetField.REPS).toInt()
-        if (done() && reps == 0) return
+        val reps = current(SetField.REPS).toInt().let { if (it == 0 && done()) expected(SetField.REPS).toInt() else it }
         if (kg == expected(SetField.LOAD) && reps.toDouble() == expected(SetField.REPS)) return
         send(reps, kg, done())
     }
@@ -220,7 +227,8 @@ internal fun SetEditPanel(
     }
     val name = stringResource(if (load) Res.string.workout_field_load else Res.string.workout_field_reps)
     val requester = remember { FocusRequester() }
-    LaunchedEffect(target) { if (target.stepperFocus) requester.requestFocus() }
+    // Keyed on the requests too: the same action again moves the focus back to the stepper.
+    LaunchedEffect(target, editor.stepperFocusRequests) { if (target.stepperFocus) requester.requestFocus() }
     Row(
         modifier.fillMaxWidth().padding(horizontal = MTheme.space.s2).padding(bottom = MTheme.space.s2),
         horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap),
@@ -231,7 +239,8 @@ internal fun SetEditPanel(
                 value = value,
                 onValueChange = { editor.step(field, it) },
                 step = step,
-                min = 0.0,
+                // A done set needs at least 1 rep.
+                min = if (!load && editor.done()) 1.0 else 0.0,
                 decreaseLabel = stringResource(DsRes.string.ds_stepper_decrease, name, stepSpoken),
                 increaseLabel = stringResource(DsRes.string.ds_stepper_increase, name, stepSpoken),
                 numberLocale = locale,

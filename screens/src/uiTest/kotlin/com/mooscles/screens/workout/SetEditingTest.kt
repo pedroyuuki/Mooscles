@@ -29,7 +29,9 @@ import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
@@ -677,6 +679,61 @@ class SetEditingTest {
         rowAction("s2", "Edit load")
         assertEquals(SetField.LOAD, shown.screen?.editing?.field)
         onNodeWithContentDescription("Editing load of set 2").assertIsFocused()
+    }
+
+    /** Review I1: emptied reps on a done set wait as a draft, but the load still writes, with the last valid reps. */
+    @Test
+    fun doneSetWithClearedRepsStillWritesTheLoad() = runComposeUiTest {
+        val entry = entryOf(SetUi("s1", reps = 8, weightKg = 85.0, completed = true))
+        val actions = Actions(entry, echo = true)
+        val shown = showRows(entry, actions)
+        reps("s1").performTextReplacement("")
+        waitForIdle()
+        assertEquals(emptyList(), actions.calls, "a done set is not written with 0 reps")
+        load("s1").performClick()
+        waitForIdle()
+        assertEquals(SetField.LOAD, shown.screen?.editing?.field)
+        onNodeWithTag(StepperIncreaseTag).performClick()
+        waitForIdle()
+        assertEquals(listOf("updateSet:s1,8,87.5,true,false,false"), actions.calls)
+        check("s1").assertIsOn()
+        assertEquals("87.5", load("s1").editableText())
+        assertEquals("", shown.screen?.drafts?.get("s1" to SetField.REPS), "the emptied reps keep waiting")
+    }
+
+    @Test
+    fun doneSetRepsStepperStopsAtOne() = runComposeUiTest {
+        val entry = entryOf(SetUi("s1", reps = 2, weightKg = 85.0, completed = true))
+        val actions = Actions(entry, echo = true)
+        showRows(entry, actions)
+        reps("s1").performClick()
+        waitForIdle()
+        onNodeWithTag(StepperDecreaseTag).performClick()
+        waitForIdle()
+        assertEquals(listOf("updateSet:s1,1,85.0,true,false,false"), actions.calls)
+        stepperValue().assertTextEquals("1")
+        onNodeWithTag(StepperDecreaseTag).assertIsNotEnabled()
+    }
+
+    /** Review M4: after a refused check, "Edit reps" keeps the error, and repeating it focuses the stepper again. */
+    @Test
+    fun editRepsActionKeepsTheErrorAndFocusesAgain() = runComposeUiTest {
+        val entry = entryOf(SetUi("s1", weightKg = 80.0))
+        val shown = showRows(entry, Actions(entry, echo = true))
+        check("s1").performClick()
+        waitForIdle()
+        assertEquals(SetEditTarget("s1", SetField.REPS, error = true), shown.screen?.editing)
+        rowAction("s1", "Edit reps")
+        assertEquals(true, shown.screen?.editing?.error)
+        onNodeWithText("Enter the reps", useUnmergedTree = true).assertIsDisplayed()
+        onNodeWithContentDescription("Editing reps of set 1").assertIsFocused()
+        // The focus moves on, inside the panel, without changing the edit.
+        onNodeWithTag(StepperIncreaseTag).performSemanticsAction(SemanticsActions.RequestFocus)
+        waitForIdle()
+        onNodeWithContentDescription("Editing reps of set 1").assertIsNotFocused()
+        assertEquals(SetEditTarget("s1", SetField.REPS, error = true, stepperFocus = true), shown.screen?.editing)
+        rowAction("s1", "Edit reps")
+        onNodeWithContentDescription("Editing reps of set 1").assertIsFocused()
     }
 
     /** S3: the iOS simulator opens no keyboard, so the keyboard is 300 dp of injected insets on both platforms. */
