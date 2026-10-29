@@ -87,9 +87,19 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
         write(value)
     }
 
-    /** The database now holds [rest]. */
+    /**
+     * The database now holds [rest]. Writes are applied in order and an emission may skip some
+     * (60, 120, 60 seen as one 60), so a rest equal to the last write settles every write: nothing
+     * is awaited any more, whatever was skipped. One equal to an earlier write acknowledges it and
+     * the ones before it, and the later ones are still awaited. Any other rest, with nothing in
+     * flight, is a change from elsewhere and shows.
+     */
     fun echo(rest: Int) {
         saved = rest
+        if (pending.lastOrNull() == rest) {
+            pending = emptyList()
+            return
+        }
         val at = pending.indexOf(rest)
         if (at >= 0) {
             pending = pending.drop(at + 1)
