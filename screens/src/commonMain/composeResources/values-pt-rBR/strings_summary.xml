@@ -15,9 +15,6 @@
     <string name="summary_set">%1$s × %2$d</string>
     <string name="summary_bodyweight">Peso corporal</string>
     <string name="summary_assistance_load">%1$s de assistência</string>
-    <string name="summary_warmup_only">Só aquecimento</string>
-    <string name="summary_assistance_only">Só assistência</string>
-    <string name="summary_no_working_set">Sem série de trabalho</string>
     <plurals name="summary_consistency">
         <item quantity="one">%1$d treino nas últimas 4 semanas</item>
         <item quantity="other">%1$d treinos nas últimas 4 semanas</item>

@@ -54,8 +54,11 @@ import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.durationText
 import com.mooscles.screens.format.summaryDateRange
 import com.mooscles.screens.resources.Res
+import com.mooscles.screens.resources.best_set_assistance_only
+import com.mooscles.screens.resources.best_set_bodyweight
+import com.mooscles.screens.resources.best_set_no_working_set
+import com.mooscles.screens.resources.best_set_warmup_only
 import com.mooscles.screens.resources.summary_assistance_load
-import com.mooscles.screens.resources.summary_assistance_only
 import com.mooscles.screens.resources.summary_bodyweight
 import com.mooscles.screens.resources.summary_consistency
 import com.mooscles.screens.resources.summary_details
@@ -63,7 +66,6 @@ import com.mooscles.screens.resources.summary_done
 import com.mooscles.screens.resources.summary_duration
 import com.mooscles.screens.resources.summary_exercises
 import com.mooscles.screens.resources.summary_first_records
-import com.mooscles.screens.resources.summary_no_working_set
 import com.mooscles.screens.resources.summary_record_line
 import com.mooscles.screens.resources.summary_records
 import com.mooscles.screens.resources.summary_reps_record
@@ -72,7 +74,6 @@ import com.mooscles.screens.resources.summary_sets
 import com.mooscles.screens.resources.summary_share
 import com.mooscles.screens.resources.summary_title
 import com.mooscles.screens.resources.summary_volume
-import com.mooscles.screens.resources.summary_warmup_only
 import com.mooscles.screens.resources.summary_weight_record
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.RecordUi
@@ -111,10 +112,11 @@ private const val ONE_COLUMN_FONT_SCALE = 1.5f
 
 /**
  * The end of a finished [workout] (spec D19): "Workout complete", its name and date range; the
- * duration, completed sets, volume (`WorkoutUi.volumeKg`) and exercises; the records beaten,
+ * duration, completed sets, volume (`WorkoutUi.volumeKg`) and exercises, sets and exercises
+ * counted over the valid completed sets ([SummaryStats.completedSets]) as the share card does; the records beaten,
  * then the first records (each section only when it has one); how many workouts were finished in
  * the last 28 calendar days of [zone] ([ScreenDates.finishedInLast28Days] over [history], this
- * workout counted once even when [history] does not hold it yet); each exercise with completed
+ * workout counted once even when [history] does not hold it yet); each exercise with valid completed
  * sets and its best set ([SummaryStats.bestSet], the share card's rule); and the actions Done,
  * Share and View details.
  *
@@ -143,6 +145,8 @@ fun WorkoutSummaryScreen(
     val locale = currentNumberLocale()
     val oneColumn = LocalDensity.current.fontScale >= ONE_COLUMN_FONT_SCALE
     val end = workout.endedAt ?: workout.startedAt
+    // The domain's valid completed sets (`WorkoutCalculations.validCompleted`), as the share card counts.
+    val counted = workout.exercises.map { it to SummaryStats.completedSets(it) }.filter { (_, sets) -> sets.isNotEmpty() }
 
     Column(
         modifier
@@ -161,9 +165,9 @@ fun WorkoutSummaryScreen(
         StatsCard(
             values = listOf(
                 StatValue(SummaryStat.DURATION, stringResource(Res.string.summary_duration), durationText((end - workout.startedAt) / 1000L)),
-                StatValue(SummaryStat.SETS, stringResource(Res.string.summary_sets), MoosclesNumbers.localize(workout.completedSets.toString(), locale)),
+                StatValue(SummaryStat.SETS, stringResource(Res.string.summary_sets), MoosclesNumbers.localize(counted.sumOf { (_, sets) -> sets.size }.toString(), locale)),
                 StatValue(SummaryStat.VOLUME, stringResource(Res.string.summary_volume), weightText(workout.volumeKg, pounds, locale)),
-                StatValue(SummaryStat.EXERCISES, stringResource(Res.string.summary_exercises), MoosclesNumbers.localize(workout.completedExercises.toString(), locale)),
+                StatValue(SummaryStat.EXERCISES, stringResource(Res.string.summary_exercises), MoosclesNumbers.localize(counted.size.toString(), locale)),
             ),
             oneColumn = oneColumn,
         )
@@ -181,7 +185,7 @@ fun WorkoutSummaryScreen(
         val recent = ScreenDates.finishedInLast28Days(others + workout, nowMillis, zone)
         MText(pluralCount(Res.plurals.summary_consistency, recent), type.bodyMd, color = colors.textSecondary)
 
-        val exercises = workout.exercises.filter { entry -> entry.sets.any { it.completed } }
+        val exercises = counted.map { (entry, _) -> entry }
         if (exercises.isNotEmpty()) {
             Column(
                 Modifier.fillMaxWidth().card().padding(space.s4),
@@ -205,13 +209,14 @@ private fun Modifier.card(): Modifier {
     return background(MTheme.colors.bgSurface, shape).border(MTheme.sizes.border, MTheme.colors.borderSubtle, shape)
 }
 
+/** One number of the stats card, with its label. */
+private class StatValue(val stat: SummaryStat, val label: String, val value: String)
+
 /**
  * The four numbers, two columns (one from [ONE_COLUMN_FONT_SCALE]), with the entrance. Every value
  * gets the same style: the largest of `num.lg`, `num.md` and `num.sm` in which all of them fit
  * their column on one line (`num.sm` when none does).
  */
-private class StatValue(val stat: SummaryStat, val label: String, val value: String)
-
 @Composable
 private fun StatsCard(values: List<StatValue>, oneColumn: Boolean) {
     val space = MTheme.space
@@ -361,7 +366,7 @@ private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: Numb
     val best = SummaryStats.bestSet(entry)
     val bestText = when {
         best == null -> null
-        best.weightKg == 0.0 -> stringResource(Res.string.summary_set, stringResource(Res.string.summary_bodyweight), best.reps)
+        best.weightKg == 0.0 -> stringResource(Res.string.best_set_bodyweight, best.reps)
         else -> MoosclesNumbers.setText(MoosclesNumbers.plain(WeightUnits.fromKg(best.weightKg, pounds)), unit(pounds), best.reps, locale)
     }
     val value: @Composable (Modifier) -> Unit = { valueModifier ->
@@ -369,9 +374,9 @@ private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: Numb
             MText(bestText, type.numSm, valueModifier)
         } else {
             val why = when (SummaryStats.noBestSet(entry)) {
-                NoBestSet.WARMUP_ONLY -> Res.string.summary_warmup_only
-                NoBestSet.ASSISTANCE_ONLY -> Res.string.summary_assistance_only
-                NoBestSet.NO_WORKING_SET -> Res.string.summary_no_working_set
+                NoBestSet.WARMUP_ONLY -> Res.string.best_set_warmup_only
+                NoBestSet.ASSISTANCE_ONLY -> Res.string.best_set_assistance_only
+                NoBestSet.NO_WORKING_SET -> Res.string.best_set_no_working_set
             }
             MText(stringResource(why), type.bodyMd, valueModifier, color = colors.textSecondary)
         }

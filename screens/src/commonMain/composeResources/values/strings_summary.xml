@@ -19,9 +19,6 @@
     <string name="summary_bodyweight">Bodyweight</string>
     <!-- An assistance load: "40 kg assistance". -->
     <string name="summary_assistance_load">%1$s assistance</string>
-    <string name="summary_warmup_only">Warm-up only</string>
-    <string name="summary_assistance_only">Assistance only</string>
-    <string name="summary_no_working_set">No working set</string>
     <!-- Finished workouts in the last 28 calendar days, this one included. Never a reproach. -->
     <plurals name="summary_consistency">
         <item quantity="one">%1$d workout in the last 4 weeks</item>

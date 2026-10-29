@@ -4,7 +4,6 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -27,7 +26,9 @@ import com.mooscles.designsystem.interaction.MotionChoice
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.tokens.MoosclesMotion
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
+import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.assertNumbersWhole
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.RecordKind
@@ -80,8 +81,11 @@ class WorkoutSummaryScreenTest {
         exercises = listOf(
             WorkoutExerciseUi("e1", bench, listOf(done("b1", 80.0, 8), done("b2", 87.5, 6))),
             WorkoutExerciseUi("e2", row, listOf(done("r1", 80.0, 8), done("r2", 82.5, 8), done("r3", 82.5, 6))),
-            WorkoutExerciseUi("e3", squat, listOf(done("s1", 80.0, 8), SetUi("s2", 8, 80.0))),
+            // s3 is done without reps: not a valid set, so neither a set nor a best set.
+            WorkoutExerciseUi("e3", squat, listOf(done("s1", 80.0, 8), SetUi("s2", 8, 80.0), done("s3", 80.0, 0))),
             WorkoutExerciseUi("e4", curl, listOf(done("c1", 10.0, 12, warmup = true))),
+            // Only an invalid completed set: not an exercise of the summary.
+            WorkoutExerciseUi("e5", exercise("press", "Desenvolvimento"), listOf(done("p1", 40.0, 0))),
         ),
         records = records,
     )
@@ -98,13 +102,13 @@ class WorkoutSummaryScreenTest {
     private fun ComposeUiTest.summary(
         workout: WorkoutUi = workout(),
         history: List<WorkoutUi> = history(1),
-        locale: String = "pt-BR",
+        locale: String? = "pt-BR",
         fontScale: Float = 1f,
         density: Float? = null,
         size: DpSize? = DpSize(360.dp, 640.dp),
         reducedMotion: Boolean = false,
         haptics: RecordingHaptics = RecordingHaptics(),
-        restoration: StateRestorationTester? = null,
+        restoration: ScreenRestoration? = null,
         calls: MutableList<String> = mutableListOf(),
     ) {
         withScreen(locale = locale, fontScale = fontScale, density = density, size = size, reducedMotion = reducedMotion,
@@ -135,6 +139,8 @@ class WorkoutSummaryScreenTest {
             onNodeWithText("Volume").shown()
             onNodeWithText("Exercícios").shown()
             onNodeWithText("42 min").shown()
+            // The valid completed sets and the exercises that have one (the share card's count), not the
+            // contract's raw `completedSets` (9) and `completedExercises` (5).
             onNodeWithText("7").shown()
             // workout.volumeKg: every completed set, the warm-up too (80×8 + 87,5×6 + 80×8 + 82,5×8 + 82,5×6 + 80×8 + 10×12).
             onNodeWithText("3.720\u00A0kg").shown()
@@ -216,6 +222,7 @@ class WorkoutSummaryScreenTest {
         onNodeWithTag(summaryExerciseTag("e1")).assert(hasText("87,5\u00A0kg × 6"))
         onNodeWithTag(summaryExerciseTag("e3")).assert(hasText("80\u00A0kg × 8"))
         onNodeWithTag(summaryExerciseTag("e4")).assert(hasText("Só aquecimento"))
+        assertEquals(0, onAllNodes(hasTestTag(summaryExerciseTag("e5"))).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -232,8 +239,10 @@ class WorkoutSummaryScreenTest {
     @Test
     fun entersOnceWithTheFinishSpringAndHaptic() = runComposeUiTest {
         val haptics = RecordingHaptics()
-        val restoration = StateRestorationTester(this)
-        summary(haptics = haptics, restoration = restoration)
+        val restoration = screenRestoration()
+        // No forced language: leaving a ProvideAppLocale bumps the theme's locale epoch, which
+        // rebuilds the tree under a new key, and nothing saved would be found on the way back.
+        summary(haptics = haptics, restoration = restoration, locale = null)
         val motion = MoosclesMotion()
         onNodeWithTag(SummaryStatsTag)
             .assert(SemanticsMatcher.expectValue(SummaryEntrance, MotionChoice.Spring(motion.springFinish, 0.92f, Dp(0f))))
@@ -258,10 +267,14 @@ class WorkoutSummaryScreenTest {
     fun numbersWholeAtTwoHundred() {
         // 2.0 with the device's density; just over 2 at density 1, the iOS text sizes; and the
         // two-column layout at 1.0 and 1.3, where num.lg would not fit 320 dp.
-        val cases = listOf(2f to null, LINEAR_TWO_X_FONT_SCALE to 1f, 1f to null, 1.3f to null)
-        for ((scale, density) in cases) {
+        // At 412 dp, 1.0 and 2.0, the other width of the spec's text-fit rule.
+        val cases = listOf(
+            Triple(2f, null, 320), Triple(LINEAR_TWO_X_FONT_SCALE, 1f, 320), Triple(1f, null, 320), Triple(1.3f, null, 320),
+            Triple(1f, null, 412), Triple(2f, null, 412),
+        )
+        for ((scale, density, width) in cases) {
             runComposeUiTest {
-                summary(fontScale = scale, density = density, size = DpSize(320.dp, 640.dp))
+                summary(fontScale = scale, density = density, size = DpSize(width.dp, 640.dp))
                 // Four stats and the best sets of three exercises.
                 assertNumbersWhole(atLeast = 7)
             }

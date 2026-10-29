@@ -16,6 +16,10 @@ import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.two
 import com.mooscles.screens.resources.Res
+import com.mooscles.screens.resources.best_set_assistance_only
+import com.mooscles.screens.resources.best_set_bodyweight
+import com.mooscles.screens.resources.best_set_no_working_set
+import com.mooscles.screens.resources.best_set_warmup_only
 import com.mooscles.screens.resources.date_day_fri
 import com.mooscles.screens.resources.date_day_mon
 import com.mooscles.screens.resources.date_day_sat
@@ -35,20 +39,16 @@ import com.mooscles.screens.resources.date_month_may
 import com.mooscles.screens.resources.date_month_nov
 import com.mooscles.screens.resources.date_month_oct
 import com.mooscles.screens.resources.date_month_sep
-import com.mooscles.screens.resources.share_assistance_only
 import com.mooscles.screens.resources.share_assisted_set
 import com.mooscles.screens.resources.share_best_set
-import com.mooscles.screens.resources.share_bodyweight_set
 import com.mooscles.screens.resources.share_date_format
 import com.mooscles.screens.resources.share_duration
 import com.mooscles.screens.resources.share_exercises
 import com.mooscles.screens.resources.share_no_completed_sets
-import com.mooscles.screens.resources.share_no_working_set
 import com.mooscles.screens.resources.share_records
 import com.mooscles.screens.resources.share_set_count
 import com.mooscles.screens.resources.share_sets
 import com.mooscles.screens.resources.share_volume
-import com.mooscles.screens.resources.share_warmup_only
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import org.jetbrains.compose.resources.pluralStringResource
@@ -249,11 +249,11 @@ fun rememberShareCardTexts(): ShareCardTexts {
         months = months,
         weekdays = weekdays,
         dateFormat = stringResource(Res.string.share_date_format),
-        bodyweightSet = stringResource(Res.string.share_bodyweight_set),
+        bodyweightSet = stringResource(Res.string.best_set_bodyweight),
         assistedSet = stringResource(Res.string.share_assisted_set),
-        warmupOnly = stringResource(Res.string.share_warmup_only),
-        assistanceOnly = stringResource(Res.string.share_assistance_only),
-        noWorkingSet = stringResource(Res.string.share_no_working_set),
+        warmupOnly = stringResource(Res.string.best_set_warmup_only),
+        assistanceOnly = stringResource(Res.string.best_set_assistance_only),
+        noWorkingSet = stringResource(Res.string.best_set_no_working_set),
         labels = ShareCardLabels(
             duration = stringResource(Res.string.share_duration),
             sets = stringResource(Res.string.share_sets),
