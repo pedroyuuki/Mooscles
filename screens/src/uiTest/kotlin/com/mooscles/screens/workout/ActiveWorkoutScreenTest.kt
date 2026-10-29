@@ -407,6 +407,26 @@ class ActiveWorkoutScreenTest {
     }
 
     @Test
+    fun anErrorAfterTheFinishCommittedStillOpensTheSummary() = runComposeUiTest {
+        val events = Events()
+        val fake = Fake(stateOf(nineOfTwelve))
+        show(fake, events)
+        onNodeWithTag(WorkoutHeaderTags.FINISH).performClick()
+        waitForIdle()
+        dialogButton("Finalizar").performClick()
+        waitForIdle()
+        // The finish committed, then clearing the rest timer failed: its error comes before the
+        // emission that moves the workout to the history.
+        fake.fail(UiError.TIMER_STORAGE)
+        waitForIdle()
+        assertTrue("clearError:" in fake.calls)
+        fake.state.value = fake.state.value.copy(active = null, history = listOf(nineOfTwelve.copy(endedAt = START + ELAPSED_MS)))
+        waitForIdle()
+        assertEquals(listOf("summary:w1"), events.list)
+        onNodeWithText("Nenhum treino em andamento").assertDoesNotExist()
+    }
+
+    @Test
     fun discardDialogWithAndWithoutSets() = runComposeUiTest {
         val fake = Fake(stateOf(nineOfFifteen))
         show(fake)

@@ -45,7 +45,10 @@ import com.mooscles.ui.UiState
  *
  * Confirming "Finish" keeps the workout's id ([rememberSaveable], so it survives recreation) and
  * calls `finishWorkout`; once the workout is in [UiState.history], [onOpenSummary] gets its id.
- * Meanwhile the finish buttons show their loading state; an error gives them back. [timer] is not
+ * Meanwhile the finish buttons show their loading state. An error while the workout is still the
+ * active one gives them back; the id is kept all the same, since the error may come from after
+ * the finish committed (clearing the rest timer, say) ahead of the emission that ends the
+ * workout, and the summary still opens when the history brings it. [timer] is not
  * read here: only the screen's rest timer reads it ([WorkoutTimerLayer]); the toasts sit above
  * it ([WorkoutToastHost]). [imeInsets] is the keyboard, which the list, the timer and the toasts
  * keep clear of; [nowMillis] is the clock the header's time reads.
@@ -69,6 +72,8 @@ fun ActiveWorkoutRoute(
     // The rest timer's height, from the screen, for the toasts. Read only by WorkoutToastHost.
     val timerHeight = remember { mutableIntStateOf(0) }
     var finishingId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The finish whose buttons an error gave back: the workout was still active when it came.
+    var finishRefused by rememberSaveable { mutableStateOf<String?>(null) }
     var summaryOpened by rememberSaveable { mutableStateOf<String?>(null) }
     val openSummary by rememberUpdatedState(onOpenSummary)
     val active = state.active
@@ -85,7 +90,10 @@ fun ActiveWorkoutRoute(
     LaunchedEffect(active?.id) {
         if (active != null && finishingId != null && active.id != finishingId) finishingId = null
     }
-    WorkoutErrorToast(state.errorCode, screen, host, actions, onError = { finishingId = null })
+    WorkoutErrorToast(state.errorCode, screen, host, actions, onError = {
+        // Only a workout still active can have failed to finish; one already gone finished.
+        if (finishingId != null && active?.id == finishingId) finishRefused = finishingId
+    })
 
     Box(modifier.fillMaxSize().testTag(ActiveWorkoutTags.ROUTE).background(MTheme.colors.bgBase).endsSetEditingOnOutsideTap(screen)) {
         when {
@@ -99,8 +107,9 @@ fun ActiveWorkoutRoute(
                 screen = screen,
                 host = host,
                 actions = actions,
-                finishing = finishingId != null,
+                finishing = finishingId == active.id && finishRefused != active.id,
                 onConfirmFinish = {
+                    finishRefused = null
                     finishingId = active.id
                     actions.finishWorkout()
                 },
