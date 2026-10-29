@@ -1,6 +1,6 @@
 # Fase 4: biblioteca de exercícios e rotinas visuais
 
-Data: 2026-10-29. Status: **rascunho**, à espera da revisão do controlador e das respostas do dono no fim. Item da fase 4 do [ROADMAP](../ROADMAP.md). Sistema visual: [spec da fase 2](2026-10-27-phase2-design-system-design.md) ("Giz & Ferro", seção "Ilustração de exercício") e as suas notas de implementação. Telas e casca: [spec da fase 3](2026-10-29-phase3-active-workout-design.md) (módulo `:screens`, D4 e D5) e as suas [notas de implementação](2026-10-29-phase3-active-workout-design.md#notas-de-implementação). Pesquisas: [P2, mídia](../reports/2026-10-27-midia-exercicios.md), [P3, bibliotecas](../reports/2026-10-27-bibliotecas-cmp-graficos-animacao-midia.md). Medições desta spec: [notas](../research/2026-10-29-phase4-midia/medicoes.md) e [mapeamento](../research/2026-10-29-phase4-midia/mapeamento.tsv).
+Data: 2026-10-29. Status: **rascunho revisado (builder check feito em 2026-10-29); à espera do dono para D3 e a licença**. Item da fase 4 do [ROADMAP](../ROADMAP.md). Sistema visual: [spec da fase 2](2026-10-27-phase2-design-system-design.md) ("Giz & Ferro", seção "Ilustração de exercício") e as suas notas de implementação. Telas e casca: [spec da fase 3](2026-10-29-phase3-active-workout-design.md) (módulo `:screens`, D4 e D5) e as suas [notas de implementação](2026-10-29-phase3-active-workout-design.md#notas-de-implementação). Pesquisas: [P2, mídia](../reports/2026-10-27-midia-exercicios.md), [P3, bibliotecas](../reports/2026-10-27-bibliotecas-cmp-graficos-animacao-midia.md). Medições desta spec: [notas](../research/2026-10-29-phase4-midia/medicoes.md) e [mapeamento](../research/2026-10-29-phase4-midia/mapeamento.tsv).
 
 As decisões vêm de duas fontes. As marcadas **(controlador)** foram passadas pelo controlador da fase, que fala pelo dono; as marcadas **(minha)** são de quem escreveu a spec, a partir delas, do código em `4f41792` e das medições. Todas são revisáveis. Cada uma aparece como **Dn** com uma linha de motivo.
 
@@ -80,6 +80,8 @@ A biblioteca e as rotinas são as telas mais antigas que sobraram depois da fase
 
 **D2 (minha). O formulário de exercício personalizado entra na 4A, sem a foto; a foto entra na 4B.** *Por quê:* a biblioteca nova precisa do "Criar exercício" para não abrir um diálogo do Material dentro de uma tela nova; a foto traz o código de plataforma, a câmera e o `FileProvider`, e fica com o resto do que o controlador pôs na 4B.
 
+**Chamada do controlador (2026-10-29), sequência do G1: a 4A não espera o G1.** A biblioteca, o detalhe (com o ícone do equipamento onde não há figura), a busca e os filtros, os nomes em pt-BR, o mapa corporal, a tabela de anatomia e o renderizador de poses com o piloto de 20 são construídos e entram na `main` do fork; a folha do piloto vai para o dono. Os lotes depois do piloto (e a página "Figuras" da galeria para eles) só começam depois do G1 aprovado. Se o dono reprovar o piloto, a encomenda e a 4M passam para uma fase futura (não a 4); a fase 4 fecha com o ícone do equipamento e o piloto removido do produto. *Por quê:* o portão G1 depende do dono e não pode travar o resto da 4A.
+
 ### Herdado da fase 3
 
 Da [verificação](../reports/2026-10-29-phase3-verificacao.md) e do [adendo da revisão final](../reports/2026-10-29-phase3-verificacao.md#adendo-2026-10-29-revisão-final):
@@ -114,14 +116,16 @@ Da [verificação](../reports/2026-10-29-phase3-verificacao.md) e do [adendo da 
 - pesa quase nada (uma pose são cerca de 20 números): o catálogo inteiro cabe no APK, funciona sem rede desde a instalação e não precisa de hospedagem, manifesto nem política de Wi-Fi;
 - os ângulos sobre ossos de comprimento fixo garantem, por construção, que a figura não muda de tamanho entre os quadros, e isso se testa.
 
+**Verificação (2026-10-29):** o `CONTRIBUTING.md` do autor original (wrkout/exercises.json) diz que as imagens foram "scrapped off the internet… I do not own the copy right… would advise against using them in comercial projects", e o mantenedor da free-exercise-db escreveu na issue #2 "no idea where the images are from or if they are royalty free so usage would be at your own risk". D3 continua proposta, à espera da resposta do dono (pergunta 1).
+
 A free-exercise-db pode servir, com cuidado, de referência visual de quem desenha as poses (que posição o movimento tem), nunca de fonte copiada.
 
 **D4 (minha). Primeiro um piloto de 20 exercícios, com portão de qualidade; depois lotes por equipamento até o catálogo inteiro.**
 
 - Piloto (spike S1): `barbell_bench_flat`, `barbell_back_squat_high_bar`, `barbell_deadlift_conventional`, `barbell_overhead_press`, `barbell_row_overhand`, `barbell_deadlift_romanian`, `barbell_hip_thrust`, `dumbbell_bench_flat`, `dumbbell_press_seated`, `dumbbell_raise_lateral`, `dumbbell_curl_standing`, `dumbbell_squat_bulgarian`, `cable_lat_pulldown_wide`, `cable_row_close_neutral`, `cable_triceps_pushdown_rope`, `bodyweight_pull_up`, `bodyweight_push_up`, `plate_leg_press_45`, `selectorized_leg_extension`, `selectorized_leg_curl_lying` (todos com o prefixo `catalog_`). Cobre barra, halter, polia, peso corporal e as duas famílias de máquina, em pé, deitado, sentado e pendurado; kettlebell, Smith e "Outro" entram nos lotes.
-- **Portão G1:** uma folha de capturas com os 20 (quadros A e B, nos dois temas, a 64 dp e no tamanho do detalhe), `critique-screen` sem achado alto de legibilidade, e o dono aprova a folha (pergunta 1). Se reprovar, as figuras não entram: o detalhe e a lista ficam com o ícone do equipamento, e a fase segue com o resto; a alternativa é encomendar ilustrações e ativar a 4M (D10).
+- **Portão G1:** uma folha de capturas com os 20 (quadros A e B, nos dois temas, a 64 dp e no tamanho do detalhe), `critique-screen` sem achado alto de legibilidade, e o dono aprova a folha (pergunta 1). Se reprovar, as figuras não entram: o detalhe e a lista ficam com o ícone do equipamento, e a fase segue com o resto; a encomenda de ilustrações e a 4M (D10) passam para uma fase futura, e o piloto sai do produto (chamada do controlador, 2026-10-29, ver D2). *Por quê:* a fase 4 não pode esperar uma encomenda.
 - Depois do G1, os lotes seguem por equipamento (barra, halter, polia, peso corporal, máquinas, kettlebell, Smith), cada um com a sua folha de capturas no relatório. São só dados e testes, sem schema; podem entrar em commits próprios durante a 4A e a 4B.
-- **Meta da fase:** as 287 entradas do catálogo com figura. O que faltar no fim da fase fica listado na verificação, com o ícone do equipamento, numa nota datada; não é bloqueio do merge da 4B.
+- **Meta da fase:** as 287 entradas do catálogo com figura **se o G1 for aprovado** (lotes de cerca de 50, cada um entra na `main` do fork); caso contrário, o ícone do equipamento. **Chamada do controlador (2026-10-29):** o compromisso de conclusão está em D21.
 
 **D5 (minha). Comportamento da figura.**
 
@@ -163,9 +167,11 @@ A free-exercise-db pode servir, com cuidado, de referência visual de quem desen
 - Exercício sem dicas: a seção some.
 - Tamanho estimado: cerca de 2 × 90 KB de JSON, por volta de 50 KB comprimidos no APK.
 
+**D21 (controlador). Quem escreve e quem revisa o conteúdo.** **Chamada do controlador (2026-10-29):** os agentes que implementam escrevem poses, anatomia, dicas, nomes em pt-BR e apelidos. Cada lote passa por (a) uma passada de agente independente, que confere anatomia e dicas contra o conhecimento geral de exercício e a pose contra as dicas, e (b) a folha de capturas com `critique-screen`. O dono revisa só a folha do piloto (G1) e, se quiser, os nomes em pt-BR. **Compromisso:** a fase 4 está pronta quando os 287 exercícios do catálogo têm anatomia, nome em pt-BR e dicas; figuras: os 287 se o G1 for aprovado, senão o ícone do equipamento. *Por quê:* o dono não é o revisor de conteúdo de 287 exercícios; o portão humano fica onde a decisão é dele.
+
 ## Licenças e créditos
 
-**D9 (minha). As figuras, o mapa corporal e as dicas são registrados como obra própria**, com um arquivo de licença em `designsystem/src/commonMain/composeResources/files/licenses/` e uma entrada nova na tela de licenças ("Ilustrações, mapa corporal e dicas de execução do Mooscles"). A licença proposta é a CC0 1.0, à espera do dono (pergunta 2; o repositório ainda não declara licença nenhuma). A free-exercise-db não aparece nos créditos, porque nada dela é distribuído. Se a 4M for ativada, cada fonte de mídia de terceiros ganha a sua entrada, com autor, licença e link, antes da primeira release que a use.
+**D9 (minha). As figuras, o mapa corporal e as dicas são registrados como obra própria**, com um arquivo de licença em `designsystem/src/commonMain/composeResources/files/licenses/` e uma entrada nova na tela de licenças ("Ilustrações, mapa corporal e dicas de execução do Mooscles"). A licença é a CC0 1.0, registrada no arquivo `designsystem/src/commonMain/composeResources/files/licenses/media-CC0.md` (o mecanismo que a tela de licenças já lê) e na entrada nova da tela, no fork. **Chamada do controlador (2026-10-29):** a concordância do dono do repositório original (ReiTut) é tratada no PR final para o upstream (o plano da fase: PR só no fim de todas as fases) e não bloqueia os merges na `main` do fork; "licença CC0?" fica como pergunta leve ao dono (pergunta 2), com CC0 como padrão sem resposta. *Por quê:* o fork é do dono do projeto e o upstream só entra no fim. A free-exercise-db não aparece nos créditos, porque nada dela é distribuído. Se a 4M for ativada, cada fonte de mídia de terceiros ganha a sua entrada, com autor, licença e link, antes da primeira release que a use.
 
 ## Etapa 4M (condicional): download de mídia
 
@@ -322,7 +328,8 @@ Pacote `com.mooscles.screens.routines`.
   - com aquecimento: "+ 2 aquec." no fim;
   - carga na unidade escolhida (lb converte do kg exato), números no formato do idioma.
 - Onde aparece: no card do treino, sob o metadado, em `caption` com os números em `num.sm`; e no editor de rotina, com as mesmas regras (uma função de formatação só, em `commonTest` nos dois idiomas).
-- *Por quê sem coluna:* a rotina não muda no meio do treino (a sincronização de alvos herdados roda só no `initialize`, no import e no `finishWorkout`), e uma coluna de alvo em `workout_sets` mexeria no histórico e no backup por um rótulo de tela.
+- **Chamada do controlador (2026-10-29):** a linha é calculada ao vivo da rotina de origem; editar a rotina durante um treino ativo atualiza a linha na hora. É comportamento aceito: o alvo é o plano atual, e as séries registradas não são tocadas. Sem snapshot e sem coluna nova.
+- *Por quê sem coluna:* o alvo é um rótulo do plano atual, e uma coluna de alvo em `workout_sets` mexeria no histórico e no backup por um rótulo de tela. (A frase anterior, "a rotina não muda no meio do treino", estava errada: a rotina pode ser editada durante o treino; só a sincronização de alvos herdados roda apenas no `initialize`, no import e no `finishWorkout`.)
 
 ### Foto do exercício personalizado
 
@@ -467,6 +474,7 @@ Nenhum fluxo novo pode passar do de hoje.
   - `ExerciseNames` (completo, único, sem órfão), `ExerciseAnatomy` (completo, coerente com o `MuscleGroup`), as poses (todas as juntas e o equipamento dentro da caixa com margem; os pés no chão quando a pose diz que estão; o mesmo equipamento nos dois quadros; nenhuma chave órfã; o piloto completo), a paridade das dicas;
   - a busca nos dois idiomas (tabela de consultas) e os testes atuais do `ExerciseSearch`;
   - o formato da linha de alvo nos dois idiomas, em kg e lb, com aquecimento, cargas e repetições variadas;
+  - editar a rotina de origem no meio do treino atualiza a linha de alvo e nunca altera as séries registradas (D16);
   - o resumo do histórico do detalhe, "Usados recentemente" e "Última vez";
   - o repositório: `addRoutineExercises`, `deleteRoutineFolder` (rotinas movidas, padrão recusada, seleção), `reorderRoutineFolders`, `setRoutineSetWarmup` (vira manual), `restoreRoutineSet`, `addRoutineSet` copiando a última, `startRoutine` com aquecimento, a sincronização ignorando aquecimentos;
   - a migração v5 → v6 (ver "Dados"), nas três listas legadas e no simulador iOS;
@@ -501,6 +509,7 @@ Nenhum fluxo novo pode passar do de hoje.
 - **"O app base continua abaixo do limite de tamanho definido na spec":** o limite é o D20 (+1 MiB sobre `4f41792`, 4A e 4B somadas), conferido pelo script no CI.
 - **"Todas as mídias têm licença registrada":** as figuras, o mapa e as dicas são obra própria, com a licença na tela de licenças e o arquivo em `files/licenses/` (D9); nenhuma mídia de terceiros entra.
 - **Entrega "thumbnails embutidos e animação ou vídeo sob demanda" (decisão do ROADMAP):** trocada por figuras próprias embutidas (miniatura e animação do mesmo desenho). O download sob demanda fica para a 4M, se houver mídia encomendada. Desvio datado de 2026-10-29, pelo bloqueio de licença e pela medição.
+- **Conclusão da fase (chamada do controlador, 2026-10-29):** 287 exercícios com anatomia, nome em pt-BR e dicas; figuras nos 287 se o G1 for aprovado, senão o ícone do equipamento (D21). O G1 não bloqueia o merge da 4A.
 - **Entrega "execução animada":** é a alternância dos dois quadros do estilo aprovado na fase 2, não vídeo.
 
 ## O que fica para quem implementar
@@ -510,12 +519,13 @@ Nenhum fluxo novo pode passar do de hoje.
 - Os comprimentos finais do esqueleto, as primitivas exatas de equipamento e a forma da tabela de poses (DSL Kotlin, por ângulos), dentro do D3 e do D5.
 - O texto de cada dica e de cada nome em pt-BR, dentro das regras de D8 e D12.
 - Onde ficam as funções puras de resumo (no `:screens` ou no `WorkoutPresentation`).
+- **Chamada do controlador (2026-10-29), itens que o builder decide no plano:** a ordem das operações ao excluir uma pasta (mover as rotinas e apagar a pasta, tudo na mesma `writeTransaction`); a posição da pasta padrão na lista; a assinatura de `reorderRoutines` sobre a ordem global (o D15 descreve o VM montando a ordem completa trocando só as da pasta); e a frase do D18 como legenda perto do botão de exportar.
 - O que sai do `:app`: `LibraryScreen`, `ExerciseCard` antigo, `ExercisePicker` antigo, `CustomExerciseDialog`, `RoutinesScreen`, `RoutineEditor`, `RoutineSetEditor` e o diálogo de mover para pasta, quando as telas novas entrarem e nada mais os usar. A tela antiga `exercise/{id}` continua (fase 5).
 
 ## Perguntas que só o dono responde
 
 1. **Mídia: confirma que não vamos usar as fotos da free-exercise-db?** O autor do dataset de origem diz que elas foram copiadas da internet, que não tem os direitos e que desaconselha o uso comercial; a recomendação desta spec é não usar. No lugar, figuras próprias no estilo "giz" que você aprovou na fase 2, começando pelo piloto de 20 (você vai receber a folha de capturas para aprovar). Se preferir ilustrações feitas por um ilustrador, isso tem custo e ativa a etapa 4M de download.
-2. **Licença das figuras, do mapa e das dicas:** proponho CC0 1.0 (qualquer um pode reutilizar). O repositório ainda não declara licença nenhuma, e o dono do repositório original (`ReiTut/Mooscles`) talvez precise concordar. Qual licença?
+2. **(Leve) Licença das figuras, do mapa e das dicas:** CC0 1.0 (qualquer um pode reutilizar), que vale como padrão se não houver resposta. O repositório ainda não declara licença nenhuma; a concordância do dono do original (`ReiTut/Mooscles`) é tratada no PR final para o upstream e não bloqueia o fork. Quer outra licença?
 3. **(Opcional) Revisar os nomes em pt-BR:** a lista dos 287 nomes vai num arquivo só; se quiser, você confere se são os nomes que se usam na sua academia. A fase não espera por isso.
 4. **Aparelho:** topa instalar o `preview` desta fase no S23 Ultra para a câmera, o seletor de fotos, o TalkBack e a fluidez a 120 Hz? Sem isso, esses itens ficam como não verificados, como nas fases 2 e 3.
 5. **Só se a 4M for ativada:** criar o repositório público de mídia (`ReiTut/Mooscles-media`) junto com o PR final, já que a URL vira contrato com os apps instalados.
