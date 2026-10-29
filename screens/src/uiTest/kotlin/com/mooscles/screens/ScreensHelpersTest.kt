@@ -1,8 +1,13 @@
 package com.mooscles.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -53,6 +58,22 @@ class ScreensHelpersTest {
         }
         waitForIdle()
         assertFails { assertNumbersWhole() }
+    }
+
+    /** A wrapping button text cut by a fixed height fails the button text check; a whole one passes. */
+    @Test
+    fun assertButtonTextsWholeFailsForAClippedButtonText() = runComposeUiTest {
+        var clipped by mutableStateOf(true)
+        withScreen {
+            Box(Modifier.width(200.dp).then(if (clipped) Modifier.height(8.dp) else Modifier).clickable {}) {
+                MText("Adicionar série", MTheme.type.labelLg)
+            }
+        }
+        waitForIdle()
+        assertFails { assertButtonTextsWhole("clipped") }
+        clipped = false
+        waitForIdle()
+        assertTrue(assertButtonTextsWhole("whole") >= 1)
     }
 
     @Test
