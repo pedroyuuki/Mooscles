@@ -184,6 +184,23 @@ class ShareCardDataTest {
         assertTrue(result.rows[1].hasRecord)
     }
 
+    /**
+     * A repetitions record on a lighter set (50 kg × 12) while the best set (60 kg × 8) is no
+     * record: the row is not marked, so its brass "60 kg × 8" never reads as a record; the record
+     * is in the card's records.
+     */
+    @Test fun aRecordOnAnotherSetDoesNotMarkTheBestSet() {
+        val old = exercise(id = "old", workout = "old")
+        val bench = exercise()
+        val result = card(AppData(workouts = listOf(workout("old", 0), workout()),
+            workoutExercises = listOf(old, bench),
+            sets = listOf(set(old, 60.0, 8), set(old, 50.0, 8, position = 1),
+                set(bench, 60.0, 8), set(bench, 50.0, 12, position = 1))))
+        assertEquals("60 kg × 8", result.rows.single().bestSet)
+        assertFalse(result.rows.single().hasRecord)
+        assertEquals(listOf(ShareRecordRow("Saved bench", "50 kg × 12")), result.records)
+    }
+
     @Test fun workoutNumberIsTheSelectedChronologicalOrdinalAndExcludesActiveWorkouts() {
         val target = workout("selected", 2000)
         val result = card(AppData(workouts = listOf(workout("last", 3000), target,

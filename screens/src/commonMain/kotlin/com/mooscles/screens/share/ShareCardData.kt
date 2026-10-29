@@ -58,7 +58,12 @@ import com.mooscles.designsystem.resources.Res as DesignRes
 /** One record of the workout on the card: "Bench press", "87,5 kg × 6". */
 data class ShareRecordRow(val name: String, val detail: String)
 
-/** One exercise of the workout: its completed sets and its best set ("82,5 kg × 8", "Warm-up only"). */
+/**
+ * One exercise of the workout: its completed sets and its best set ("82,5 kg × 8", "Warm-up only").
+ * [hasRecord] says the best set shown is itself a record set, which the card draws in brass with
+ * the record icon; a record on another set of the exercise (more reps at a lighter load) is only
+ * in the card's records, so the brass never marks a set that is not a record.
+ */
 data class ShareCardRow(val name: String, val completedSets: Int, val bestSet: String, val hasRecord: Boolean)
 
 /** The fixed words the card draws, in the app's language. */
@@ -158,16 +163,15 @@ object ShareCards {
                     NoBestSet.ASSISTANCE_ONLY -> texts.assistanceOnly
                     NoBestSet.NO_WORKING_SET -> texts.noWorkingSet
                 }
-            val hasWeightPr = entry.pr?.let { record ->
-                eligible.any { BestSets.sameLoad(it.weightKg, record.newWeightKg) && it.reps == record.reps }
-            } ?: false
-            val hasRepsPr = entry.repsPrs.any { record ->
-                completed.any { set ->
-                    !set.warmup && BestSets.sameLoad(set.weightKg, record.weightKg) && set.reps == record.newReps &&
-                        (set.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE) == record.assistance
-                }
+            // Only the best set itself: brass beside "62,5 kg × 8" must mean that set is a record.
+            val bestIsWeightPr = best != null && entry.pr?.let { record ->
+                BestSets.sameLoad(best.weightKg, record.newWeightKg) && best.reps == record.reps
+            } == true
+            val bestIsRepsPr = best != null && entry.repsPrs.any { record ->
+                !best.warmup && BestSets.sameLoad(best.weightKg, record.weightKg) && best.reps == record.newReps &&
+                    (best.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE) == record.assistance
             }
-            ShareCardRow(entry.exercise.name, completed.size, bestText, hasWeightPr || hasRepsPr)
+            ShareCardRow(entry.exercise.name, completed.size, bestText, bestIsWeightPr || bestIsRepsPr)
         }
 
         // One line per variation, in workout order: its weight record, else its first repetitions record.
