@@ -25,7 +25,9 @@ import com.mooscles.screens.shell.AppShellBottom
 import com.mooscles.screens.shell.ShellTabs
 import com.mooscles.screens.summary.WorkoutSummaryScreen
 import com.mooscles.screens.workout.ActiveWorkoutRoute
+import com.mooscles.screens.workout.ActiveWorkoutScreenState
 import com.mooscles.screens.workout.ScreenErrorToast
+import com.mooscles.screens.workout.rememberActiveWorkoutScreenState
 
 /** The full-screen active workout (spec D1): the only route without the shell. */
 internal const val WORKOUT_ROUTE = "workout"
@@ -98,6 +100,15 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
         }
         val skeletonCards = startedRoutineId?.let { id -> state.routines.find { it.id == id } }
             ?.exercises?.size?.coerceAtLeast(1) ?: 1
+
+        // The workout screen's own state (cleared fields, drafts, cards opened by hand, the pending
+        // undo) lives here, above the NavHost: minimizing and Back pop the workout's entry, and the
+        // spec keeps that state for the session. A new workout, or none, starts afresh; while the
+        // state loads (a process death) the last workout's id stands, so the restored state stays.
+        var workoutScreenFor by rememberSaveable { mutableStateOf<String?>(null) }
+        val workoutScreenKey = if (state.loading) workoutScreenFor else state.active?.id
+        SideEffect { workoutScreenFor = workoutScreenKey }
+        val workoutScreen = rememberActiveWorkoutScreenState(workoutScreenKey)
 
         var handledDiscard by rememberSaveable { mutableLongStateOf(0L) }
         LaunchedEffect(state.discardNavigationRequest, state.loading) {
@@ -177,7 +188,7 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                         if (routine != null) RoutineEditor(routine, state, hosted, onWorkout = ::openWorkout)
                         else MissingScreen("Routine unavailable")
                     }
-                    composable(WORKOUT_ROUTE) { WorkoutRoute(state, timer, hosted, nav, skeletonCards, onChooseRoutine = { selectTab(ShellTabs.TRAIN) }) }
+                    composable(WORKOUT_ROUTE) { WorkoutRoute(state, timer, hosted, nav, skeletonCards, workoutScreen, onChooseRoutine = { selectTab(ShellTabs.TRAIN) }) }
                     composable(ShellTabs.LIBRARY) { LibraryScreen(state, hosted, onHistory = { nav.navigate("exercise/$it") }) }
                     composable(ShellTabs.HISTORY) { HistoryScreen(state, hosted, onDetail = { nav.navigate(detailRoute(it, summary = false)) }) }
                     composable(DETAIL_ROUTE, arguments = listOf(navArgument("id") { type = NavType.StringType }, navArgument(SUMMARY_ARG) { type = NavType.BoolType; defaultValue = false })) { page ->
@@ -256,7 +267,7 @@ internal const val SHELL_SYSTEM_BAR_TAG = "shell-system-bar"
 /**
  * The `workout` route: minimizing, and the system Back, return to where the workout was opened
  * (Train when nothing is under it); the summary replaces the workout in the stack, which the
- * route relies on to open it once.
+ * route relies on to open it once. [screen] is the screen's state, kept by [MoosclesApp].
  */
 @Composable
 private fun WorkoutRoute(
@@ -265,6 +276,7 @@ private fun WorkoutRoute(
     actions: MoosclesActions,
     nav: NavHostController,
     skeletonCards: Int,
+    screen: ActiveWorkoutScreenState,
     onChooseRoutine: () -> Unit,
 ) {
     val minimize = { if (!nav.popBackStack()) nav.navigate(ShellTabs.TRAIN) }
@@ -278,6 +290,7 @@ private fun WorkoutRoute(
         onExerciseHistory = { nav.navigate("exercise/$it") },
         onChooseRoutine = onChooseRoutine,
         skeletonCards = skeletonCards,
+        screen = screen,
     )
 }
 

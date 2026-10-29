@@ -461,7 +461,10 @@ class ActiveWorkoutScreenState(
     }
 }
 
-/** The [ActiveWorkoutScreenState] of the screen, kept across recreation and process death. */
+/**
+ * The [ActiveWorkoutScreenState] of the screen, kept across recreation and process death, and
+ * started afresh when [workoutId] changes (another workout, or none).
+ */
 @Composable
-fun rememberActiveWorkoutScreenState(): ActiveWorkoutScreenState =
-    rememberSaveable(saver = ActiveWorkoutScreenState.Saver) { ActiveWorkoutScreenState() }
+fun rememberActiveWorkoutScreenState(workoutId: String? = null): ActiveWorkoutScreenState =
+    rememberSaveable(workoutId, saver = ActiveWorkoutScreenState.Saver) { ActiveWorkoutScreenState() }

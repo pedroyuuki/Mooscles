@@ -360,6 +360,47 @@ class ShellNavigationHostTest {
         compose.onNodeWithTag("workout-route").assertIsDisplayed()
     }
 
+    /** The spec keeps the workout screen's own state for the session: minimizing and Back pop its entry, not it. */
+    @Test fun theWorkoutScreenStateOutlivesMinimizeBackAndRecreation() {
+        state = mutableStateOf(activeState())
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MoosclesApp(state.value, actions) }
+        openFromTheBar()
+        compose.onNodeWithTag("workout-set-set-1").assertExists()
+        // Closed by hand: the advance never opens it again (D9), nor does leaving the workout.
+        toggleCard("entry")
+        compose.onNodeWithTag("workout-set-set-1").assertDoesNotExist()
+        compose.onNodeWithTag("workout-minimize").performClick()
+        compose.onNodeWithTag("routines-list").assertIsDisplayed()
+        openFromTheBar()
+        compose.onNodeWithTag("workout-set-set-1").assertDoesNotExist()
+        back()
+        openFromTheBar()
+        compose.onNodeWithTag("workout-set-set-1").assertDoesNotExist()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithTag("workout-route").assertIsDisplayed()
+        compose.onNodeWithTag("workout-set-set-1").assertDoesNotExist()
+        // A recreation while the state reloads (a process death) keeps it too.
+        compose.runOnIdle { state.value = state.value.copy(loading = true, active = null) }
+        restoration.emulateSavedInstanceStateRestore()
+        compose.runOnIdle { state.value = activeState() }
+        compose.onNodeWithTag("workout-route").assertIsDisplayed()
+        compose.onNodeWithTag("workout-set-set-1").assertDoesNotExist()
+    }
+
+    @Test fun theWorkoutScreenStateStartsAfreshForTheNextWorkout() {
+        show(activeState(completed = true))
+        openFromTheBar()
+        toggleCard("entry")
+        compose.onNodeWithTag("workout-set-set-2").assertDoesNotExist()
+        finish()
+        // The next workout happens to reuse the entry's id: nothing of the last one carries over.
+        compose.runOnIdle { state.value = activeState().let { it.copy(active = it.active!!.copy(id = "next")) } }
+        compose.onNodeWithTag("tab-routines").performClick()
+        openFromTheBar()
+        compose.onNodeWithTag("workout-set-set-2").assertExists()
+    }
+
     private fun planned(id: String, exercise: ExerciseUi) = PlannedExerciseUi(id, exercise, sets = 2, reps = 8)
 
     private fun activeState(completed: Boolean = false) = UiState(loading = false, exercises = listOf(bench, row),
@@ -382,6 +423,11 @@ class ShellNavigationHostTest {
         compose.onNodeWithTag("workout-header-finish").performClick()
         compose.onNodeWithTag("dialog-confirm").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("summary-stats").fetchSemanticsNodes().isNotEmpty() }
+    }
+    private fun toggleCard(entryId: String) {
+        compose.onNode(hasTestTag("exercise-header-toggle") and hasAnyAncestor(hasTestTag("exercise-header-$entryId")), useUnmergedTree = true)
+            .performClick()
+        compose.waitForIdle()
     }
     private fun back() {
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }

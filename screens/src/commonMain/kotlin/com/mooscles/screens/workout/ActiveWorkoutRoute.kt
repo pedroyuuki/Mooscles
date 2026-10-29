@@ -37,8 +37,10 @@ import com.mooscles.ui.UiState
  * shaped like the cards ([WorkoutSkeleton]); otherwise "No workout in progress" ([NoWorkout]),
  * with "Choose routine" ([onChooseRoutine]) and "Empty workout" (`startWorkout(null)`).
  *
- * The screen's own state ([rememberActiveWorkoutScreenState]) and its toast host live here, so
- * they outlast the switch from the placeholders to the workout. Around everything, a tap outside
+ * The screen's own state ([screen]) and its toast host live here, so they outlast the switch from
+ * the placeholders to the workout. An app whose navigation drops the route when the workout is
+ * minimized passes [screen] from above it, so the state lasts the session (cleared fields,
+ * drafts, cards opened or closed by hand, the pending undo). Around everything, a tap outside
  * the row in edit ends the edit ([endsSetEditingOnOutsideTap]). The undo toast of a removal
  * ([UndoRemovalToast]) and the error toast ([WorkoutErrorToast]: the localized [UiState.errorCode],
  * never [UiState.error]) share that host.
@@ -66,8 +68,8 @@ fun ActiveWorkoutRoute(
     skeletonCards: Int = 1,
     imeInsets: WindowInsets = WindowInsets.ime,
     nowMillis: () -> Long = { currentTimeMillis() },
+    screen: ActiveWorkoutScreenState = rememberActiveWorkoutScreenState(),
 ) {
-    val screen = rememberActiveWorkoutScreenState()
     val host = remember { MToastHostState() }
     // The rest timer's height, from the screen, for the toasts. Read only by WorkoutToastHost.
     val timerHeight = remember { mutableIntStateOf(0) }
