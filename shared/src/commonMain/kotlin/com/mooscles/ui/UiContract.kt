@@ -150,6 +150,8 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun updateWorkoutExerciseRest(entryId: String, seconds: Int)
     fun addSet(entryId: String)
     fun removeSet(setId: String)
+    /** Undoes [removeSet]: puts [set] back in [entryId] at [position], with its id and values. */
+    fun restoreSet(entryId: String, position: Int, set: SetUi)
     fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean)
     fun finishWorkout()
     fun discardWorkout()

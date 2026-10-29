@@ -516,6 +516,27 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.exerciseSets(item.workoutExerciseId).forEachIndexed { index, entry -> dao.updateSet(entry.copy(position = index)) }
     }
 
+    /**
+     * Puts a removed set back: the same id and values, at [position] among the exercise's current sets (past the
+     * end, last), with the later sets moving down one. Refused with [DataError.RESTORE_UNAVAILABLE] when the
+     * exercise is gone, its workout is no longer active or the id already exists (a second undo); the set limit
+     * and value rules are the ones [addSet] and [updateSet] apply. Every rule is checked before the first write.
+     */
+    suspend fun restoreSet(workoutExerciseId: String, position: Int, item: WorkoutSet) = db.writeTransaction {
+        val entry = dataRequireNotNull(dao.workoutExercise(workoutExerciseId), DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        dataRequire(dao.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE, DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        dataRequire(dao.set(item.id) == null, DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        val sets = dao.exerciseSets(workoutExerciseId)
+        EditRules.workoutSetCount(sets.size + 1)
+        EditRules.workoutSet(item)
+        val target = position.coerceIn(0, sets.size)
+        sets.forEachIndexed { index, set ->
+            val moved = if (index >= target) index + 1 else index
+            if (set.position != moved) dao.updateSet(set.copy(position = moved))
+        }
+        dao.insertSet(item.copy(workoutExerciseId = workoutExerciseId, position = target))
+    }
+
     /** All child mutations are already durable; final status/end time changes atomically once. */
     suspend fun finishWorkout(id: String, now: Long = currentTimeMillis()): Boolean = db.writeTransaction {
         val workout = dataRequireNotNull(dao.workout(id), DataError.WORKOUT_NOT_FOUND) { "Workout not found." }
@@ -547,5 +568,9 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dataRequire(index >= 0, DataError.INVALID_VALUE) { "Item not found." }
         val destination = (index + direction.coerceIn(-1, 1)).coerceIn(0, items.lastIndex)
         if (index != destination) items.add(destination, items.removeAt(index))
+    }
+
+    private companion object {
+        const val RESTORE_UNAVAILABLE = "This set can no longer be restored."
     }
 }

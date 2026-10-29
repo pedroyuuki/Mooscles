@@ -140,7 +140,8 @@ jobs:
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7, WorkoutRepositoryErrorTypesTest +5,
           # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
-          MIN_HOST_TESTS: 661
+          # Phase 3 task 6: WorkoutSetRestoreTest +8, AppViewModelRestoreHostTest +5.
+          MIN_HOST_TESTS: 674
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -255,9 +256,9 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # The common tests in :shared (156) plus the iOS-only entry point tests
-          # (6). Raise it when tests move into commonTest or iosTest, so a silently
-          # skipped class fails the job.
+          # The common tests in :shared (156 after phase 2, 183 with the lines below)
+          # plus the iOS-only entry point tests (6). Raise it when tests move into
+          # commonTest or iosTest, so a silently skipped class fails the job.
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
           MIN_IOS_TESTS: 189

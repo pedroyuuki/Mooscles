@@ -189,6 +189,14 @@ abstract class MoosclesViewModel(
     override fun updateWorkoutExerciseRest(entryId: String, seconds: Int) = act { repo.updateWorkoutExerciseRest(entryId, seconds) }
     override fun addSet(entryId: String) = act { repo.addSet(entryId) }
     override fun removeSet(setId: String) = act { repo.removeSet(setId) }
+    // Through the gate like updateSet: the set put back may be a completed one.
+    override fun restoreSet(entryId: String, position: Int, set: SetUi) = act {
+        services.trainingGate.withLock {
+            services.updates.assertTrainingMayStart()
+            repo.restoreSet(entryId, position, WorkoutSet(id = set.id, workoutExerciseId = entryId, position = position,
+                reps = set.reps, weightKg = set.weightKg, completed = set.completed, warmup = set.warmup, assistance = set.assistance))
+        }
+    }
     override fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean) = act {
         services.trainingGate.withLock {
         services.updates.assertTrainingMayStart()
@@ -196,7 +204,8 @@ abstract class MoosclesViewModel(
         repo.updateSet(item.copy(reps = reps, weightKg = weightKg, completed = completed, warmup = warmup, assistance = assistance))
         if (completed && !item.completed && services.preferences.snapshot().autoRest) {
             val entry = dataRequireNotNull(repo.workoutExercise(item.workoutExerciseId), DataError.WORKOUT_EXERCISE_NOT_FOUND) { "Workout exercise unavailable" }
-            if (repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
+            // A 0:00 rest turns this exercise's rest off (supersets): start(…, 0) would only finish at once.
+            if (entry.restSeconds > 0 && repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
                 services.timer.start(entry.name, entry.restSeconds, entry.id)
         }
         }
