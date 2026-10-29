@@ -62,7 +62,7 @@ fun SetRowColumns(set: String, previous: String, load: String, reps: String, cel
             .fillMaxWidth()
             .clearAndSetSemantics {}
             // The same padding as the row, so the cells' starts line up.
-            .padding(horizontal = MTheme.space.s2),
+            .padding(SetRowPadding),
     ) { measurables, constraints ->
         val width = if (constraints.hasBoundedWidth) constraints.maxWidth else constraints.minWidth
         val cells = shown ?: return@Layout layout(width, 0) {}

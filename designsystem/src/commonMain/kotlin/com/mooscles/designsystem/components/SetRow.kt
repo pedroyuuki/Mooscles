@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
@@ -251,7 +252,7 @@ fun SetRow(
         modifier = modifier
             .fillMaxWidth()
             .background(background, shape)
-            .padding(horizontal = MTheme.space.s2)
+            .padding(SetRowPadding)
             .then(if (onCells != null) Modifier.onPlaced { measurePolicy.cells?.let { reportCells?.invoke(it) } } else Modifier)
             .semantics(mergeDescendants = true) {
                 contentDescription = description
@@ -381,6 +382,15 @@ private class SetRowMeasurePolicy(private val alwaysTwoLines: Boolean, private v
 }
 
 private val SetStatus.isDone: Boolean get() = this == SetStatus.Completed || this == SetStatus.CompletedRecord
+
+/**
+ * The row's inset inside its background, as on the board "Treino ativo": `space.1` before the set
+ * number and none after the check, whose 44 dp disc already sits 6 dp inside its 56 dp target. The
+ * room this leaves the previous result keeps the usual row on one line on a 412 dp phone.
+ * [SetRowColumns] uses the same, so its titles line up with the cells.
+ */
+internal val SetRowPadding: PaddingValues
+    @Composable get() = PaddingValues(start = MTheme.space.s1)
 
 /** The haptic of a status change, or null for none (see [SetRow]). */
 internal fun statusHaptic(before: SetStatus, after: SetStatus, recordHaptic: Boolean): HapticEvent? = when {
