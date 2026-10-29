@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -29,6 +30,7 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.theme.MTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
 
 /** How far, as a share of the row's width, a set row must be dragged for the swipe to count. */
@@ -83,6 +85,10 @@ fun Modifier.setRowSwipe(
     LaunchedEffect(state, width, completeEnabled, removeEnabled) {
         // Only the enabled sides get an anchor; the offset is clamped to the anchors, so a
         // disabled side neither moves nor reaches the threshold.
+        // New anchors wait for the settle to end: the state restarts a running anchoredDrag when
+        // they change, which would run the fling (and its commit) again. A set completed by this
+        // swipe turns completeEnabled off while the row is still going back.
+        snapshotFlow { fling.settling }.first { !it }
         val full = width.toFloat()
         state.updateAnchors(
             DraggableAnchors {
@@ -150,14 +156,23 @@ private class SettleToCenter(
     private val spec: AnimationSpec<Float>,
     private val onRelease: (Float) -> Unit,
 ) : FlingBehavior {
+    /** True from the release until the row is back at the center. */
+    var settling by mutableStateOf(false)
+        private set
+
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
         val released = state.offset
         if (released.isNaN()) return 0f
-        onRelease(released)
-        var current = released
-        animate(released, 0f, animationSpec = spec) { value, _ ->
-            scrollBy(value - current)
-            current = value
+        settling = true
+        try {
+            onRelease(released)
+            var current = released
+            animate(released, 0f, animationSpec = spec) { value, _ ->
+                scrollBy(value - current)
+                current = value
+            }
+        } finally {
+            settling = false
         }
         return 0f
     }

@@ -80,6 +80,28 @@ class SetRowSwipeTest {
         assertBackAtRest(left)
     }
 
+    /** The anchors change mid-settle when a completed set turns its right side off; that drag still completes once. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun completingTurnsTheRightSideOffAndCommitsOnce() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        val calls = Calls()
+        var done by mutableStateOf(false)
+        withTheme(haptics = haptics) {
+            Box(
+                Modifier.width(400.dp).height(56.dp)
+                    .setRowSwipe(!done, true, { calls.completes++; done = true }, { calls.removes++ })
+                    .testTag("swipe"),
+            )
+        }
+        waitForIdle()
+        val left = onNodeWithTag("swipe").fetchSemanticsNode().boundsInRoot.left
+        drag(0.4f)
+        assertEquals(1, calls.completes)
+        assertEquals(0, calls.removes)
+        assertBackAtRest(left)
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun shortOfTheThresholdSettlesBack() = runComposeUiTest {
