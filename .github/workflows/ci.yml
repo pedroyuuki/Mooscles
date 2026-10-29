@@ -345,8 +345,9 @@ jobs:
           # SizesTimingElevationTest +1. Swipe settle restart fix: SetRowSwipeTest +1.
           # Phase 3 task 17 fix round 1: SetRowColumnsTest 2.
           # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1 (fix round 1: RestTimerCompactTest +1).
+          # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 282
+          MIN_DS_IOS_TESTS: 285
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -384,8 +385,9 @@ jobs:
           # Task 20: RestUpNextTest 3 (commonTest), WorkoutTimerTest 17 (uiTest) (fix round 1: RestUpNextTest +1,
           # CardExpansionTest +1, WorkoutTimerTest +3).
           # Task 21: RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1 (commonTest), RecordReactionTest 10 (uiTest).
+          # Task 28: ActiveWorkoutFlowTest 2 (uiTest; the end-to-end proof of the workout on iOS, spec D6).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 260
+          MIN_SCREENS_IOS_TESTS: 262
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -406,6 +408,17 @@ jobs:
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           if ($files.Count -eq 0) { throw 'No screens iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests screens iOS simulator tests ran; at least $minimum are expected." }
+
+      # The PNGs ActiveWorkoutFlowTest writes on the simulator, one per state of each run (none when
+      # captureToImage is unsupported there). Uploaded whatever the outcome, to look at the iOS screens.
+      - name: Upload iOS flow captures
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-flow-captures
+          path: screens/build/ios-captures/**
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload iOS reports
         if: ${{ failure() }}
