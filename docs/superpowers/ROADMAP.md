@@ -282,7 +282,7 @@ Só entram com motivo claro, cada uma com sua própria spec:
 ## Perguntas em aberto
 
 - ~~Qual é o modelo exato do aparelho Android do dono, que será o aparelho de referência para desempenho?~~ Respondida em 2026-10-29: Samsung Galaxy S23 Ultra (Snapdragon 8 Gen 2, tela de 120 Hz, One UI com o teclado Samsung). É o aparelho de referência para desempenho e para o que o emulador não prova; os testes automatizados continuam no emulador do Mac.
-- O dono topa instalar o "Mooscles Preview" (build `preview`, ao lado do app de verdade, sem tocar nos dados dele) no próprio aparelho e percorrer a lista de TalkBack e háptico da fase 3 (cerca de 30 minutos)? Sem isso, esses itens continuam não verificados, como nas fases 2 e 3.
+- O dono topa instalar o "Mooscles Preview" (build `preview`, ao lado do app de verdade, sem tocar nos dados dele) no próprio aparelho e percorrer a lista de TalkBack e háptico da fase 3 (cerca de 30 minutos)? Sem isso, esses itens continuam não verificados, como nas fases 2 e 3. **2026-10-29:** o dono tem o APK preview da fase 3 (`2359ab6`) e deixou os testes no S23 Ultra como pendentes por ora, para seguir com a fase 4; a lista (teclado Samsung, notificação na gaveta e na tela de bloqueio, vibração, fluidez a 120 Hz, fonte no máximo e TalkBack) continua não verificada.
 - ~~Haverá um iPhone físico para testes antes da fase 1 terminar?~~ Respondida em 2026-10-27: não há iPhone. O iOS fica restrito ao simulador do CI até haver um aparelho; teclado, vibração e desempenho reais no iPhone continuam sem verificação.
 
 Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Decisões).
