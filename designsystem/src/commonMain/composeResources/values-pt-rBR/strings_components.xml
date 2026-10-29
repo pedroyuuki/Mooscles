@@ -14,8 +14,8 @@
     <string name="ds_close">Fechar</string>
     <string name="ds_dismiss">Dispensar</string>
     <string name="ds_set_row_position">Série %1$d de %2$d</string>
-    <string name="ds_set_row_a11y">%1$s, anterior %2$s, carga %3$s, %4$s, %5$s</string>
-    <string name="ds_set_row_a11y_no_previous">%1$s, carga %2$s, %3$s, %4$s</string>
+    <string name="ds_set_row_a11y">%1$s, anterior %2$s, %3$s, %4$s, %5$s</string>
+    <string name="ds_set_row_a11y_no_previous">%1$s, %2$s, %3$s, %4$s</string>
     <string name="ds_load_by_reps_spoken">%1$s por %2$d</string>
     <plurals name="ds_reps_count">
         <item quantity="one">%1$d repetição</item>
@@ -71,4 +71,10 @@
     <string name="ds_duration_list">%1$s, %2$s e %3$s</string>
     <string name="ds_workout_bar_spoken">Treino em andamento, %1$s, %2$s</string>
     <string name="ds_workout_bar_rest_spoken">%1$s. Descanso, %2$s</string>
+    <string name="ds_load_spoken">carga %1$s</string>
+    <string name="ds_suggestion_spoken">sugestão %1$s</string>
+    <string name="ds_set_type_assisted_short">AS</string>
+    <string name="ds_set_type_assisted_spoken">série assistida</string>
+    <string name="ds_action_edit_set">Editar série</string>
+    <string name="ds_action_copy_previous">Copiar anterior</string>
 </resources>

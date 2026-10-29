@@ -32,6 +32,10 @@ import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.withTheme
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.performSemanticsAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -237,5 +241,115 @@ class StepperTest {
         }
         waitForIdle()
         assertEquals(listOf(22.5), changes)
+    }
+
+    /** A stepper that logs each change and each finish, in order. */
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.loggingStepper(log: MutableList<String>, start: Double = 20.0, max: Double = Double.POSITIVE_INFINITY) {
+        var value by mutableStateOf(start)
+        withTheme {
+            Stepper(
+                value, { value = it; log += "change:$it" }, step = 2.5, min = 0.0, display = "$value",
+                decreaseLabel = "Decrease", increaseLabel = "Increase", max = max,
+                onValueChangeFinished = { log += "finished" },
+            )
+        }
+        waitForIdle()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun tapFinishesOnceAfterTheStep() = runComposeUiTest {
+        val log = mutableListOf<String>()
+        loggingStepper(log)
+        onNodeWithTag(StepperIncreaseTag).performClick()
+        waitForIdle()
+        assertEquals(listOf("change:22.5", "finished"), log)
+        onNodeWithTag(StepperIncreaseTag).requestFocus()
+        onNodeWithTag(StepperIncreaseTag).performKeyInput { pressKey(Key.Enter) }
+        waitForIdle()
+        assertEquals(listOf("change:22.5", "finished", "change:25.0", "finished"), log)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun holdFinishesOnceOnRelease() = runComposeUiTest {
+        val log = mutableListOf<String>()
+        loggingStepper(log)
+        mainClock.autoAdvance = false
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
+        // Steps at about 400, 480 and 560 ms; the next would be at 640.
+        repeat(600) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(listOf("change:22.5", "change:25.0", "change:27.5"), log, "while held")
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
+        repeat(200) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        assertEquals(listOf("change:22.5", "change:25.0", "change:27.5", "finished"), log)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun semanticActionStepsAndFinishes() = runComposeUiTest {
+        val log = mutableListOf<String>()
+        loggingStepper(log)
+        onNodeWithTag(StepperDecreaseTag).performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        assertEquals(listOf("change:17.5", "finished"), log)
+    }
+
+    /** A scroll that starts on a button makes no step, so nothing is finished either. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aScrollDoesNotFinish() = runComposeUiTest {
+        val changes = mutableListOf<Double>()
+        var finished = 0
+        var value by mutableStateOf(20.0)
+        withTheme {
+            Column(Modifier.height(300.dp).verticalScroll(rememberScrollState())) {
+                Spacer(Modifier.height(100.dp))
+                Stepper(
+                    value, { value = it; changes += it }, step = 2.5, min = 0.0, display = "$value",
+                    decreaseLabel = "Decrease", increaseLabel = "Increase", onValueChangeFinished = { finished++ },
+                )
+                Spacer(Modifier.height(2000.dp))
+            }
+        }
+        waitForIdle()
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { swipeUp(startY = centerY, endY = centerY - 60.dp.toPx(), durationMillis = 100) }
+        waitForIdle()
+        assertEquals(emptyList(), changes)
+        assertEquals(0, finished)
+    }
+
+    /** Pre-flight F6: the value stops at [max], where the increase button is disabled. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun maxDisablesIncreaseAndClampsTheLastStep() = runComposeUiTest {
+        val log = mutableListOf<String>()
+        loggingStepper(log, start = 299.0, max = 300.0)
+        onNodeWithTag(StepperIncreaseTag).assertIsEnabled()
+        onNodeWithTag(StepperIncreaseTag).performClick()
+        waitForIdle()
+        assertEquals(listOf("change:300.0", "finished"), log)
+        onNodeWithTag(StepperIncreaseTag).assertIsNotEnabled()
+        onNodeWithTag(StepperDecreaseTag).assertIsEnabled()
+    }
+
+    /** Pre-flight F6: the whole stepper has a name and can take the focus ("Editing load of set 4"). */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun groupHasItsNameAndTakesFocus() = runComposeUiTest {
+        val focus = FocusRequester()
+        withTheme {
+            Stepper(
+                85.0, {}, step = 2.5, min = 0.0, decreaseLabel = "Decrease", increaseLabel = "Increase",
+                focusRequester = focus, contentDescription = "Editing load of set 4",
+            )
+        }
+        waitForIdle()
+        runOnUiThread { focus.requestFocus() }
+        waitForIdle()
+        onNodeWithContentDescription("Editing load of set 4").assertIsFocused()
+        onNodeWithContentDescription("Increase").assertExists()
+        onNodeWithContentDescription("Decrease").assertExists()
     }
 }

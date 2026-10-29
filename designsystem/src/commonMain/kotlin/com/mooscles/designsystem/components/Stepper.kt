@@ -18,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -60,9 +62,19 @@ const val StepperValueTag = "stepper-value"
  * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Moving the finger past
  * touch slop, off the button or into a scroll cancels the press (no step, no more repeats), so a scroll
  * that starts on a button never changes the value. Every step gives the
- * `StepperStep` haptic. The value never goes below [min], where the decrease button is disabled.
- * [display] is the text of [value]; by default the domain's plain decimal ([MoosclesNumbers.plain],
- * `20`, `82.5`) with the separators of [numberLocale] (`82,5` in pt-BR), never `20.0`.
+ * `StepperStep` haptic. The value stays within [min] and [max], where the decrease or the increase
+ * button is disabled.
+ *
+ * [onValueChangeFinished] is called once when a run of steps ends: after the step of a tap, a key
+ * press or a screen reader's activation, and when the finger lifts (or the press is cancelled)
+ * after a hold, however many steps it made. A press that made no step does not call it. A caller
+ * that saves on every step can instead save only here.
+ *
+ * [contentDescription] names the whole stepper ("Editing load of set 4"); with [focusRequester]
+ * the stepper itself is focusable, so the caller can move focus to it (its buttons stay focusable
+ * on their own). [display] is the text of [value]; by default the domain's plain decimal
+ * ([MoosclesNumbers.plain], `20`, `82.5`) with the separators of [numberLocale] (`82,5` in pt-BR),
+ * never `20.0`.
  */
 @Composable
 fun Stepper(
@@ -75,25 +87,38 @@ fun Stepper(
     modifier: Modifier = Modifier,
     numberLocale: NumberLocale = currentNumberLocale(),
     display: String = MoosclesNumbers.localize(MoosclesNumbers.plain(value), numberLocale),
+    max: Double = Double.POSITIVE_INFINITY,
+    onValueChangeFinished: () -> Unit = {},
+    focusRequester: FocusRequester? = null,
+    contentDescription: String? = null,
 ) {
     val currentValue by rememberUpdatedState(value)
     val currentOnChange by rememberUpdatedState(onValueChange)
+    val currentOnFinished by rememberUpdatedState(onValueChangeFinished)
     val haptics = MTheme.haptics
-    val change: (Int) -> Unit = { direction ->
-        val next = (currentValue + direction * step).coerceAtLeast(min)
+    // A step; true when it changed the value. The value the caller gets is always within min..max.
+    val change: (Int) -> Boolean = { direction ->
+        val next = (currentValue + direction * step).coerceAtMost(max).coerceAtLeast(min)
         if (next != currentValue) {
             haptics.perform(HapticEvent.StepperStep)
             currentOnChange(next)
+            true
+        } else {
+            false
         }
     }
+    val finished = { currentOnFinished() }
+    var group: Modifier = Modifier
+    if (contentDescription != null) group = group.semantics { this.contentDescription = contentDescription }
+    if (focusRequester != null) group = group.focusRequester(focusRequester).focusable()
     Row(
-        modifier,
+        modifier.then(group),
         horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StepperButton(MIcons.Minus, decreaseLabel, enabled = value > min, tag = StepperDecreaseTag) { change(-1) }
+        StepperButton(MIcons.Minus, decreaseLabel, enabled = value > min, tag = StepperDecreaseTag, step = { change(-1) }, finished = finished)
         MText(display, MTheme.type.numLg, modifier = Modifier.testTag(StepperValueTag))
-        StepperButton(MIcons.Plus, increaseLabel, enabled = true, tag = StepperIncreaseTag) { change(1) }
+        StepperButton(MIcons.Plus, increaseLabel, enabled = value < max, tag = StepperIncreaseTag, step = { change(1) }, finished = finished)
     }
 }
 
@@ -103,11 +128,13 @@ private fun StepperButton(
     label: String,
     enabled: Boolean,
     tag: String,
-    step: () -> Unit,
+    step: () -> Boolean,
+    finished: () -> Unit,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
     val currentStep by rememberUpdatedState(step)
+    val currentFinished by rememberUpdatedState(finished)
     val repeatDelay = MTheme.timing.stepperRepeatDelay
     val repeatInterval = MTheme.timing.stepperRepeatInterval
     val shape = RoundedCornerShape(MTheme.radius.md)
@@ -119,13 +146,13 @@ private fun StepperButton(
             .semantics {
                 contentDescription = label
                 role = Role.Button
-                if (enabled) onClick { currentStep(); true } else disabled()
+                if (enabled) onClick { if (currentStep()) currentFinished(); true } else disabled()
             }
             .onKeyEvent {
                 // One step per press, on key up; Enter, NumPad Enter and Space.
                 val activates = it.key == Key.Enter || it.key == Key.NumPadEnter || it.key == Key.Spacebar
                 if (enabled && activates && it.type == KeyEventType.KeyUp) {
-                    currentStep()
+                    if (currentStep()) currentFinished()
                     true
                 } else {
                     false
@@ -143,19 +170,21 @@ private fun StepperButton(
                     val press = PressInteraction.Press(down.position)
                     source.tryEmit(press)
                     var released = false
+                    // Whether this press changed the value: then it ends with onValueChangeFinished, once.
+                    var stepped = false
                     try {
                         val first = withTimeoutOrNull(repeatDelay) { awaitReleaseOrCancel(down) }
                         if (first != null) {
                             if (first) {
                                 released = true
-                                currentStep()
+                                stepped = currentStep()
                             }
                         } else {
-                            currentStep()
+                            stepped = currentStep()
                             while (true) {
                                 val end = withTimeoutOrNull(repeatInterval) { awaitReleaseOrCancel(down) }
                                 if (end == null) {
-                                    currentStep()
+                                    stepped = currentStep() || stepped
                                 } else {
                                     released = end
                                     break
@@ -164,6 +193,7 @@ private fun StepperButton(
                         }
                     } finally {
                         source.tryEmit(if (released) PressInteraction.Release(press) else PressInteraction.Cancel(press))
+                        if (stepped) currentFinished()
                     }
                 }
             }

@@ -13,6 +13,12 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
+import com.mooscles.designsystem.interaction.FocusRingVisible
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.text.input.ImeAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -56,5 +62,50 @@ class NumericFieldTest {
         onNode(hasSetTextAction()).performTextInput("kg")
         waitForIdle()
         assertEquals("82,5", text)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun selectedShowsTheRingWithoutFocus() {
+        for (selected in listOf(true, false)) {
+            runComposeUiTest {
+                withTheme { NumericField("85", {}, NumericKind.Load, "Load", selected = selected) }
+                waitForIdle()
+                onNode(hasSetTextAction()).assertIsNotFocused()
+                val box = onNodeWithTag(NumericFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().config
+                assertEquals(selected, box.getOrNull(FocusRingVisible), "selected=$selected")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun imeActionCallsBack() {
+        for (action in listOf(ImeAction.Next, ImeAction.Done)) {
+            runComposeUiTest {
+                var calls = 0
+                withTheme { NumericField("85", {}, NumericKind.Load, "Load", imeAction = action, onImeAction = { calls++ }) }
+                waitForIdle()
+                val field = onNode(hasSetTextAction())
+                assertEquals(action, field.fetchSemanticsNode().config.getOrNull(SemanticsProperties.ImeAction))
+                field.performImeAction()
+                waitForIdle()
+                assertEquals(1, calls, "$action")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun focusRequesterFocusesTheField() = runComposeUiTest {
+        val focus = FocusRequester()
+        withTheme { NumericField("8", {}, NumericKind.Reps, "Reps", focusRequester = focus) }
+        waitForIdle()
+        onNode(hasSetTextAction()).assertIsNotFocused()
+        runOnUiThread { focus.requestFocus() }
+        waitForIdle()
+        onNode(hasSetTextAction()).assertIsFocused()
+        val box = onNodeWithTag(NumericFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().config
+        assertEquals(true, box.getOrNull(FocusRingVisible))
     }
 }

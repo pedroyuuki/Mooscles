@@ -22,10 +22,12 @@ private var SemanticsPropertyReceiver.focusRingVisible by FocusRingVisible
 
 /**
  * Draws the `focus.ring` outline (`focusRingWidth`, kept `focusRingOffset` outside the control)
- * while [interactionSource] reports focus. The control itself must be focusable with the same source.
+ * while [interactionSource] reports focus, or always with [alwaysVisible] (a control shown as
+ * selected without focus). The control itself must be focusable with the same source.
  */
-fun Modifier.mFocusRing(shape: Shape, interactionSource: MutableInteractionSource): Modifier = composed {
-    val focused by interactionSource.collectIsFocusedAsState()
+fun Modifier.mFocusRing(shape: Shape, interactionSource: MutableInteractionSource, alwaysVisible: Boolean = false): Modifier = composed {
+    val hasFocus by interactionSource.collectIsFocusedAsState()
+    val focused = hasFocus || alwaysVisible
     val color = MTheme.colors.focusRing
     val width = MTheme.sizes.focusRingWidth
     val offset = MTheme.sizes.focusRingOffset
