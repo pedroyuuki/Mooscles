@@ -43,5 +43,8 @@ class SpaceTokensTest {
         assertTrue(sizes.stepperButtonHeight >= targets.workout)
         assertTrue(sizes.numericFieldHeight >= targets.min)
         assertTrue(sizes.rowMin >= targets.workout)
+        // Phase 3: a tab (the bar's full height) is a 48 dp target at least; the bar's ring fits its 56 dp row.
+        assertTrue(sizes.barMin >= targets.min)
+        assertTrue(sizes.ringBar < targets.workout && sizes.ringBarStroke < sizes.dockRingStroke)
     }
 }

@@ -1,6 +1,7 @@
 package com.mooscles.designsystem.icons
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -19,7 +20,7 @@ internal fun mIcon(name: String, block: ImageVector.Builder.() -> Unit): ImageVe
         viewportHeight = 24f,
     ).apply(block).build()
 
-/** The only kind of path an icon has: a black, unfilled stroke of 2 with round caps and joins. */
+/** The path of every outline icon: a black, unfilled stroke of 2 with round caps and joins. */
 internal fun ImageVector.Builder.strokePath(pathBuilder: PathBuilder.() -> Unit): ImageVector.Builder =
     path(
         fill = null,
@@ -27,5 +28,19 @@ internal fun ImageVector.Builder.strokePath(pathBuilder: PathBuilder.() -> Unit)
         strokeLineWidth = 2f,
         strokeLineCap = StrokeCap.Round,
         strokeLineJoin = StrokeJoin.Round,
+        pathBuilder = pathBuilder,
+    )
+
+/**
+ * A solid black area with no stroke, drawn at the size the stroked outline covers. Only the
+ * `*Filled` variants (the selected tab icons) have these; [evenOdd] cuts holes, such as the
+ * clock hands of `HistoryFilled`.
+ */
+internal fun ImageVector.Builder.fillPath(evenOdd: Boolean = false, pathBuilder: PathBuilder.() -> Unit): ImageVector.Builder =
+    path(
+        fill = SolidColor(Color.Black),
+        stroke = null,
+        strokeLineWidth = 0f,
+        pathFillType = if (evenOdd) PathFillType.EvenOdd else PathFillType.NonZero,
         pathBuilder = pathBuilder,
     )

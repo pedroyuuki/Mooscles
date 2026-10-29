@@ -36,6 +36,15 @@ class SizesTimingElevationTest {
         assertEquals(2.dp, s.textCursor)
     }
 
+    /** Phase 3 (spec D7 and D8): the tab bar is 64 dp at least, the workout bar's rest ring 32 dp with a 3 dp stroke. */
+    @Test
+    fun shellBarSizesMatchPhaseThree() {
+        val s = MoosclesSizes()
+        assertEquals(64.dp, s.barMin)
+        assertEquals(32.dp, s.ringBar)
+        assertEquals(3.dp, s.ringBarStroke)
+    }
+
     @Test
     fun everyTimingMatchesPlanDecisionSeven() {
         val t = MoosclesTiming()

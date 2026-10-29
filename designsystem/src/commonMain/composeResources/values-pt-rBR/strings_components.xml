@@ -64,4 +64,11 @@
     <string name="ds_add_set">Adicionar série</string>
     <string name="ds_media_offline">Imagem ainda não baixada</string>
     <string name="ds_exercise_menu">Opções do exercício</string>
+    <plurals name="ds_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <string name="ds_duration_list">%1$s, %2$s e %3$s</string>
+    <string name="ds_workout_bar_spoken">Treino em andamento, %1$s, %2$s</string>
+    <string name="ds_workout_bar_rest_spoken">%1$s. Descanso, %2$s</string>
 </resources>

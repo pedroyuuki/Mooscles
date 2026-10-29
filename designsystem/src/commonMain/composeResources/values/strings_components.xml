@@ -64,4 +64,11 @@
     <string name="ds_add_set">Add set</string>
     <string name="ds_media_offline">Image not downloaded yet</string>
     <string name="ds_exercise_menu">Exercise options</string>
+    <plurals name="ds_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <string name="ds_duration_list">%1$s, %2$s and %3$s</string>
+    <string name="ds_workout_bar_spoken">Workout in progress, %1$s, %2$s</string>
+    <string name="ds_workout_bar_rest_spoken">%1$s. Rest, %2$s</string>
 </resources>

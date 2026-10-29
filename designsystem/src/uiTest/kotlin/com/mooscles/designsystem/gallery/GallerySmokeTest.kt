@@ -34,6 +34,7 @@ import com.mooscles.designsystem.resources.gallery_section_records
 import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_set_rows
+import com.mooscles.designsystem.resources.gallery_section_shell
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
 import com.mooscles.designsystem.theme.rememberSystemReducedMotion
@@ -66,6 +67,7 @@ class GallerySmokeTest {
         GalleryPage.Timer to Res.string.gallery_section_timer,
         GalleryPage.Records to Res.string.gallery_section_records,
         GalleryPage.ExerciseCard to Res.string.gallery_section_exercise_card,
+        GalleryPage.Shell to Res.string.gallery_section_shell,
     )
 
     /** A failed language test must not leak Portuguese into the next test. */
