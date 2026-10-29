@@ -13,7 +13,6 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
@@ -37,6 +36,8 @@ import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.screens.RecordingActions
+import com.mooscles.screens.ScreenRestoration
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -101,7 +102,7 @@ class WorkoutSetRowTest {
         haptics: RecordingHaptics = RecordingHaptics(),
         pounds: Boolean = false,
         locale: String? = null,
-        restoration: StateRestorationTester? = null,
+        restoration: ScreenRestoration? = null,
     ): Shown {
         val shown = Shown()
         withScreen(haptics = haptics, locale = locale, restoration = restoration) {
@@ -351,7 +352,7 @@ class WorkoutSetRowTest {
         val entry = entryOf(SetUi("s1"), exercise = pullUp)
         val actions = Actions(entry, echo = true)
         val haptics = RecordingHaptics()
-        val restoration = StateRestorationTester(this)
+        val restoration = screenRestoration()
         showRows(entry, actions, haptics, restoration = restoration)
         assertEquals("", field("s1", SetRowLoadTag).editableText())
         // No reps yet: refused, with the error on the reps field.

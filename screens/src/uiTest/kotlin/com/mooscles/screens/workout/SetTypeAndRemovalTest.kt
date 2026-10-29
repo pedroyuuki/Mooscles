@@ -16,7 +16,6 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -46,6 +45,8 @@ import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.tokens.MoosclesMotion
 import com.mooscles.designsystem.tokens.MoosclesTiming
 import com.mooscles.screens.RecordingActions
+import com.mooscles.screens.ScreenRestoration
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -133,7 +134,7 @@ class SetTypeAndRemovalTest {
         entry: MutableState<WorkoutExerciseUi>,
         actions: MoosclesActions,
         locale: String? = "pt-BR",
-        restoration: StateRestorationTester? = null,
+        restoration: ScreenRestoration? = null,
     ): Shown {
         val shown = Shown()
         withScreen(locale = locale, restoration = restoration) {
@@ -364,7 +365,7 @@ class SetTypeAndRemovalTest {
         // tester loses the saved state when the language override rebuilds the tree.
         val entry = entryOf(sets())
         val actions = Actions(entry, echo = false)
-        val restoration = StateRestorationTester(this)
+        val restoration = screenRestoration()
         val shown = showList(entry, actions, locale = null, restoration = restoration)
         field("s1", SetRowRepsTag).performTextReplacement("8")
         waitForIdle()
