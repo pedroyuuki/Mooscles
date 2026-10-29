@@ -4,17 +4,22 @@ import androidx.compose.runtime.Composable
 import com.mooscles.data.AppData
 import com.mooscles.data.LoadConvention
 import com.mooscles.data.Workout
-import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.resources.ds_pr_label
 import com.mooscles.domain.WeightUnits
 import com.mooscles.domain.WorkoutCalculations
+import com.mooscles.screens.format.BestSets
 import com.mooscles.screens.format.Durations
+import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.two
 import com.mooscles.screens.resources.Res
+import com.mooscles.screens.resources.best_set_assistance_only
+import com.mooscles.screens.resources.best_set_bodyweight
+import com.mooscles.screens.resources.best_set_no_working_set
+import com.mooscles.screens.resources.best_set_warmup_only
 import com.mooscles.screens.resources.date_day_fri
 import com.mooscles.screens.resources.date_day_mon
 import com.mooscles.screens.resources.date_day_sat
@@ -34,26 +39,20 @@ import com.mooscles.screens.resources.date_month_may
 import com.mooscles.screens.resources.date_month_nov
 import com.mooscles.screens.resources.date_month_oct
 import com.mooscles.screens.resources.date_month_sep
-import com.mooscles.screens.resources.share_assistance_only
 import com.mooscles.screens.resources.share_assisted_set
 import com.mooscles.screens.resources.share_best_set
-import com.mooscles.screens.resources.share_bodyweight_set
 import com.mooscles.screens.resources.share_date_format
 import com.mooscles.screens.resources.share_duration
 import com.mooscles.screens.resources.share_exercises
 import com.mooscles.screens.resources.share_no_completed_sets
-import com.mooscles.screens.resources.share_no_working_set
 import com.mooscles.screens.resources.share_records
 import com.mooscles.screens.resources.share_set_count
 import com.mooscles.screens.resources.share_sets
 import com.mooscles.screens.resources.share_volume
-import com.mooscles.screens.resources.share_warmup_only
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.abs
-import kotlin.math.ulp
 import com.mooscles.designsystem.resources.Res as DesignRes
 
 /** One record of the workout on the card: "Bench press", "87,5 kg × 6". */
@@ -150,22 +149,21 @@ object ShareCards {
 
         val rows = summary.exercises.filter { it.completedSets.isNotEmpty() }.map { entry ->
             val completed = entry.completedSets
-            val eligible = completed.filter {
-                !it.warmup && !it.assistance && entry.exercise.convention != LoadConvention.ASSISTANCE
-            }
-            val best = bestSet(eligible)
-            val bestText = when {
-                best != null -> loadByReps(best.weightKg, best.reps)
-                completed.all { it.warmup } -> texts.warmupOnly
-                entry.exercise.convention == LoadConvention.ASSISTANCE || completed.all { it.assistance } -> texts.assistanceOnly
-                else -> texts.noWorkingSet
-            }
+            val assistanceConvention = entry.exercise.convention == LoadConvention.ASSISTANCE
+            val eligible = completed.filter { BestSets.eligible(it.warmup, it.assistance, assistanceConvention) }
+            val best = BestSets.best(eligible, { it.weightKg }, { it.reps })
+            val bestText = if (best != null) loadByReps(best.weightKg, best.reps) else
+                when (BestSets.whyNone(completed, { it.warmup }, { it.assistance }, assistanceConvention)) {
+                    NoBestSet.WARMUP_ONLY -> texts.warmupOnly
+                    NoBestSet.ASSISTANCE_ONLY -> texts.assistanceOnly
+                    NoBestSet.NO_WORKING_SET -> texts.noWorkingSet
+                }
             val hasWeightPr = entry.pr?.let { record ->
-                eligible.any { sameLoad(it.weightKg, record.newWeightKg) && it.reps == record.reps }
+                eligible.any { BestSets.sameLoad(it.weightKg, record.newWeightKg) && it.reps == record.reps }
             } ?: false
             val hasRepsPr = entry.repsPrs.any { record ->
                 completed.any { set ->
-                    !set.warmup && sameLoad(set.weightKg, record.weightKg) && set.reps == record.newReps &&
+                    !set.warmup && BestSets.sameLoad(set.weightKg, record.weightKg) && set.reps == record.newReps &&
                         (set.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE) == record.assistance
                 }
             }
@@ -221,15 +219,6 @@ object ShareCards {
             "${two(end.hour)}:${two(end.minute)}",
         )
     }
-
-    /** Round-trip unit noise is equal load; both displayed values still come from one real set. */
-    private fun bestSet(sets: List<WorkoutSet>): WorkoutSet? {
-        val highest = sets.maxOfOrNull { it.weightKg } ?: return null
-        return sets.filter { sameLoad(it.weightKg, highest) }.maxByOrNull { it.reps }
-    }
-
-    private fun sameLoad(first: Double, second: Double) =
-        abs(first - second) <= maxOf(first.ulp, second.ulp) * 4
 }
 
 private val placeholder = Regex("%(\\d+)\\$[ds]")
@@ -260,11 +249,11 @@ fun rememberShareCardTexts(): ShareCardTexts {
         months = months,
         weekdays = weekdays,
         dateFormat = stringResource(Res.string.share_date_format),
-        bodyweightSet = stringResource(Res.string.share_bodyweight_set),
+        bodyweightSet = stringResource(Res.string.best_set_bodyweight),
         assistedSet = stringResource(Res.string.share_assisted_set),
-        warmupOnly = stringResource(Res.string.share_warmup_only),
-        assistanceOnly = stringResource(Res.string.share_assistance_only),
-        noWorkingSet = stringResource(Res.string.share_no_working_set),
+        warmupOnly = stringResource(Res.string.best_set_warmup_only),
+        assistanceOnly = stringResource(Res.string.best_set_assistance_only),
+        noWorkingSet = stringResource(Res.string.best_set_no_working_set),
         labels = ShareCardLabels(
             duration = stringResource(Res.string.share_duration),
             sets = stringResource(Res.string.share_sets),
