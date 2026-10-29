@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
+import com.mooscles.data.LoadConvention
 import com.mooscles.designsystem.components.PrToast
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.currentNumberLocale
@@ -32,6 +33,7 @@ import com.mooscles.screens.resources.workout_record_weight_detail
 import com.mooscles.screens.resources.workout_record_weight_title
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.SetRecordUi
+import com.mooscles.ui.SetUi
 import com.mooscles.ui.WorkoutExerciseUi
 import com.mooscles.ui.WorkoutUi
 import org.jetbrains.compose.resources.stringResource
@@ -72,12 +74,15 @@ object RecordAnnouncer {
 
     /**
      * The category a record competes in: the exercise and its convention (records are kept per
-     * both, across the entries of the same exercise) and the kind; a reps record also by its load,
-     * since it is "most reps at this load".
+     * both, across the entries of the same exercise) and the kind; a reps record also by the load
+     * of [set], since it is "most reps at this load", and by its assistance mode, which the domain
+     * keeps apart (an assisted set, or any set of the assistance convention).
      */
-    fun category(entry: WorkoutExerciseUi, record: SetRecordUi, weightKg: Double): String {
+    fun category(entry: WorkoutExerciseUi, record: SetRecordUi, set: SetUi): String {
         val base = "${entry.exercise.id}|${entry.exercise.convention}|${record.kind}"
-        return if (record.kind == RecordKind.REPS) "$base|$weightKg" else base
+        if (record.kind != RecordKind.REPS) return base
+        val assisted = set.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE.label
+        return if (assisted) "$base|${set.weightKg}|assisted" else "$base|${set.weightKg}"
     }
 
     /**
@@ -109,7 +114,7 @@ object RecordAnnouncer {
                 if (!set.completed || set.id !in checkedHere) continue
                 consumed += set.id
                 val record = set.record ?: continue
-                val category = category(entry, record, set.weightKg)
+                val category = category(entry, record, set)
                 if (!beats(record.kind, set.weightKg, set.reps, best[category])) continue
                 best = best + (category to RecordBest(set.weightKg, set.reps))
                 events += RecordEvent(key(set.id, set.weightKg, set.reps, record), set.id, entry.exercise.name, record, set.weightKg, set.reps)

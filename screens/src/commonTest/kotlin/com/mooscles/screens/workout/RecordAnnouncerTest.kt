@@ -176,4 +176,22 @@ class RecordAnnouncerTest {
         val other = RecordAnnouncer.step(workout(row to listOf(SetUi("x1", reps = 6, weightKg = 87.5, completed = true, record = weight))), setOf("x1"), nine.announced)
         assertEquals(listOf("x1:87.5:6:WEIGHT"), other.announce.map { it.key })
     }
+    @Test
+    fun repsRecordsCompeteWithinTheirAssistanceMode() {
+        // The domain keeps reps records per assistance mode: 12 assisted reps at 80 kg do not
+        // stand in the way of an unassisted record at the same load.
+        val assisted = RecordAnnouncer.step(
+            bench(SetUi("a1", reps = 12, weightKg = 80.0, completed = true, assistance = true, record = SetRecordUi(RecordKind.REPS, previousReps = 10))),
+            setOf("a1"), emptyMap(),
+        )
+        assertEquals(listOf("a1:80.0:12:REPS"), assisted.announce.map { it.key })
+        val unassisted = RecordAnnouncer.step(bench(SetUi("u1", reps = 8, weightKg = 80.0, completed = true, record = reps)), setOf("u1"), assisted.announced)
+        assertEquals(listOf("u1:80.0:8:REPS"), unassisted.announce.map { it.key })
+        // Each mode keeps its own best: fewer assisted reps after it say nothing.
+        val fewer = RecordAnnouncer.step(
+            bench(SetUi("a2", reps = 11, weightKg = 80.0, completed = true, assistance = true, record = SetRecordUi(RecordKind.REPS, previousReps = 10))),
+            setOf("a2"), unassisted.announced,
+        )
+        assertEquals(emptyList(), fewer.announce)
+    }
 }
