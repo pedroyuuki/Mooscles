@@ -225,7 +225,7 @@ class RestTimerDockTest {
             waitForIdle()
             onNodeWithTag(TimerOpenTag)
                 .assertHasClickAction()
-                .assertContentDescriptionEquals("Abrir timer de descanso, 1 minuto e 24 segundos restantes")
+                .assertContentDescriptionEquals("Abrir timer de descanso, tempo restante: 1 minuto e 24 segundos")
             onNodeWithTag(TimerOpenTag).performClick()
             waitForIdle()
             assertEquals(1, opened)
@@ -271,8 +271,8 @@ class RestTimerDockTest {
     @Test
     fun openLabelReadsPausedAndDone() {
         val cases = listOf(
-            visual(84) to ("Abrir timer de descanso, 1 minuto e 24 segundos restantes" to null),
-            visual(84, TimerPhase.Paused) to ("Abrir timer de descanso, 1 minuto e 24 segundos restantes" to "Pausado"),
+            visual(84) to ("Abrir timer de descanso, tempo restante: 1 minuto e 24 segundos" to null),
+            visual(84, TimerPhase.Paused) to ("Abrir timer de descanso, tempo restante: 1 minuto e 24 segundos" to "Pausado"),
             visual(0, TimerPhase.Done) to ("Abrir timer de descanso" to "Descanso concluído"),
         )
         for ((shown, expected) in cases) {

@@ -214,10 +214,11 @@ internal fun TimerAdjustButton(
 
 /**
  * The part of a timer that opens the expanded one: with [onOpen] one button named "Open rest
- * timer, 1 minute and 24 seconds remaining" (the name stands for the texts merged into it), without
- * it plain content. The texts are merged, not cleared, so they stay in the tree for the tests.
+ * timer, 1 minute and 24 seconds remaining"; in pt-BR "…, tempo restante: 1 minuto e 24
+ * segundos", which agrees with any number), without it plain content. The name stands for the
+ * texts merged into it; they are merged, not cleared, so they stay in the tree for the tests.
  * Paused or done, the name alone would hide what the merged status line says, so the button also
- * reads that state ("Paused", "Rest complete"); done, the name drops the "0 seconds remaining".
+ * reads that state ("Paused", "Rest complete"); done, the name drops the time left.
  * A press scales the body like the other workout controls (`motion.pressScale`).
  */
 @Composable

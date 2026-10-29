@@ -49,7 +49,7 @@
     <string name="ds_timer_plus15_short">+15 s</string>
     <string name="ds_timer_skip">Pular descanso</string>
     <string name="ds_timer_up_next">A seguir</string>
-    <string name="ds_timer_announce">Descanso, %1$s restantes</string>
+    <string name="ds_timer_announce">Descanso, tempo restante: %1$s</string>
     <plurals name="ds_minutes">
         <item quantity="one">%1$d minuto</item>
         <item quantity="other">%1$d minutos</item>
@@ -78,7 +78,7 @@
     <string name="ds_set_type_assisted_spoken">série assistida</string>
     <string name="ds_action_edit_set">Editar série</string>
     <string name="ds_action_copy_previous">Copiar anterior</string>
-    <string name="ds_timer_open">Abrir timer de descanso, %1$s restantes</string>
+    <string name="ds_timer_open">Abrir timer de descanso, tempo restante: %1$s</string>
     <string name="ds_timer_open_done">Abrir timer de descanso</string>
     <string name="ds_timer_of">de %1$s</string>
     <string name="ds_timer_pause">Pausar</string>
