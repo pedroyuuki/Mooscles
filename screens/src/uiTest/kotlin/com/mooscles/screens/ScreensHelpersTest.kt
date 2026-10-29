@@ -1,0 +1,73 @@
+package com.mooscles.screens
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
+import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.screens.workout.RecompositionProbe
+import com.mooscles.ui.SetUi
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFails
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/** The test helpers the screen tests lean on fail when they should, so those tests cannot pass in the void. */
+@OptIn(ExperimentalTestApi::class)
+class ScreensHelpersTest {
+    @Test
+    fun recordingActionsWritesMethodAndArguments() {
+        val actions = RecordingActions()
+        actions.updateSet("s2", 8, 82.5, completed = true, warmup = false, assistance = false)
+        actions.skipTimer()
+        actions.startWorkout(null)
+        actions.restoreSet("e1", 2, SetUi("s3", reps = 5))
+        assertEquals(
+            listOf(
+                "updateSet:s2,8,82.5,true,false,false",
+                "skipTimer:",
+                "startWorkout:null",
+                "restoreSet:e1,2,${SetUi("s3", reps = 5)}",
+            ),
+            actions.calls,
+        )
+    }
+
+    @Test
+    fun numberTextsAreTheOnlyOnesMeasured() {
+        for (text in listOf("82.5", "82,5 kg", "82.5 kg × 8", "1:02:18", "−15 s", "1 h 12 min", "185 lb")) {
+            assertTrue(isNumberText(text), text)
+        }
+        for (text in listOf("Rest", "3 sets", "Set 1", "kg", "", "Bench 80")) assertFalse(isNumberText(text), text)
+    }
+
+    @Test
+    fun assertNumbersWholeFailsForACutNumber() = runComposeUiTest {
+        withScreen {
+            Box(Modifier.width(20.dp)) { MText("187.5", MTheme.type.numDock, softWrap = false, maxLines = 1) }
+        }
+        waitForIdle()
+        assertFails { assertNumbersWhole() }
+    }
+
+    @Test
+    fun assertNumbersWholePassesForWholeNumbersAndFailsWithoutAny() = runComposeUiTest {
+        val keys = mutableListOf<String>()
+        withScreen(probe = { keys += it }) {
+            Column {
+                RecompositionProbe("column")
+                MText("82.5 kg × 8", MTheme.type.bodyMd)
+                MText("Rest", MTheme.type.bodyMd)
+            }
+        }
+        waitForIdle()
+        assertNumbersWhole(atLeast = 1)
+        assertFails { assertNumbersWhole(atLeast = 2) }
+        assertTrue("column" in keys, "the probe was not called: $keys")
+    }
+}

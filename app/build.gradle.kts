@@ -63,6 +63,9 @@ dependencies {
     // Design system (tokens, components, fonts, strings); Compose Multiplatform 1.12.2 maps to the
     // Jetpack Compose 1.12.1 of the BOM above, so it changes no Compose version.
     implementation(project(":designsystem"))
+    // The redesigned screens (Compose Multiplatform, on :shared and :designsystem): no new
+    // library and no version change, only the module itself.
+    implementation(project(":screens"))
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")

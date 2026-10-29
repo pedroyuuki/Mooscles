@@ -1,5 +1,5 @@
 # Host tests, lint and a debug build on every push and pull request, the iOS
-# targets of :shared and :designsystem compiled and their tests run on the iOS simulator, plus
+# targets of :shared, :designsystem and :screens compiled and their tests run on the iOS simulator, plus
 # a check that the release script still works on Linux and Windows, run when tools/,
 # build.ps1, app/build.gradle.kts (version and signing inputs) or a workflow
 # changes, and on every manual run.
@@ -62,11 +62,12 @@ jobs:
 
       # No test retry: a flaky test must fail the job so it gets looked at.
       - name: Test, lint and assemble
-        # :shared and :designsystem register no lint report task of their own (AGP 9.3.3 KMP
-        # library: only lintAnalyzeAndroidHostTest, which writes no report).
-        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :designsystem:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
+        # :shared, :designsystem and :screens register no lint report task of their own (AGP 9.3.3
+        # KMP library: only lintAnalyzeAndroidHostTest, which writes no report).
+        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :designsystem:testAndroidHostTest :screens:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
-      # Phase 2 budget: APK growth over the phase's base, the fonts, and fonts plus icons.
+      # Phase 3 budget: APK growth over the phase's base (main after phase 2), the fonts, and
+      # fonts plus icons.
       - name: APK budget
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -91,8 +92,8 @@ jobs:
             --lock designsystem/font-sources.txt --require-tabular '*' --require-proportional 'inter*' \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
-      # Components, the gallery and the licenses page may not hard-code colors, measures or
-      # durations: those live in designsystem/.../tokens/. The two fixtures prove the guard
+      # Components, the gallery, the licenses page and the :screens common code may not hard-code
+      # colors, measures or durations: those live in designsystem/.../tokens/. The two fixtures prove the guard
       # still catches (8 violating lines) and still passes clean code.
       - name: Design token guard
         if: ${{ !cancelled() }}
@@ -141,12 +142,16 @@ jobs:
           # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
           # Phase 3 task 6: WorkoutSetRestoreTest +8, AppViewModelRestoreHostTest +5.
-          MIN_HOST_TESTS: 706
+          # Phase 3 tasks 7 and 8: SetSuggestionsTest +20, InProcessRestTimerTest +12 (shared).
+          # Phase 3 task 9 (:screens): StringsParityTest 6, EquipmentIconsTest 1;
+          # DesignSystemResourcesHostTest +1 (:app).
+          MIN_HOST_TESTS: 714
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
               'shared/build/test-results/testAndroidHostTest',
-              'designsystem/build/test-results/testAndroidHostTest'
+              'designsystem/build/test-results/testAndroidHostTest',
+              'screens/build/test-results/testAndroidHostTest'
           ) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.xml' -ErrorAction SilentlyContinue }
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
           foreach ($file in $files) {
@@ -160,7 +165,7 @@ jobs:
           $minimum = [int]$env:MIN_HOST_TESTS
           $lines = @(
               '### Host tests',
-              "$tests tests in $($files.Count) classes (:app, :shared and :designsystem): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+              "$tests tests in $($files.Count) classes (:app, :shared, :designsystem and :screens): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
           ) + ($failed | ForEach-Object { "- ``$_``" })
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -178,6 +183,8 @@ jobs:
             shared/build/test-results/
             designsystem/build/reports/
             designsystem/build/test-results/
+            screens/build/reports/
+            screens/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -192,8 +199,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Compiles the iOS device targets of :shared and :designsystem and runs their tests
-  # (common tests, plus the design system UI tests) on the iOS simulator. Only a Mac
+  # Compiles the iOS device targets of :shared, :designsystem and :screens and runs their tests
+  # (common tests, plus the design system and screen UI tests) on the iOS simulator. Only a Mac
   # can build Kotlin/Native Apple targets.
   ios:
     name: iOS compile and simulator tests
@@ -233,11 +240,11 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'designsystem/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'designsystem/build.gradle.kts', 'screens/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: konan-${{ runner.os }}-
 
       - name: Compile for iOS and run the simulator tests
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :designsystem:compileKotlinIosArm64 :designsystem:iosSimulatorArm64Test --console=plain --continue
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :designsystem:compileKotlinIosArm64 :designsystem:iosSimulatorArm64Test :screens:compileKotlinIosArm64 :screens:iosSimulatorArm64Test --console=plain --continue
 
       # kspIosArm64 and kspIosSimulatorArm64 run only here, so an iOS-only divergence in the
       # exported schema (and its identityHash) is caught here, not in the host job.
@@ -329,6 +336,35 @@ jobs:
           if ($files.Count -eq 0) { throw 'No design system iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests design system iOS simulator tests ran; at least $minimum are expected." }
 
+      # The screens on their own, for the same reason.
+      - name: Summarize screens iOS simulator tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        env:
+          # Per class: EquipmentIconsTest 1 (commonTest); CatalogLabelsTest 4, ScreensHelpersTest 4 (uiTest).
+          # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
+          MIN_SCREENS_IOS_TESTS: 9
+        run: |
+          $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          foreach ($file in $files) {
+              $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
+              $tests += [int]$suite.tests; $failures += [int]$suite.failures
+              $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
+              foreach ($case in @($suite.testcase)) {
+                  if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+              }
+          }
+          $minimum = [int]$env:MIN_SCREENS_IOS_TESTS
+          $lines = @(
+              '### Screens iOS simulator tests',
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+          ) + ($failed | ForEach-Object { "- ``$_``" })
+          $lines | Write-Host
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if ($files.Count -eq 0) { throw 'No screens iOS simulator test results were written.' }
+          if ($tests -lt $minimum) { throw "Only $tests screens iOS simulator tests ran; at least $minimum are expected." }
+
       - name: Upload iOS reports
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -339,6 +375,8 @@ jobs:
             shared/build/test-results/
             designsystem/build/reports/
             designsystem/build/test-results/
+            screens/build/reports/
+            screens/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 

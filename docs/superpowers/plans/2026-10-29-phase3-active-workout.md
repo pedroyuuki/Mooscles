@@ -67,7 +67,7 @@ As decisões da spec (D1–D24 e as sete regras de 2026-10-29) valem como estão
   - o `compat-reviewer` (`.claude/agents/compat-reviewer.md`) roda e dá `SEGURO` antes do commit nas Tasks 4, 5, 6, 8, 9, 25, 27 e 32;
   - o iOS só se prova no CI (este Mac não tem Xcode); nunca desinstale o app de um aparelho do dono; desligue a rede do emulador (`svc wifi disable`, `svc data disable`) antes de instalar APKs de teste.
 - Código, comentários, KDoc e commits em inglês. Plano e relatórios em pt-BR. Commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- **Evidências:** tudo vai para `docs/superpowers/reports/AAAA-MM-DD-phase3-verificacao/` (a data é a do dia em que a pasta nasce, na Task 24; as tasks seguintes reutilizam a mesma pasta).
+- **Evidências:** tudo vai para `docs/superpowers/reports/2026-10-29-phase3-verificacao/` (a pasta nasce na Task 9, com o `deps-before.txt`; as tasks seguintes reutilizam a mesma pasta; ver a nota F27).
 
 ## Review Focus
 
@@ -928,4 +928,8 @@ Todo o resto é sequencial: as Tasks 4–6 tocam `MoosclesViewModel.kt` e `UiCon
   - **F9:** no CI, os relatórios do iOS são enviados também com o job verde (`if: !cancelled()`), para os spikes e as capturas da Task 28.
   - **F23:** cada lane paralela tem a sua branch; o controlador mescla. O relatório dos spikes (Task 3) entra na branch da fase depois da Task 6.
   - **F25:** a Task 4 leva o `MIN_HOST_TESTS` à contagem real (≥ 624), e as Tasks 11, 13 e 27 o sobem.
+- **2026-10-29, Task 9.** Três decisões da varredura mudam o texto acima:
+  - **F27:** a pasta de evidências nasce na Task 9 (Step 1, `deps-before.txt`), não na 24. Recebeu a data da fase, `2026-10-29-phase3-verificacao`, como os outros documentos da fase 3, embora o relógio da máquina marcasse 2026-10-28 quando ela foi criada.
+  - **F35:** o caminho padrão do `check-design-tokens.ps1` **acrescenta** `screens/src/commonMain/kotlin/com/mooscles/screens` à lista atual (DS e tela piloto), sem tirar nada; as fixtures continuam com 8 linhas.
+  - **F41:** `withScreen` ganha `density: Float? = null`, como o `withTheme` do DS, para reproduzir no Android as medidas do iOS (com `LINEAR_TWO_X_FONT_SCALE`, 2,01).
 - **2026-10-29, resultados dos spikes S1 (Android) e S2.** S1 no Android: PNG igual ao bitmap, mediana 446 ms, thread principal livre; a metade iOS é decidida na Task 3. S2: nenhuma estratégia leva o rótulo ao nó editável e o TalkBack do emulador não pôde ser conduzido, então, pela regra de decisão, o `MTextField` não muda e o #11 continua aberto.
