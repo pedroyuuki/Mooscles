@@ -170,7 +170,9 @@ jobs:
           # Task 24 fix round 1 (:app): ShellNavigationHostTest +4 (one workout entry, saved tabs
           # without the workout, the summary's error, the shell's system-bar insets). 775 + 4 = 779.
           # Merged: 776 + 2 (task 20 fix) + 13 - 14 + 4 (task 24) = 781.
-          MIN_HOST_TESTS: 781
+          # Phase 3 task 25 (:app): RestProgressNotificationHostTest +13, RestTimerActionsHostTest +4,
+          # MainActivityOpenWorkoutHostTest +4. 781 + 21 = 802.
+          MIN_HOST_TESTS: 802
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

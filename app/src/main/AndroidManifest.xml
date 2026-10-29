@@ -20,6 +20,7 @@
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
         <receiver android:name=".timer.RestAlarmReceiver" android:exported="false" />
+        <receiver android:name=".timer.RestTimerActionReceiver" android:exported="false" />
         <receiver android:name=".updates.InstallStatusReceiver" android:exported="false" />
         <receiver android:name=".updates.UpdateReplacedReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
