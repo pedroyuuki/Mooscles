@@ -90,4 +90,6 @@ data class MoosclesSizes(
     val skeletonMinAlpha: Float = 0.5f,
     /** Widest a dialog card gets; narrower screens keep `space.6` on each side instead. */
     val dialogMaxWidth: Dp = 360.dp,
+    /** Phase 3: the widest the content of a screen gets, centered (spec "Tela do treino ativo", 600 dp). */
+    val contentMaxWidth: Dp = 600.dp,
 )

@@ -2,34 +2,56 @@ package com.mooscles.designsystem.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
+import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_add_set
+import com.mooscles.designsystem.resources.ds_card_collapse
+import com.mooscles.designsystem.resources.ds_card_expand
 import com.mooscles.designsystem.resources.ds_exercise_menu
 import com.mooscles.designsystem.resources.ds_media_offline
+import com.mooscles.designsystem.resources.ds_sets_done_of
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.designsystem.tokens.tabular
 import org.jetbrains.compose.resources.stringResource
 
 const val ExerciseCardTag = "exercise-card"
@@ -40,6 +62,20 @@ const val ExerciseOfflineIconTag = "exercise-offline-icon"
 const val ExerciseOfflineTextTag = "exercise-offline-text"
 const val ExerciseSetsTag = "exercise-sets"
 const val ExerciseMediaPlaceholderTag = "exercise-media-placeholder"
+const val ExerciseCardHeaderTag = "exercise-card-header"
+const val ExerciseCardSegmentTag = "exercise-card-segment"
+const val ExerciseCardFooterTag = "exercise-card-footer"
+const val ExerciseHeaderToggleTag = "exercise-header-toggle"
+const val ExerciseCardDoneTag = "card-done"
+const val ExerciseCardProgressTag = "card-progress"
+const val ExerciseCardCaptionTag = "card-caption"
+
+/**
+ * Test-facing: the shape a piece of the segmented exercise card draws its surface with. The header
+ * is rounded on top (all round when collapsed, as the whole card), a segment has no corners and the
+ * footer is rounded at the bottom, so header, segments and footer stacked with no gap draw one card.
+ */
+val CardSegmentShape = SemanticsPropertyKey<Shape>("CardSegmentShape")
 
 /** What the 64 dp thumbnail of an exercise shows. */
 @Immutable
@@ -55,11 +91,19 @@ sealed interface ExerciseMedia {
 }
 
 /**
+ * "3 of 3 sets" / "3 de 3 séries": [done] of [total], plural on [total] ("0 of 1 set"), zero
+ * plural. The collapsed header's [ExerciseCardHeader] `progress` and the workout header use it.
+ */
+@Composable
+fun setsDoneOf(done: Int, total: Int): String = pluralCount(Res.plurals.ds_sets_done_of, total, done, total)
+
+/**
  * An exercise in the workout: the thumbnail ([media], 64 dp), [name], [meta] (muscle, equipment),
  * the options menu and, below, the set rows given by [sets] and a 56 dp "Add set" button. With
  * [collapsed] only the header remains. Without an image the thumbnail is the equipment icon, and
  * an image is drawn over that icon, so a tile still loading shows it; with an image (or the offline
- * note) the equipment icon also sits beside [meta].
+ * note) the equipment icon also sits beside [meta]. It is the [ExerciseCardHeader],
+ * [ExerciseCardSegment] and [ExerciseCardFooter] stacked; a lazy list uses those pieces directly.
  */
 @Composable
 fun ExerciseCard(
@@ -73,51 +117,128 @@ fun ExerciseCard(
     collapsed: Boolean = false,
     sets: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = MTheme.colors
-    val cardShape = RoundedCornerShape(MTheme.radius.lg)
-    val thumbShape = RoundedCornerShape(MTheme.radius.md)
-    Column(
-        modifier
-            .testTag(ExerciseCardTag)
-            .fillMaxWidth()
-            .background(colors.bgSurface, cardShape)
-            .border(MTheme.sizes.border, colors.borderSubtle, cardShape)
-            .padding(MTheme.space.s3),
-        verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(MTheme.sizes.media).clip(thumbShape).background(colors.bgInset),
-                contentAlignment = Alignment.Center,
-            ) {
-                when (media) {
-                    is ExerciseMedia.Image -> {
-                        // The placeholder under the image: a painter that has not loaded yet draws
-                        // nothing, and the tile must not be an empty square meanwhile.
-                        MIcon(
-                            equipmentIcon, null, Modifier.testTag(ExerciseMediaPlaceholderTag),
-                            size = MTheme.sizes.icon28, tint = colors.textTertiary,
-                        )
-                        Image(
-                            media.painter,
-                            contentDescription = null,
-                            modifier = Modifier.size(MTheme.sizes.media),
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
-                    ExerciseMedia.Offline -> MIcon(
-                        MIcons.ImageOff, null, Modifier.testTag(ExerciseOfflineIconTag),
-                        size = MTheme.sizes.icon24, tint = colors.textTertiary,
-                    )
-                    ExerciseMedia.None -> MIcon(
-                        equipmentIcon, null, Modifier.testTag(ExerciseEquipmentIconTag),
-                        size = MTheme.sizes.icon28, tint = colors.textTertiary,
-                    )
+    Column(modifier.testTag(ExerciseCardTag).fillMaxWidth()) {
+        CardHeader(
+            name, meta, media, equipmentIcon, onMenu, collapsed,
+            onToggle = null, modifier = Modifier, progress = null, done = false, caption = null, support = null, columns = null,
+        )
+        if (!collapsed) {
+            ExerciseCardSegment {
+                Column(Modifier.testTag(ExerciseSetsTag), verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap)) {
+                    sets()
                 }
             }
+            ExerciseCardFooter(onAddSet)
+        }
+    }
+}
+
+/**
+ * The top of a segmented exercise card (a lazy list item of its own): thumbnail, [name], [meta],
+ * the menu and, open, the [caption] (a load convention note), the [support] line (rest chip,
+ * previous date) and the [columns] header of the set rows. Tapping the header (not the menu) calls
+ * [onToggle]. [collapsed], it is the whole card: rounded all round, with [progress] ("3 of 3
+ * sets", see [setsDoneOf]) under [meta] and, with [done], a check before it.
+ */
+@Composable
+fun ExerciseCardHeader(
+    name: String,
+    meta: String,
+    media: ExerciseMedia,
+    equipmentIcon: ImageVector,
+    onMenu: () -> Unit,
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    progress: String? = null,
+    done: Boolean = false,
+    caption: String? = null,
+    support: (@Composable RowScope.() -> Unit)? = null,
+    columns: (@Composable () -> Unit)? = null,
+) = CardHeader(name, meta, media, equipmentIcon, onMenu, collapsed, onToggle, modifier, progress, done, caption, support, columns)
+
+/** The middle of a segmented exercise card, one set row for a lazy list: the card's sides, no corners. */
+@Composable
+fun ExerciseCardSegment(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val space = MTheme.space
+    Box(
+        modifier
+            .testTag(ExerciseCardSegmentTag)
+            .fillMaxWidth()
+            .cardSurface(RectangleShape, openTop = true, openBottom = true)
+            // Half the row gap above and below: rows in their own segments sit `targets.gap` apart.
+            .padding(horizontal = space.s3, vertical = space.s1),
+    ) {
+        content()
+    }
+}
+
+/** The bottom of a segmented exercise card: a full-width, 56 dp tonal "Add set", disabled without [addEnabled]. */
+@Composable
+fun ExerciseCardFooter(onAddSet: () -> Unit, modifier: Modifier = Modifier, addEnabled: Boolean = true) {
+    val space = MTheme.space
+    val radius = MTheme.radius.lg
+    Box(
+        modifier
+            .testTag(ExerciseCardFooterTag)
+            .fillMaxWidth()
+            .cardSurface(RoundedCornerShape(bottomStart = radius, bottomEnd = radius), openTop = true, openBottom = false)
+            .padding(start = space.s3, end = space.s3, top = space.s2, bottom = space.s3),
+    ) {
+        MButton(
+            stringResource(Res.string.ds_add_set), onAddSet,
+            modifier = Modifier.fillMaxWidth().testTag(ExerciseAddSetTag),
+            variant = MButtonVariant.Tonal,
+            size = MButtonSize.L,
+            icon = MIcons.Plus,
+            enabled = addEnabled,
+        )
+    }
+}
+
+@Composable
+private fun CardHeader(
+    name: String,
+    meta: String,
+    media: ExerciseMedia,
+    equipmentIcon: ImageVector,
+    onMenu: () -> Unit,
+    collapsed: Boolean,
+    onToggle: (() -> Unit)?,
+    modifier: Modifier,
+    progress: String?,
+    done: Boolean,
+    caption: String?,
+    support: (@Composable RowScope.() -> Unit)?,
+    columns: (@Composable () -> Unit)?,
+) {
+    val colors = MTheme.colors
+    val space = MTheme.space
+    val shape = if (collapsed) RoundedCornerShape(MTheme.radius.lg) else topRoundedShape()
+    Column(
+        modifier
+            .testTag(ExerciseCardHeaderTag)
+            .fillMaxWidth()
+            .cardSurface(shape, openTop = false, openBottom = !collapsed)
+            // Open, `space.2` here and the first segment's `space.1` keep the header `space.3` from the sets.
+            .padding(start = space.s3, end = space.s3, top = space.s3, bottom = if (collapsed) space.s3 else space.s2),
+        verticalArrangement = Arrangement.spacedBy(space.s3),
+    ) {
+        val toggle = if (onToggle != null) {
+            val source = remember { MutableInteractionSource() }
+            val label = stringResource(if (collapsed) Res.string.ds_card_expand else Res.string.ds_card_collapse)
+            Modifier
+                .testTag(ExerciseHeaderToggleTag)
+                .clickable(interactionSource = source, indication = null, onClickLabel = label, role = Role.Button, onClick = onToggle)
+                .mFocusRing(RoundedCornerShape(MTheme.radius.md), source)
+        } else {
+            Modifier
+        }
+        Row(toggle, horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically) {
+            Thumbnail(media, equipmentIcon)
             Column(Modifier.weight(1f)) {
                 MText(name, MTheme.type.titleMd, modifier = Modifier.semantics { heading() })
-                Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s1), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s1), verticalAlignment = Alignment.CenterVertically) {
                     if (media != ExerciseMedia.None) {
                         MIcon(equipmentIcon, null, Modifier.testTag(ExerciseEquipmentIconTag), size = MTheme.sizes.icon16, tint = colors.textTertiary)
                     }
@@ -131,20 +252,108 @@ fun ExerciseCard(
                         color = colors.textSecondary,
                     )
                 }
+                if (!collapsed && caption != null) {
+                    MText(caption, MTheme.type.caption, modifier = Modifier.testTag(ExerciseCardCaptionTag), color = colors.textSecondary)
+                }
+                if (collapsed && progress != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(space.s1), verticalAlignment = Alignment.CenterVertically) {
+                        if (done) {
+                            MIcon(MIcons.CircleCheck, null, Modifier.testTag(ExerciseCardDoneTag), size = MTheme.sizes.icon16, tint = colors.accentText)
+                        }
+                        MText(
+                            progress,
+                            MTheme.type.labelMd.tabular(),
+                            modifier = Modifier.testTag(ExerciseCardProgressTag),
+                            color = colors.textSecondary,
+                        )
+                    }
+                }
             }
             MIconButton(MIcons.EllipsisVertical, stringResource(Res.string.ds_exercise_menu), onMenu, Modifier.testTag(ExerciseMenuTag))
         }
         if (!collapsed) {
-            Column(Modifier.testTag(ExerciseSetsTag), verticalArrangement = Arrangement.spacedBy(MTheme.targets.gap)) {
-                sets()
+            if (support != null) {
+                // A flow, so the chips wrap under each other with large text instead of being cut.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalArrangement = Arrangement.spacedBy(space.s1),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    support()
+                }
             }
-            MButton(
-                stringResource(Res.string.ds_add_set), onAddSet,
-                modifier = Modifier.fillMaxWidth().testTag(ExerciseAddSetTag),
-                variant = MButtonVariant.Tonal,
-                size = MButtonSize.L,
-                icon = MIcons.Plus,
+            columns?.invoke()
+        }
+    }
+}
+
+@Composable
+private fun Thumbnail(media: ExerciseMedia, equipmentIcon: ImageVector) {
+    val colors = MTheme.colors
+    Box(
+        Modifier.size(MTheme.sizes.media).clip(RoundedCornerShape(MTheme.radius.md)).background(colors.bgInset),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (media) {
+            is ExerciseMedia.Image -> {
+                // The placeholder under the image: a painter that has not loaded yet draws
+                // nothing, and the tile must not be an empty square meanwhile.
+                MIcon(
+                    equipmentIcon, null, Modifier.testTag(ExerciseMediaPlaceholderTag),
+                    size = MTheme.sizes.icon28, tint = colors.textTertiary,
+                )
+                Image(
+                    media.painter,
+                    contentDescription = null,
+                    modifier = Modifier.size(MTheme.sizes.media),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            ExerciseMedia.Offline -> MIcon(
+                MIcons.ImageOff, null, Modifier.testTag(ExerciseOfflineIconTag),
+                size = MTheme.sizes.icon24, tint = colors.textTertiary,
             )
+            ExerciseMedia.None -> MIcon(
+                equipmentIcon, null, Modifier.testTag(ExerciseEquipmentIconTag),
+                size = MTheme.sizes.icon28, tint = colors.textTertiary,
+            )
+        }
+    }
+}
+
+/**
+ * The card's surface (`bg.surface` with a `border.subtle` hairline) in [shape], for one piece of
+ * it. An open edge ([openTop], [openBottom]) draws no line: the outline is extended past it by the
+ * line width and clipped, so the pieces join into one card with only its outer edge drawn.
+ */
+@Composable
+private fun Modifier.cardSurface(shape: Shape, openTop: Boolean, openBottom: Boolean): Modifier {
+    val fill = MTheme.colors.bgSurface
+    val line = MTheme.colors.borderSubtle
+    val width = MTheme.sizes.border
+    return semantics { this[CardSegmentShape] = shape }.drawBehind { drawCardSurface(shape, openTop, openBottom, fill, line, width) }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCardSurface(
+    shape: Shape,
+    openTop: Boolean,
+    openBottom: Boolean,
+    fill: Color,
+    line: Color,
+    width: Dp,
+) {
+    val stroke = width.toPx()
+    val above = if (openTop) stroke else 0f
+    val below = if (openBottom) stroke else 0f
+    val extended = Size(size.width, size.height + above + below)
+    clipRect {
+        translate(top = -above) {
+            drawOutline(shape.createOutline(extended, layoutDirection, this), fill)
+            // The line inside the edge, as Modifier.border draws it.
+            translate(left = stroke / 2f, top = stroke / 2f) {
+                val inner = Size(extended.width - stroke, extended.height - stroke)
+                drawOutline(shape.createOutline(inner, layoutDirection, this), line, style = Stroke(stroke))
+            }
         }
     }
 }

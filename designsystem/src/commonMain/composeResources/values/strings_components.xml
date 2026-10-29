@@ -78,4 +78,16 @@
     <string name="ds_set_type_assisted_spoken">assisted set</string>
     <string name="ds_action_edit_set">Edit set</string>
     <string name="ds_action_copy_previous">Copy previous</string>
+    <string name="ds_timer_open">Open rest timer, %1$s remaining</string>
+    <string name="ds_timer_of">of %1$s</string>
+    <string name="ds_timer_pause">Pause</string>
+    <string name="ds_timer_resume">Resume</string>
+    <string name="ds_timer_restart">Restart</string>
+    <string name="ds_timer_close">Close timer</string>
+    <plurals name="ds_sets_done_of">
+        <item quantity="one">%1$d of %2$d set</item>
+        <item quantity="other">%1$d of %2$d sets</item>
+    </plurals>
+    <string name="ds_card_expand">Show sets</string>
+    <string name="ds_card_collapse">Hide sets</string>
 </resources>

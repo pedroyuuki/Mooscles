@@ -48,4 +48,6 @@ data class MoosclesTiming(
     val skeletonPulse: Long = 1_200,
     val illustrationFrame: Long = 900,
     val hapticDoubleGap: Long = 80,
+    /** Phase 3 (D9): after the last pending set of an exercise is checked, the wait before its card collapses and the next opens. */
+    val cardAdvance: Long = 300,
 )

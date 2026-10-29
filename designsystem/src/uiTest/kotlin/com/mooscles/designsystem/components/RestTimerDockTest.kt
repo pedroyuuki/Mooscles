@@ -10,6 +10,9 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -98,7 +101,7 @@ class RestTimerDockTest {
         var state by mutableStateOf(visual(1))
         var expanded by mutableStateOf(false)
         withTheme(haptics = haptics) {
-            if (expanded) RestTimerExpanded(state, null, {}, {}, {}) else RestTimerDock(state, {}, {}, {})
+            if (expanded) RestTimerExpanded(state, null, {}, {}, {}, title = "Rest", totalText = null, onPauseResume = {}, onRestart = {}, onClose = {}) else RestTimerDock(state, {}, {}, {})
         }
         waitForIdle()
         state = visual(0, TimerPhase.Done)
@@ -208,5 +211,55 @@ class RestTimerDockTest {
                 if (paused) icon.assertExists() else icon.assertDoesNotExist()
             }
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun bodyTapOpensWithTheSpokenLabel() {
+        runComposeUiTest {
+            var opened = 0
+            withTheme { ProvideAppLocale("pt-BR") { RestTimerDock(visual(84), {}, {}, {}, onOpen = { opened++ }) } }
+            waitForIdle()
+            onNodeWithTag(TimerOpenTag)
+                .assertHasClickAction()
+                .assertContentDescriptionEquals("Abrir timer de descanso, 1 minuto e 24 segundos restantes")
+            onNodeWithTag(TimerOpenTag).performClick()
+            waitForIdle()
+            assertEquals(1, opened)
+        }
+        runComposeUiTest {
+            withTheme { ProvideAppLocale("en") { RestTimerDock(visual(84), {}, {}, {}, onOpen = {}) } }
+            waitForIdle()
+            onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals("Open rest timer, 1 minute and 24 seconds remaining")
+        }
+        runComposeUiTest {
+            // Without onOpen the body is not a button.
+            withTheme { RestTimerDock(visual(84), {}, {}, {}) }
+            waitForIdle()
+            val node = onNodeWithTag(TimerOpenTag).fetchSemanticsNode()
+            assertTrue(SemanticsActions.OnClick !in node.config, "no click without onOpen")
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun plusIsDisabledWhenItCannotAdd() = runComposeUiTest {
+        var plus = 0
+        var minus = 0
+        var canAdd by mutableStateOf(false)
+        withTheme { RestTimerDock(visual(295), { minus++ }, { plus++ }, {}, canAdd = canAdd) }
+        waitForIdle()
+        onNodeWithTag(TimerPlusTag).assertIsNotEnabled()
+        onNodeWithTag(TimerMinusTag).assertIsEnabled()
+        onNodeWithTag(TimerPlusTag).performClick()
+        onNodeWithTag(TimerMinusTag).performClick()
+        waitForIdle()
+        assertEquals(0, plus)
+        assertEquals(1, minus)
+        canAdd = true
+        waitForIdle()
+        onNodeWithTag(TimerPlusTag).assertIsEnabled().performClick()
+        waitForIdle()
+        assertEquals(1, plus)
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -50,6 +51,7 @@ import com.mooscles.designsystem.resources.ds_timer_announce
 import com.mooscles.designsystem.resources.ds_timer_done
 import com.mooscles.designsystem.resources.ds_timer_minus15
 import com.mooscles.designsystem.resources.ds_timer_minus15_short
+import com.mooscles.designsystem.resources.ds_timer_open
 import com.mooscles.designsystem.resources.ds_timer_paused
 import com.mooscles.designsystem.resources.ds_timer_plus15
 import com.mooscles.designsystem.resources.ds_timer_plus15_short
@@ -64,6 +66,7 @@ const val TimerPlusTag = "timer-plus15"
 const val TimerSkipTag = "timer-skip"
 const val TimerAnnounceTag = "timer-announce"
 const val TimerPausedIconTag = "timer-paused-icon"
+const val TimerOpenTag = "timer-open"
 
 /** From this font scale on, the dock always stacks its buttons under the time (it also stacks when they do not fit beside it). */
 private const val STACK_FONT_SCALE = 1.5f
@@ -175,7 +178,10 @@ internal fun RestFinishedHaptic(done: Boolean) {
     }
 }
 
-/** The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is its label. */
+/**
+ * The ±15 s button, 56 dp at least (a disc of `timer.disc` in the expanded timer). [description] is
+ * its label. Not [enabled] (+15 s at the 5:00 ceiling), it draws like a disabled `MButton`.
+ */
 @Composable
 internal fun TimerAdjustButton(
     text: String,
@@ -184,23 +190,41 @@ internal fun TimerAdjustButton(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(MTheme.radius.md),
     size: Dp = MTheme.targets.workout,
+    enabled: Boolean = true,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
     Box(
         modifier
             .sizeIn(minWidth = size, minHeight = size)
-            .mPressScale(source, true)
+            .mPressScale(source, enabled)
             .semantics { contentDescription = description }
-            .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
             .mFocusRing(shape, source)
-            .background(colors.bgRaised, shape)
-            .border(MTheme.sizes.border, colors.borderStrong, shape)
+            .background(if (enabled) colors.bgRaised else colors.bgInset, shape)
+            .then(if (enabled) Modifier.border(MTheme.sizes.border, colors.borderStrong, shape) else Modifier)
             .padding(horizontal = TimerAdjustPadding),
         contentAlignment = Alignment.Center,
     ) {
-        MText(text, MTheme.type.labelLg)
+        MText(text, MTheme.type.labelLg, color = if (enabled) Color.Unspecified else colors.textDisabled)
     }
+}
+
+/**
+ * The part of a timer that opens the expanded one: with [onOpen] one button named "Open rest
+ * timer, 1 minute and 24 seconds remaining" (the name stands for the texts merged into it), without
+ * it plain content. The texts are merged, not cleared, so they stay in the tree for the tests.
+ */
+@Composable
+internal fun Modifier.timerOpener(visual: RestTimerVisual, onOpen: (() -> Unit)?): Modifier {
+    val tagged = testTag(TimerOpenTag)
+    if (onOpen == null) return tagged
+    val label = stringResource(Res.string.ds_timer_open, spokenDuration(visual.remainingSeconds))
+    val source = remember { MutableInteractionSource() }
+    return tagged
+        .semantics(mergeDescendants = true) { contentDescription = label }
+        .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onOpen)
+        .mFocusRing(RoundedCornerShape(MTheme.radius.md), source)
 }
 
 /**
@@ -213,6 +237,8 @@ internal fun TimerAdjustButton(
  * `timing.timerDoneHold`). A hidden polite live region speaks the start, each adjustment and the
  * end, not every second. The component is presentational and owns no clock: the caller passes a new
  * [visual] each second, which recomposes the dock (the ring sweep is read while drawing).
+ * With [onOpen], tapping the body (ring, name and time) opens the expanded timer; without [canAdd]
+ * (the 5:00 ceiling) +15 s is disabled.
  */
 @Composable
 fun RestTimerDock(
@@ -221,6 +247,8 @@ fun RestTimerDock(
     onPlus15: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpen: (() -> Unit)? = null,
+    canAdd: Boolean = true,
 ) {
     val colors = MTheme.colors
     val haptics = MTheme.haptics
@@ -266,36 +294,43 @@ fun RestTimerDock(
         val stacked = density.fontScale >= STACK_FONT_SCALE || !fits
         val buttons: @Composable (Modifier) -> Unit = { each ->
             TimerAdjustButton(minusShort, minusLabel, minus, each.testTag(TimerMinusTag))
-            TimerAdjustButton(plusShort, plusLabel, plus, each.testTag(TimerPlusTag))
+            TimerAdjustButton(plusShort, plusLabel, plus, each.testTag(TimerPlusTag), enabled = canAdd)
         }
         Column(
             Modifier.fillMaxWidth().background(colors.bgRaised, shape).padding(padding),
             verticalArrangement = Arrangement.spacedBy(padding),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(padding)) {
-                RestTimerRing({ progress.value }, ring, MTheme.sizes.dockRingStroke, ticks = false, phase = visual.phase) {
-                    MIcon(
-                        when (visual.phase) {
-                            TimerPhase.Done -> MIcons.CircleCheck
-                            TimerPhase.Paused -> MIcons.Pause
-                            TimerPhase.Running -> MIcons.Timer
-                        },
-                        contentDescription = null,
-                        modifier = if (paused) Modifier.testTag(TimerPausedIconTag) else Modifier,
-                        size = MTheme.sizes.icon20,
-                        tint = if (done) colors.timerProgress else colors.textSecondary,
-                    )
-                }
-                Column(Modifier.weight(1f)) {
-                    MText(status, MTheme.type.labelMd, color = colors.textSecondary)
-                    MText(
-                        MoosclesNumbers.clock(visual.remainingSeconds),
-                        timeStyle,
-                        modifier = Modifier.testTag(TimerTimeTag),
-                        color = if (paused) colors.textSecondary else colors.textPrimary,
-                        softWrap = false,
-                        maxLines = 1,
-                    )
+                // The body, with the row's gap, so the inline width measured above still holds.
+                Row(
+                    Modifier.weight(1f).timerOpener(visual, onOpen),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(padding),
+                ) {
+                    RestTimerRing({ progress.value }, ring, MTheme.sizes.dockRingStroke, ticks = false, phase = visual.phase) {
+                        MIcon(
+                            when (visual.phase) {
+                                TimerPhase.Done -> MIcons.CircleCheck
+                                TimerPhase.Paused -> MIcons.Pause
+                                TimerPhase.Running -> MIcons.Timer
+                            },
+                            contentDescription = null,
+                            modifier = if (paused) Modifier.testTag(TimerPausedIconTag) else Modifier,
+                            size = MTheme.sizes.icon20,
+                            tint = if (done) colors.timerProgress else colors.textSecondary,
+                        )
+                    }
+                    Column(Modifier.weight(1f)) {
+                        MText(status, MTheme.type.labelMd, color = colors.textSecondary)
+                        MText(
+                            MoosclesNumbers.clock(visual.remainingSeconds),
+                            timeStyle,
+                            modifier = Modifier.testTag(TimerTimeTag),
+                            color = if (paused) colors.textSecondary else colors.textPrimary,
+                            softWrap = false,
+                            maxLines = 1,
+                        )
+                    }
                 }
                 if (!stacked) {
                     Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {

@@ -108,4 +108,6 @@
     <string name="gallery_sample_long_workout">Upper body strength, heavy week</string>
     <string name="gallery_sample_sets_done">9 of 15 sets</string>
     <string name="gallery_restore_set">Restore the set</string>
+    <string name="gallery_sample_caption">Per hand: log one dumbbell's load.</string>
+    <string name="gallery_sample_rest_chip">Rest 2:00</string>
 </resources>

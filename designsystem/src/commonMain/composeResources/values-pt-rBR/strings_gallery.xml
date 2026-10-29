@@ -108,4 +108,6 @@
     <string name="gallery_sample_long_workout">Força de membros superiores, semana pesada</string>
     <string name="gallery_sample_sets_done">9 de 15 séries</string>
     <string name="gallery_restore_set">Restaurar a série</string>
+    <string name="gallery_sample_caption">Por mão: registre a carga de um halter.</string>
+    <string name="gallery_sample_rest_chip">Descanso 2:00</string>
 </resources>

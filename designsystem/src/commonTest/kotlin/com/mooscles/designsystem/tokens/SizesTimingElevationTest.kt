@@ -45,6 +45,13 @@ class SizesTimingElevationTest {
         assertEquals(3.dp, s.ringBarStroke)
     }
 
+    /** Phase 3 (spec "Tela do treino ativo" and D9): content up to 600 dp wide; a finished card advances after 300 ms. */
+    @Test
+    fun activeWorkoutTokensMatchPhaseThree() {
+        assertEquals(600.dp, MoosclesSizes().contentMaxWidth)
+        assertEquals(300L, MoosclesTiming().cardAdvance)
+    }
+
     @Test
     fun everyTimingMatchesPlanDecisionSeven() {
         val t = MoosclesTiming()
