@@ -3,7 +3,6 @@ package com.mooscles.designsystem.spike
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextMeasurer
@@ -19,6 +18,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/** The Pixel 8 emulator's density (420 dpi), so the Android numbers stay those of Task 1. */
+internal const val SPIKE_CARD_DENSITY = 2.625f
+
 internal class SpikeInputs(val measurer: TextMeasurer, val styles: SpikeCardStyles, val density: Density)
 
 /** Resolves the fonts and styles in a composition, then leaves it: drawing runs outside. */
@@ -30,7 +32,9 @@ internal fun captureSpikeInputs(): SpikeInputs {
             MoosclesDesignTheme(dark = true) {
                 val measurer = rememberTextMeasurer()
                 val t = rememberMoosclesTypography()
-                val density = Density(LocalDensity.current.density, 1f)
+                // A fixed density, not the screen's: the card is 1080 px on every device, and the
+                // iOS test window is at density 1 (a first CI run compared 1 with 2.625).
+                val density = Density(SPIKE_CARD_DENSITY, 1f)
                 inputs = SpikeInputs(
                     measurer,
                     SpikeCardStyles(

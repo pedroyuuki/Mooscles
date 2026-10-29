@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ImeSpikeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-29T00:54:25.989Z" hostname="iad20-eo1212-0b9da844-33fe-4076-b8fa-8057197337c7-0E0A0735B757.local" time="2.264">
+  <properties/>
+  <testcase name="focusingAFieldRecordsTheImeInset[iosSimulatorArm64]" classname="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ImeSpikeTest" time="2.246"/>
+  <testcase name="injectedInsetsPlaceTheCompactDockAboveThem[iosSimulatorArm64]" classname="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ImeSpikeTest" time="0.016"/>
+  <system-out><![CDATA[SPIKE ime bottom=0 fieldVisible=true maxBottom=0 screen=Rect.fromLTRB(0.0, 0.0, 1024.0, 768.0) dock=Rect.fromLTRB(0.0, 712.0, 1024.0, 768.0) field=Rect.fromLTRB(0.0, 664.0, 1024.0, 712.0)
+SPIKE injected screen=Rect.fromLTRB(0.0, 0.0, 1024.0, 768.0) dock=Rect.fromLTRB(0.0, 412.0, 1024.0, 468.0) expectedBottom=468.0 imeBottom=300
+SPIKE injected afterBringIntoView field=Rect.fromLTRB(0.0, 364.0, 1024.0, 412.0) dock=Rect.fromLTRB(0.0, 412.0, 1024.0, 468.0)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

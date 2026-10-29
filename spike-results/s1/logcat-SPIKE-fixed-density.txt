@@ -1,0 +1,14 @@
+# Full spike package on emulator-5554 after fixing the card density to 2.625 (uncommitted at run time, then commit "spike: fix the share card density").
+10-28 21:56:46.685 I System.out: SPIKE png page=0 1080x1278 bytes=140755
+10-28 21:56:47.199 I System.out: SPIKE png page=1 1080x1274 bytes=116162
+10-28 21:56:47.511 I System.out: SPIKE png page=2 1080x652 bytes=50226
+10-28 21:56:47.511 I System.out: SPIKE png mismatchedPixels=0 pages=3
+10-28 21:56:49.019 I System.out: SPIKE main drawThreadIsMain=false postedRunnableLatencyMs=0
+10-28 21:56:52.801 I System.out: SPIKE time runsMs=[654, 534, 428, 430, 541] medianMs=534   (paintAndEncodeUnder500ms FAILED in this run)
+10-28 21:56:54.139 I System.out: SPIKE paint pages=3 sizes=[1080x1278, 1080x1274, 1080x652]
+10-28 21:56:55.874 I System.out: SPIKE layout pages=3 rows=[2, 1, 5, 2, 2, 1]
+10-28 21:56:58.020 I System.out: SPIKE textIsDrawn differingPixelsInBrandBand=11362
+# paintAndEncodeUnder500ms alone, three more runs (host load average ~5.5):
+10-28 21:57:46.555 I System.out: SPIKE time runsMs=[669, 437, 419, 445, 491] medianMs=445
+10-28 21:57:58.119 I System.out: SPIKE time runsMs=[868, 499, 360, 453, 543] medianMs=499
+10-28 21:58:09.415 I System.out: SPIKE time runsMs=[703, 384, 371, 467, 403] medianMs=403

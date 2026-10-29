@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ShareCardSpikeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-29T00:54:28.254Z" hostname="iad20-eo1212-0b9da844-33fe-4076-b8fa-8057197337c7-0E0A0735B757.local" time="0.004">
+  <properties/>
+  <testcase name="paintsOffTheMainThreadAt1080[iosSimulatorArm64]" classname="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ShareCardSpikeTest" time="0.0"/>
+  <testcase name="textIsDrawn[iosSimulatorArm64]" classname="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ShareCardSpikeTest" time="0.001"/>
+  <testcase name="layoutSignature[iosSimulatorArm64]" classname="iosSimulatorArm64Test.com.mooscles.designsystem.spike.ShareCardSpikeTest" time="0.003"/>
+  <system-out><![CDATA[SPIKE paint pages=1 sizes=[1080x1184]
+SPIKE textIsDrawn differingPixelsInBrandBand=1940
+SPIKE layout pages=1 rows=[1, 1, 2, 1, 1, 1]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
