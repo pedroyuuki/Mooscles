@@ -153,8 +153,9 @@ jobs:
           # Phase 3 task 15 (:screens commonTest): SetDraftsTest 7.
           # Phase 3 task 26: WorkoutShareCardTest -19 (removed with the Android card data),
           # WorkoutCardRendererTest +4 (5 -> 9); :screens commonTest ShareCardDataTest 23, ShareCardColorsTest 1.
+          # Phase 3 task 16 (:screens commonTest): ActiveWorkoutScreenStateTest +2.
           # Phase 3 task 22 (:screens commonTest): SummaryStatsTest 6.
-          MIN_HOST_TESTS: 750
+          MIN_HOST_TESTS: 752
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -355,12 +356,13 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # Per class: EquipmentIconsTest 1, ScreenDatesTest 4, ActiveWorkoutScreenStateTest 2, SetDraftsTest 7,
+          # Per class: EquipmentIconsTest 1, ScreenDatesTest 4, ActiveWorkoutScreenStateTest 4, SetDraftsTest 7,
           # ShareCardDataTest 23, ShareCardColorsTest 1 (commonTest); CatalogLabelsTest 4, ScreensHelpersTest 4,
-          # DateTextsTest 5, WorkoutSetRowTest 13, SetEditingTest 23, ShareCardPainterTest 4, ShareCardTextsTest 2 (uiTest).
+          # DateTextsTest 5, WorkoutSetRowTest 13, SetEditingTest 23, SetTypeAndRemovalTest 14, ShareCardPainterTest 4,
+          # ShareCardTextsTest 2 (uiTest).
           # Task 22: SummaryStatsTest 6 (commonTest), WorkoutSummaryScreenTest 11 (uiTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 110
+          MIN_SCREENS_IOS_TESTS: 126
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

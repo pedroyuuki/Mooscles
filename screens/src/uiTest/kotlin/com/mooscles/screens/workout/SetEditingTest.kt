@@ -25,7 +25,6 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -56,7 +55,9 @@ import com.mooscles.designsystem.components.StepperValueTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.domain.WeightUnits
 import com.mooscles.screens.RecordingActions
+import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.assertShownWhole
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -123,7 +124,7 @@ class SetEditingTest {
         actions: MoosclesActions,
         pounds: MutableState<Boolean> = mutableStateOf(false),
         locale: String? = "en",
-        restoration: StateRestorationTester? = null,
+        restoration: ScreenRestoration? = null,
         visible: MutableState<Boolean> = mutableStateOf(true),
         imeInsets: WindowInsets? = null,
     ): Shown {
@@ -620,7 +621,7 @@ class SetEditingTest {
     fun editingDraftAndClearedFieldsSurviveRecreation() = runComposeUiTest {
         val entry = entryOf(SetUi("s1", reps = 8, weightKg = 85.0), previous = listOf(PreviousSetUi(80.0, 6, warmup = false, assistance = false)))
         val actions = Actions(entry, echo = false)
-        val restoration = StateRestorationTester(this)
+        val restoration = screenRestoration()
         // No language override: leaving ProvideAppLocale rebuilds the theme's tree (LocaleEpoch),
         // which would drop the saved state the tester restores.
         val shown = showRows(entry, actions, locale = null, restoration = restoration)

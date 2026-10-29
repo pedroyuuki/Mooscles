@@ -58,6 +58,9 @@ import com.mooscles.designsystem.resources.Res as DsRes
 internal const val MAX_REPS = 9999
 internal const val MAX_LOAD_KG = 100_000.0
 
+/** The most sets an exercise can have in a workout (`EditRules.MAX_WORKOUT_SETS`). */
+internal const val MAX_SETS = 100
+
 /** One stepper step of the load: 2.5 kg, or 5 lb in pounds. */
 internal fun loadStep(pounds: Boolean): Double = if (pounds) 5.0 else 2.5
 
@@ -170,16 +173,35 @@ internal class SetRowEditor(
      */
     fun save() {
         val kg = current(SetField.LOAD)
-        val reps = current(SetField.REPS).toInt().let { if (it == 0 && done()) expected(SetField.REPS).toInt() else it }
+        val reps = writtenReps()
         if (kg == expected(SetField.LOAD) && reps.toDouble() == expected(SetField.REPS)) return
         send(reps, kg, done())
     }
 
+    /** The reps a write sends now: the shown ones, or on a done set showing none the last valid ones ([save]). */
+    private fun writtenReps(): Int = current(SetField.REPS).toInt().let { if (it == 0 && done()) expected(SetField.REPS).toInt() else it }
+
+    /**
+     * Writes the set with the type [warmup] and [assistance], with its values as of now (the
+     * drafts as [save] would write them, the done state as drawn), so the change cannot put back
+     * an older value while a write is in flight.
+     */
+    fun changeType(warmup: Boolean, assistance: Boolean) {
+        send(writtenReps(), current(SetField.LOAD), done(), warmup, assistance)
+    }
+
+    /**
+     * The set as it stands now, for "Undo" to put back: its values as [save] writes them (each
+     * valid draft is already written; an invalid one gives way to the last valid value) and the
+     * done state as drawn, so a check or a value still in flight is not lost by the undo.
+     */
+    fun snapshot(): SetUi = set.copy(weightKg = current(SetField.LOAD), reps = writtenReps(), completed = done())
+
     /** Sends [reps] and [kg] as the set's values, noting each one that changes, so its echo is awaited. */
-    fun send(reps: Int, kg: Double, completed: Boolean) {
+    fun send(reps: Int, kg: Double, completed: Boolean, warmup: Boolean = set.warmup, assistance: Boolean = set.assistance) {
         if (kg != expected(SetField.LOAD)) screen.sent(set.id, SetField.LOAD, kg)
         if (reps.toDouble() != expected(SetField.REPS)) screen.sent(set.id, SetField.REPS, reps.toDouble())
-        actions.updateSet(set.id, reps, kg, completed, set.warmup, set.assistance)
+        actions.updateSet(set.id, reps, kg, completed, warmup, assistance)
     }
 
     /** The database shows [field] as now saved, after [previous]. */

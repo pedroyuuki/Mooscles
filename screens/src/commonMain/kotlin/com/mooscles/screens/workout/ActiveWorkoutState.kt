@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mooscles.designsystem.components.NumericInput
 import com.mooscles.domain.WeightUnits
+import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.SetField
 import com.mooscles.ui.SetUi
 
@@ -45,7 +46,9 @@ data class SetEditTarget(
  *   holds the same value. A draft is the text as entered ("82,5", "80.0", an invalid "82,"), and
  *   the field shows it instead of the saved value. With it, by the same key, the values written
  *   since it was entered and not yet seen back ([echo]), so a late echo of an older write cannot
- *   erase a newer draft, and the unit the load drafts are written in ([useUnit]).
+ *   erase a newer draft, and the unit the load drafts are written in ([useUnit]);
+ * - [lastRemoved]: the set removed last, whose "Undo" toast is up ([UndoRemovalToast]);
+ * - [typeSheetFor]: the set whose type sheet is open ([SetTypeSheetHost]).
  */
 @Stable
 class ActiveWorkoutScreenState(
@@ -55,6 +58,8 @@ class ActiveWorkoutScreenState(
     drafts: Map<Pair<String, SetField>, String> = emptyMap(),
     sent: Map<Pair<String, SetField>, List<Double>> = emptyMap(),
     draftsPounds: Boolean? = null,
+    lastRemoved: RemovedSet? = null,
+    typeSheetFor: String? = null,
 ) {
     var cleared: Set<Pair<String, SetField>> by mutableStateOf(cleared)
         internal set
@@ -64,6 +69,48 @@ class ActiveWorkoutScreenState(
         internal set
     var drafts: Map<Pair<String, SetField>, String> by mutableStateOf(drafts)
         internal set
+
+    /**
+     * The set removed last, with what "Undo" puts back, while its toast is up. Only this one can
+     * be undone (D13): another removal replaces it and [closeUndo] (finishing, discarding) ends it.
+     */
+    var lastRemoved: RemovedSet? by mutableStateOf(lastRemoved)
+        internal set
+
+    /** The id of the set whose type sheet is open, if any ([openTypeSheet]). */
+    var typeSheetFor: String? by mutableStateOf(typeSheetFor)
+        internal set
+
+    /** Opens the type sheet of [setId], as a tap on the set's number does. */
+    fun openTypeSheet(setId: String) {
+        typeSheetFor = setId
+    }
+
+    /** Closes the "Undo" toast of the last removal, if it is up, so the removal can no longer be undone. */
+    fun closeUndo() {
+        lastRemoved = null
+    }
+
+    /**
+     * Removes [removed]'s set: forgets everything kept for it ([forget]), so an undo brings back
+     * the values of the snapshot and no older draft, keeps [removed] for "Undo" (replacing, and so
+     * closing, the toast of the previous removal) and sends `removeSet`.
+     */
+    internal fun removeSet(removed: RemovedSet, actions: MoosclesActions) {
+        forget(removed.set.id)
+        lastRemoved = removed
+        actions.removeSet(removed.set.id)
+    }
+
+    /** Forgets the drafts, awaited writes, cleared fields, optimistic state, edit and type sheet of [setId]. */
+    internal fun forget(setId: String) {
+        if (drafts.keys.any { it.first == setId }) drafts = drafts.filterKeys { it.first != setId }
+        if (sent.keys.any { it.first == setId }) sent = sent.filterKeys { it.first != setId }
+        if (cleared.any { it.first == setId }) cleared = cleared.filterTo(HashSet()) { it.first != setId }
+        if (setId in optimistic) optimistic = optimistic - setId
+        if (editing?.setId == setId) editing = null
+        if (typeSheetFor == setId) typeSheetFor = null
+    }
 
     /**
      * The values (kg or reps) written for a field while its draft was held, oldest first, until
@@ -228,8 +275,11 @@ class ActiveWorkoutScreenState(
          * Saves the fields as lists of strings, booleans and numbers, which every platform can
          * keep: a cleared pair as "FIELD:setId" (the field name has no colon; an id may), the edit
          * target as [setId, field, keyboard, error], a draft as [field, setId, text] and its
-         * awaited writes as [field, setId, values]. [optimistic] is left out on purpose: a write
-         * lost with the process must not come back as a full disc.
+         * awaited writes as [field, setId, values], the last removal as [entryId, position, number,
+         * setId, reps, weightKg, completed, warmup, assistance] and the type sheet's set id.
+         * [optimistic] is left out on purpose: a write lost with the process must not come back as
+         * a full disc. So is the removed set's record: the record is the presentation's, computed
+         * again once the set is back.
          */
         val Saver: Saver<ActiveWorkoutScreenState, Any> = listSaver<ActiveWorkoutScreenState, Any?>(
             save = { state ->
@@ -239,6 +289,13 @@ class ActiveWorkoutScreenState(
                     ArrayList(state.drafts.map { (key, text) -> arrayListOf<Any>(key.second.name, key.first, text) }),
                     ArrayList(state.sent.map { (key, values) -> arrayListOf<Any>(key.second.name, key.first, ArrayList(values)) }),
                     state.draftsPounds,
+                    state.lastRemoved?.let {
+                        arrayListOf<Any>(
+                            it.entryId, it.position, it.number,
+                            it.set.id, it.set.reps, it.set.weightKg, it.set.completed, it.set.warmup, it.set.assistance,
+                        )
+                    },
+                    state.typeSheetFor,
                 )
             },
             restore = { saved ->
@@ -254,12 +311,26 @@ class ActiveWorkoutScreenState(
                 @Suppress("UNCHECKED_CAST")
                 val sent = (saved.getOrNull(3) as List<List<Any>>?).orEmpty()
                     .associate { (it[1] as String to SetField.valueOf(it[0] as String)) to (it[2] as List<Double>).toList() }
+                @Suppress("UNCHECKED_CAST")
+                val lastRemoved = (saved.getOrNull(5) as List<Any>?)?.let {
+                    RemovedSet(
+                        entryId = it[0] as String,
+                        position = it[1] as Int,
+                        set = SetUi(
+                            id = it[3] as String, reps = it[4] as Int, weightKg = it[5] as Double,
+                            completed = it[6] as Boolean, warmup = it[7] as Boolean, assistance = it[8] as Boolean,
+                        ),
+                        number = it[2] as Int,
+                    )
+                }
                 ActiveWorkoutScreenState(
                     cleared = cleared,
                     editing = editing,
                     drafts = drafts,
                     sent = sent,
                     draftsPounds = saved.getOrNull(4) as Boolean?,
+                    lastRemoved = lastRemoved,
+                    typeSheetFor = saved.getOrNull(6) as String?,
                 )
             },
         )
