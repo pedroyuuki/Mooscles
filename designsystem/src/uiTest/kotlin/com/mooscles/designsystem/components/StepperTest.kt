@@ -38,6 +38,9 @@ import com.mooscles.designsystem.withTheme
 import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.assertShownWhole
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
+import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.designsystem.interaction.FocusRingVisible
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.focus.FocusRequester
@@ -212,6 +215,86 @@ class StepperTest {
             val value = onNodeWithTag(StepperValueTag, useUnmergedTree = true).getBoundsInRoot()
             assertTrue(minus.right <= value.left && value.right <= plus.left, "the value is not between the buttons: $minus $value $plus")
         }
+    }
+
+    /**
+     * A box where "97.5" fits between the buttons in `num.sm` and "102.5" does not (half way between
+     * their widths), with a stepper from [start] by 2.5 showing its plain value.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.thresholdStepper(start: Double, widest: String?, onValue: (Double) -> Unit = {}): () -> Double {
+        var value by mutableStateOf(start)
+        withTheme {
+            val sizes = MoosclesSizes()
+            val measurer = rememberTextMeasurer()
+            val style = MTheme.type.numSm
+            val density = LocalDensity.current
+            val buttons = with(density) { (sizes.stepperButtonWidth * 2 + MTheme.targets.gap * 2).roundToPx() }
+            val narrow = measurer.measure("97.5", style, softWrap = false, maxLines = 1).size.width
+            val wide = measurer.measure("102.5", style, softWrap = false, maxLines = 1).size.width
+            Box(Modifier.width(with(density) { (buttons + (narrow + wide) / 2).toDp() })) {
+                val display = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+                Stepper(
+                    value, { value = it; onValue(it) }, step = 2.5, min = 0.0, display = display,
+                    decreaseLabel = "Decrease", increaseLabel = "Increase", widest = widest ?: display,
+                )
+            }
+        }
+        waitForIdle()
+        return { value }
+    }
+
+    /**
+     * Holding + from 92.5 past the width where the value no longer fits between the buttons (102.5)
+     * neither moves the buttons nor stops the hold: given the widest value it will show, the
+     * stepper keeps one arrangement (review I1 of Task 29).
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun steppingPastTheWidthThresholdKeepsTheButtonsAndTheHold() = runComposeUiTest {
+        val value = thresholdStepper(92.5, widest = "102.5")
+        val minus = onNodeWithTag(StepperDecreaseTag).getBoundsInRoot()
+        val plus = onNodeWithTag(StepperIncreaseTag).getBoundsInRoot()
+        mainClock.autoAdvance = false
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { down(center) }
+        var seen = 0
+        repeat(1_000) {
+            mainClock.advanceTimeBy(1, ignoreFrameDuration = true)
+            if (it % 50 == 0) {
+                assertEquals(plus, onNodeWithTag(StepperIncreaseTag).getBoundsInRoot(), "the increase button moved at ${value()}")
+                assertEquals(minus, onNodeWithTag(StepperDecreaseTag).getBoundsInRoot(), "the decrease button moved at ${value()}")
+                seen++
+            }
+        }
+        onNodeWithTag(StepperIncreaseTag).performTouchInput { up() }
+        repeat(100) { mainClock.advanceTimeBy(1, ignoreFrameDuration = true) }
+        mainClock.autoAdvance = true
+        assertTrue(value() >= 105.0, "the hold stopped at ${value()}")
+        assertTrue(seen > 0)
+    }
+
+    /**
+     * Without a widest value, the arrangement changes at most once: stepping up past the threshold
+     * puts the value above the buttons, and stepping back down leaves it there.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun onceAboveTheValueStaysAboveAtThatWidth() = runComposeUiTest {
+        val value = thresholdStepper(97.5, widest = null)
+        val between = onNodeWithTag(StepperIncreaseTag).getBoundsInRoot()
+        repeat(2) {
+            onNodeWithTag(StepperIncreaseTag).performClick()
+            waitForIdle()
+        }
+        assertEquals(102.5, value())
+        val above = onNodeWithTag(StepperIncreaseTag).getBoundsInRoot()
+        assertTrue(above.top > between.top, "102.5 did not go above the buttons: $between, then $above")
+        repeat(2) {
+            onNodeWithTag(StepperDecreaseTag).performClick()
+            waitForIdle()
+        }
+        assertEquals(97.5, value())
+        assertEquals(above, onNodeWithTag(StepperIncreaseTag).getBoundsInRoot(), "the buttons moved back")
     }
 
     @OptIn(ExperimentalTestApi::class)

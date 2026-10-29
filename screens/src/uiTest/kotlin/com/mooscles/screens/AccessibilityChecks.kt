@@ -65,15 +65,15 @@ fun ComposeUiTest.assertAtLeast(node: SemanticsNode, widthDp: Float, heightDp: F
 
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.unmerged(matcher: SemanticsMatcher): List<SemanticsNode> =
-    onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes()
+    onAllNodes(matcher and isPlaced, useUnmergedTree = true).fetchSemanticsNodes()
 
 /**
- * Every clickable node (merged tree, every root, a 0-wide one too: a collapsed button is a
- * defect, not a node to skip) has a label and is at least 48 × 48 dp. Fails without any.
+ * Every placed ([isPlaced]) clickable node (merged tree, every root, a 0-wide one too: a collapsed
+ * button is a defect, not a node to skip) has a label and is at least 48 × 48 dp. Fails without any.
  */
 @OptIn(ExperimentalTestApi::class)
 fun ComposeUiTest.assertClickablesLabeledAndSized(where: String) {
-    val clickable = onAllNodes(hasClickAction()).fetchSemanticsNodes()
+    val clickable = onAllNodes(hasClickAction() and isPlaced).fetchSemanticsNodes()
     assertTrue(clickable.isNotEmpty(), "$where: no clickable node")
     for (node in clickable) {
         assertTrue(spokenLabel(node).isNotBlank(), "$where: a clickable node has no label: ${describe(node)}")

@@ -7,11 +7,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -23,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -64,8 +62,11 @@ const val StepperValueTag = "stepper-value"
 /**
  * A value changed in steps of [step] with a button on each side (64 x 56 dp each, always) and the
  * value between, in `num.lg`, or `num.md` or `num.sm` when that is all the room left fits (large text
- * in a narrow place). When not even `num.sm` fits between them, the value goes on its own line above
- * the two buttons, whole, in the largest of the three that fits the width. `BoxWithConstraints`
+ * in a narrow place). When not even `num.sm` fits between them, for [display] or for [widest] (the
+ * widest value the caller expects to step to, so the arrangement does not change while stepping),
+ * the value goes on its own line above the two buttons, whole, in the largest of the three that
+ * fits the width; once there it stays there at that width. The buttons keep their identity either
+ * way, so a hold in progress goes on. `BoxWithConstraints`
  * decides that, and it has no intrinsic measurement: keep the stepper out of `IntrinsicSize`
  * parents. A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
  * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Moving the finger past
@@ -100,6 +101,7 @@ fun Stepper(
     onValueChangeFinished: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     contentDescription: String? = null,
+    widest: String = display,
 ) {
     val currentValue by rememberUpdatedState(value)
     val currentOnChange by rememberUpdatedState(onValueChange)
@@ -140,23 +142,50 @@ fun Stepper(
     BoxWithConstraints(modifier.then(group), contentAlignment = Alignment.Center) {
         val candidates = listOf(type.numLg, type.numMd, type.numSm)
         val width = constraints.maxWidth
-        fun fitting(room: Int) = candidates.firstOrNull { measurer.measure(display, it, softWrap = false, maxLines = 1).size.width <= room }
-        // Between the buttons, in the largest style that fits the room they leave.
-        val between = if (constraints.hasBoundedWidth) fitting(width - buttons) else type.numLg
-        if (between != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
-                minus()
-                StepperValue(display, between)
-                plus()
-            }
-        } else {
-            // Not even num.sm fits there (large text in a narrow place): the value goes on its own
-            // line above the buttons, whole, rather than be cut or push a button out.
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
-                StepperValue(display, fitting(width) ?: type.numSm)
-                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    minus()
-                    plus()
+        fun fitting(text: String, room: Int) =
+            candidates.firstOrNull { measurer.measure(text, it, softWrap = false, maxLines = 1).size.width <= room }
+        val room = width - buttons
+        // Above once, above for good at this width: the layout never flips back while stepping.
+        val wentAbove = remember(width) { booleanArrayOf(false) }
+        val between = !constraints.hasBoundedWidth ||
+            (!wentAbove[0] && fitting(widest, room) != null && fitting(display, room) != null)
+        if (!between) wentAbove[0] = true
+        val style = when {
+            !constraints.hasBoundedWidth -> type.numLg
+            between -> fitting(display, room) ?: type.numSm
+            else -> fitting(display, width) ?: type.numSm
+        }
+        val gapPx = with(LocalDensity.current) { gap.roundToPx() }
+        // One layout for both arrangements, so the buttons keep their identity (and a press in
+        // progress) even if the arrangement changes.
+        Layout(content = {
+            minus()
+            StepperValue(display, style)
+            plus()
+        }) { measurables, constraints ->
+            val loose = constraints.copy(minWidth = 0, minHeight = 0)
+            val left = measurables[0].measure(loose)
+            val right = measurables[2].measure(loose)
+            val text = measurables[1].measure(loose)
+            if (between) {
+                val w = left.width + gapPx + text.width + gapPx + right.width
+                val h = maxOf(left.height, text.height, right.height)
+                layout(w, h) {
+                    left.placeRelative(0, (h - left.height) / 2)
+                    text.placeRelative(left.width + gapPx, (h - text.height) / 2)
+                    right.placeRelative(w - right.width, (h - right.height) / 2)
+                }
+            } else {
+                // The value on its own line, the two buttons side by side under it.
+                val pair = left.width + gapPx + right.width
+                val w = maxOf(pair, text.width)
+                val row = maxOf(left.height, right.height)
+                val h = text.height + gapPx + row
+                layout(w, h) {
+                    text.placeRelative((w - text.width) / 2, 0)
+                    val start = (w - pair) / 2
+                    left.placeRelative(start, text.height + gapPx)
+                    right.placeRelative(start + left.width + gapPx, text.height + gapPx)
                 }
             }
         }

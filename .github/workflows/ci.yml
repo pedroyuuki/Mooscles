@@ -350,9 +350,9 @@ jobs:
           # Phase 3 task 17 fix round 1: SetRowColumnsTest 2.
           # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1 (fix round 1: RestTimerCompactTest +1).
           # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
-          # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1.
+          # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1 (fix round 1: StepperTest +2).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 287
+          MIN_DS_IOS_TESTS: 289
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -58,6 +58,11 @@ import com.mooscles.designsystem.resources.Res as DsRes
 internal const val MAX_REPS = 9999
 internal const val MAX_LOAD_KG = 100_000.0
 
+/** Wide values a set's stepper may reach, for its arrangement ([com.mooscles.designsystem.components.Stepper]'s `widest`). */
+private const val WIDEST_LOAD_KG = 997.5
+private const val WIDEST_LOAD_LB = 1995.0
+private const val WIDEST_REPS = "999"
+
 /** The most sets an exercise can have in a workout (`EditRules.MAX_WORKOUT_SETS`). */
 internal const val MAX_SETS = 100
 
@@ -271,6 +276,8 @@ internal fun SetEditPanel(
                 onValueChangeFinished = { editor.save() },
                 focusRequester = requester,
                 contentDescription = stringResource(if (load) Res.string.workout_editing_load else Res.string.workout_editing_reps, number),
+                // A wide value it may step to, so stepping never moves the buttons (the stepper keeps one arrangement).
+                widest = if (load) MoosclesNumbers.weight(stepperPlain(if (pounds) WIDEST_LOAD_LB else WIDEST_LOAD_KG), unit, locale) else WIDEST_REPS,
             )
             MText(stringResource(Res.string.workout_step, stepText), MTheme.type.caption, color = MTheme.colors.textSecondary)
         }

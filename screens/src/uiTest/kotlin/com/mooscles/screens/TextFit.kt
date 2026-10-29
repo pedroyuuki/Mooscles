@@ -40,13 +40,29 @@ fun assertShownWhole(layout: TextLayoutResult, where: String = "") {
 private val UNIT_WORDS = Regex("\\b(kg|lbs?|min|h|s)\\b")
 private val NUMBER_CHARS = Regex("[0-9\\s\\u00A0\\u202F.,:×+\\-−–/]+")
 
+/**
+ * The node and every layout above it are placed: what the screen shows. A lazy list keeps some
+ * items composed but unplaced (out of its viewport, kept for reuse); their layout is not redone
+ * when the font scale changes, so measuring them would measure a stale layout.
+ */
+val isPlaced: SemanticsMatcher = SemanticsMatcher("is placed") { node ->
+    var info: androidx.compose.ui.layout.LayoutInfo? = node.layoutInfo
+    var placed = true
+    while (info != null && placed) {
+        placed = info.isPlaced
+        info = info.parentInfo
+    }
+    placed
+}
+
 /** True when [text] holds a digit and nothing but digits, units, `×`, `:` and separators. */
 internal fun isNumberText(text: String): Boolean =
     text.any { it.isDigit() } && NUMBER_CHARS.matches(UNIT_WORDS.replace(text, " "))
 
 /**
  * Applies [assertShownWhole] to every text node (unmerged tree) whose whole text is a number,
- * with or without a unit, such as "82.5", "82.5 kg × 8", "1:02:18" or "1 h 12 min". Fails when
+ * with or without a unit, such as "82.5", "82.5 kg × 8", "1:02:18" or "1 h 12 min", that is
+ * placed ([isPlaced]). Fails when
  * fewer than [atLeast] such nodes exist, so a screen that lost its numbers cannot pass in the void.
  */
 fun SemanticsNodeInteractionsProvider.assertNumbersWhole(atLeast: Int = 1) {
@@ -54,7 +70,7 @@ fun SemanticsNodeInteractionsProvider.assertNumbersWhole(atLeast: Int = 1) {
         val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
         text != null && isNumberText(text)
     }
-    val nodes = onAllNodes(numbers, useUnmergedTree = true).fetchSemanticsNodes()
+    val nodes = onAllNodes(numbers and isPlaced, useUnmergedTree = true).fetchSemanticsNodes()
     assertTrue(nodes.size >= atLeast, "${nodes.size} number texts found, at least $atLeast expected")
     for (node in nodes) {
         val text = node.config[SemanticsProperties.Text].joinToString("") { it.text }

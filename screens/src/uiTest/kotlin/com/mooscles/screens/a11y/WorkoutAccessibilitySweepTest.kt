@@ -37,6 +37,11 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
+import com.mooscles.designsystem.components.ExerciseAddSetTag
+import com.mooscles.screens.workout.ActiveWorkoutTags
+import com.mooscles.screens.workout.exerciseFooterTag
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
@@ -62,6 +67,7 @@ import com.mooscles.screens.assertButtonTextsWhole
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.assertNumbersWhole
 import com.mooscles.screens.assertWorkoutTargets
+import com.mooscles.screens.isPlaced
 import com.mooscles.screens.screenReaderOrder
 import com.mooscles.screens.spokenLabel
 import com.mooscles.screens.shell.AppShellBottom
@@ -105,7 +111,9 @@ import kotlin.time.Duration.Companion.minutes
  * composition ([ScreenFrame] over [Combo] state) and checks each combination. In each: every
  * clickable has a label and a 48 dp target ([assertClickablesLabeledAndSized]), the workout's
  * actions 56 dp ([assertWorkoutTargets]), every number is whole ([assertNumbersWhole]) and no
- * button text is cut ([assertButtonTextsWhole]). All the failures of a state are reported together.
+ * button text is cut ([assertButtonTextsWhole]). The workout list is checked in three looks
+ * ([listPasses]: its top, the bench's footer, its end), each requiring its controls to be there.
+ * All the failures of a state are reported together.
  *
  * Plus the screen reader's order over the workout ([readingOrderIsHeaderToastCardsDock]) and the
  * dock and the workout bar as traversal groups ([dockAndWorkoutBarAreTraversalGroups]).
@@ -219,6 +227,7 @@ class WorkoutAccessibilitySweepTest {
         numbers: Int = 1,
         frozen: Boolean = false,
         scaled: String? = null,
+        passes: List<Pass> = listOf(Pass("as shown")),
         reach: ComposeUiTest.() -> Unit = {},
         content: @Composable () -> Unit,
     ) {
@@ -227,6 +236,9 @@ class WorkoutAccessibilitySweepTest {
             ScreenFrame(dark = combo.dark, fontScale = combo.fontScale, locale = "pt-BR", size = sizeOf(combo.width), content = content)
         }
         waitForIdle()
+        // A lazy list scrolled with the clock stopped never lays out what it scrolls to (and the
+        // scroll keeps looking): a frozen state is checked as shown.
+        require(!frozen || passes.all { it.scroll == null }) { "$state: no scrolling with a frozen clock" }
         if (frozen) mainClock.autoAdvance = false
         try {
             reach()
@@ -234,25 +246,56 @@ class WorkoutAccessibilitySweepTest {
             var buttonTexts = 0
             for (each in combos) {
                 combo = each
-                if (frozen) repeat(FROZEN_FRAMES) { mainClock.advanceTimeByFrame() }
-                waitForIdle()
-                val where = "$state, $each"
-                try {
-                    assertClickablesLabeledAndSized(where)
-                    if (workoutActions) assertWorkoutTargets(where)
-                    assertNumbersWhole(atLeast = numbers)
-                    buttonTexts += assertButtonTextsWhole(where)
-                    if (scaled != null) assertDrawnAt(scaled, each.fontScale, where)
-                } catch (failure: AssertionError) {
-                    failures += "$where: ${failure.message}"
+                for (pass in passes) {
+                    pass.scroll?.invoke(this)
+                    if (frozen) repeat(FROZEN_FRAMES) { mainClock.advanceTimeByFrame() }
+                    waitForIdle()
+                    val where = "$state, $each, ${pass.name}"
+                    try {
+                        // What this pass is for must be there: a check of nothing passes in the void.
+                        for (tag in pass.required) {
+                            assertTrue(onAllNodes(hasTestTag(tag) and isPlaced, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(), "$where: no $tag shown")
+                        }
+                        assertClickablesLabeledAndSized(where)
+                        if (workoutActions) assertWorkoutTargets(where)
+                        assertNumbersWhole(atLeast = numbers)
+                        buttonTexts += assertButtonTextsWhole(where)
+                        if (scaled != null) assertDrawnAt(scaled, each.fontScale, where)
+                    } catch (failure: AssertionError) {
+                        failures += "$where: ${failure.message}"
+                    }
                 }
             }
-            println("SWEEP $state: ${combos.size} combinations, $buttonTexts button texts measured, ${failures.size} failing")
+            println("SWEEP $state: ${combos.size} combinations x ${passes.size} passes, $buttonTexts button texts measured, ${failures.size} failing")
             assertTrue(failures.isEmpty(), "${failures.size} of ${combos.size} combinations fail:\n" + failures.joinToString("\n"))
         } finally {
             mainClock.autoAdvance = true
         }
     }
+
+    /**
+     * One look at a state: [scroll] brings part of it into view (null: as it is), and the tags in
+     * [required] must then be there.
+     */
+    private class Pass(val name: String, val required: List<String> = emptyList(), val scroll: (ComposeUiTest.() -> Unit)? = null)
+
+    /**
+     * The workout list in three looks, each scrolled to: its top (or [focus], required), the
+     * bench's footer ("Add set") and the list's end ("Add exercise", "Finish workout"), so the
+     * 56 dp and text checks of the controls at the end of the list never skip them for not being composed.
+     */
+    private fun listPasses(focus: String? = null) = listOf(
+        Pass("list top", listOfNotNull(focus)) {
+            if (focus == null) onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToIndex(0)
+            else onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(hasTestTag(focus))
+        },
+        Pass("bench footer", listOf(ExerciseAddSetTag)) {
+            onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(hasTestTag(exerciseFooterTag("e1")))
+        },
+        Pass("list end", listOf(ActiveWorkoutTags.ADD_EXERCISE, ActiveWorkoutTags.FINISH_WORKOUT)) {
+            onNodeWithTag(ActiveWorkoutTags.LIST).performScrollToNode(hasTestTag(ActiveWorkoutTags.END))
+        },
+    )
 
     /** The workout route over [fake], its timer at [timer]. */
     @Composable
@@ -326,36 +369,37 @@ class WorkoutAccessibilitySweepTest {
     @Test
     fun pendingSets() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("pending") { WorkoutRoute(fake) }
+        sweep("pending", passes = listPasses()) { WorkoutRoute(fake) }
     }
 
     @Test
     fun setInEdit() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("editing", reach = {
+        sweep("editing", passes = listPasses(focus = StepperIncreaseTag), reach = {
             loadField("s2").performClick()
             waitForIdle()
             onNodeWithTag(StepperIncreaseTag).assertIsDisplayed()
         }) { WorkoutRoute(fake) }
     }
 
+    /** Checked as shown, the clock stopped (the toast's hold): the list's end is the pending state's. */
     @Test
     fun recordToast() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("record", frozen = true, reach = { bringTheRecordToast() }) { WorkoutRoute(fake) }
+        sweep("record", frozen = true, passes = listOf(Pass("as shown", listOf(RecordToastTag))), reach = { bringTheRecordToast() }) { WorkoutRoute(fake) }
         assertTrue(fake.recording.calls.any { it.startsWith("updateSet:s2,8,82.5,true") }, fake.recording.calls.toString())
     }
 
     @Test
     fun restDocked() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("dock", reach = { assertTrue(exists(TimerDockTag)) }) { WorkoutRoute(fake, resting) }
+        sweep("dock", passes = listPasses(), reach = { assertTrue(exists(TimerDockTag)) }) { WorkoutRoute(fake, resting) }
     }
 
     @Test
     fun restExpanded() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("expanded", reach = {
+        sweep("expanded", passes = listPasses(), reach = {
             onNodeWithTag(TimerOpenTag).performClick()
             waitUntil("the expanded timer opens", timeoutMillis = WAIT_MS) { exists(TimerExpandedTag) }
             waitForIdle()
@@ -395,7 +439,7 @@ class WorkoutAccessibilitySweepTest {
     @Test
     fun restPaused() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("paused", reach = { assertTrue(exists(TimerDockTag)) }) { WorkoutRoute(fake, paused) }
+        sweep("paused", passes = listPasses(), reach = { assertTrue(exists(TimerDockTag)) }) { WorkoutRoute(fake, paused) }
     }
 
     @Test
@@ -431,8 +475,9 @@ class WorkoutAccessibilitySweepTest {
     /**
      * The order a screen reader reads the workout in ([screenReaderOrder]), with the record toast
      * up and the rest docked: Minimize, the title, the time and the sets, Finish, More options (the
-     * header), the record toast, the cards in order (the bench's header and its rows, then the
-     * row's and the press's headers), and the dock last.
+     * header), the record toast, the cards in order (the bench's header, its rows and its "Add
+     * set", then the row's and the press's headers), the list's end ("Add exercise", "Finish
+     * workout"), and the dock last.
      */
     @Test
     fun readingOrderIsHeaderToastCardsDock() = runComposeUiTest(testTimeout = 2.minutes) {
@@ -448,8 +493,8 @@ class WorkoutAccessibilitySweepTest {
                 WorkoutHeaderTags.FINISH, WorkoutHeaderTags.MORE,
             )
             val cards = listOf(
-                exerciseHeaderTag("e1"), workoutSetRowTag("s1"), workoutSetRowTag("s2"), workoutSetRowTag("s3"),
-                exerciseHeaderTag("e2"), exerciseHeaderTag("e3"),
+                exerciseHeaderTag("e1"), workoutSetRowTag("s1"), workoutSetRowTag("s2"), workoutSetRowTag("s3"), exerciseFooterTag("e1"),
+                exerciseHeaderTag("e2"), exerciseHeaderTag("e3"), ActiveWorkoutTags.ADD_EXERCISE, ActiveWorkoutTags.FINISH_WORKOUT,
             )
             val expected = header + RecordToastTag + cards + TimerDockTag
             val order = screenReaderOrder()
