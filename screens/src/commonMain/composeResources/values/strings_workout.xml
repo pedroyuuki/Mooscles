@@ -57,11 +57,6 @@
     <!-- The active workout screen: header, end of the list, finish, discard, rename, no workout. -->
     <string name="workout_minimize">Minimize workout</string>
     <string name="workout_more_options">More options</string>
-    <!-- After the clock in the header: "42:18 · 9 of 15 sets". -->
-    <plurals name="workout_header_sets">
-        <item quantity="one">· %1$d of %2$d set</item>
-        <item quantity="other">· %1$d of %2$d sets</item>
-    </plurals>
     <!-- How the clock is read: %1$s is the time in whole minutes, read aloud ("42 minutes"). -->
     <string name="workout_clock_spoken">Workout time, %1$s</string>
     <string name="workout_finish">Finish</string>

@@ -2,6 +2,7 @@ package com.mooscles.screens.workout
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +41,8 @@ internal object RenameSheetTags {
  * "Rename workout" (plan decision 16): an `MBottomSheet` with the name in an `MTextField`, which
  * starts as [name], and "Save". The `MDialog` has no field, hence the sheet. Saving a name that
  * is not blank calls [onRename] with it trimmed, unless it is the same name, and closes; "Save"
- * is off while the field is blank. What is typed survives recreation.
+ * is off while the field is blank; the keyboard's Done saves the same way. What is typed survives
+ * recreation.
  */
 @Composable
 internal fun RenameSheet(name: String, onRename: (String) -> Unit, onDismiss: () -> Unit) {
@@ -73,6 +75,7 @@ internal fun RenameSheet(name: String, onRename: (String) -> Unit, onDismiss: ()
             label = stringResource(Res.string.workout_rename_field),
             modifier = Modifier.fillMaxWidth().padding(horizontal = space.s4).testTag(RenameSheetTags.FIELD),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { save() }),
             singleLine = true,
         )
         MButton(

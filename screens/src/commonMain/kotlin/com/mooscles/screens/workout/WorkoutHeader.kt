@@ -19,7 +19,9 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -29,12 +31,11 @@ import com.mooscles.designsystem.components.MButtonSize
 import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.MIconButton
 import com.mooscles.designsystem.components.MText
-import com.mooscles.designsystem.format.pluralCount
+import com.mooscles.designsystem.components.setsDoneOf
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_finish
-import com.mooscles.screens.resources.workout_header_sets
 import com.mooscles.screens.resources.workout_menu_discard
 import com.mooscles.screens.resources.workout_menu_rename
 import com.mooscles.screens.resources.workout_minimize
@@ -51,11 +52,31 @@ internal object WorkoutHeaderTags {
     const val MINIMIZE = "workout-minimize"
     const val TITLE = "workout-title"
     const val SETS = "workout-header-sets"
+    const val SEPARATOR = "workout-header-separator"
     const val FINISH = "workout-header-finish"
     const val MORE = "workout-more"
     const val MENU_RENAME = "workout-menu-rename"
     const val MENU_DISCARD = "workout-menu-discard"
 }
+
+/** The separator between the clock and the sets, the same in every language. */
+private const val SEPARATOR = "·"
+
+/**
+ * The reading order of the header's parts (spec "Resto da tela": Minimize, title, time and sets,
+ * Finish, More options). The two-row layout puts "More options" above the time and "Finish", so
+ * the order is set, not left to the geometry; the header is its own traversal group.
+ */
+internal object ReadOrder {
+    const val MINIMIZE = 0f
+    const val TITLE = 1f
+    const val CLOCK = 2f
+    const val SETS = 3f
+    const val FINISH = 4f
+    const val MORE = 5f
+}
+
+private fun Modifier.readOrder(index: Float): Modifier = semantics { traversalIndex = index }
 
 /** From this font scale the header is laid out in two rows, as the in-progress bar is. */
 private const val TWO_ROW_FONT_SCALE = 1.5f
@@ -66,7 +87,8 @@ private const val TITLE_SHARE = 3
 /**
  * The fixed header of the active workout (spec "Cabeçalho"), at least `barMin` (64 dp) tall:
  * "Minimize workout" (`ChevronDown`, 48 dp), the workout's [name] (`title.sm`, up to two lines),
- * under it the [WorkoutClock] and "· 9 of 15 sets" (`caption`, from [progress]), then "Finish"
+ * under it the [WorkoutClock] and "· 9 of 15 sets" (`caption`, from [progress]; without the "·"
+ * when the sets go under the clock), then "Finish"
  * (tonal S, a 48 dp target) and "More options" (`EllipsisVertical`), which opens a menu with
  * "Rename workout" and "Discard workout".
  *
@@ -111,26 +133,33 @@ internal fun WorkoutHeader(
                 MIcons.ChevronDown,
                 stringResource(Res.string.workout_minimize),
                 onClick = onMinimize,
-                modifier = Modifier.testTag(WorkoutHeaderTags.MINIMIZE),
+                modifier = Modifier.testTag(WorkoutHeaderTags.MINIMIZE).readOrder(ReadOrder.MINIMIZE),
             )
             MText(
                 name,
                 MTheme.type.titleSm,
-                modifier = Modifier.testTag(WorkoutHeaderTags.TITLE).semantics { heading() },
+                modifier = Modifier.testTag(WorkoutHeaderTags.TITLE).readOrder(ReadOrder.TITLE).semantics { heading() },
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            WorkoutClock(startedAt, nowMillis)
+            WorkoutClock(startedAt, nowMillis, Modifier.readOrder(ReadOrder.CLOCK))
+            // The separator only stands between the clock and the sets on one line; never read.
             MText(
-                pluralCount(Res.plurals.workout_header_sets, sets.total, sets.done, sets.total),
+                SEPARATOR,
                 MTheme.type.caption,
-                modifier = Modifier.testTag(WorkoutHeaderTags.SETS),
+                modifier = Modifier.testTag(WorkoutHeaderTags.SEPARATOR).clearAndSetSemantics { },
+                color = colors.textSecondary,
+            )
+            MText(
+                setsDoneOf(sets.done, sets.total),
+                MTheme.type.caption,
+                modifier = Modifier.testTag(WorkoutHeaderTags.SETS).readOrder(ReadOrder.SETS),
                 color = colors.textSecondary,
             )
             MButton(
                 stringResource(Res.string.workout_finish),
                 onClick = onFinish,
-                modifier = Modifier.testTag(WorkoutHeaderTags.FINISH),
+                modifier = Modifier.testTag(WorkoutHeaderTags.FINISH).readOrder(ReadOrder.FINISH),
                 variant = MButtonVariant.Tonal,
                 size = MButtonSize.S,
                 enabled = finishEnabled,
@@ -140,7 +169,7 @@ internal fun WorkoutHeader(
                 MIcons.EllipsisVertical,
                 stringResource(Res.string.workout_more_options),
                 onClick = { menu = true },
-                modifier = Modifier.testTag(WorkoutHeaderTags.MORE),
+                modifier = Modifier.testTag(WorkoutHeaderTags.MORE).readOrder(ReadOrder.MORE),
                 enabled = menuEnabled,
             )
         },
@@ -150,16 +179,17 @@ internal fun WorkoutHeader(
         val loose = Constraints(maxWidth = width)
         val minimize = measurables[0].measure(loose)
         val clock = measurables[2].measure(loose)
-        val finish = measurables[4].measure(loose)
-        val more = measurables[5].measure(loose)
+        val separator = measurables[3].measure(loose)
+        val finish = measurables[5].measure(loose)
+        val more = measurables[6].measure(loose)
         val middle = width - minimize.width - finish.width - more.width - gap * 3
         val oneRow = !large && middle >= width / TITLE_SHARE && middle >= clock.width
 
         // The clock and the sets after it on one line when they fit in [lineWidth], else under it.
         fun clockLine(lineWidth: Int): ClockLine {
-            val sets = measurables[3].measure(Constraints(maxWidth = lineWidth.coerceAtLeast(0)))
-            val sameLine = clock.width + gap + sets.width <= lineWidth
-            return ClockLine(clock, sets, sameLine, gap)
+            val sets = measurables[4].measure(Constraints(maxWidth = lineWidth.coerceAtLeast(0)))
+            val sameLine = clock.width + gap + separator.width + gap + sets.width <= lineWidth
+            return ClockLine(clock, separator, sets, sameLine, gap)
         }
 
         val placements = mutableListOf<Triple<Placeable, Int, Int>>()
@@ -221,8 +251,11 @@ internal fun WorkoutHeader(
     }
 }
 
-/** The clock and the sets text, on one line (baselines aligned) or the sets under the clock. */
-private class ClockLine(val clock: Placeable, val sets: Placeable, val sameLine: Boolean, val gap: Int) {
+/**
+ * The clock and the sets text: on one line, baselines aligned, with the separator between them
+ * ("42:18 · 9 of 15 sets"); or the sets under the clock, and then the separator is not placed.
+ */
+private class ClockLine(val clock: Placeable, val separator: Placeable, val sets: Placeable, val sameLine: Boolean, val gap: Int) {
     private val clockBaseline = clock[FirstBaseline].takeIf { it != AlignmentLine.Unspecified } ?: clock.height
     private val setsBaseline = sets[FirstBaseline].takeIf { it != AlignmentLine.Unspecified } ?: sets.height
     private val setsTop = if (sameLine) (clockBaseline - setsBaseline).coerceAtLeast(0) else clock.height
@@ -231,7 +264,12 @@ private class ClockLine(val clock: Placeable, val sets: Placeable, val sameLine:
 
     fun place(x: Int, y: Int, into: MutableList<Triple<Placeable, Int, Int>>) {
         into += Triple(clock, x, y + clockTop)
-        into += Triple(sets, if (sameLine) x + clock.width + gap else x, y + setsTop)
+        if (sameLine) {
+            into += Triple(separator, x + clock.width + gap, y + setsTop)
+            into += Triple(sets, x + clock.width + gap + separator.width + gap, y + setsTop)
+        } else {
+            into += Triple(sets, x, y + setsTop)
+        }
     }
 }
 

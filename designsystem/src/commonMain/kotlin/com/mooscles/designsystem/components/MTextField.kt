@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -59,7 +60,8 @@ const val TextFieldErrorIconTag = "text-field-error-icon"
  * it fills the width available to the field (as wide as its modifier allows).
  * [suffix] is a short unit drawn after the value inside the box (such as "min"), in
  * `text.secondary`; it is part of the field's accessible text. [singleLine] keeps the value on
- * one line: Enter (also from a hardware keyboard) runs the IME action instead of a line break.
+ * one line: Enter (also from a hardware keyboard) runs the IME action instead of a line break;
+ * [keyboardActions] says what the IME action does (by default, what the platform does).
  * The selection is drawn only while the field has focus (see [textSelectionColors]).
  */
 @Composable
@@ -72,6 +74,7 @@ fun MTextField(
     error: String? = null,
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     onFocusChange: (Boolean) -> Unit = {},
     textStyle: TextStyle = MTheme.type.bodyLg,
     suffix: String? = null,
@@ -105,6 +108,7 @@ fun MTextField(
             enabled = enabled,
             textStyle = textStyle.copy(color = if (enabled) colors.textPrimary else colors.textDisabled),
             keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
             singleLine = singleLine,
             interactionSource = source,
             cursorBrush = SolidColor(colors.accentText),

@@ -102,9 +102,10 @@ fun ActiveWorkoutRoute(
                 imeInsets = imeInsets,
                 nowMillis = nowMillis,
             )
-            // Finished: blank until the summary opens (as soon as the history has the workout) and
-            // while the app moves there, so "No workout in progress" never flashes.
-            finishingId != null -> Unit
+            // Finished: blank once the history has the workout (the summary opens) and while the app
+            // moves there, so "No workout in progress" never flashes. A workout that left without
+            // reaching the history falls through to the empty state, so the screen is never a dead end.
+            finishingId != null && (summaryOpened == finishingId || state.history.any { it.id == finishingId }) -> Unit
             state.loading || state.startingWorkout -> WorkoutSkeleton(skeletonCards, onMinimize)
             else -> NoWorkout(onChooseRoutine, onEmptyWorkout = { actions.startWorkout(null) })
         }

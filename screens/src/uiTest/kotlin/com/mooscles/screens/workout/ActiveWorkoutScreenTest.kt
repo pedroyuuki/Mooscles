@@ -16,6 +16,8 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
@@ -38,6 +40,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
@@ -46,6 +49,8 @@ import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.assertShownWhole
+import com.mooscles.screens.ScreenRestoration
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -166,9 +171,13 @@ class ActiveWorkoutScreenTest {
         density: Float? = null,
         skeletonCards: Int = 1,
         probe: ((String) -> Unit)? = null,
+        restoration: ScreenRestoration? = null,
         now: () -> Long = { START + ELAPSED_MS },
     ) {
-        withScreen(locale = locale, reducedMotion = reducedMotion, size = size, fontScale = fontScale, density = density, haptics = haptics, probe = probe) {
+        withScreen(
+            locale = locale, reducedMotion = reducedMotion, size = size, fontScale = fontScale, density = density,
+            haptics = haptics, probe = probe, restoration = restoration,
+        ) {
             ActiveWorkoutRoute(
                 state = fake.state.value,
                 timer = remember { mutableStateOf(TimerUi()) },
@@ -240,10 +249,13 @@ class ActiveWorkoutScreenTest {
         tag(WorkoutHeaderTags.TITLE).assertTextEquals("Treino A")
         // 2538 s on the clock, then the sets: "42:18 · 9 de 15 séries".
         tag(WorkoutClockTag).assertTextEquals("42:18")
-        tag(WorkoutHeaderTags.SETS).assertTextEquals("· 9 de 15 séries")
+        tag(WorkoutHeaderTags.SETS).assertTextEquals("9 de 15 séries")
         val clock = tag(WorkoutClockTag).getBoundsInRoot()
+        val dot = tag(WorkoutHeaderTags.SEPARATOR).assertIsDisplayed().getBoundsInRoot()
         val sets = tag(WorkoutHeaderTags.SETS).getBoundsInRoot()
-        assertTrue(sets.left >= clock.right && abs((sets.bottom - clock.bottom).value) < 4f, "the sets follow the clock on its line: $clock, $sets")
+        assertTrue(dot.left >= clock.right && sets.left >= dot.right && abs((sets.bottom - clock.bottom).value) < 4f, "the sets follow the clock on its line: $clock, $dot, $sets")
+        // The separator is drawn, not read.
+        tag(WorkoutHeaderTags.SEPARATOR).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
         // Read in whole minutes, and never announced on its own.
         tag(WorkoutClockTag).assertContentDescriptionEquals("Tempo de treino, 42 minutos")
         tag(WorkoutClockTag).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.LiveRegion))
@@ -534,7 +546,7 @@ class ActiveWorkoutScreenTest {
         val haptics = RecordingHaptics()
         val fake = Fake(stateOf(WorkoutUi("w1", "Treino vazio", startedAt = START)))
         show(fake, haptics = haptics)
-        tag(WorkoutHeaderTags.SETS).assertTextEquals("· 0 de 0 séries")
+        tag(WorkoutHeaderTags.SETS).assertTextEquals("0 de 0 séries")
         onNodeWithTag(ActiveWorkoutTags.ADD_EXERCISE).assertIsDisplayed()
         onNodeWithTag(ActiveWorkoutTags.FINISH_WORKOUT).assertDoesNotExist()
         tag(ActiveWorkoutTags.FINISH_NOTE).assertDoesNotExist()
@@ -583,6 +595,10 @@ class ActiveWorkoutScreenTest {
                     val bounds = tag(part).getBoundsInRoot()
                     assertTrue(bounds.left >= header.left - 0.5.dp && bounds.right <= header.right + 0.5.dp && bounds.bottom <= header.bottom + 0.5.dp, "$part at $scale: $bounds in $header")
                 }
+                // The sets go under the clock there, without the separator.
+                val setsBounds = tag(WorkoutHeaderTags.SETS).getBoundsInRoot()
+                assertTrue(setsBounds.top >= tag(WorkoutClockTag).getBoundsInRoot().bottom - 0.5.dp, "at $scale the sets wrap: $setsBounds")
+                tag(WorkoutHeaderTags.SEPARATOR).assertIsNotDisplayed()
                 // Nothing overlaps: the clock is not under "Finish".
                 val clock = tag(WorkoutClockTag).getBoundsInRoot()
                 val finish = onNodeWithTag(WorkoutHeaderTags.FINISH).getBoundsInRoot()
@@ -591,9 +607,150 @@ class ActiveWorkoutScreenTest {
         }
     }
 
+    @Test
+    fun finishedWorkoutThatNeverReachesTheHistoryShowsNoWorkout() = runComposeUiTest {
+        val events = Events()
+        val fake = Fake(stateOf(nineOfTwelve))
+        show(fake, events)
+        onNodeWithTag(WorkoutHeaderTags.FINISH).performClick()
+        waitForIdle()
+        dialogButton("Finalizar").performClick()
+        waitForIdle()
+        // The workout left, but no emission brought it to the history: not a blank dead end.
+        fake.state.value = fake.state.value.copy(active = null)
+        waitForIdle()
+        onNodeWithText("Nenhum treino em andamento").assertIsDisplayed()
+        assertTrue(events.list.isEmpty(), "summary opened: ${events.list}")
+        // Should the history bring it later, the summary still opens.
+        fake.state.value = fake.state.value.copy(history = listOf(nineOfTwelve.copy(endedAt = START + ELAPSED_MS)))
+        waitForIdle()
+        assertEquals(listOf("summary:w1"), events.list)
+    }
+
+    @Test
+    fun headerReadOrderFollowsTheSpecInTwoRows() = runComposeUiTest {
+        show(Fake(stateOf(nineOfFifteen)), size = DpSize(320.dp, 800.dp), fontScale = 2f)
+        // Two rows: "More options" sits above the clock and "Finish"...
+        val more = onNodeWithTag(WorkoutHeaderTags.MORE).getBoundsInRoot()
+        val finish = onNodeWithTag(WorkoutHeaderTags.FINISH).getBoundsInRoot()
+        assertTrue(more.bottom <= finish.top + 0.5.dp, "more $more, finish $finish")
+        // ...but the header is read Minimize, title, time, sets, Finish, More options.
+        onNodeWithTag(WorkoutHeaderTags.HEADER).assert(SemanticsMatcher.expectValue(SemanticsProperties.IsTraversalGroup, true))
+        val order = listOf(
+            WorkoutHeaderTags.MINIMIZE, WorkoutHeaderTags.TITLE, WorkoutClockTag,
+            WorkoutHeaderTags.SETS, WorkoutHeaderTags.FINISH, WorkoutHeaderTags.MORE,
+        ).map { part -> tag(part).fetchSemanticsNode().config.getOrNull(SemanticsProperties.TraversalIndex) }
+        assertTrue(order.all { it != null }, "every part has a reading index: $order")
+        assertEquals(order.map { it!! }.sorted(), order.map { it!! }, "reading order")
+        assertEquals(order.size, order.toSet().size, "distinct indices: $order")
+    }
+
+    @Test
+    fun swapFromTheCardMenuReplacesTheExercise() = runComposeUiTest {
+        val fake = Fake(stateOf(nothingDone))
+        show(fake)
+        onNode(hasTestTag(ExerciseMenuTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).performClick()
+        waitForIdle()
+        onNodeWithTag(ExerciseMenuTags.SWAP).performClick()
+        waitForIdle()
+        // No set done: the picker opens directly, and the pick replaces this entry.
+        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        waitForIdle()
+        assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
+        assertFalse(fake.calls.any { it.startsWith("addWorkoutExercise") })
+    }
+
+    @Test
+    fun restChipOpensTheRestSheet() = runComposeUiTest {
+        show(Fake(stateOf(nothingDone)))
+        onNodeWithText(REST_NOTE).assertDoesNotExist()
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        onNodeWithText(REST_NOTE).assertIsDisplayed()
+    }
+
+    @Test
+    fun howToLogOpensItsSheet() = runComposeUiTest {
+        show(Fake(stateOf(nothingDone)))
+        onNode(hasTestTag(ExerciseMenuTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).performClick()
+        waitForIdle()
+        onNodeWithTag(ExerciseMenuTags.HOW_TO_LOG).performClick()
+        waitForIdle()
+        // The menu closed and the sheet opened with its title.
+        onNodeWithTag(ExerciseMenuTags.HOW_TO_LOG).assertDoesNotExist()
+        onNodeWithText("Como registrar").assertIsDisplayed()
+    }
+
+    @Test
+    fun discardClosesTheUndoToast() = runComposeUiTest {
+        val fake = Fake(stateOf(oneDoneFirst))
+        show(fake)
+        swipeLeft("e1s4")
+        toast("Série 4 removida").assertIsDisplayed()
+        openMenuItem(WorkoutHeaderTags.MENU_DISCARD)
+        dialogButton("Descartar").performClick()
+        waitForIdle()
+        assertEquals("discardWorkout:", fake.calls.last())
+        toast("Série 4 removida").assertDoesNotExist()
+        assertFalse(fake.calls.any { it.startsWith("restoreSet") })
+    }
+
+    @Test
+    fun sheetsWaitWhileLoading() = runComposeUiTest {
+        val fake = Fake(stateOf(nothingDone).copy(loading = true))
+        show(fake)
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        // Still loading: the rest sheet is not put up (an unloaded list would close it).
+        onNodeWithText(REST_NOTE).assertDoesNotExist()
+        fake.state.value = fake.state.value.copy(loading = false)
+        waitForIdle()
+        onNodeWithText(REST_NOTE).assertIsDisplayed()
+    }
+
+    @Test
+    fun finishingSurvivesRecreation() = runComposeUiTest {
+        val events = Events()
+        val fake = Fake(stateOf(nineOfTwelve))
+        val restoration = screenRestoration()
+        show(fake, events, locale = null, restoration = restoration)
+        onNodeWithTag(WorkoutHeaderTags.FINISH).performClick()
+        waitForIdle()
+        dialogButton("Finish").performClick()
+        waitForIdle()
+        assertEquals("finishWorkout:", fake.calls.last())
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        // Still waiting for the summary after the recreation.
+        onNodeWithTag(WorkoutHeaderTags.FINISH).assertContentDescriptionEquals("Loading")
+        fake.state.value = fake.state.value.copy(active = null, history = listOf(nineOfTwelve.copy(endedAt = START + ELAPSED_MS)))
+        waitForIdle()
+        assertEquals(listOf("summary:w1"), events.list)
+        // A recreation after it opened does not open it again.
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        assertEquals(listOf("summary:w1"), events.list)
+        assertEquals(1, fake.calls.count { it == "finishWorkout:" })
+    }
+
+    @Test
+    fun renameKeyboardDoneSaves() = runComposeUiTest {
+        val fake = Fake(stateOf(nineOfFifteen))
+        show(fake)
+        openMenuItem(WorkoutHeaderTags.MENU_RENAME)
+        val field = onNode(hasSetTextAction() and hasTestTag(RenameSheetTags.FIELD), useUnmergedTree = true)
+        field.performTextReplacement("Treino C")
+        waitForIdle()
+        field.performImeAction()
+        waitForIdle()
+        assertEquals("renameWorkout:w1,Treino C", fake.calls.last())
+        onNodeWithTag(RenameSheetTags.SAVE).assertDoesNotExist()
+    }
+
     private companion object {
         const val START = 1_700_000_000_000L
         const val ELAPSED_MS = 2_538_000L
+        const val REST_NOTE = "Vale para os próximos descansos deste exercício; o descanso atual mantém o próprio tempo."
         // The design system's internal tags of the toast and the dialog card.
         const val TOAST = "toast"
         const val DIALOG = "dialog"

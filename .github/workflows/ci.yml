@@ -368,9 +368,9 @@ jobs:
           # Task 22: SummaryStatsTest 6 (commonTest), WorkoutSummaryScreenTest 11 (uiTest).
           # Task 17: CardExpansionTest 5 (commonTest), ExerciseListTest 20 (uiTest) (fix round 1: +1, +4).
           # Task 18: ExercisePickerTest 3, RestDraftTest 1 (commonTest), RestSheetTest 9, ExercisePickerSheetTest 6 (uiTest).
-          # Task 19: ActiveWorkoutScreenTest 21 (uiTest).
+          # Task 19: ActiveWorkoutScreenTest 21 (uiTest) (fix round 1: +9).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 206
+          MIN_SCREENS_IOS_TESTS: 215
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

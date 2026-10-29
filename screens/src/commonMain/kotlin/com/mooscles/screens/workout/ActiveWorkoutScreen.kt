@@ -131,7 +131,8 @@ internal fun ActiveWorkoutScreen(
     var picker by rememberSaveable(workout.id) { mutableStateOf<String?>(null) }
     var restEntryId by rememberSaveable(workout.id) { mutableStateOf<String?>(null) }
     var howToLogId by rememberSaveable(workout.id) { mutableStateOf<String?>(null) }
-    val rejection = remember { arrayOfNulls<Job>(1) }
+    // The note of the last refused finish, while it is up. Not read in composition.
+    var rejection by remember { mutableStateOf<Job?>(null) }
 
     // Done as drawn, so the header and the end of the list follow a check at once; read only by them.
     val progress: State<SetProgress> = remember(screen, workout) {
@@ -145,7 +146,7 @@ internal fun ActiveWorkoutScreen(
         } else {
             haptics.perform(HapticEvent.Rejected)
             // One note at a time: taps while it is up do not queue more.
-            if (rejection[0]?.isActive != true) rejection[0] = scope.launch { host.show(needsDone) }
+            if (rejection?.isActive != true) rejection = scope.launch { host.show(needsDone) }
         }
     }
     val exerciseHistory by rememberUpdatedState(onExerciseHistory)
