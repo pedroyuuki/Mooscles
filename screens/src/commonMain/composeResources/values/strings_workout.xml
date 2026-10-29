@@ -4,4 +4,10 @@
     <string name="workout_enter_reps">Enter the reps</string>
     <string name="workout_load_of_set">Load of set %1$d</string>
     <string name="workout_reps_of_set">Reps of set %1$d</string>
+    <string name="workout_editing_load">Editing load of set %1$d</string>
+    <string name="workout_editing_reps">Editing reps of set %1$d</string>
+    <string name="workout_step">step of %1$s</string>
+    <string name="workout_open_keyboard">Open keyboard</string>
+    <string name="workout_field_load">load</string>
+    <string name="workout_field_reps">reps</string>
 </resources>

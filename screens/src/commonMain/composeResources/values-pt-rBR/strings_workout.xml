@@ -4,4 +4,10 @@
     <string name="workout_enter_reps">Informe as repetições</string>
     <string name="workout_load_of_set">Carga da série %1$d</string>
     <string name="workout_reps_of_set">Repetições da série %1$d</string>
+    <string name="workout_editing_load">Editando carga da série %1$d</string>
+    <string name="workout_editing_reps">Editando repetições da série %1$d</string>
+    <string name="workout_step">passo de %1$s</string>
+    <string name="workout_open_keyboard">Abrir teclado</string>
+    <string name="workout_field_load">carga</string>
+    <string name="workout_field_reps">repetições</string>
 </resources>
