@@ -255,8 +255,10 @@ class RestTimerExpandedTest {
     /**
      * The board "Descanso e recorde": inside the ring, only the phase ("Rest", "Paused", "Rest
      * complete"); the exercise is in the title. A screen's dock label ("Rest · Barbell bench
-     * press") drawn there ran over the ring's stroke. Every corner of the status stays within the
-     * ring's clear circle, in both languages, at 1.0 and 2.0.
+     * press") drawn there ran over the ring's stroke. Every corner of the status, of the time (or,
+     * done, of the check) and of the total stays within the ring's clear circle, in both languages,
+     * at 1.0, 1.3 and 2.0 and at the iOS sizes of 2x (linear scaling, CI run 40937989893: "Paused"
+     * ran out of it), on 320 and 360 dp.
      */
     @OptIn(ExperimentalTestApi::class)
     @Test
@@ -267,24 +269,41 @@ class RestTimerExpandedTest {
             "pt-BR" to listOf("Descanso", "Pausado", "Descanso concluído"),
         )) {
             for ((phase, word) in listOf(TimerPhase.Running, TimerPhase.Paused, TimerPhase.Done).zip(words)) {
-                for (scale in listOf(1f, 2f)) {
-                    runComposeUiTest {
-                        withTheme(fontScale = scale) {
-                            ProvideAppLocale(language) {
-                                Box(Modifier.width(360.dp)) { Expanded(RestTimerVisual(if (phase == TimerPhase.Done) 0 else 84, 120, phase, long)) }
+                for ((scale, density) in listOf(1f to null, 1.3f to null, 2f to null, LINEAR_TWO_X_FONT_SCALE to 1f)) {
+                    for (width in listOf(320.dp, 360.dp)) {
+                        runComposeUiTest {
+                            withTheme(fontScale = scale, density = density) {
+                                ProvideAppLocale(language) {
+                                    Box(Modifier.width(width)) { Expanded(RestTimerVisual(if (phase == TimerPhase.Done) 0 else 84, 120, phase, long)) }
+                                }
                             }
-                        }
-                        waitForIdle()
-                        val inRing = hasAnyAncestor(hasTestTag(TimerRingTag))
-                        onNode(hasText(long, substring = true) and inRing, useUnmergedTree = true).assertDoesNotExist()
-                        val status = onNode(hasText(word) and inRing, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-                        val ring = onNodeWithTag(TimerRingTag).fetchSemanticsNode().boundsInRoot
-                        val sizes = MoosclesSizes()
-                        val clear = ring.height / 2f - with(density) { (sizes.tickLength + 4.dp + sizes.expandedRingStroke).toPx() }
-                        val center = ring.center
-                        for ((x, y) in listOf(status.left to status.top, status.right to status.top, status.left to status.bottom, status.right to status.bottom)) {
-                            val distance = kotlin.math.hypot(x - center.x, y - center.y)
-                            assertTrue(distance <= clear + 1f, "$language $phase $scale: corner ($x, $y) of $status outside the clear circle $clear")
+                            waitForIdle()
+                            val case = "$language $phase $scale $width"
+                            val inRing = hasAnyAncestor(hasTestTag(TimerRingTag))
+                            onNode(hasText(long, substring = true) and inRing, useUnmergedTree = true).assertDoesNotExist()
+                            val status = onNode(hasText(word) and inRing, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                            val middle = onNodeWithTag(if (phase == TimerPhase.Done) TimerDoneCheckTag else TimerTimeTag, useUnmergedTree = true)
+                                .fetchSemanticsNode().boundsInRoot
+                            val total = onNodeWithTag(TimerTotalTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                            val ring = onNodeWithTag(TimerRingTag).fetchSemanticsNode().boundsInRoot
+                            // In the content's density (1 for the iOS-sized case), not the device's.
+                            val px = density ?: this.density.density
+                            val sizes = MoosclesSizes()
+                            val clear = ring.height / 2f - (sizes.tickLength + 4.dp + sizes.expandedRingStroke).value * px
+                            val center = ring.center
+                            for ((name, box) in listOf("status" to status, "middle" to middle, "total" to total)) {
+                                for ((x, y) in listOf(box.left to box.top, box.right to box.top, box.left to box.bottom, box.right to box.bottom)) {
+                                    val distance = kotlin.math.hypot(x - center.x, y - center.y)
+                                    assertTrue(distance <= clear + 1f, "$case: $name corner ($x, $y) of $box outside the clear circle $clear")
+                                }
+                            }
+                            if (phase != TimerPhase.Done) {
+                                val results = mutableListOf<TextLayoutResult>()
+                                val time = onNodeWithTag(TimerTimeTag, useUnmergedTree = true).fetchSemanticsNode()
+                                val action = time.config[SemanticsActions.GetTextLayoutResult].action
+                                assertTrue(action != null && action(results), "$case: no text layout result")
+                                assertShownWhole(results.first(), case)
+                            }
                         }
                     }
                 }
