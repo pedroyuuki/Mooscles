@@ -53,6 +53,11 @@ class SizesTimingElevationTest {
     }
 
     @Test
+    fun timerAnnounceHoldIsOneAndAHalfSeconds() {
+        assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)
+    }
+
+    @Test
     fun everyTimingMatchesPlanDecisionSeven() {
         val t = MoosclesTiming()
         // Plan decision 7, in ms.

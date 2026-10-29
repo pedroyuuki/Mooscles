@@ -628,9 +628,12 @@ class WorkoutTimerTest {
 
     @Test
     fun progressSemanticsFollowRunningPausedAdjustedResetAndDone() = runComposeUiTest {
+        // The announcer clears itself after `timerAnnounceHold`, so the clock only moves a frame at a time.
+        mainClock.autoAdvance = false
         val timer = mutableStateOf(running)
         show(timer)
         fun expect(time: String, label: String, state: String?, announced: String, paused: Boolean) {
+            mainClock.advanceTimeByFrame()
             waitForIdle()
             assertEquals(time, textOf(TimerTimeTag))
             onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals(label)

@@ -45,6 +45,8 @@ data class MoosclesTiming(
     val toastAction: Long = 6_000,
     val prToast: Long = 4_000,
     val timerDoneHold: Long = 3_000,
+    /** How long the timer's live region keeps its text after an announcement; empty after, so it is not a screen-reader stop. */
+    val timerAnnounceHold: Long = 1_500,
     val skeletonPulse: Long = 1_200,
     val illustrationFrame: Long = 900,
     val hapticDoubleGap: Long = 80,

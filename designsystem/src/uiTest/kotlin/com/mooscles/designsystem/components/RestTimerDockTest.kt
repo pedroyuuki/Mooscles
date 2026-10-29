@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import com.mooscles.designsystem.tokens.MoosclesMotion
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
@@ -82,26 +83,63 @@ class RestTimerDockTest {
         }
     }
 
+    /** Between announcements the node holds no text, so a screen reader has no stop on it to read a stale time. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun announcerIsNotAStopBetweenAnnouncements() = runComposeUiTest {
+        withTheme { ProvideAppLocale("en") { RestTimerDock(visual(84), {}, {}, {}, onOpen = {}) } }
+        mainClock.advanceTimeBy(MoosclesTiming().timerAnnounceHold + 100)
+        waitForIdle()
+        val config = onNodeWithTag(TimerAnnounceTag, useUnmergedTree = true).fetchSemanticsNode().config
+        assertEquals(null, config.getOrNull(SemanticsProperties.ContentDescription))
+        assertEquals(null, config.getOrNull(SemanticsProperties.Text))
+        assertEquals(null, config.getOrNull(SemanticsProperties.Focused))
+        assertEquals(null, config.getOrNull(SemanticsActions.OnClick))
+        // The visible dock still names itself and its state.
+        onNodeWithTag(TimerOpenTag).assertContentDescriptionEquals("Open rest timer, 1 minute and 24 seconds remaining")
+    }
+
+    /** The text is there while it is announced, then cleared after the hold; a later change announces again. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun announcerClearsAfterAnnouncing() = runComposeUiTest {
+        mainClock.autoAdvance = false
+        var state by mutableStateOf(visual(84))
+        withTheme { ProvideAppLocale("en") { RestTimerDock(state, {}, {}, {}) } }
+        mainClock.advanceTimeByFrame()
+        assertEquals("Rest, 1 minute and 24 seconds remaining", announcement())
+        mainClock.advanceTimeBy(MoosclesTiming().timerAnnounceHold - 100)
+        assertEquals("Rest, 1 minute and 24 seconds remaining", announcement())
+        mainClock.advanceTimeBy(200)
+        assertEquals(null, onNodeWithTag(TimerAnnounceTag).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription))
+        state = visual(97)
+        mainClock.advanceTimeByFrame()
+        assertEquals("Rest, 1 minute and 37 seconds remaining", announcement())
+        mainClock.advanceTimeBy(MoosclesTiming().timerAnnounceHold + 100)
+        assertEquals(null, onNodeWithTag(TimerAnnounceTag).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription))
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun announcementChangesOnlyOnStartAdjustAndFinish() = runComposeUiTest {
+        mainClock.autoAdvance = false
         var state by mutableStateOf(visual(84))
         withTheme { ProvideAppLocale("en") { RestTimerDock(state, {}, {}, {}) } }
-        waitForIdle()
+        mainClock.advanceTimeByFrame()
         val start = announcement()
         assertEquals("Rest, 1 minute and 24 seconds remaining", start)
         state = visual(83)
-        waitForIdle()
+        mainClock.advanceTimeByFrame()
         assertEquals(start, announcement())
         state = visual(82)
-        waitForIdle()
+        mainClock.advanceTimeByFrame()
         assertEquals(start, announcement())
         state = visual(97)
-        waitForIdle()
+        mainClock.advanceTimeByFrame()
         val adjusted = announcement()
         assertNotEquals(start, adjusted)
         state = visual(0, TimerPhase.Done)
-        waitForIdle()
+        mainClock.advanceTimeByFrame()
         assertNotEquals(adjusted, announcement())
         assertEquals("Rest complete", announcement())
     }

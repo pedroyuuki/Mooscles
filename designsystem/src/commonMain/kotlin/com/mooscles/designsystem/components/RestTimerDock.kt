@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -60,6 +61,7 @@ import com.mooscles.designsystem.resources.ds_timer_plus15
 import com.mooscles.designsystem.resources.ds_timer_plus15_short
 import com.mooscles.designsystem.resources.ds_timer_skip
 import com.mooscles.designsystem.theme.MTheme
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 const val TimerDockTag = "timer-dock"
@@ -114,11 +116,18 @@ private class Announcement {
     var text = ""
         private set
 
+    /** Counts the announcements made, so the view can tell a new one from a recomposition. */
+    var serial = 0
+        private set
+
     fun update(visual: RestTimerVisual, fresh: String): String {
         val ticked = phase == TimerPhase.Running && visual.phase == TimerPhase.Running &&
             remaining - visual.remainingSeconds in 0..TICK_SECONDS
         val unchanged = phase == visual.phase && (visual.phase != TimerPhase.Running || remaining == visual.remainingSeconds)
-        if (!ticked && !unchanged) text = fresh
+        if (!ticked && !unchanged) {
+            text = fresh
+            serial++
+        }
         phase = visual.phase
         remaining = visual.remainingSeconds
         return text
@@ -126,8 +135,10 @@ private class Announcement {
 }
 
 /**
- * The live-region text of a timer. It changes when the timer starts, when ±15 s or a skip moves the
+ * The live-region text of a timer. It is set when the timer starts, when ±15 s or a skip moves the
  * clock, and when it ends, never on an ordinary tick, so a screen reader is not read to every second.
+ * It is empty the rest of the time (cleared after `timing.timerAnnounceHold`), so the announcer is
+ * not a stop for a screen reader and cannot be read stale.
  */
 @Composable
 internal fun rememberTimerAnnouncement(visual: RestTimerVisual): String {
@@ -137,10 +148,21 @@ internal fun rememberTimerAnnouncement(visual: RestTimerVisual): String {
         TimerPhase.Paused -> stringResource(Res.string.ds_timer_paused)
         TimerPhase.Running -> stringResource(Res.string.ds_timer_announce, spokenDuration(visual.remainingSeconds))
     }
-    return holder.update(visual, fresh)
+    val text = holder.update(visual, fresh)
+    val serial = holder.serial
+    var clearedSerial by remember { mutableIntStateOf(-1) }
+    val hold = MTheme.timing.timerAnnounceHold
+    LaunchedEffect(serial) {
+        delay(hold)
+        clearedSerial = serial
+    }
+    return if (serial == clearedSerial) "" else text
 }
 
-/** The 1 dp node that carries the polite live region: it adds nothing to the layout. */
+/**
+ * The 1 dp node that carries the polite live region: it adds nothing to the layout. Between
+ * announcements [text] is empty and the node has no description, so a screen reader skips it.
+ */
 @Composable
 internal fun TimerAnnouncer(text: String) {
     Box(
@@ -149,7 +171,7 @@ internal fun TimerAnnouncer(text: String) {
             .testTag(TimerAnnounceTag)
             .semantics {
                 liveRegion = LiveRegionMode.Polite
-                contentDescription = text
+                if (text.isNotEmpty()) contentDescription = text
             },
     )
 }
