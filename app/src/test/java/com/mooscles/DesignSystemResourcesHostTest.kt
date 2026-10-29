@@ -9,6 +9,7 @@ import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_licenses_title
 import com.mooscles.designsystem.tokens.interFamily
 import com.mooscles.designsystem.tokens.numberFamily
+import com.mooscles.screens.format.conventionCaption
 import kotlinx.coroutines.test.runTest
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
@@ -23,7 +24,7 @@ import org.robolectric.annotation.LooperMode
 /**
  * The :designsystem Compose Multiplatform resources (strings, fonts and files) load in the
  * :app host tests under Robolectric. Later tasks render design system screens here, so a
- * missing resource must fail this class first.
+ * missing resource must fail this class first. The :screens strings, packed the same way, too.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -35,6 +36,14 @@ class DesignSystemResourcesHostTest {
     fun stringResourceResolvesUnderRobolectric() {
         compose.setContent { Text(stringResource(Res.string.ds_licenses_title)) }
         compose.onNodeWithText("Open-source licenses").assertExists()
+    }
+
+    // A text only the :screens resources hold (an unknown label would fall back to itself, so the
+    // caption cannot come from anywhere else); its Res class is internal to that module.
+    @Test
+    fun screensStringResourceResolvesUnderRobolectric() {
+        compose.setContent { Text(conventionCaption("Per hand").orEmpty()) }
+        compose.onNodeWithText("Per hand: log one dumbbell's load.").assertExists()
     }
 
     @Test

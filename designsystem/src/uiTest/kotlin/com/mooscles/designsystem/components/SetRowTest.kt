@@ -37,6 +37,12 @@ import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.assertShownWhole
 import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.withTheme
+import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesTargets
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
 import kotlin.math.ceil
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,9 +56,15 @@ class SetRowTest {
         previousSpoken: String? = "80 kilograms by 6",
         load: String = "85",
         loadSpoken: String = "85 kilograms",
+        reps: Int = 6,
+        index: Int = 4,
+        loadSuggested: Boolean = false,
+        repsSuggested: Boolean = false,
+        editing: Boolean = false,
     ) = SetRowState(
-        index = 4, total = 5, previous = previous, previousSpoken = previousSpoken,
-        load = load, loadSpoken = loadSpoken, reps = 6, type = type, status = status,
+        index = index, total = 5, previous = previous, previousSpoken = previousSpoken,
+        load = load, loadSpoken = loadSpoken, reps = reps, type = type, status = status,
+        loadSuggested = loadSuggested, repsSuggested = repsSuggested, editing = editing,
     )
 
     @androidx.compose.runtime.Composable
@@ -63,7 +75,13 @@ class SetRowTest {
         onReps: () -> Unit = {},
         onType: () -> Unit = {},
         onRemove: () -> Unit = {},
-    ) = SetRow(state, onComplete, onLoad, onReps, onType, onRemove, modifier = Modifier.testTag("row"))
+        onEditRow: (() -> Unit)? = null,
+        onCopyPrevious: (() -> Unit)? = null,
+        recordHaptic: Boolean = true,
+    ) = SetRow(
+        state, onComplete, onLoad, onReps, onType, onRemove, modifier = Modifier.testTag("row"),
+        onEditRow = onEditRow, onCopyPrevious = onCopyPrevious, recordHaptic = recordHaptic,
+    )
 
     @OptIn(ExperimentalTestApi::class)
     @Test
@@ -146,7 +164,7 @@ class SetRowTest {
         withTheme {
             ProvideAppLocale("en") {
                 SetRow(
-                    state(status = SetStatus.Editing), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
+                    state(editing = true), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
                     loadField = { NumericField(load, { load = it }, NumericKind.Load, "Load") },
                     repsField = { NumericField(reps, { reps = it }, NumericKind.Reps, "Reps") },
                 )
@@ -178,8 +196,8 @@ class SetRowTest {
                 settled = onNodeWithTag(PrBadgeTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
             }
             runComposeUiTest {
-                var status by mutableStateOf(SetStatus.Editing)
-                withTheme(reducedMotion = reduced) { Row(state(status = status)) }
+                var status by mutableStateOf(SetStatus.Pending)
+                withTheme(reducedMotion = reduced) { Row(state(status = status, editing = status == SetStatus.Pending)) }
                 waitForIdle()
                 status = SetStatus.CompletedRecord
                 waitForIdle()
@@ -214,7 +232,7 @@ class SetRowTest {
     @Test
     fun recordShowsTheBadgeAndFiresTheRecordHaptic() = runComposeUiTest {
         val haptics = RecordingHaptics()
-        var status by mutableStateOf(SetStatus.Editing)
+        var status by mutableStateOf(SetStatus.Pending)
         withTheme(haptics = haptics) { ProvideAppLocale("en") { Row(state(status = status)) } }
         waitForIdle()
         onNodeWithTag(PrBadgeTag, useUnmergedTree = true).assertDoesNotExist()
@@ -290,14 +308,19 @@ class SetRowTest {
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun assertNumbersWholeOn320dp(density: Float? = null, fontScale: Float = 2f, fields: Boolean = false) = runComposeUiTest {
+    private fun assertNumbersWholeOn320dp(
+        density: Float? = null,
+        fontScale: Float = 2f,
+        fields: Boolean = false,
+        type: SetType = SetType.Normal,
+    ) = runComposeUiTest {
         withTheme(fontScale = fontScale, density = density) {
             Box(Modifier.width(320.dp)) {
                 ProvideAppLocale("en") {
-                    val row = state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12")
+                    val row = state(status = SetStatus.CompletedRecord, load = "187.5", previous = "187.5 kg × 12", type = type)
                     if (fields) {
                         SetRow(
-                            row.copy(status = SetStatus.Editing, reps = 12), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
+                            row.copy(status = SetStatus.Pending, editing = true, reps = 12), {}, {}, {}, {}, {}, modifier = Modifier.testTag("row"),
                             loadField = { NumericField("187.5", {}, NumericKind.Load, "Load") },
                             repsField = { NumericField("12", {}, NumericKind.Reps, "Reps") },
                         )
@@ -440,7 +463,7 @@ class SetRowTest {
     fun previousStaysOnOneLineAtOneThirtyPercent() {
         val samples = listOf(
             "55 kg × 10" to SetStatus.Pending,
-            "77.5 kg × 6" to SetStatus.Editing,
+            "77.5 kg × 6" to SetStatus.Pending,
             "187.5 kg × 12" to SetStatus.CompletedRecord,
         )
         for (width in listOf(360, 320)) {
@@ -462,6 +485,245 @@ class SetRowTest {
                         assertTrue(bounds.right <= widthPx + 0.5f, "$width dp: $tag ends at ${bounds.right} beyond $widthPx")
                     }
                 }
+            }
+        }
+    }
+
+    /** The text node of a number shown by the row (not the previous result), with the color it is drawn in. */
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.colorOf(text: String, tag: String): Color {
+        val node = onNode(hasText(text) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true).fetchSemanticsNode()
+        val results = mutableListOf<TextLayoutResult>()
+        runOnUiThread { node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results) }
+        return results.single().layoutInput.style.color
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun suggestedValuesAreSecondaryAndSpoken() {
+        for ((lang, spoken, expected) in listOf(
+            Triple(
+                "pt-BR", state(index = 2, previous = "80 kg × 8", previousSpoken = "80 quilos por 8", load = "82,5", loadSpoken = "82,5 quilos", reps = 8, loadSuggested = true, repsSuggested = true),
+                "Série 2 de 5, anterior 80 quilos por 8, sugestão 82,5 quilos, 8 repetições, não concluída",
+            ),
+            Triple(
+                "en", state(index = 2, previous = "80 kg × 8", previousSpoken = "80 kilograms by 8", load = "82.5", loadSpoken = "82.5 kilograms", reps = 8, loadSuggested = true, repsSuggested = true),
+                "Set 2 of 5, previous 80 kilograms by 8, suggestion 82.5 kilograms, 8 reps, not completed",
+            ),
+        )) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+                val secondary = MoosclesColors.Light.textSecondary
+                assertEquals(secondary, colorOf(spoken.load, SetRowLoadTag), "$lang load")
+                assertEquals(secondary, colorOf("8", SetRowRepsTag), "$lang reps")
+            }
+        }
+        // A saved value keeps the primary text color.
+        runComposeUiTest {
+            withTheme { Row(state()) }
+            waitForIdle()
+            assertEquals(MoosclesColors.Light.textPrimary, colorOf("85", SetRowLoadTag))
+            assertEquals(MoosclesColors.Light.textPrimary, colorOf("6", SetRowRepsTag))
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun onlyRepsSuggestedSaysSuggestionBeforeReps() {
+        for ((lang, spoken, expected) in listOf(
+            Triple(
+                "pt-BR", state(previousSpoken = "80 quilos por 6", loadSpoken = "85 quilos", reps = 8, repsSuggested = true),
+                "Série 4 de 5, anterior 80 quilos por 6, carga 85 quilos, sugestão 8 repetições, não concluída",
+            ),
+            Triple(
+                "en", state(reps = 8, repsSuggested = true),
+                "Set 4 of 5, previous 80 kilograms by 6, load 85 kilograms, suggestion 8 reps, not completed",
+            ),
+            Triple(
+                "en", state(previous = null, previousSpoken = null, reps = 8, repsSuggested = true),
+                "Set 4 of 5, load 85 kilograms, suggestion 8 reps, not completed",
+            ),
+        )) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+                assertEquals(MoosclesColors.Light.textPrimary, colorOf("85", SetRowLoadTag))
+                assertEquals(MoosclesColors.Light.textSecondary, colorOf("8", SetRowRepsTag))
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun assistedShowsASAndIsSpoken() {
+        for ((lang, spoken, expected) in listOf(
+            Triple("en", state(type = SetType.Assisted), "Set 4 of 5, assisted set, previous 80 kilograms by 6, load 85 kilograms, 6 reps, not completed"),
+            Triple(
+                "pt-BR", state(type = SetType.Assisted, previousSpoken = "80 quilos por 6", loadSpoken = "85 quilos"),
+                "Série 4 de 5, série assistida, anterior 80 quilos por 6, carga 85 quilos, 6 repetições, não concluída",
+            ),
+        )) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag(SetRowTypeTag, useUnmergedTree = true).assertTextEquals("AS")
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+            }
+        }
+        // With the wider "AS" pill, every text (the letters, previous, load and reps) stays whole
+        // where text is largest: iOS's 2x on a 320 dp screen, with numbers and with fields.
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE, type = SetType.Assisted)
+        assertNumbersWholeOn320dp(density = 1f, fontScale = LINEAR_TWO_X_FONT_SCALE, fields = true, type = SetType.Assisted)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun rowClickIsEditSet() {
+        for ((lang, label) in listOf("pt-BR" to "Editar série", "en" to "Edit set")) {
+            runComposeUiTest {
+                val calls = mutableListOf<String>()
+                withTheme {
+                    ProvideAppLocale(lang) {
+                        Row(
+                            state(),
+                            onComplete = { calls += "complete" }, onLoad = { calls += "load" }, onReps = { calls += "reps" },
+                            onEditRow = { calls += "editRow" },
+                        )
+                    }
+                }
+                waitForIdle()
+                val click = onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)
+                assertEquals(label, click?.label)
+                onNodeWithTag("row").performSemanticsAction(SemanticsActions.OnClick)
+                waitForIdle()
+                assertEquals(listOf("editRow"), calls)
+                // The five actions stay, and the check keeps its own click.
+                assertEquals(5, onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty().size)
+                onNodeWithTag(SetRowCheckTag).assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun noRowClickWithoutCallback() = runComposeUiTest {
+        withTheme { Row(state()) }
+        waitForIdle()
+        onNodeWithTag("row").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun previousIsATargetThatCopies() {
+        for ((lang, label) in listOf("en" to "Copy previous", "pt-BR" to "Copiar anterior")) {
+            for (previous in listOf("80 kg × 6", "5")) {
+                runComposeUiTest {
+                    var copies = 0
+                    withTheme { ProvideAppLocale(lang) { Row(state(previous = previous), onCopyPrevious = { copies++ }) } }
+                    waitForIdle()
+                    val bounds = onNodeWithTag(SetRowPreviousTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                    val min = with(density) { MoosclesTargets().min.toPx() }
+                    assertTrue(bounds.width >= min - 0.5f && bounds.height >= min - 0.5f, "\"$previous\": ${bounds.width} x ${bounds.height}, needs $min")
+                    onNodeWithTag(SetRowPreviousTag, useUnmergedTree = true).performClick()
+                    waitForIdle()
+                    assertEquals(1, copies, "\"$previous\" tap")
+                    val actions = onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty()
+                    assertEquals(6, actions.size)
+                    // Copy comes before the destructive "Remove set", which stays last.
+                    assertEquals(label, actions[4].label)
+                    assertEquals(if (lang == "en") "Remove set" else "Remover série", actions.last().label)
+                    runOnUiThread { actions[4].action() }
+                    assertEquals(2, copies, "\"$previous\" action")
+                }
+            }
+        }
+        // Without the callback, tapping the previous result does nothing and there is no action.
+        runComposeUiTest {
+            val calls = mutableListOf<String>()
+            withTheme { Row(state(), onComplete = { calls += "complete" }, onLoad = { calls += "load" }, onType = { calls += "type" }) }
+            waitForIdle()
+            onNodeWithTag(SetRowPreviousTag, useUnmergedTree = true).performClick()
+            waitForIdle()
+            assertEquals(emptyList(), calls)
+            assertEquals(5, onNodeWithTag("row").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty().size)
+        }
+    }
+
+    /** Pre-flight F3: a record that stops holding goes away without a vibration. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun losingARecordDoesNotVibrate() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        var status by mutableStateOf(SetStatus.CompletedRecord)
+        withTheme(haptics = haptics) { Row(state(status = status)) }
+        waitForIdle()
+        status = SetStatus.Completed
+        waitForIdle()
+        onNodeWithTag(PrBadgeTag, useUnmergedTree = true).assertDoesNotExist()
+        assertEquals(emptyList(), haptics.events.toList())
+    }
+
+    /** Pre-flight F3: editing is a flag, not a status, so entering or leaving it on a done set never vibrates. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun editingNeverVibrates() {
+        for (status in SetStatus.entries) {
+            runComposeUiTest {
+                val haptics = RecordingHaptics()
+                var editing by mutableStateOf(false)
+                withTheme(haptics = haptics) { Row(state(status = status, editing = editing)) }
+                waitForIdle()
+                editing = true
+                waitForIdle()
+                editing = false
+                waitForIdle()
+                assertEquals(emptyList(), haptics.events.toList(), "$status")
+            }
+        }
+    }
+
+    /** Pre-flight F3: in the workout the screen plays the record haptic from its record event, so the row only gives the complete one. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun withoutRecordHapticARecordGivesOnlyTheCompleteHaptic() = runComposeUiTest {
+        val haptics = RecordingHaptics()
+        var status by mutableStateOf(SetStatus.Pending)
+        withTheme(haptics = haptics) { Row(state(status = status), recordHaptic = false) }
+        waitForIdle()
+        status = SetStatus.CompletedRecord
+        waitForIdle()
+        assertEquals(listOf(HapticEvent.SetCompleted), haptics.events.toList())
+        status = SetStatus.Completed
+        waitForIdle()
+        status = SetStatus.CompletedRecord
+        waitForIdle()
+        assertEquals(listOf(HapticEvent.SetCompleted), haptics.events.toList())
+        onNodeWithTag(PrBadgeTag, useUnmergedTree = true).assertExists()
+    }
+
+    /** Review M2: a suggested load with saved reps names the load as the suggestion, not the reps. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun onlyLoadSuggestedSaysSuggestedLoad() {
+        for ((lang, spoken, expected) in listOf(
+            Triple(
+                "pt-BR", state(previousSpoken = "80 quilos por 6", load = "82,5", loadSpoken = "82,5 quilos", reps = 8, loadSuggested = true),
+                "Série 4 de 5, anterior 80 quilos por 6, sugestão de carga 82,5 quilos, 8 repetições, não concluída",
+            ),
+            Triple(
+                "en", state(load = "82.5", loadSpoken = "82.5 kilograms", reps = 8, loadSuggested = true),
+                "Set 4 of 5, previous 80 kilograms by 6, suggested load 82.5 kilograms, 8 reps, not completed",
+            ),
+        )) {
+            runComposeUiTest {
+                withTheme { ProvideAppLocale(lang) { Row(spoken) } }
+                waitForIdle()
+                onNodeWithTag("row").assertContentDescriptionEquals(expected)
+                assertEquals(MoosclesColors.Light.textSecondary, colorOf(spoken.load, SetRowLoadTag))
+                assertEquals(MoosclesColors.Light.textPrimary, colorOf("8", SetRowRepsTag))
             }
         }
     }

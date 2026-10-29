@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
@@ -54,5 +56,18 @@ class MBottomSheetTest {
         val sheet = onNodeWithTag(SheetTag).getBoundsInRoot().let { (it.bottom - it.top).value }
         assertTrue(sheet <= screen * 0.9f + 1f, "sheet $sheet of screen $screen")
         assertTrue(sheet >= screen * 0.9f - 1f, "tall content fills the cap: sheet $sheet of screen $screen")
+    }
+
+    /**
+     * The scrim is clickable, so it is named ("Dismiss", as Material's "Close sheet"): a screen
+     * reader never lands on a nameless control. It is read after the content (traversal index 1).
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun scrimIsNamedDismissAndReadLast() = runComposeUiTest {
+        withTheme { MBottomSheet(onDismiss = {}) { MText("Sheet", MTheme.type.bodyLg) } }
+        waitForIdle()
+        onNodeWithTag(SheetScrimTag).assertContentDescriptionEquals("Dismiss")
+        assertEquals(1f, onNodeWithTag(SheetScrimTag).fetchSemanticsNode().config[SemanticsProperties.TraversalIndex])
     }
 }

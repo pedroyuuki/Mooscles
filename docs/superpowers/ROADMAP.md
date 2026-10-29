@@ -1,6 +1,6 @@
 # Roadmap do Mooscles
 
-Atualizado em 2026-10-28. Este é o mapa de onde o produto vai. Cada fase vira uma ou mais specs (`specs/`), planos (`plans/`) e releases (`releases/`), seguindo o fluxo do [AGENTS.md](../../AGENTS.md). Quando uma fase termina, marque-a aqui e ligue os documentos que a entregaram.
+Atualizado em 2026-10-29. Este é o mapa de onde o produto vai. Cada fase vira uma ou mais specs (`specs/`), planos (`plans/`) e releases (`releases/`), seguindo o fluxo do [AGENTS.md](../../AGENTS.md). Quando uma fase termina, marque-a aqui e ligue os documentos que a entregaram.
 
 ## Aonde queremos chegar
 
@@ -42,7 +42,7 @@ O projeto falhou, mesmo que "funcione", se acontecer alguma destas coisas:
   - `ui/Common.kt` tem só 10 componentes compartilhados.
   - **2026-10-28:** com merge na `main` do fork depois do CI verde (host, iOS e release), a fase 2 entregou o design system "Giz & Ferro" no módulo `:designsystem` (Compose Multiplatform, Android e iOS): tokens de cor, tipo, espaço, raio, elevação, movimento e háptico; 28 arquivos de componentes; Inter e Barlow Condensed com algarismos tabulares; 38 ícones; a galeria escondida; e Configurações refeita só com ele. As outras telas continuam no Material 3 antigo, com as mesmas cores e textos, até a sua fase. Ver a [verificação](reports/2026-10-28-phase2-verificacao.md).
 - **Movimento e mídia:** nenhuma animação, nenhum gráfico, uma única imagem na UI, e os 287 exercícios do catálogo não têm mídia.
-- **Textos:** 144 textos fixos no código, sem recursos de string nem tradução. A UI está toda em inglês. **2026-10-28:** os textos dos componentes e de Configurações estão em recursos, em inglês e pt-BR; as outras telas migram quando forem redesenhadas.
+- **Textos:** 144 textos fixos no código, sem recursos de string nem tradução. A UI está toda em inglês. **2026-10-28:** os textos dos componentes e de Configurações estão em recursos, em inglês e pt-BR; as outras telas migram quando forem redesenhadas. **2026-10-29:** o treino ativo, o resumo de fim, o cartão de compartilhamento, a casca (abas e barra do treino) e as notificações do descanso também estão em inglês e pt-BR; os nomes do catálogo continuam em inglês até a fase 4.
 
 ## Decisões tomadas (chamadas minhas, revisáveis)
 
@@ -159,7 +159,7 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 **Entregas:**
 
 - Iniciar o treino a partir da rotina.
-- Card de exercício com a última performance e o alvo visíveis.
+- Card de exercício com a última performance e o alvo visíveis. **2026-10-29:** o alvo da rotina aparece como o valor pré-preenchido na linha de série; uma linha de alvo separada ("Alvo 3×8 · 80 kg") foi para a fase 4, por decisão da [spec](specs/2026-10-29-phase3-active-workout-design.md) ("Adaptações do 'Pronto quando' do ROADMAP").
 - Registro de série em um toque, com stepper e gesto para concluir.
 - Timer redesenhado, com anel animado, vibração e posição inteligente acima do teclado.
 - Reação animada ao bater um PR.
@@ -180,6 +180,14 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 - as animações mantêm 60 fps no aparelho de referência;
 - o treino ativo funciona inteiro no iOS (build interno).
 
+**Andamento (2026-10-29):** implementada e verificada na branch `feat/phase3-active-workout`, a partir da `main` do fork em `51508a5`. Antes do merge na `main` do fork faltam: corrigir um teste do design system que falha só no simulador iOS (o texto do anel do timer expandido a 200%, ver a verificação), o `compat-reviewer` da branch inteira e o `/code-review`. [Spec](specs/2026-10-29-phase3-active-workout-design.md) (com as [notas de implementação](specs/2026-10-29-phase3-active-workout-design.md#notas-de-implementação)), [plano](plans/2026-10-29-phase3-active-workout.md), [spikes](reports/2026-10-29-phase3-spikes.md), [verificação](reports/2026-10-29-phase3-verificacao.md), [crítica do treino](reports/2026-10-29-phase3-critica-treino.md).
+
+- Entregue: o módulo `:screens` (Compose Multiplatform, Android e iOS) com o treino ativo novo, o resumo de fim, o cartão de compartilhamento em código comum e a casca do app com quatro abas e a barra do treino; a notificação em andamento do descanso com ações no Android; o ícone novo; e o build `preview`, que instala ao lado do app. Os itens #1–#5 e #20 herdados da fase 2 foram resolvidos na casca nova. O #11 (o `MTextField` lê o valor antes do nome) continua aberto: o spike S2 não achou uma estratégia que se pudesse provar sem o TalkBack real.
+- Registrar uma série: nenhum fluxo medido leva mais toques que hoje (concluir uma série igual à da semana passada foi de 6 para 1; subir a carga um passo, de 8 para 3), provado por teste contra a contagem feita na tela antiga.
+- 60 fps: medido só no emulador. O aparelho de referência ainda não foi definido (ver as perguntas em aberto).
+- iOS: em vez de um build interno, o `ActiveWorkoutFlowTest` percorre o treino inteiro no simulador do CI sobre o ViewModel, o Room e o DataStore reais, e guarda capturas. O build interno no iPhone fica para a fase 7.
+- Não verificado: TalkBack, háptico e desempenho num aparelho (pendentes do dono instalar o `preview`), qualquer coisa num iPhone e a release, que depende da chave original de assinatura.
+
 ### Fase 4 — Biblioteca de exercícios e rotinas visuais · v2.1 · 3–5 semanas
 
 **Objetivo:** cada exercício passa a ter cara, e montar uma rotina fica visual e rápido.
@@ -191,6 +199,8 @@ As durações são estimativas para um desenvolvedor sozinho e servem para orden
 - Busca e filtros por músculo e equipamento.
 - Editor de rotina com arrastar e soltar, pastas e prescrição por série.
 - Exercícios personalizados com foto própria.
+- Linha de alvo da rotina no card do treino ("Alvo 3×8 · 80 kg"), vinda da fase 3 (2026-10-29).
+- Nomes dos exercícios do catálogo em pt-BR (a única mistura de idioma conhecida nas telas da fase 3).
 
 **Pronto quando:**
 
@@ -272,6 +282,7 @@ Só entram com motivo claro, cada uma com sua própria spec:
 ## Perguntas em aberto
 
 - Qual é o modelo exato do aparelho Android do dono, que será o aparelho de referência para desempenho? Os testes automatizados também usam um emulador no Mac.
+- O dono topa instalar o "Mooscles Preview" (build `preview`, ao lado do app de verdade, sem tocar nos dados dele) no próprio aparelho e percorrer a lista de TalkBack e háptico da fase 3 (cerca de 30 minutos)? Sem isso, esses itens continuam não verificados, como nas fases 2 e 3.
 - ~~Haverá um iPhone físico para testes antes da fase 1 terminar?~~ Respondida em 2026-10-27: não há iPhone. O iOS fica restrito ao simulador do CI até haver um aparelho; teclado, vibração e desempenho reais no iPhone continuam sem verificação.
 
 Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Decisões).
@@ -282,8 +293,8 @@ Respondidas em 2026-10-27: sem Google Play por enquanto e app gratuito (ver Deci
 | --- | --- | --- | --- | --- |
 | 0 | em andamento: export/import e PR fora da thread principal concluídos (2026-10-27), sem release; build/release no macOS e CI concluídos (2026-10-27); faltam a chave de assinatura (pendente com o dono do repositório original) e a release v1.5.0, e o "Pronto quando" ainda pede o export/import verificado entre aparelhos reais | [export/import](specs/2026-10-27-export-import-design.md) · [PR fora da main thread](specs/2026-10-27-pr-off-main-thread-design.md) | [export/import](plans/2026-10-27-export-import.md) · [PR fora da main thread](plans/2026-10-27-pr-off-main-thread.md) · [build no macOS e CI](plans/2026-10-27-macos-build-ci.md) | [v1.5.0 (rascunho e instruções do PR)](releases/v1.5.0.md) |
 | 1 | concluída: 1A e 1B na `main` do fork (2026-10-27 e 2026-10-28), sem release | [base multiplataforma](specs/2026-10-27-phase1-shared-base-design.md) | [1A](plans/2026-10-27-phase1a-toolchain-room.md) · [1B](plans/2026-10-27-phase1b-shared-module.md) | — |
-| 2 | implementada e verificada em 2026-10-28 na branch `feat/phase2-design-system` ([verificação](reports/2026-10-28-phase2-verificacao.md), [spike](reports/2026-10-28-phase2-tnum-spike.md), [crítica](reports/2026-10-28-phase2-critica-configuracoes.md)); falta o job `ios` do CI e o merge na `main` do fork; sem release (entra no PR final, ver a [v1.5.0](releases/v1.5.0.md)) | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | [design system](plans/2026-10-27-phase2-design-system.md) | — |
-| 3 | não iniciada | — | — | — |
+| 2 | concluída: implementada e verificada em 2026-10-28 ([verificação](reports/2026-10-28-phase2-verificacao.md), [spike](reports/2026-10-28-phase2-tnum-spike.md), [crítica](reports/2026-10-28-phase2-critica-configuracoes.md)), com merge na `main` do fork em `4f2911c`; sem release (entra no PR final, ver a [v1.5.0](releases/v1.5.0.md)) | [design system](specs/2026-10-27-phase2-design-system-design.md) · [direção visual](https://claude.ai/artifact/Y4pTUbYqTcCCrznT74raBM) | [design system](plans/2026-10-27-phase2-design-system.md) | — |
+| 3 | implementada e verificada em 2026-10-29 na branch `feat/phase3-active-workout` ([verificação](reports/2026-10-29-phase3-verificacao.md), [spikes](reports/2026-10-29-phase3-spikes.md), [crítica](reports/2026-10-29-phase3-critica-treino.md)); faltam um teste do iOS (anel do timer a 200%), o `compat-reviewer` da branch, o `/code-review` e o merge na `main` do fork | [treino ativo](specs/2026-10-29-phase3-active-workout-design.md) | [treino ativo](plans/2026-10-29-phase3-active-workout.md) | [v1.5.0](releases/v1.5.0.md): release pendente da chave original |
 | 4 | não iniciada | — | — | — |
 | 5 | não iniciada | — | — | — |
 | 6 | não iniciada | — | — | — |

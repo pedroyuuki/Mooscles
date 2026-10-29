@@ -1,8 +1,8 @@
 {
-  "baseCommit": "4f698a83d53bab62e7e278fb9c26b6a4e49bc1df",
-  "baseApkSource": "app-debug-apk artifact of the green CI run 40692246673 on main (after stage 1B)",
-  "baseApkBytes": 21796716,
-  "maxGrowthBytes": 1572864,
+  "baseCommit": "4f2911cb6b514f9552e283023b4a4482bd6dd555",
+  "baseApkSource": "app-debug-apk artifact of the green CI run 40783553904 on main (after phase 2)",
+  "baseApkBytes": 23119851,
+  "maxGrowthBytes": 1048576,
   "maxFontBytes": 921600,
   "maxFontsAndIconsBytes": 1048576
 }

@@ -1,10 +1,17 @@
 package com.mooscles
 
 import com.mooscles.data.*
+import com.mooscles.domain.RepsPr
+import com.mooscles.domain.WeightPr
 import com.mooscles.domain.WorkoutCalculations
 import com.mooscles.ui.PreferencesUi
+import com.mooscles.ui.PreviousSetUi
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.RecordUi
+import com.mooscles.ui.SetRecordUi
+import com.mooscles.ui.UiState
+import com.mooscles.ui.WorkoutUi
+import kotlin.math.nextUp
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -266,5 +273,186 @@ class WorkoutPresentationTest {
         val latest = ui.history.single { it.id == "latest" }.records.single { it.kind == RecordKind.WEIGHT }
         assertEquals(100.0, latest.previousKg!!, 0.0)
         assertEquals(110.0, ui.records.single { it.kind == RecordKind.WEIGHT }.weightKg, 0.0)
+    }
+
+    /** One set of [recordData]: completed unless told otherwise. */
+    private data class Row(val id: String, val kg: Double, val reps: Int, val completed: Boolean = true,
+        val warmup: Boolean = false, val assistance: Boolean = false)
+
+    /** One finished bench session (startedAt 1000) with [history], then the active one with one entry per list of [today]. */
+    private fun recordData(history: List<Row>, vararg today: List<Row>): AppData {
+        fun rows(entryId: String, list: List<Row>) = list.mapIndexed { index, row ->
+            WorkoutSet(row.id, entryId, position = index, reps = row.reps, weightKg = row.kg, completed = row.completed,
+                warmup = row.warmup, assistance = row.assistance)
+        }
+        val past = if (history.isEmpty()) emptyList() else listOf(entry("past-bench", "past", bench, 0))
+        return AppData(exercises = listOf(bench),
+            workouts = listOfNotNull(
+                Workout("past", "Past", startedAt = 1000, endedAt = 1500, status = WorkoutStatus.FINISHED).takeIf { history.isNotEmpty() },
+                Workout("active", "Active", startedAt = 3000)),
+            workoutExercises = past + today.indices.map { entry("today-$it", "active", bench, it) },
+            sets = rows("past-bench", history) + today.withIndex().flatMap { (index, list) -> rows("today-$index", list) })
+    }
+
+    private fun WorkoutUi.marks() = exercises.flatMap { e -> e.sets.mapNotNull { set -> set.record?.let { set.id to it } } }
+
+    private fun UiState.marks() = active!!.marks()
+
+    private fun present(data: AppData, pounds: Boolean = false) = WorkoutPresentation().present(data, PreferencesUi(pounds = pounds))
+
+    private val heavierToday = recordData(listOf(Row("h1", 80.0, 6)),
+        listOf(Row("t1", 85.0, 6), Row("t2", 87.5, 6), Row("t3", 87.5, 6)))
+
+    @Test fun weightRecordMarksExactlyTheChosenSet() {
+        assertEquals(listOf("t2" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), present(heavierToday).marks())
+    }
+
+    @Test fun heavierTieBreaksByReps() {
+        val data = recordData(listOf(Row("h1", 80.0, 6)), listOf(Row("t1", 87.5, 5), Row("t2", 87.5, 6)))
+        assertEquals(listOf("t2" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), present(data).marks())
+    }
+
+    @Test fun repsRecordMarksTheFirstWithMostRepsAtThatLoad() {
+        val data = recordData(listOf(Row("h1", 80.0, 6)), listOf(Row("t1", 80.0, 8), Row("t2", 80.0, 8)))
+        assertEquals(listOf("t1" to SetRecordUi(RecordKind.REPS, previousReps = 6)), present(data).marks())
+    }
+
+    @Test fun firstRecordMarksNothing() {
+        val ui = present(recordData(emptyList(), listOf(Row("t1", 85.0, 6), Row("t2", 87.5, 6))))
+        // The first records exist (the summary lists them); only the per-set mark is withheld (D18).
+        assertTrue(ui.active!!.records.isNotEmpty())
+        assertTrue(ui.active!!.records.all { it.firstRecord })
+        assertEquals(emptyList(), ui.marks())
+    }
+
+    @Test fun warmupAndAssistanceRules() {
+        val data = recordData(listOf(Row("h1", 80.0, 6), Row("h2", 20.0, 5, assistance = true)),
+            listOf(Row("warmup", 100.0, 5, warmup = true), Row("assisted-heavy", 120.0, 3, assistance = true),
+                Row("assisted-reps", 20.0, 8, assistance = true)))
+        assertEquals(listOf("assisted-reps" to SetRecordUi(RecordKind.REPS, previousReps = 5)), present(data).marks())
+    }
+
+    @Test fun ulpToleranceIsNotARecord() {
+        val ui = present(recordData(listOf(Row("h1", 80.0, 6)), listOf(Row("t1", 80.0.nextUp().nextUp(), 6))))
+        assertTrue(ui.active!!.records.isEmpty())
+        assertEquals(emptyList(), ui.marks())
+    }
+
+    @Test fun poundsDoNotChangeTheMarkedSet() {
+        assertEquals(listOf("t2" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), present(heavierToday, pounds = true).marks())
+        val reps = recordData(listOf(Row("h1", 80.0, 6)), listOf(Row("t1", 80.0, 8), Row("t2", 80.0, 8)))
+        assertEquals(listOf("t1" to SetRecordUi(RecordKind.REPS, previousReps = 6)), present(reps, pounds = true).marks())
+    }
+
+    @Test fun recordMarksOneSetAcrossTwoEntriesOfTheSameExercise() {
+        val data = recordData(listOf(Row("h1", 85.0, 5)),
+            listOf(Row("pending", 90.0, 5, completed = false), Row("lighter", 80.0, 5)), listOf(Row("done", 90.0, 5)))
+        val active = present(data).active!!
+        assertEquals(listOf("today-0", "today-1"), active.exercises.map { it.id })
+        assertEquals(listOf("done" to SetRecordUi(RecordKind.WEIGHT, previousKg = 85.0)), active.marks())
+        assertTrue(active.exercises[0].sets.none { it.record != null })
+    }
+
+    @Test fun uncheckingTheRecordSetRemovesTheMark() {
+        val presenter = WorkoutPresentation()
+        fun unchecked(vararg ids: String) = heavierToday.copy(sets = heavierToday.sets.map {
+            if (it.id in ids) it.copy(completed = false) else it
+        })
+        assertEquals(listOf("t2" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), presenter.present(heavierToday, PreferencesUi()).marks())
+        // The mark moves to the set the domain picks next, and leaves when no set beats the history.
+        assertEquals(listOf("t3" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), presenter.present(unchecked("t2"), PreferencesUi()).marks())
+        assertEquals(listOf("t1" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0)), presenter.present(unchecked("t2", "t3"), PreferencesUi()).marks())
+        assertEquals(emptyList(), presenter.present(unchecked("t1", "t2", "t3"), PreferencesUi()).marks())
+    }
+
+    /** Every set mark, in history and in the active session, is exactly the domain's choice, with the weight one first. */
+    @Test fun setRecordsFollowTheDomainOnGeneratedHistories() {
+        val random = Random(1729)
+        var marks = 0
+        repeat(20) { round ->
+            val data = generatedHistory(random)
+            val ui = WorkoutPresentation().present(data, PreferencesUi())
+            (ui.history + listOfNotNull(ui.active)).forEach { workout ->
+                val weight = WorkoutCalculations.prsForWorkout(data, workout.id).filterNot { it.firstRecord }
+                val reps = WorkoutCalculations.repsPrsForWorkout(data, workout.id).filterNot { it.firstRecord }
+                val expected = LinkedHashMap<String, SetRecordUi>()
+                reps.forEach { expected[it.setId] = SetRecordUi(RecordKind.REPS, previousReps = it.previousReps) }
+                weight.forEach { expected[it.setId] = SetRecordUi(RecordKind.WEIGHT, previousKg = it.previousWeightKg) }
+                assertEquals(expected, workout.marks().toMap(), "round $round workout ${workout.id}")
+                marks += expected.size
+            }
+        }
+        assertTrue(marks > 20, "marked sets: $marks")
+    }
+
+    /**
+     * Plan decision 5. Today's rules cannot beat both records with one set (a heavier load has no earlier set at the
+     * same load to beat on reps), so the precedence is pinned on the merge itself.
+     */
+    @Test fun aSetHoldingBothRecordsShowsTheWeightOne() {
+        val weight = WeightPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 80.0, 85.0, 8, false, "s1")
+        val reps = listOf(RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 85.0, false, 6, 8, false, "s1"),
+            RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 60.0, false, 10, 12, false, "s2"),
+            RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 50.0, false, null, 12, true, "s3"))
+        val first = weight.copy(previousWeightKg = null, firstRecord = true, setId = "s4")
+        assertEquals(mapOf("s1" to SetRecordUi(RecordKind.WEIGHT, previousKg = 80.0), "s2" to SetRecordUi(RecordKind.REPS, previousReps = 10)),
+            WorkoutPresentation.setRecords(listOf(weight, first), reps))
+    }
+
+    private fun previousData(): AppData = AppData(
+        exercises = listOf(bench),
+        workouts = listOf(
+            Workout("older", "Older", startedAt = 1000, endedAt = 1500, status = WorkoutStatus.FINISHED),
+            Workout("latest", "Latest", startedAt = 2000, endedAt = 2500, status = WorkoutStatus.FINISHED),
+            Workout("active", "Active", startedAt = 3000)),
+        workoutExercises = listOf(entry("older-bench", "older", bench, 0), entry("latest-bench", "latest", bench, 0),
+            entry("active-bench", "active", bench, 0)),
+        sets = listOf(
+            WorkoutSet("o1", "older-bench", reps = 5, weightKg = 60.0, completed = true),
+            WorkoutSet("l1", "latest-bench", position = 0, reps = 10, weightKg = 40.0, completed = true, warmup = true),
+            WorkoutSet("l2", "latest-bench", position = 1, reps = 8, weightKg = 80.0, completed = true),
+            WorkoutSet("l3", "latest-bench", position = 2, reps = 7, weightKg = 80.0),
+            WorkoutSet("l4", "latest-bench", position = 3, reps = 6, weightKg = 82.5, completed = true),
+            WorkoutSet("a1", "active-bench", position = 0, reps = 8, weightKg = 80.0),
+            WorkoutSet("a2", "active-bench", position = 1, reps = 8, weightKg = 80.0)))
+
+    @Test fun previousSetsAreTheLastSessionsCompletedSetsInOrder() {
+        val ui = present(previousData())
+        val entry = ui.active!!.exercises.single()
+        assertEquals(listOf(PreviousSetUi(40.0, 10, true, false), PreviousSetUi(80.0, 8, false, false),
+            PreviousSetUi(82.5, 6, false, false)), entry.previousSets)
+        assertEquals(2000L, entry.previousDate)
+        // In pounds the sets stay in exact kg; only the text follows the unit.
+        assertEquals(entry.previousSets, present(previousData(), pounds = true).active!!.exercises.single().previousSets)
+    }
+
+    /** Only the active workout suggests from the session before; a finished one keeps just the "previous" text. */
+    @Test fun historyEntriesCarryNoPreviousSets() {
+        val latest = present(previousData()).history.single { it.id == "latest" }.exercises.single()
+        assertEquals(emptyList(), latest.previousSets)
+        assertNull(latest.previousDate)
+        assertEquals("60 kg × 5", latest.previous)
+    }
+
+    @Test fun noHistoryHasNoPreviousSets() {
+        val data = previousData().let { d -> d.copy(workouts = d.workouts.filter { it.id == "active" },
+            workoutExercises = d.workoutExercises.filter { it.workoutId == "active" },
+            sets = d.sets.filter { it.workoutExerciseId == "active-bench" }) }
+        val entry = present(data).active!!.exercises.single()
+        assertEquals(emptyList(), entry.previousSets)
+        assertNull(entry.previousDate)
+        assertNull(entry.previous)
+    }
+
+    @Test fun previousSetsAreReusedWhenOnlyTheActiveWorkoutChanges() {
+        val presenter = WorkoutPresentation()
+        val data = previousData()
+        val before = presenter.present(data, PreferencesUi()).active!!.exercises.single()
+        val after = presenter.present(data.copy(sets = data.sets.map {
+            if (it.id == "a1") it.copy(completed = true, weightKg = 82.5) else it
+        }), PreferencesUi()).active!!.exercises.single()
+        assertNotSame(before, after)
+        assertSame(before.previousSets, after.previousSets)
+        assertEquals(before.previousDate, after.previousDate)
     }
 }

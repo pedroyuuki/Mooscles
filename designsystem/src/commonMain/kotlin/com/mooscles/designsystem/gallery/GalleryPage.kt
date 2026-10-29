@@ -14,6 +14,7 @@ import com.mooscles.designsystem.gallery.pages.OverlaysPage
 import com.mooscles.designsystem.gallery.pages.RecordsPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
 import com.mooscles.designsystem.gallery.pages.SetRowPage
+import com.mooscles.designsystem.gallery.pages.ShellPage
 import com.mooscles.designsystem.gallery.pages.StatesPage
 import com.mooscles.designsystem.gallery.pages.TimerPage
 import com.mooscles.designsystem.gallery.pages.WorkoutInputsPage
@@ -28,6 +29,7 @@ import com.mooscles.designsystem.resources.gallery_page_overlays
 import com.mooscles.designsystem.resources.gallery_page_records
 import com.mooscles.designsystem.resources.gallery_page_rows
 import com.mooscles.designsystem.resources.gallery_page_set_row
+import com.mooscles.designsystem.resources.gallery_page_shell
 import com.mooscles.designsystem.resources.gallery_page_states
 import com.mooscles.designsystem.resources.gallery_page_timer
 import com.mooscles.designsystem.resources.gallery_page_workout_inputs
@@ -48,6 +50,7 @@ enum class GalleryPage(val title: StringResource) {
     Timer(Res.string.gallery_page_timer),
     Records(Res.string.gallery_page_records),
     ExerciseCard(Res.string.gallery_page_exercise_card),
+    Shell(Res.string.gallery_page_shell),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
@@ -72,6 +75,7 @@ fun GalleryPage.Content() {
             GalleryPage.Timer -> TimerPage()
             GalleryPage.Records -> RecordsPage()
             GalleryPage.ExerciseCard -> ExerciseCardPage()
+            GalleryPage.Shell -> ShellPage()
         }
     }
 }

@@ -98,4 +98,16 @@
     <string name="gallery_sample_pr_detail">85 kg × 6</string>
     <string name="gallery_finish_rest">Terminar descanso</string>
     <string name="gallery_sample_reps_error">Mín. 1</string>
+    <string name="gallery_page_shell">Abas e barra do treino</string>
+    <string name="gallery_section_shell">Barra de abas e o treino em andamento</string>
+    <string name="gallery_tab_train">Treinar</string>
+    <string name="gallery_tab_library">Biblioteca</string>
+    <string name="gallery_tab_history">Histórico</string>
+    <string name="gallery_tab_records">Recordes</string>
+    <string name="gallery_sample_workout">Treino A</string>
+    <string name="gallery_sample_long_workout">Força de membros superiores, semana pesada</string>
+    <string name="gallery_sample_sets_done">9 de 15 séries</string>
+    <string name="gallery_restore_set">Restaurar a série</string>
+    <string name="gallery_sample_caption">Por mão: registre a carga de um halter.</string>
+    <string name="gallery_sample_rest_chip">Descanso 2:00</string>
 </resources>

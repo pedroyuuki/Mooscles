@@ -12,10 +12,21 @@ android {
         targetSdk = 35
         versionCode = 16
         versionName = "1.4.5"
+        // The updater runs everywhere except the side-by-side `preview` build (below).
+        buildConfigField("boolean", "UPDATER_ENABLED", "true")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
     buildTypes {
+        // Installs beside the distributed app (own applicationId, own data, own launcher entry) and
+        // can never update or replace it: the updater is off. Signed with the debug key like debug.
+        create("preview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+            buildConfigField("boolean", "UPDATER_ENABLED", "false")
+            matchingFallbacks += listOf("debug")
+        }
         // A release-like local measurement build. Use the existing distributed
         // certificate, package and data instead of creating another application.
         create("performance") {
@@ -63,6 +74,9 @@ dependencies {
     // Design system (tokens, components, fonts, strings); Compose Multiplatform 1.12.2 maps to the
     // Jetpack Compose 1.12.1 of the BOM above, so it changes no Compose version.
     implementation(project(":designsystem"))
+    // The redesigned screens (Compose Multiplatform, on :shared and :designsystem): no new
+    // library and no version change, only the module itself.
+    implementation(project(":screens"))
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")

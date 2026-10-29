@@ -36,6 +36,27 @@ class SizesTimingElevationTest {
         assertEquals(2.dp, s.textCursor)
     }
 
+    /** Phase 3 (spec D7 and D8): the tab bar is 64 dp at least, the workout bar's rest ring 32 dp with a 3 dp stroke. */
+    @Test
+    fun shellBarSizesMatchPhaseThree() {
+        val s = MoosclesSizes()
+        assertEquals(64.dp, s.barMin)
+        assertEquals(32.dp, s.ringBar)
+        assertEquals(3.dp, s.ringBarStroke)
+    }
+
+    /** Phase 3 (spec "Tela do treino ativo" and D9): content up to 600 dp wide; a finished card advances after 300 ms. */
+    @Test
+    fun activeWorkoutTokensMatchPhaseThree() {
+        assertEquals(600.dp, MoosclesSizes().contentMaxWidth)
+        assertEquals(300L, MoosclesTiming().cardAdvance)
+    }
+
+    @Test
+    fun timerAnnounceHoldIsOneAndAHalfSeconds() {
+        assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)
+    }
+
     @Test
     fun everyTimingMatchesPlanDecisionSeven() {
         val t = MoosclesTiming()

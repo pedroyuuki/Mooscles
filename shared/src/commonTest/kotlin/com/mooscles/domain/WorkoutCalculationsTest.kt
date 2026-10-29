@@ -409,4 +409,43 @@ class WorkoutCalculationsTest {
         assertTrue(WorkoutCalculations.summary(expanded, "new")!!.repsPrs.isEmpty())
         assertEquals(10, WorkoutCalculations.repsRecords(expanded).single().reps)
     }
+
+    @Test fun weightPrCarriesTheChosenSetId() {
+        val old = exercise("old")
+        val new = exercise("new")
+        val again = exercise("new", suffix = "again")
+        fun row(entry: WorkoutExercise, id: String, position: Int, kg: Double, reps: Int) =
+            WorkoutSet(id, entry.id, position = position, reps = reps, weightKg = kg, completed = true)
+        val data = AppData(workouts = listOf(workout("old", 100), workout("new", 200)),
+            workoutExercises = listOf(old, new, again.copy(position = 1)),
+            sets = listOf(row(old, "old-1", 0, 80.0, 6),
+                // The heaviest load, tied on reps, keeps the first set in workout order; more reps break a tie.
+                row(new, "lighter", 0, 85.0, 6), row(new, "first-tie", 1, 87.5, 6),
+                row(new, "fewer-reps", 2, 87.5, 5), row(again, "second-tie", 0, 87.5, 6)))
+        val pr = WorkoutCalculations.prsForWorkout(data, "new").single()
+        assertEquals("first-tie", pr.setId)
+        assertEquals(87.5, pr.newWeightKg, 0.0)
+        assertEquals(6, pr.reps)
+        assertEquals(listOf(pr), WorkoutCalculations.prsByWorkout(data)["new"])
+        val moreReps = data.copy(sets = data.sets + row(again, "more-reps", 1, 87.5, 7))
+        assertEquals("more-reps", WorkoutCalculations.prsForWorkout(moreReps, "new").single().setId)
+        // A first record carries its set too, so the field never needs a default.
+        assertEquals("old-1", WorkoutCalculations.prsForWorkout(data, "old").single().setId)
+    }
+
+    @Test fun repsPrCarriesTheChosenSetId() {
+        val old = exercise("old")
+        val new = exercise("new")
+        fun row(entry: WorkoutExercise, id: String, position: Int, kg: Double, reps: Int, assistance: Boolean = false) =
+            WorkoutSet(id, entry.id, position = position, reps = reps, weightKg = kg, completed = true, assistance = assistance)
+        val data = AppData(workouts = listOf(workout("old", 100), workout("new", 200)),
+            workoutExercises = listOf(old, new),
+            sets = listOf(row(old, "old-80", 0, 80.0, 6), row(old, "old-assisted", 1, 20.0, 5, assistance = true),
+                // Only strictly more reps replace the first set at a load.
+                row(new, "first-8", 0, 80.0, 8), row(new, "second-8", 1, 80.0, 8),
+                row(new, "assisted-6", 2, 20.0, 6, assistance = true), row(new, "assisted-9", 3, 20.0, 9, assistance = true)))
+        val prs = WorkoutCalculations.repsPrsForWorkout(data, "new")
+        assertEquals(listOf("first-8" to 6, "assisted-9" to 5), prs.map { it.setId to it.previousReps })
+        assertEquals(prs, WorkoutCalculations.repsPrsByWorkout(data)["new"])
+    }
 }

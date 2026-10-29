@@ -7,4 +7,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "Mooscles"
-include(":app", ":shared", ":designsystem")
+include(":app", ":shared", ":designsystem", ":screens")

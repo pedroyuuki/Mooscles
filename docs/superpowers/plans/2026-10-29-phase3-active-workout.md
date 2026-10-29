@@ -67,7 +67,7 @@ As decisões da spec (D1–D24 e as sete regras de 2026-10-29) valem como estão
   - o `compat-reviewer` (`.claude/agents/compat-reviewer.md`) roda e dá `SEGURO` antes do commit nas Tasks 4, 5, 6, 8, 9, 25, 27 e 32;
   - o iOS só se prova no CI (este Mac não tem Xcode); nunca desinstale o app de um aparelho do dono; desligue a rede do emulador (`svc wifi disable`, `svc data disable`) antes de instalar APKs de teste.
 - Código, comentários, KDoc e commits em inglês. Plano e relatórios em pt-BR. Commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- **Evidências:** tudo vai para `docs/superpowers/reports/AAAA-MM-DD-phase3-verificacao/` (a data é a do dia em que a pasta nasce, na Task 24; as tasks seguintes reutilizam a mesma pasta).
+- **Evidências:** tudo vai para `docs/superpowers/reports/2026-10-29-phase3-verificacao/` (a pasta nasce na Task 9, com o `deps-before.txt`; as tasks seguintes reutilizam a mesma pasta; ver a nota F27).
 
 ## Review Focus
 
@@ -917,3 +917,30 @@ Todo o resto é sequencial: as Tasks 4–6 tocam `MoosclesViewModel.kt` e `UiCon
 | 4 → 27 | `UpdateManager.kt` (4: `TrainingBlockedException`; 27: `enabled`) | sim; a 25 não toca nesse arquivo, então 25 ∥ 26 e 27 não se cruzam nele |
 | 6 → 9 | `MoosclesActions.restoreSet`, que o `RecordingActions` implementa | sim: a 9 vem depois da 6 e já implementa a interface com `restoreSet` |
 | 26 → 30, 31 | o painter e o `WorkoutSharePreview` usados nas capturas `share-card-*` | sim |
+
+
+## Notas
+
+- **2026-10-29, varredura prévia.** Antes da Task 3, uma varredura só de leitura cruzou o plano com a spec e com o código pós-fase 2 e encontrou 41 pontos (F1–F41). Cada task segue as decisões que levam o seu número; a tabela fica no workspace de execução, fora do git. As que mudam o texto acima:
+  - **F1:** a notificação em andamento do descanso usa o id 3 (o 2 é do updater). Desvio do D16, registrado na spec e no AGENTS.md na Task 32.
+  - **F2:** `app_name` com `translatable="false"` e `share_strings.xml` com `tools:ignore="MissingTranslation"`, para o lint não quebrar quando a Task 25 criar `values-pt-rBR`.
+  - **F4:** o formatador do CMP só troca `%N$s` e `%N$d`; nada de largura (`%2$02d`). O `StringsParityTest` passa a reprovar isso.
+  - **F9:** no CI, os relatórios do iOS são enviados também com o job verde (`if: !cancelled()`), para os spikes e as capturas da Task 28.
+  - **F23:** cada lane paralela tem a sua branch; o controlador mescla. O relatório dos spikes (Task 3) entra na branch da fase depois da Task 6.
+  - **F25:** a Task 4 leva o `MIN_HOST_TESTS` à contagem real (≥ 624), e as Tasks 11, 13 e 27 o sobem.
+- **2026-10-29, Task 9.** Três decisões da varredura mudam o texto acima:
+  - **F27:** a pasta de evidências nasce na Task 9 (Step 1, `deps-before.txt`), não na 24. Recebeu a data da fase, `2026-10-29-phase3-verificacao`, como os outros documentos da fase 3, embora o relógio da máquina marcasse 2026-10-28 quando ela foi criada.
+  - **F35:** o caminho padrão do `check-design-tokens.ps1` **acrescenta** `screens/src/commonMain/kotlin/com/mooscles/screens` à lista atual (DS e tela piloto), sem tirar nada; as fixtures continuam com 8 linhas.
+  - **F41:** `withScreen` ganha `density: Float? = null`, como o `withTheme` do DS, para reproduzir no Android as medidas do iOS (com `LINEAR_TWO_X_FONT_SCALE`, 2,01).
+- **2026-10-29, resultados dos spikes S1 (Android) e S2.** S1 no Android: PNG igual ao bitmap, mediana 446 ms, thread principal livre; a metade iOS é decidida na Task 3. S2: nenhuma estratégia leva o rótulo ao nó editável e o TalkBack do emulador não pôde ser conduzido, então, pela regra de decisão, o `MTextField` não muda e o #11 continua aberto.
+- **2026-10-29, fechamento (Task 32).** O que a execução mudou no texto acima. As decisões que detalham ou desviam da spec estão nas [notas de implementação da spec](../specs/2026-10-29-phase3-active-workout-design.md#notas-de-implementação); aqui ficam as que são só do plano:
+  - **Decisão 1, push:** além dos checkpoints, houve pushes extras para provar no iOS mais cedo o que só o simulador decide (depois da Task 12, o `ActiveWorkoutFlowTest` da Task 28 e a correção iOS da Task 29, numa lane própria). As lanes paralelas rodaram em worktrees com branch própria (`lane/phase3-tN`) e o controlador mesclou, somando os mínimos do CI (F23).
+  - **Decisão 10, `kotlinx-datetime`:** entrou na versão 0.8.0, no `commonMain` do `:screens`. Na Task 26 o escopo passou de `implementation` para `api`, porque o `ShareCards.from` recebe o `TimeZone` do `:app`; o artefato já ia no APK, então nada mudou no `debugRuntimeClasspath`.
+  - **Task 14 → Task 19, check otimista:** o estado otimista não vai para o `Saver` (não sobrevive à morte do processo), e um erro de gravação o descarta (`dropOptimistic`, `dropAllOptimistic`, que também descarta as gravações pendentes da edição). A Task 19 chama isso quando chega um `errorCode` (`failedCheckClearsTheDisc`).
+  - **Task 20, destino de `progressSemanticsReflect…`:** a tabela "Destino dos testes atuais" o porta para `WorkoutTimerTest.progressSemanticsFollowRunningPausedAdjustedResetAndDone`, mas o teste novo não confere um valor de progresso: o anel do timer não expõe `ProgressBarRangeInfo`, porque um valor de progresso que muda a cada segundo seria lido pelo leitor de tela a cada tick, contra a regra "anuncia ao começar, ao ajustar e ao terminar". O teste confere o estado e os anúncios. Os limites do progresso (restante maior que o total, total 0) ficaram em `RestTimerRingMathTest`.
+  - **Restauração no iOS (Task 16):** o `StateRestorationTester` lança `NotImplementedError` no Skiko. Os testes de recriação usam o `ScreenRestoration` do `:screens`, que no Android embrulha o `StateRestorationTester` e no iOS recompõe com um `SaveableStateRegistry` próprio.
+  - **Contador de recomposição (Task 23):** o `RecompositionProbe` virou `@NonRestartableComposable`; antes ele só contava a primeira composição, e um teste de "zero recomposições" passaria sem provar nada. Os testes de tick têm controle positivo (o `dock`, a barra ou o `clock` sobem).
+  - **Gestos no iOS (Task 12):** o Skiko não entrega `cancel()` de toque, então o teste do arrasto cancelado só roda onde o toque cancelado existe (`INJECTS_TOUCH_CANCEL`, falso no `iosTest`). Como um `touchesCancelled` real chega no iPhone fica para a fase 7.
+  - **Fonte grande nos testes Android (Task 29):** os diálogos e as sheets dos testes de UI do Android ignoram a escala de fonte do quadro de teste. É limite do harness; a sheet do tipo e o seletor a 200% foram vistos nas capturas da Task 31, com a escala de fonte do sistema em 2,0.
+  - **Mínimos do CI:** cada task subiu o mínimo pelo número de testes novos. No fim, o `MIN_HOST_TESTS` foi levado à contagem real do CI (F25), com a conta no comentário do `ci.yml`.
+  - **Decisão 28, versão:** `versionCode` 16 e `versionName` 1.4.5 continuam. A release v1.5.0 depende da chave original de assinatura, que não está neste Mac.

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Checks the debug APK against the phase 2 size budget in tools/apk-budget.json.
+Checks the debug APK against the size budget of the current phase in tools/apk-budget.json.
 
 .DESCRIPTION
 Prints the numbers and fails (exit 1) when any limit is exceeded:

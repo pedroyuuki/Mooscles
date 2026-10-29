@@ -1,5 +1,5 @@
 # Host tests, lint and a debug build on every push and pull request, the iOS
-# targets of :shared and :designsystem compiled and their tests run on the iOS simulator, plus
+# targets of :shared, :designsystem and :screens compiled and their tests run on the iOS simulator, plus
 # a check that the release script still works on Linux and Windows, run when tools/,
 # build.ps1, app/build.gradle.kts (version and signing inputs) or a workflow
 # changes, and on every manual run.
@@ -62,11 +62,12 @@ jobs:
 
       # No test retry: a flaky test must fail the job so it gets looked at.
       - name: Test, lint and assemble
-        # :shared and :designsystem register no lint report task of their own (AGP 9.3.3 KMP
-        # library: only lintAnalyzeAndroidHostTest, which writes no report).
-        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :designsystem:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
+        # :shared, :designsystem and :screens register no lint report task of their own (AGP 9.3.3
+        # KMP library: only lintAnalyzeAndroidHostTest, which writes no report).
+        run: ./gradlew :app:testDebugUnitTest :shared:testAndroidHostTest :designsystem:testAndroidHostTest :screens:testAndroidHostTest :app:lintDebug :app:assembleDebug --console=plain --continue
 
-      # Phase 2 budget: APK growth over the phase's base, the fonts, and fonts plus icons.
+      # Phase 3 budget: APK growth over the phase's base (main after phase 2), the fonts, and
+      # fonts plus icons.
       - name: APK budget
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -91,8 +92,8 @@ jobs:
             --lock designsystem/font-sources.txt --require-tabular '*' --require-proportional 'inter*' \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
-      # Components, the gallery and the licenses page may not hard-code colors, measures or
-      # durations: those live in designsystem/.../tokens/. The two fixtures prove the guard
+      # Components, the gallery, the licenses page and the :screens common code may not hard-code
+      # colors, measures or durations: those live in designsystem/.../tokens/. The two fixtures prove the guard
       # still catches (8 violating lines) and still passes clean code.
       - name: Design token guard
         if: ${{ !cancelled() }}
@@ -136,12 +137,61 @@ jobs:
         env:
           # The host total before :shared existed. Moving tests between the two
           # modules must never lose any, so the sum may not drop below it.
-          MIN_HOST_TESTS: 600
+          # Raised to the real count after phase 2: 624 (:app 377, :shared 181, :designsystem 66).
+          # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7, WorkoutRepositoryErrorTypesTest +5,
+          # AppViewModelErrorCodeHostTest +4, RestTimerControllerTest +1.
+          # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
+          # Phase 3 task 6: WorkoutSetRestoreTest +8, AppViewModelRestoreHostTest +5.
+          # Phase 3 tasks 7 and 8: SetSuggestionsTest +20, InProcessRestTimerTest +12 (shared).
+          # Phase 3 task 9 (:screens): StringsParityTest 6, EquipmentIconsTest 1;
+          # DesignSystemResourcesHostTest +1 (:app).
+          # Phase 3 task 10 (:screens): ScreenDatesTest 4 (commonTest), ScreenDatesJvmEquivalenceTest 2.
+          # Phase 3 task 11 (:designsystem commonTest): IconsTest +1, SizesTimingElevationTest +1.
+          # Phase 3 task 27 (:app): UpdaterDisabledHostTest 2, LauncherIconHostTest 1.
+          # Phase 3 task 13 (:designsystem commonTest): SizesTimingElevationTest +1.
+          # Phase 3 task 14 (:screens commonTest): ActiveWorkoutScreenStateTest 2.
+          # Phase 3 task 15 (:screens commonTest): SetDraftsTest 7.
+          # Phase 3 task 26: WorkoutShareCardTest -19 (removed with the Android card data),
+          # WorkoutCardRendererTest +4 (5 -> 9); :screens commonTest ShareCardDataTest 23, ShareCardColorsTest 1.
+          # Phase 3 task 16 (:screens commonTest): ActiveWorkoutScreenStateTest +2.
+          # Phase 3 task 22 (:screens commonTest): SummaryStatsTest 6.
+          # Phase 3 task 17 (:screens commonTest): CardExpansionTest 4.
+          # Phase 3 task 23 (:screens commonTest): WorkoutBarStateTest 2.
+          # Phase 3 task 18 (:screens commonTest): ExercisePickerTest 3, RestDraftTest 1.
+          # Task 17 fix round 1 (:screens commonTest): CardExpansionTest +1.
+          # Phase 3 task 20 (:screens commonTest): RestUpNextTest 3.
+          # Phase 3 task 21 (:screens commonTest): RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1.
+          # Task 20 fix round 1 (:screens commonTest): CardExpansionTest +1, RestUpNextTest +1.
+          # Phase 3 task 24 (:app): ShellNavigationHostTest +13; retired with the old workout screen
+          # (ported to :screens uiTests or retired, see the commit): WorkoutLazyRowsHostTest -6,
+          # WorkoutInputHostTest -4, InlineRestEditorHostTest -3, InlineRestVisualHostTest -1.
+          # RestTimerHostTest, DiscardNavigationHostTest, UiFlowHostTest and TimerKeyboardInsetsHostTest
+          # keep their names on the shell (0). 776 + 13 - 14 = 775.
+          # Task 24 fix round 1 (:app): ShellNavigationHostTest +4 (one workout entry, saved tabs
+          # without the workout, the summary's error, the shell's system-bar insets). 775 + 4 = 779.
+          # Merged: 776 + 2 (task 20 fix) + 13 - 14 + 4 (task 24) = 781.
+          # Phase 3 task 25 (:app): RestProgressNotificationHostTest +13, RestTimerActionsHostTest +4,
+          # MainActivityOpenWorkoutHostTest +4. 781 + 21 = 802.
+          # Task 25 fix round 1: RestProgressNotificationHostTest +1 (timeout after the end),
+          # RestTimerActionsHostTest +1 (gate held past the receiver's budget). 802 + 2 = 804.
+          # Phase 3 task 31 (:screens commonTest): ShareCardDataTest +1. 804 + 1 = 805.
+          # The CI run on task 31 (run 40937989893, 5d94a7f) counted 806: one earlier test was added
+          # without raising the minimum. Timer announcer fix (2ff31b4, :designsystem commonTest):
+          # SizesTimingElevationTest +1. 806 + 1 = 807.
+          # Phase 3 end, the real count (F25): 807 = :app 416 + :shared 240 + :designsystem 70 + :screens 81.
+          # Phase 3 final review fixes: :screens commonTest RecordAnnouncerTest +1, RestDraftTest +2;
+          # :app ShellNavigationHostTest +2, WorkoutSharePreviewHostTest -1; :shared WorkoutPresentationTest +1,
+          # InProcessRestTimerTest +1. 807 + 3 + 1 + 2 = 813.
+          # Ring iOS fix (:designsystem commonTest): RestTimerRingMathTest +1.
+          # Merged with the ring fix: 813 + 1 = 814.
+          # +1: in-process rest completion retry test
+          MIN_HOST_TESTS: 815
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
               'shared/build/test-results/testAndroidHostTest',
-              'designsystem/build/test-results/testAndroidHostTest'
+              'designsystem/build/test-results/testAndroidHostTest',
+              'screens/build/test-results/testAndroidHostTest'
           ) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*.xml' -ErrorAction SilentlyContinue }
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
           foreach ($file in $files) {
@@ -155,7 +205,7 @@ jobs:
           $minimum = [int]$env:MIN_HOST_TESTS
           $lines = @(
               '### Host tests',
-              "$tests tests in $($files.Count) classes (:app, :shared and :designsystem): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+              "$tests tests in $($files.Count) classes (:app, :shared, :designsystem and :screens): $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
           ) + ($failed | ForEach-Object { "- ``$_``" })
           $lines | Write-Host
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -173,6 +223,8 @@ jobs:
             shared/build/test-results/
             designsystem/build/reports/
             designsystem/build/test-results/
+            screens/build/reports/
+            screens/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -187,8 +239,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Compiles the iOS device targets of :shared and :designsystem and runs their tests
-  # (common tests, plus the design system UI tests) on the iOS simulator. Only a Mac
+  # Compiles the iOS device targets of :shared, :designsystem and :screens and runs their tests
+  # (common tests, plus the design system and screen UI tests) on the iOS simulator. Only a Mac
   # can build Kotlin/Native Apple targets.
   ios:
     name: iOS compile and simulator tests
@@ -228,11 +280,11 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'designsystem/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'shared/build.gradle.kts', 'designsystem/build.gradle.kts', 'screens/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: konan-${{ runner.os }}-
 
       - name: Compile for iOS and run the simulator tests
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :designsystem:compileKotlinIosArm64 :designsystem:iosSimulatorArm64Test --console=plain --continue
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test :designsystem:compileKotlinIosArm64 :designsystem:iosSimulatorArm64Test :screens:compileKotlinIosArm64 :screens:iosSimulatorArm64Test --console=plain --continue
 
       # kspIosArm64 and kspIosSimulatorArm64 run only here, so an iOS-only divergence in the
       # exported schema (and its identityHash) is caught here, not in the host job.
@@ -251,10 +303,14 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # The common tests in :shared (156) plus the iOS-only entry point tests
-          # (6). Raise it when tests move into commonTest or iosTest, so a silently
-          # skipped class fails the job.
-          MIN_IOS_TESTS: 162
+          # The common tests in :shared (156 after phase 2, 183 with the lines below)
+          # plus the iOS-only entry point tests (6). Raise it when tests move into
+          # commonTest or iosTest, so a silently skipped class fails the job.
+          # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
+          # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
+          # Phase 3 final review fixes: WorkoutPresentationTest +1, InProcessRestTimerTest +1. 221 + 2 = 223.
+          # +1: in-process rest completion retry test
+          MIN_IOS_TESTS: 224
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -299,8 +355,22 @@ jobs:
           # ComponentColorsTest 5. Task 16 critique: LicenseTextTest 5, MButtonIconScaleTest 1, GallerySmokeTest +4, FullWidthTest 3.
           # Final fix wave: StepperTest +4, MToastTest +2, MDialogTest +2, RestTimerDockTest +1, RestTimerExpandedTest +2, TextFitTest 3.
           # Set row density fix: SetRowTest +4.
+          # Phase 3 task 11: IconsTest +1, SizesTimingElevationTest +1, MTabBarTest 8, ActiveWorkoutBarTest 7.
+          # Phase 3 task 12: SetRowTest +9, SetRowSwipeTest 5, NumericFieldTest +3, StepperTest +6.
+          # Task 12 review fixes: SetRowSwipeTest +7, StepperTest +2, NumericFieldTest +2, SetRowTest +1.
+          # Phase 3 task 13: ExerciseCardTest +5, RestTimerDockTest +2, RestTimerExpandedTest +4, RestTimerCompactTest 3,
+          # SizesTimingElevationTest +1. Swipe settle restart fix: SetRowSwipeTest +1.
+          # Phase 3 task 17 fix round 1: SetRowColumnsTest 2.
+          # Phase 3 task 20: RestTimerDockTest +2, RestTimerCompactTest +1, RestTimerExpandedTest +1 (fix round 1: RestTimerCompactTest +1).
+          # Phase 3 task 28 (defects the flow found): StepperTest +1, MDialogTest +1, MBottomSheetTest +1.
+          # Phase 3 task 29 (defects the sweep found): StepperTest +1, RestTimerDockTest +1 (fix round 1: StepperTest +2).
+          # Phase 3 task 31 (screen critique): SetCheckTest +1, RestTimerExpandedTest +1.
+          # Timer announcer fix (2ff31b4): RestTimerDockTest +2 (uiTest), SizesTimingElevationTest +1
+          # (commonTest). 291 (counted by run 40937989893 on 5d94a7f) + 3 = 294, the number of @Test in
+          # commonTest, uiTest and iosTest at the phase 3 end (that count matched the CI at 53b13ba and 5d94a7f).
+          # Ring iOS fix: RestTimerRingMathTest +1. Run 40944220889 counted 295 (294 + 1).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 204
+          MIN_DS_IOS_TESTS: 295
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -322,6 +392,61 @@ jobs:
           if ($files.Count -eq 0) { throw 'No design system iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests design system iOS simulator tests ran; at least $minimum are expected." }
 
+      # The screens on their own, for the same reason.
+      - name: Summarize screens iOS simulator tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        env:
+          # Per class: EquipmentIconsTest 1, ScreenDatesTest 4, ActiveWorkoutScreenStateTest 4, SetDraftsTest 7,
+          # ShareCardDataTest 23, ShareCardColorsTest 1, WorkoutBarStateTest 2 (commonTest); CatalogLabelsTest 4,
+          # ScreensHelpersTest 4, DateTextsTest 5, WorkoutSetRowTest 13, SetEditingTest 23, SetTypeAndRemovalTest 14,
+          # ShareCardPainterTest 4, ShareCardTextsTest 2, AppShellBottomTest 13 (uiTest).
+          # Task 22: SummaryStatsTest 6 (commonTest), WorkoutSummaryScreenTest 11 (uiTest).
+          # Task 17: CardExpansionTest 5 (commonTest), ExerciseListTest 20 (uiTest) (fix round 1: +1, +4).
+          # Task 18: ExercisePickerTest 3, RestDraftTest 1 (commonTest), RestSheetTest 9, ExercisePickerSheetTest 6 (uiTest).
+          # Task 19: ActiveWorkoutScreenTest 21 (uiTest) (fix round 1: +9).
+          # Task 20: RestUpNextTest 3 (commonTest), WorkoutTimerTest 17 (uiTest) (fix round 1: RestUpNextTest +1,
+          # CardExpansionTest +1, WorkoutTimerTest +3).
+          # Task 21: RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1 (commonTest), RecordReactionTest 10 (uiTest).
+          # Task 28: ActiveWorkoutFlowTest 2 (uiTest; the end-to-end proof of the workout on iOS, spec D6).
+          # Task 29: TapBudgetTest 11, WorkoutAccessibilitySweepTest 12, ScreensHelpersTest +1 (uiTest).
+          # Task 31 (screen critique): ShareCardDataTest +1 (commonTest).
+          # Final review fixes: RecordAnnouncerTest +1, RestDraftTest +2 (commonTest), ActiveWorkoutScreenTest +3
+          # (uiTest). 287 + 3 + 3 = 293.
+          # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
+          MIN_SCREENS_IOS_TESTS: 293
+        run: |
+          $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
+          foreach ($file in $files) {
+              $suite = ([xml](Get-Content -LiteralPath $file.FullName -Raw)).testsuite
+              $tests += [int]$suite.tests; $failures += [int]$suite.failures
+              $errors += [int]$suite.errors; $skipped += [int]$suite.skipped
+              foreach ($case in @($suite.testcase)) {
+                  if ($case.failure -or $case.error) { $failed += "$($case.classname).$($case.name)" }
+              }
+          }
+          $minimum = [int]$env:MIN_SCREENS_IOS_TESTS
+          $lines = @(
+              '### Screens iOS simulator tests',
+              "$tests tests in $($files.Count) classes: $failures failed, $errors errors, $skipped skipped. Minimum: $minimum."
+          ) + ($failed | ForEach-Object { "- ``$_``" })
+          $lines | Write-Host
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if ($files.Count -eq 0) { throw 'No screens iOS simulator test results were written.' }
+          if ($tests -lt $minimum) { throw "Only $tests screens iOS simulator tests ran; at least $minimum are expected." }
+
+      # The PNGs ActiveWorkoutFlowTest writes on the simulator, one per state of each run (none when
+      # captureToImage is unsupported there). Uploaded whatever the outcome, to look at the iOS screens.
+      - name: Upload iOS flow captures
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-flow-captures
+          path: screens/build/ios-captures/**
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload iOS reports
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -332,6 +457,8 @@ jobs:
             shared/build/test-results/
             designsystem/build/reports/
             designsystem/build/test-results/
+            screens/build/reports/
+            screens/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 

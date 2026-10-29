@@ -23,7 +23,9 @@ data class WeightPr(
     val previousWeightKg: Double?,
     val newWeightKg: Double,
     val reps: Int,
-    val firstRecord: Boolean
+    val firstRecord: Boolean,
+    /** The set holding [newWeightKg]: the heaviest, ties broken by more reps, then the first in workout order. */
+    val setId: String
 )
 
 data class RepsPr(
@@ -35,7 +37,9 @@ data class RepsPr(
     val assistance: Boolean,
     val previousReps: Int?,
     val newReps: Int,
-    val firstRecord: Boolean
+    val firstRecord: Boolean,
+    /** The set holding [newReps]: the first in workout order with that many reps at this load. */
+    val setId: String
 )
 
 data class ExerciseRecord(
@@ -227,7 +231,8 @@ object WorkoutCalculations {
             val best = candidates.maxWithOrNull(compareBy<WorkoutSet> { it.weightKg }.thenBy { it.reps }) ?: return@mapNotNull null
             val previous = baseline[key]
             if (previous != null && !heavier(best.weightKg, previous)) return@mapNotNull null
-            WeightPr(key.exerciseId, entries.first().name, key.convention, previous, best.weightKg, best.reps, previous == null)
+            WeightPr(key.exerciseId, entries.first().name, key.convention, previous, best.weightKg, best.reps, previous == null,
+                best.id)
         }
 
     /** Repetition records are independent for each variation, assistance mode, and external load. */
@@ -248,7 +253,7 @@ object WorkoutCalculations {
             val previous = previousReps(candidate)
             if (previous != null && candidate.set.reps <= previous) return@mapNotNull null
             RepsPr(candidate.exercise.exerciseId, candidate.exercise.name, candidate.exercise.convention,
-                candidate.set.weightKg, candidate.assistance, previous, candidate.set.reps, previous == null)
+                candidate.set.weightKg, candidate.assistance, previous, candidate.set.reps, previous == null, candidate.set.id)
         }
 
     /** Shared by both record passes, so [historyRecords] indexes the snapshot once. */

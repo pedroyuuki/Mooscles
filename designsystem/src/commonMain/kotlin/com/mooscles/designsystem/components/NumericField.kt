@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -24,6 +27,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -48,6 +52,12 @@ const val NumericFieldBoxTag = "numeric-field-box"
  * [accessibilityLabel] on the field's own semantics (there is no visible label); an [error] adds
  * a 2 dp danger border, the alert icon and the message, and is also reported as `error`.
  * Text that cannot lead to a number of [kind] is not passed to [onValueChange].
+ *
+ * [selected] draws the focus ring without the field having focus: the field a row is editing with
+ * its stepper, while the keyboard stays closed. The keyboard shows [imeAction]; pressing it calls
+ * [onImeAction], and with [ImeAction.Done] the keyboard also closes (the system default). Other
+ * actions do only [onImeAction], so with [ImeAction.Next] the caller moves the focus where it
+ * wants. [focusRequester] lets the caller focus the field (and so open the keyboard).
  */
 @Composable
 fun NumericField(
@@ -59,6 +69,10 @@ fun NumericField(
     suggested: String? = null,
     error: String? = null,
     enabled: Boolean = true,
+    selected: Boolean = false,
+    imeAction: ImeAction = ImeAction.Done,
+    onImeAction: () -> Unit = {},
+    focusRequester: FocusRequester? = null,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
@@ -82,7 +96,7 @@ fun NumericField(
         BasicTextField(
             value = value,
             onValueChange = { if (NumericInput.isTypable(it, kind)) onValueChange(it) },
-            modifier = Modifier.semantics {
+            modifier = (if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier).semantics {
                 contentDescription = accessibilityLabel
                 if (error != null) error("$errorPrefix: $error")
             },
@@ -92,7 +106,12 @@ fun NumericField(
             textStyle = textStyle,
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (kind == NumericKind.Load) KeyboardType.Decimal else KeyboardType.Number,
+                imeAction = imeAction,
             ),
+            keyboardActions = KeyboardActions(onAny = {
+                onImeAction()
+                if (imeAction == ImeAction.Done) defaultKeyboardAction(ImeAction.Done)
+            }),
             interactionSource = source,
             cursorBrush = SolidColor(colors.accentText),
             decorationBox = { inner ->
@@ -105,7 +124,7 @@ fun NumericField(
                         Modifier
                             .testTag(NumericFieldBoxTag)
                             .sizeIn(minWidth = MTheme.sizes.numericFieldWidth, minHeight = MTheme.sizes.numericFieldHeight)
-                            .mFocusRing(shape, source)
+                            .mFocusRing(shape, source, alwaysVisible = selected)
                             .background(if (enabled) colors.bgSurface else colors.bgInset, shape)
                             .border(
                                 if (hasError) MTheme.sizes.borderError else MTheme.sizes.border,

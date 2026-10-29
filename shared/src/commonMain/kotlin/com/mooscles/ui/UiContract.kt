@@ -23,12 +23,25 @@ data class RoutineUi(val id: String, val name: String, val exercises: List<Plann
 data class SetUi(
     val id: String, val reps: Int = 0, val weightKg: Double = 0.0,
     val completed: Boolean = false, val warmup: Boolean = false, val assistance: Boolean = false,
+    /** The record beaten by exactly this set, as the domain chose it; never a first record. */
+    val record: SetRecordUi? = null,
 )
+/**
+ * A record beaten by one set. [previousKg] is the history's best load (weight records only); [previousReps] the
+ * history's most reps at this load (reps records only). When one set beats both, it shows the weight record.
+ */
+data class SetRecordUi(val kind: RecordKind, val previousKg: Double? = null, val previousReps: Int? = null)
+/** One completed set of the previous session, in exact kg; [assistance] is the set's own flag, as in [SetUi]. */
+data class PreviousSetUi(val weightKg: Double, val reps: Int, val warmup: Boolean, val assistance: Boolean)
 data class WorkoutExerciseUi(
     val id: String, val exercise: ExerciseUi, val sets: List<SetUi> = emptyList(),
     val restSeconds: Int = RestDuration.DEFAULT_SECONDS, val previous: String? = null,
     val provisionalRecordKg: Double? = null, val firstRecord: Boolean = false,
     val records: List<RecordUi> = emptyList(),
+    /** The completed sets of the latest earlier session of this exercise and convention, in set order. */
+    val previousSets: List<PreviousSetUi> = emptyList(),
+    /** That session's `startedAt`; null without an earlier session. */
+    val previousDate: Long? = null,
 )
 enum class RecordKind { WEIGHT, REPS }
 data class RecordUi(
@@ -77,7 +90,15 @@ data class UiState(
     val discardingWorkout: Boolean = false, val discardNavigationRequest: Long = 0,
     val routineFolders: List<RoutineFolderUi> = listOf(RoutineFolderUi("default", "My routines")),
     val backup: BackupUi = BackupUi(),
+    /** Why [error] is set, for screens that show their own localized copy instead of [error]'s text. */
+    val errorCode: UiError? = null,
 )
+
+/** What went wrong, as the new screens word it. [UiErrors] translates failures into it. */
+enum class UiError {
+    SAVE_FAILED, TIMER_STORAGE, LOCAL_DATA_UNAVAILABLE, BLOCKED_BY_UPDATE, SET_GONE, EXERCISE_GONE, WORKOUT_GONE,
+    SET_LIMIT, INVALID_VALUE, NEEDS_COMPLETED_SET, SET_NOT_RESTORED, GENERIC,
+}
 
 /**
  * [pendingImport] is the summary of a read file waiting for confirmation; [message] reports the last outcome
@@ -129,6 +150,8 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun updateWorkoutExerciseRest(entryId: String, seconds: Int)
     fun addSet(entryId: String)
     fun removeSet(setId: String)
+    /** Undoes [removeSet]: puts [set] back in [entryId] at [position], with its id and values. */
+    fun restoreSet(entryId: String, position: Int, set: SetUi)
     fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean)
     fun finishWorkout()
     fun discardWorkout()

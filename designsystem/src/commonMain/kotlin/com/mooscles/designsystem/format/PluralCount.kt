@@ -11,3 +11,12 @@ import org.jetbrains.compose.resources.pluralStringResource
 @Composable
 fun pluralCount(res: PluralStringResource, n: Int): String =
     pluralStringResource(res, if (n == 0) 2 else n, n)
+
+/**
+ * Formats the plural [res] chosen by [n] with [formatArgs], for a plural whose counted word does
+ * not follow its first argument ("%1$d of %2$d sets" is plural on the total). Zero stays plural,
+ * as in the single-argument [pluralCount].
+ */
+@Composable
+fun pluralCount(res: PluralStringResource, n: Int, vararg formatArgs: Any): String =
+    pluralStringResource(res, if (n == 0) 2 else n, *formatArgs)

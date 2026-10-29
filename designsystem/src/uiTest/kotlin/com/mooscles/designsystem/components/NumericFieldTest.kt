@@ -13,6 +13,14 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import com.mooscles.designsystem.tokens.MoosclesSizes
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.hasContentDescription
+import com.mooscles.designsystem.interaction.FocusRingVisible
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.text.input.ImeAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -56,5 +64,94 @@ class NumericFieldTest {
         onNode(hasSetTextAction()).performTextInput("kg")
         waitForIdle()
         assertEquals("82,5", text)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun selectedShowsTheRingWithoutFocus() {
+        for (selected in listOf(true, false)) {
+            runComposeUiTest {
+                withTheme { NumericField("85", {}, NumericKind.Load, "Load", selected = selected) }
+                waitForIdle()
+                onNode(hasSetTextAction()).assertIsNotFocused()
+                val box = onNodeWithTag(NumericFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().config
+                assertEquals(selected, box.getOrNull(FocusRingVisible), "selected=$selected")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun imeActionCallsBack() {
+        for (action in listOf(ImeAction.Next, ImeAction.Done)) {
+            runComposeUiTest {
+                var calls = 0
+                withTheme { NumericField("85", {}, NumericKind.Load, "Load", imeAction = action, onImeAction = { calls++ }) }
+                waitForIdle()
+                val field = onNode(hasSetTextAction())
+                assertEquals(action, field.fetchSemanticsNode().config.getOrNull(SemanticsProperties.ImeAction))
+                field.performImeAction()
+                waitForIdle()
+                assertEquals(1, calls, "$action")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun focusRequesterFocusesTheField() = runComposeUiTest {
+        val focus = FocusRequester()
+        withTheme { NumericField("8", {}, NumericKind.Reps, "Reps", focusRequester = focus) }
+        waitForIdle()
+        onNode(hasSetTextAction()).assertIsNotFocused()
+        runOnUiThread { focus.requestFocus() }
+        waitForIdle()
+        onNode(hasSetTextAction()).assertIsFocused()
+        val box = onNodeWithTag(NumericFieldBoxTag, useUnmergedTree = true).fetchSemanticsNode().config
+        assertEquals(true, box.getOrNull(FocusRingVisible))
+    }
+
+    /** Review M4: with Next only the callback runs; the field does not move the focus by itself. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun nextLeavesTheFocusToTheCaller() = runComposeUiTest {
+        val first = FocusRequester()
+        var calls = 0
+        withTheme {
+            Column {
+                NumericField("85", {}, NumericKind.Load, "Load", imeAction = ImeAction.Next, onImeAction = { calls++ }, focusRequester = first)
+                NumericField("8", {}, NumericKind.Reps, "Reps")
+            }
+        }
+        waitForIdle()
+        runOnUiThread { first.requestFocus() }
+        waitForIdle()
+        onNode(hasSetTextAction() and hasContentDescription("Load")).performImeAction()
+        waitForIdle()
+        assertEquals(1, calls)
+        onNode(hasSetTextAction() and hasContentDescription("Load")).assertIsFocused()
+        onNode(hasSetTextAction() and hasContentDescription("Reps")).assertIsNotFocused()
+    }
+
+    /** Review M4: Done only closes the keyboard; the field keeps the focus. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun doneKeepsTheFocus() = runComposeUiTest {
+        val focus = FocusRequester()
+        var calls = 0
+        withTheme {
+            Column {
+                NumericField("8", {}, NumericKind.Reps, "Reps", imeAction = ImeAction.Done, onImeAction = { calls++ }, focusRequester = focus)
+                NumericField("85", {}, NumericKind.Load, "Load")
+            }
+        }
+        waitForIdle()
+        runOnUiThread { focus.requestFocus() }
+        waitForIdle()
+        onNode(hasSetTextAction() and hasContentDescription("Reps")).performImeAction()
+        waitForIdle()
+        assertEquals(1, calls)
+        onNode(hasSetTextAction() and hasContentDescription("Reps")).assertIsFocused()
+        onNode(hasSetTextAction() and hasContentDescription("Load")).assertIsNotFocused()
     }
 }

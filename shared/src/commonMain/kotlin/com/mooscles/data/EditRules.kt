@@ -8,36 +8,36 @@ internal object EditRules {
     const val MAX_WORKOUT_SETS = 100
 
     fun name(value: String): String = value.trim().also {
-        require(it.isNotEmpty()) { "Enter a name." }
-        require(it.length <= 120) { "Names must be 120 characters or fewer." }
+        dataRequire(it.isNotEmpty(), DataError.INVALID_VALUE) { "Enter a name." }
+        dataRequire(it.length <= 120, DataError.INVALID_VALUE) { "Names must be 120 characters or fewer." }
     }
 
     fun target(reps: Int, weightKg: Double?) {
-        require(reps in 0..9999) { "Target reps must be blank or between 1 and 9999." }
-        require(weightKg == null || (weightKg.isFinite() && weightKg in 0.0..100000.0)) { "Enter a valid non-negative target weight." }
+        dataRequire(reps in 0..9999, DataError.INVALID_VALUE) { "Target reps must be blank or between 1 and 9999." }
+        dataRequire(weightKg == null || (weightKg.isFinite() && weightKg in 0.0..100000.0), DataError.INVALID_VALUE) { "Enter a valid non-negative target weight." }
     }
 
     fun plannedSets(count: Int) {
-        require(count in 1..MAX_ROUTINE_SETS) { "Planned sets must be between 1 and 50." }
+        dataRequire(count in 1..MAX_ROUTINE_SETS, DataError.INVALID_VALUE) { "Planned sets must be between 1 and 50." }
     }
 
     /** [count] is the number of planned sets an exercise has once the change is applied. */
     fun routineSetCount(count: Int) {
-        require(count <= MAX_ROUTINE_SETS) { "A maximum of 50 planned sets is supported per exercise." }
+        dataRequire(count <= MAX_ROUTINE_SETS, DataError.SET_LIMIT) { "A maximum of 50 planned sets is supported per exercise." }
     }
 
     /** [count] is the number of sets a workout exercise has once the change is applied. */
     fun workoutSetCount(count: Int) {
-        require(count <= MAX_WORKOUT_SETS) { "A maximum of 100 sets is supported per exercise." }
+        dataRequire(count <= MAX_WORKOUT_SETS, DataError.SET_LIMIT) { "A maximum of 100 sets is supported per exercise." }
     }
 
     fun rest(seconds: Int?) {
-        require(seconds == null || seconds in 0..RestDuration.MAX_SECONDS) { "Rest must be between 0:00 and 5:00." }
+        dataRequire(seconds == null || seconds in 0..RestDuration.MAX_SECONDS, DataError.INVALID_VALUE) { "Rest must be between 0:00 and 5:00." }
     }
 
     fun workoutSet(item: WorkoutSet) {
-        require(item.reps in 0..9999) { "Reps must be between 0 and 9999." }
-        require(item.weightKg.isFinite() && item.weightKg >= 0 && item.weightKg <= 100000) { "Enter a valid non-negative weight." }
-        require(!item.completed || item.reps > 0) { "Enter at least 1 rep before completing a set." }
+        dataRequire(item.reps in 0..9999, DataError.INVALID_VALUE) { "Reps must be between 0 and 9999." }
+        dataRequire(item.weightKg.isFinite() && item.weightKg >= 0 && item.weightKg <= 100000, DataError.INVALID_VALUE) { "Enter a valid non-negative weight." }
+        dataRequire(!item.completed || item.reps > 0, DataError.INVALID_VALUE) { "Enter at least 1 rep before completing a set." }
     }
 }

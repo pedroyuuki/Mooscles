@@ -1,5 +1,32 @@
 # Verification — 2026-10-23
 
+## Phase 3 active workout redesign (unreleased, fork branch) — 2026-10-29
+
+Branch `feat/phase3-active-workout` in the fork, not in a published release. It adds the `:screens` module (the new active workout, end-of-workout summary, share card and app shell, in shared Compose Multiplatform code, English and Brazilian Portuguese), the ongoing rest notification with actions, a new launcher icon and a side-by-side `preview` build. versionCode 16 and versionName 1.4.5 are unchanged; no Room schema, DataStore key, updater contract or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-29-phase3-verificacao.md](docs/superpowers/reports/2026-10-29-phase3-verificacao.md).
+
+Verified:
+
+- Host tests: 815 in 137 classes on CI (run 40958575207, `f646dfd`, the merged phase 3 head), 0 failures. One earlier CI host run failed only on the known wall-clock timing test `WorkoutCalculationsBatchTimingTest` (see the phase 2 notes).
+- Shared screen and design system UI tests on the Android 15 emulator (Pixel 8 profile), full suites once at the end of the phase: `:screens` 294 of 294 and `:designsystem` 295 of 295; `:app` instrumented tests 25 with 0 failures (2 opt-in fixtures skipped) — `UiFlowTest` timed out once at the routine-save wait right after an emulator restart and passed when rerun alone.
+- iOS simulator (CI, run 40958575207): `:shared` 224, `:screens` 293 and `:designsystem` 295, all passing, including an end-to-end active workout test over the real view model, Room database and DataStore, which also saves screenshots of each state. The expanded timer's ring now picks the largest type that fits its circle, so iOS-sized 200% text no longer reaches the ring (it failed once on CI before that fix).
+- Tap budget: no measured flow takes more taps than the old workout screen (for example, completing a set equal to last week's: 6 → 1; one load step up: 8 → 3).
+- Accessibility sweep in tests: labels on every clickable node, 48 dp targets (56 dp for workout actions), no clipped number or button text, at font scales 1.0, 1.3, 2.0 and 2.01, at 320 and 412 dp, in both themes.
+- Upgrade in place on the emulator from the fork's main (`4f2911c`), in Portuguese and pounds, with an active workout and a running rest: same sets, byte-identical preferences file (same MD5), the rest ended at its saved deadline, the ongoing notification appeared in the background with its three actions, and the export after matched the export before except for the finished workout.
+- The `preview` build installed beside the debug app: separate launcher entry and empty data, the real app's preferences file unchanged, and no update work scheduled.
+- Performance on the emulator (R8 build, 208-workout history): the set check fills on the next frame with no database or presentation work on the main thread; timer ticks recompose no card, row or tab; fast-scroll p95 25 ms against 26 ms on main. Start to editable workout: median 306 ms against 252 ms on main, within this emulator's noise but in the slower direction.
+- Debug APK size (CI clean build): +532,492 bytes over the post-phase-2 main (limit 1 MiB). Only new dependency: `kotlinx-datetime` 0.8.0.
+- Fixed along the way (pre-existing): the status and navigation bar icons turned dark over the dark theme after rotating between the two landscape orientations.
+
+Not verified:
+
+- Anything on a physical Android phone: a real TalkBack session (none of the 11 spec items was heard with TalkBack; the reading order comes from the accessibility tree and tests), haptics, 60 fps on a reference device, the notification on the lock screen, Android 8 to 14. The owner has not yet installed the `preview` build.
+- The timer's hidden announcement node holding no text between announcements was checked only at the semantics level, not with real TalkBack or `AccessibilityNodeInfo`.
+- Start to editable workout on a real device (+54 ms median on the emulator, within noise).
+- On a cold start, the system bars follow the system theme for about 1–2 seconds until preferences load (pre-existing).
+- Anything on an iPhone: VoiceOver, haptics, the real keyboard (the simulator does not open one; tests inject insets), the back gesture, performance and a visual review.
+- The release path from a published APK signed with the original key: the key is not on this Mac, and v1.5.0 is not published.
+- Exercise names, the old screens (Train, routines, library, history, records), the old share preview and the updater and backup messages stay in English on a Portuguese phone, as decided.
+
 ## Phase 2 design system and Settings (unreleased, fork branch) — 2026-10-28
 
 Branch `feat/phase2-design-system` in the fork, not in a published release. It adds the `:designsystem` module (tokens, components, fonts, icons, English and Brazilian Portuguese strings, a hidden component gallery and an open-source licenses screen) and rebuilds Settings with it. versionCode 16 and versionName 1.4.5 are unchanged; no Room, DataStore, updater or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-28-phase2-verificacao.md](docs/superpowers/reports/2026-10-28-phase2-verificacao.md).

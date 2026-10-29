@@ -17,6 +17,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_dismiss
@@ -33,7 +36,10 @@ internal fun Modifier.overlayKeys(onClose: () -> Unit): Modifier = onPreviewKeyE
     }
 }
 
-/** The dim layer behind a dialog or sheet; [visible] (0..1) scales the token color's alpha. A tap closes. */
+/**
+ * The dim layer behind a dialog or sheet; [visible] (0..1) scales the token color's alpha. A tap
+ * closes. Screen readers read it as "Dismiss", after the content.
+ */
 @Composable
 internal fun OverlayScrim(tag: String, visible: Float, onClick: () -> Unit) {
     val dismiss = stringResource(Res.string.ds_dismiss)
@@ -45,7 +51,13 @@ internal fun OverlayScrim(tag: String, visible: Float, onClick: () -> Unit) {
             .graphicsLayer { alpha = visible }
             .background(MTheme.colors.scrim)
             .focusProperties { canFocus = false }
-            .clickable(interactionSource = source, indication = null, onClickLabel = dismiss, onClick = onClick),
+            // Named, as Material's scrim ("Close sheet"): a screen reader never lands on a nameless
+            // control. Read after the content (traversal index 1), which comes first in the layout.
+            .semantics {
+                contentDescription = dismiss
+                traversalIndex = 1f
+            }
+            .clickable(interactionSource = source, indication = null, onClick = onClick),
     )
 }
 

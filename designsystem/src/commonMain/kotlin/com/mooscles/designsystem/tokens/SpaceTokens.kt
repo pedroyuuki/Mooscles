@@ -61,6 +61,9 @@ data class MoosclesSizes(
     val stepperButtonHeight: Dp = 56.dp,
     val dockRing: Dp = 48.dp,
     val dockRingStroke: Dp = 4.dp,
+    /** Phase 3: the rest ring of the in-progress workout bar (spec D8, "o anel de 32 dp"). */
+    val ringBar: Dp = 32.dp,
+    val ringBarStroke: Dp = 3.dp,
     val expandedRing: Dp = 280.dp,
     val expandedRingStroke: Dp = 12.dp,
     val tickLength: Dp = 8.dp,
@@ -72,6 +75,8 @@ data class MoosclesSizes(
     val sheetHandleHeight: Dp = 4.dp,
     val sheetMaxFraction: Float = 0.9f,
     val rowMin: Dp = 56.dp,
+    /** Phase 3: the lowest the tab bar gets (spec D7, "altura mínima de 64 dp"). */
+    val barMin: Dp = 64.dp,
     val border: Dp = 1.dp,
     val borderError: Dp = 2.dp,
     /** Ring of a selected radio. The spec is silent: a controller choice, 2 dp like the focus ring. */
@@ -85,4 +90,6 @@ data class MoosclesSizes(
     val skeletonMinAlpha: Float = 0.5f,
     /** Widest a dialog card gets; narrower screens keep `space.6` on each side instead. */
     val dialogMaxWidth: Dp = 360.dp,
+    /** Phase 3: the widest the content of a screen gets, centered (spec "Tela do treino ativo", 600 dp). */
+    val contentMaxWidth: Dp = 600.dp,
 )

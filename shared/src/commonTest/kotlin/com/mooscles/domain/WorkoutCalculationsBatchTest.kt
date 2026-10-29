@@ -115,6 +115,44 @@ class WorkoutCalculationsBatchTest {
         assertTrue(activeHistories > 10, "histories with an active workout: $activeHistories")
     }
 
+    /** Each record names one completed set of its own workout, exercise and convention, with the record's values. */
+    @Test fun batchAndPerWorkoutRecordsAgreeOnSetIds() {
+        val random = Random(5150)
+        var weightIds = 0
+        var repsIds = 0
+        repeat(200) { history ->
+            val data = randomHistory(random)
+            val entries = data.workoutExercises.associateBy { it.id }
+            val sets = data.sets.associateBy { it.id }
+            val batch = WorkoutCalculations.historyRecords(data)
+            data.workouts.filter { it.status == WorkoutStatus.FINISHED }.forEach { workout ->
+                val label = "history $history workout ${workout.id}"
+                val weight = WorkoutCalculations.prsForWorkout(data, workout.id)
+                val reps = WorkoutCalculations.repsPrsForWorkout(data, workout.id)
+                assertEquals(weight.map { it.setId }, batch.weight.getValue(workout.id).map { it.setId }, "$label weight ids")
+                assertEquals(reps.map { it.setId }, batch.reps.getValue(workout.id).map { it.setId }, "$label reps ids")
+                weight.forEach { pr ->
+                    val set = sets.getValue(pr.setId)
+                    val entry = entries.getValue(set.workoutExerciseId)
+                    assertEquals(Triple(workout.id, pr.exerciseId, pr.convention), Triple(entry.workoutId, entry.exerciseId, entry.convention), label)
+                    assertEquals(pr.newWeightKg to pr.reps, set.weightKg to set.reps, label)
+                    assertTrue(set.completed && !set.warmup && !set.assistance, label)
+                    weightIds++
+                }
+                reps.forEach { pr ->
+                    val set = sets.getValue(pr.setId)
+                    val entry = entries.getValue(set.workoutExerciseId)
+                    assertEquals(Triple(workout.id, pr.exerciseId, pr.convention), Triple(entry.workoutId, entry.exerciseId, entry.convention), label)
+                    assertEquals(pr.weightKg to pr.newReps, set.weightKg to set.reps, label)
+                    assertTrue(set.completed && !set.warmup, label)
+                    repsIds++
+                }
+            }
+        }
+        assertTrue(weightIds > 100, "weight records checked: $weightIds")
+        assertTrue(repsIds > 100, "reps records checked: $repsIds")
+    }
+
     @Test fun performanceHistoriesMatchPerExerciseHistories() {
         val random = Random(7)
         var compared = 0
@@ -212,7 +250,7 @@ class WorkoutCalculationsBatchTest {
             val previous = baseline.firstOrNull { comparable(it, candidate) }?.second?.reps
             if (previous != null && set.reps <= previous) return@mapNotNull null
             RepsPr(exercise.exerciseId, exercise.name, exercise.convention, set.weightKg, assisted(candidate),
-                previous, set.reps, previous == null)
+                previous, set.reps, previous == null, set.id)
         }
     }
 
@@ -266,8 +304,8 @@ class WorkoutCalculationsBatchTest {
 
         assertEquals(setOf("done"), weight.keys)
         assertEquals(setOf("done"), reps.keys)
-        assertEquals(listOf(WeightPr("bench", "Bench", LoadConvention.TOTAL_LOAD, null, 60.0, 5, true)), weight["done"])
-        assertEquals(listOf(RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 60.0, false, null, 5, true)), reps["done"])
+        assertEquals(listOf(WeightPr("bench", "Bench", LoadConvention.TOTAL_LOAD, null, 60.0, 5, true, "d")), weight["done"])
+        assertEquals(listOf(RepsPr("bench", "Bench", LoadConvention.TOTAL_LOAD, 60.0, false, null, 5, true, "d")), reps["done"])
         assertEquals(WorkoutCalculations.prsForWorkout(data, "done"), weight["done"])
         assertEquals(WorkoutCalculations.repsPrsForWorkout(data, "done"), reps["done"])
     }

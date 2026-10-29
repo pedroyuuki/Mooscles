@@ -63,7 +63,7 @@ private fun WorkoutHistoryCard(workout: WorkoutUi, pounds: Boolean, onClick: () 
 }
 
 @Composable
-fun WorkoutDetailScreen(workout: WorkoutUi, state: UiState, actions: MoosclesActions, summary: Boolean, onDeleted: () -> Unit, onExerciseHistory: (String) -> Unit) {
+fun WorkoutDetailScreen(workout: WorkoutUi, state: UiState, actions: MoosclesActions, onDeleted: () -> Unit, onExerciseHistory: (String) -> Unit) {
     var editing by remember(workout.id) { mutableStateOf(false) }
     var confirmEdit by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
@@ -74,7 +74,7 @@ fun WorkoutDetailScreen(workout: WorkoutUi, state: UiState, actions: MoosclesAct
     val beaten = workout.records.filterNot { it.firstRecord }
     val first = workout.records.filter { it.firstRecord }
     LazyColumn(modifier = Modifier.testTag("workout-details"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item { PageHeading(if (editing) "Editing saved session" else if (summary) "Workout complete" else "Session breakdown", if (summary && !editing) "Strong work." else workout.name, if (summary && !editing) workout.name else null) }
+        item { PageHeading(if (editing) "Editing saved session" else "Session breakdown", workout.name) }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(25.dp)) {
                 Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {

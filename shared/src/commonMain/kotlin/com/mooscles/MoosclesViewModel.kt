@@ -32,7 +32,8 @@ abstract class MoosclesViewModel(
     private val platform: ViewModelPlatform = ViewModelPlatform.None,
 ) : ViewModel(), MoosclesActions {
     private val repo = services.repository
-    private val error = MutableStateFlow<String?>(null)
+    /** The failed action's text and code, published together so a screen never sees one without the other. */
+    private val error = MutableStateFlow<UiProblem?>(null)
     private val initialized = MutableStateFlow(false)
     private val startingWorkout = MutableStateFlow(false)
     private val discardingWorkout = MutableStateFlow(false)
@@ -45,7 +46,7 @@ abstract class MoosclesViewModel(
     fun openUpdateSettings() { settingsRequest.value += 1 }
     private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
     /** Null until Room's first snapshot (or its failure): an empty placeholder must never be presented as saved data. */
-    private val source = repo.data.catch { error.value = "Unable to open local data: ${it.message}"; emit(AppData()) }
+    private val source = repo.data.catch { error.value = UiProblem("Unable to open local data: ${it.message}", UiError.LOCAL_DATA_UNAVAILABLE); emit(AppData()) }
         .stateIn<AppData?>(viewModelScope, SharingStarted.Eagerly, null)
     /**
      * Presentation leaves the main thread: a large history takes seconds to present on a debug build.
@@ -57,11 +58,13 @@ abstract class MoosclesViewModel(
         .conflate()
         .map { (data, prefs) -> platform.presentation { presenter.present(data, prefs) } }
         .flowOn(presentationDispatcher)
-    private val problems = combine(error, services.preferences.error, services.timer.error) { action, prefs, timer -> action ?: prefs ?: timer }
+    private val problems = combine(error, services.preferences.error, services.timer.error, services.timer.errorCode) { action, prefs, timer, timerCode ->
+        UiErrors.current(action, prefs, timer, timerCode)
+    }
     // Ready needs both: initialization finished and a presentation of Room's data (combine waits for the first one).
     private val baseUi = combine(presentation, problems, initialized, services.updates.ui, startingWorkout) { base, problem, ready, updates, starting ->
-        base.copy(error = problem, loading = !ready, updates = updates, startingWorkout = starting)
-    }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}")) }
+        base.copy(error = problem?.text, errorCode = problem?.code, loading = !ready, updates = updates, startingWorkout = starting)
+    }.catch { emit(UiState(loading = false, error = "Unable to read local preferences: ${it.message}", errorCode = UiError.LOCAL_DATA_UNAVAILABLE)) }
     /** Screens do not observe countdown ticks. Only the dock collects [timerUi]. */
     val contentUi = combine(baseUi, settingsRequest, discardingWorkout, discardNavigationRequest, backup) { base, request, discarding, discarded, backup ->
         base.copy(updateSettingsRequest = request, discardingWorkout = discarding, discardNavigationRequest = discarded, backup = backup)
@@ -80,16 +83,16 @@ abstract class MoosclesViewModel(
         }
         viewModelScope.launch {
             try { repo.initialize() } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error.value = "Unable to initialize local data: ${e.message}" }
+            catch (e: Exception) { error.value = UiProblem("Unable to initialize local data: ${e.message}", UiError.LOCAL_DATA_UNAVAILABLE) }
             initialized.value = true
             for (command in commands) try { command() }
             catch (e: CancellationException) {
                 // Only a cleared ViewModel ends the loop. A timed-out wait or a cancelled child is one failed
                 // command: rethrowing it would silently drop every later command. Its message is not user copy.
                 currentCoroutineContext().ensureActive()
-                error.value = SAVE_FAILED
+                error.value = UiProblem(SAVE_FAILED, UiErrors.from(e))
             }
-            catch (e: Exception) { error.value = e.message ?: SAVE_FAILED }
+            catch (e: Exception) { error.value = UiProblem(e.message ?: SAVE_FAILED, UiErrors.from(e)) }
         }
     }
     private fun act(block: suspend () -> Unit) { commands.trySend(block) }
@@ -126,7 +129,7 @@ abstract class MoosclesViewModel(
     }
     override fun renameRoutineFolder(id: String, name: String) = act { repo.renameRoutineFolder(id, name) }
     override fun selectRoutineFolder(id: String) = act {
-        requireNotNull(repo.routineFolder(id)) { "Folder unavailable." }
+        dataRequireNotNull(repo.routineFolder(id), DataError.FOLDER_NOT_FOUND) { "Folder unavailable." }
         services.preferences.selectRoutineFolder(id)
     }
     override fun moveRoutineToFolder(routineId: String, folderId: String) = act { repo.moveRoutineToFolder(routineId, folderId) }
@@ -140,7 +143,7 @@ abstract class MoosclesViewModel(
     override fun inheritRoutineSet(setId: String) = act { repo.inheritRoutineSet(setId) }
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = act { repo.updateRoutineExerciseRest(entryId, seconds) }
     override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) = act {
-        val item = requireNotNull(repo.routineExercise(entryId)) { "Routine exercise unavailable" }
+        val item = dataRequireNotNull(repo.routineExercise(entryId), DataError.ROUTINE_NOT_FOUND) { "Routine exercise unavailable" }
         repo.updateRoutineExercise(item.copy(plannedSets = sets, targetReps = reps, targetWeightKg = weightKg, restSeconds = restSeconds))
     }
     override fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String) = act {
@@ -149,7 +152,7 @@ abstract class MoosclesViewModel(
         val c = LoadConvention.entries.firstOrNull { it.label == convention || it.name == convention } ?: LoadConvention.TOTAL_LOAD
         if (id == null) repo.createCustomExercise(name, m, e, c)
         else {
-            val existing = requireNotNull(repo.exercise(id)) { "Exercise unavailable" }
+            val existing = dataRequireNotNull(repo.exercise(id), DataError.EXERCISE_NOT_FOUND) { "Exercise unavailable" }
             repo.saveExercise(existing.copy(name = name, muscle = m, equipment = e, convention = c))
         }
     }
@@ -186,14 +189,23 @@ abstract class MoosclesViewModel(
     override fun updateWorkoutExerciseRest(entryId: String, seconds: Int) = act { repo.updateWorkoutExerciseRest(entryId, seconds) }
     override fun addSet(entryId: String) = act { repo.addSet(entryId) }
     override fun removeSet(setId: String) = act { repo.removeSet(setId) }
+    // Through the gate like updateSet: the set put back may be a completed one.
+    override fun restoreSet(entryId: String, position: Int, set: SetUi) = act {
+        services.trainingGate.withLock {
+            services.updates.assertTrainingMayStart()
+            repo.restoreSet(entryId, position, WorkoutSet(id = set.id, workoutExerciseId = entryId, position = position,
+                reps = set.reps, weightKg = set.weightKg, completed = set.completed, warmup = set.warmup, assistance = set.assistance))
+        }
+    }
     override fun updateSet(setId: String, reps: Int, weightKg: Double, completed: Boolean, warmup: Boolean, assistance: Boolean) = act {
         services.trainingGate.withLock {
         services.updates.assertTrainingMayStart()
-        val item = requireNotNull(repo.workoutSet(setId)) { "Set unavailable" }
+        val item = dataRequireNotNull(repo.workoutSet(setId), DataError.SET_NOT_FOUND) { "Set unavailable" }
         repo.updateSet(item.copy(reps = reps, weightKg = weightKg, completed = completed, warmup = warmup, assistance = assistance))
         if (completed && !item.completed && services.preferences.snapshot().autoRest) {
-            val entry = requireNotNull(repo.workoutExercise(item.workoutExerciseId)) { "Workout exercise unavailable" }
-            if (repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
+            val entry = dataRequireNotNull(repo.workoutExercise(item.workoutExerciseId), DataError.WORKOUT_EXERCISE_NOT_FOUND) { "Workout exercise unavailable" }
+            // A 0:00 rest turns this exercise's rest off (supersets): start(…, 0) would only finish at once.
+            if (entry.restSeconds > 0 && repo.workout(entry.workoutId)?.status == WorkoutStatus.ACTIVE)
                 services.timer.start(entry.name, entry.restSeconds, entry.id)
         }
         }

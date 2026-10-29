@@ -9,7 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +27,8 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
@@ -36,7 +38,10 @@ import com.mooscles.designsystem.interaction.MotionPolicy
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_action_complete_set
+import com.mooscles.designsystem.resources.ds_action_uncomplete_set
 import com.mooscles.designsystem.resources.ds_complete_set_n
+import com.mooscles.designsystem.resources.ds_set_n_completed
 import com.mooscles.designsystem.theme.MTheme
 import org.jetbrains.compose.resources.stringResource
 
@@ -47,7 +52,9 @@ private var SemanticsPropertyReceiver.setCheckScale by SetCheckScale
 private var SemanticsPropertyReceiver.setCheckAlpha by SetCheckAlpha
 
 /**
- * The "set done" check: a 44 dp disc in a 56 dp target, a checkbox labelled "Complete set N".
+ * The "set done" check: a 44 dp disc in a 56 dp target, a checkbox labelled "Complete set N",
+ * and, once checked, "Set N completed", with its double tap read as "mark set as not done": a
+ * screen reader never offers "Complete set N" on a set that is done, where the tap undoes it.
  * Checked it is filled with a check mark (an empty ring otherwise), so the state is not by color
  * alone. Checking plays the `SetCompleted` key moment (a spring, or a fade with reduced motion).
  * With [haptics] it gives `SetCompleted`/`SetUnchecked`; [SetRow] turns it off and fires them from
@@ -65,7 +72,8 @@ fun SetCheck(
     val colors = MTheme.colors
     val feedback = MTheme.haptics
     val source = remember { MutableInteractionSource() }
-    val label = stringResource(Res.string.ds_complete_set_n, setNumber)
+    val label = stringResource(if (checked) Res.string.ds_set_n_completed else Res.string.ds_complete_set_n, setNumber)
+    val action = stringResource(if (checked) Res.string.ds_action_uncomplete_set else Res.string.ds_action_complete_set)
     val reduced = MTheme.reducedMotion
     val scale = remember { Animatable(1f) }
     val alpha = remember { Animatable(1f) }
@@ -119,20 +127,23 @@ fun SetCheck(
             .mPressScale(source, enabled)
             .semantics {
                 contentDescription = label
+                toggleableState = ToggleableState(checked)
                 setCheckScale = drawnScale()
                 setCheckAlpha = drawnAlpha()
             }
-            .toggleable(
-                value = checked,
+            // A toggle drawn as a click with its own action label: `toggleable` cannot name the
+            // action, and the name of the double tap is what tells "complete" from "undo".
+            .clickable(
                 interactionSource = source,
                 indication = null,
                 enabled = enabled,
+                onClickLabel = action,
                 role = Role.Checkbox,
-                onValueChange = {
-                    if (haptics) feedback.perform(if (it) HapticEvent.SetCompleted else HapticEvent.SetUnchecked)
-                    onCheckedChange(it)
-                },
-            ),
+            ) {
+                val next = !checked
+                if (haptics) feedback.perform(if (next) HapticEvent.SetCompleted else HapticEvent.SetUnchecked)
+                onCheckedChange(next)
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(
