@@ -1,0 +1,54 @@
+--------- beginning of main
+SPIKE ContentDescription tree android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree   android.widget.LinearLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree     android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree       androidx.compose.ui.platform.ComposeView text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree         android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree           android.widget.EditText text=2:30 cd=null focusable=true clickable=true editable=true
+SPIKE ContentDescription tree             android.view.View text=null cd=Default rest duration focusable=false clickable=false editable=false
+SPIKE ContentDescription tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree               android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription tree             android.widget.TextView text=Minutes, then seconds cd=null focusable=false clickable=false editable=false
+SPIKE ContentDescription text=2:30 hint=null contentDescription=null stateDescription=null editable=true class=android.widget.EditText
+SPIKE ContentDescription other text=null contentDescription=Default rest duration class=android.view.View
+SPIKE ContentDescription other text=Minutes, then seconds contentDescription=null class=android.widget.TextView
+SPIKE StateDescription tree android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree   android.widget.LinearLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree     android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree       androidx.compose.ui.platform.ComposeView text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree         android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree           android.widget.EditText text=2:30 cd=null focusable=true clickable=true editable=true
+SPIKE StateDescription tree             android.view.View text=null cd=Default rest duration focusable=false clickable=false editable=false
+SPIKE StateDescription tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree               android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription tree             android.widget.TextView text=Minutes, then seconds cd=null focusable=false clickable=false editable=false
+SPIKE StateDescription text=2:30 hint=null contentDescription=null stateDescription=null editable=true class=android.widget.EditText
+SPIKE StateDescription other text=null contentDescription=Default rest duration class=android.view.View
+SPIKE StateDescription other text=Minutes, then seconds contentDescription=null class=android.widget.TextView
+SPIKE TextProperty tree android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree   android.widget.LinearLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree     android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree       androidx.compose.ui.platform.ComposeView text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree         android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree           android.widget.TextView text=2:30 cd=null focusable=true clickable=true editable=true
+SPIKE TextProperty tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree             android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree               android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty tree             android.widget.TextView text=Minutes, then seconds cd=null focusable=false clickable=false editable=false
+SPIKE TextProperty text=2:30 hint=null contentDescription=null stateDescription=null editable=true class=android.widget.TextView
+SPIKE TextProperty other text=Minutes, then seconds contentDescription=null class=android.widget.TextView
+SPIKE MergedParent tree android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree   android.widget.LinearLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree     android.widget.FrameLayout text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree       androidx.compose.ui.platform.ComposeView text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree         android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree           android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree             android.widget.EditText text=2:30 cd=null focusable=true clickable=true editable=true
+SPIKE MergedParent tree               android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree               android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree                 android.view.View text=null cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent tree               android.widget.TextView text=Minutes, then seconds cd=null focusable=false clickable=false editable=false
+SPIKE MergedParent text=2:30 hint=null contentDescription=null stateDescription=null editable=true class=android.widget.EditText
+SPIKE MergedParent other text=Minutes, then seconds contentDescription=null class=android.widget.TextView

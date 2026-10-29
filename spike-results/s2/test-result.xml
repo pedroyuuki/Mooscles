@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="2" failures="0" errors="0" skipped="0" time="27.186" timestamp="2026-10-29T00:32:34" hostname="localhost">
+  <testsuite name="com.mooscles.designsystem.spike.TextFieldEditSpikeTest" tests="1" failures="0" errors="0" skipped="0" time="10.233" timestamp="2026-10-29T00:32:34" hostname="localhost">
+    <properties>
+      <property name="device" value="Mooscles_Pixel8_API35(AVD) - 15" />
+      <property name="flavor" value="" />
+      <property name="project" value=":designsystem" />
+    </properties>
+    <testcase name="everyStrategyStaysEditable" classname="com.mooscles.designsystem.spike.TextFieldEditSpikeTest" time="10.233" />
+  </testsuite>
+  <testsuite name="com.mooscles.designsystem.spike.TextFieldNodeSpikeTest" tests="1" failures="0" errors="0" skipped="0" time="14.731" timestamp="2026-10-29T00:32:34" hostname="localhost">
+    <properties>
+      <property name="device" value="Mooscles_Pixel8_API35(AVD) - 15" />
+      <property name="flavor" value="" />
+      <property name="project" value=":designsystem" />
+    </properties>
+    <testcase name="recordsTheNodeOfEachStrategy" classname="com.mooscles.designsystem.spike.TextFieldNodeSpikeTest" time="14.731" />
+  </testsuite>
+</testsuites>

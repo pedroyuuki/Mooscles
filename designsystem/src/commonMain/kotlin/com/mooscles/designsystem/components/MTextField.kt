@@ -29,7 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
@@ -41,6 +46,9 @@ import com.mooscles.designsystem.resources.ds_error_prefix
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.designsystem.tokens.MoosclesColors
 import org.jetbrains.compose.resources.stringResource
+
+/** SPIKE S2 only: how the field exposes its label to the screen reader. */
+enum class SpikeLabelStrategy { Today, ContentDescription, StateDescription, TextProperty, MergedParent }
 
 /** The tag of the field's box, which grows with the text. */
 const val TextFieldBoxTag = "text-field-box"
@@ -76,6 +84,7 @@ fun MTextField(
     textStyle: TextStyle = MTheme.type.bodyLg,
     suffix: String? = null,
     singleLine: Boolean = false,
+    labelStrategy: SpikeLabelStrategy = SpikeLabelStrategy.Today,
 ) {
     val colors = MTheme.colors
     val source = remember { MutableInteractionSource() }
@@ -98,10 +107,23 @@ fun MTextField(
     // descendants of the field's own semantics node and merge into it with the typed value; a
     // validation error is also set as `error` on that node.
     CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors(colors, focused)) {
+      Box(if (labelStrategy == SpikeLabelStrategy.MergedParent) Modifier.semantics(mergeDescendants = true) { } else Modifier) {
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = modifier.semantics { if (error != null) error("$errorPrefix: $error") },
+            modifier = modifier.semantics {
+                if (error != null) error("$errorPrefix: $error")
+                when (labelStrategy) {
+                    SpikeLabelStrategy.Today -> {}
+                    SpikeLabelStrategy.ContentDescription -> contentDescription = label
+                    SpikeLabelStrategy.TextProperty -> text = AnnotatedString(label)
+                    SpikeLabelStrategy.MergedParent -> {}
+                    SpikeLabelStrategy.StateDescription -> {
+                        contentDescription = label
+                        stateDescription = value.text
+                    }
+                }
+            },
             enabled = enabled,
             textStyle = textStyle.copy(color = if (enabled) colors.textPrimary else colors.textDisabled),
             keyboardOptions = keyboardOptions,
@@ -112,7 +134,12 @@ fun MTextField(
                 // The text field lays out this box with no minimum width: filling the width it may
                 // take makes a field given fillMaxWidth (or a width) draw that wide.
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
-                    MText(label, MTheme.type.labelMd, color = if (enabled) colors.textSecondary else colors.textDisabled)
+                    MText(
+                        label,
+                        MTheme.type.labelMd,
+                        color = if (enabled) colors.textSecondary else colors.textDisabled,
+                        modifier = if (labelStrategy == SpikeLabelStrategy.Today) Modifier else Modifier.clearAndSetSemantics { },
+                    )
                     Box(
                         Modifier
                             .testTag(TextFieldBoxTag)
@@ -155,6 +182,7 @@ fun MTextField(
                 }
             },
         )
+      }
     }
 }
 
