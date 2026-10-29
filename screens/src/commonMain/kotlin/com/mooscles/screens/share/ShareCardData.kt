@@ -4,14 +4,15 @@ import androidx.compose.runtime.Composable
 import com.mooscles.data.AppData
 import com.mooscles.data.LoadConvention
 import com.mooscles.data.Workout
-import com.mooscles.data.WorkoutSet
 import com.mooscles.data.WorkoutStatus
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.resources.ds_pr_label
 import com.mooscles.domain.WeightUnits
 import com.mooscles.domain.WorkoutCalculations
+import com.mooscles.screens.format.BestSets
 import com.mooscles.screens.format.Durations
+import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.two
 import com.mooscles.screens.resources.Res
@@ -52,8 +53,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.abs
-import kotlin.math.ulp
 import com.mooscles.designsystem.resources.Res as DesignRes
 
 /** One record of the workout on the card: "Bench press", "87,5 kg × 6". */
@@ -150,22 +149,21 @@ object ShareCards {
 
         val rows = summary.exercises.filter { it.completedSets.isNotEmpty() }.map { entry ->
             val completed = entry.completedSets
-            val eligible = completed.filter {
-                !it.warmup && !it.assistance && entry.exercise.convention != LoadConvention.ASSISTANCE
-            }
-            val best = bestSet(eligible)
-            val bestText = when {
-                best != null -> loadByReps(best.weightKg, best.reps)
-                completed.all { it.warmup } -> texts.warmupOnly
-                entry.exercise.convention == LoadConvention.ASSISTANCE || completed.all { it.assistance } -> texts.assistanceOnly
-                else -> texts.noWorkingSet
-            }
+            val assistanceConvention = entry.exercise.convention == LoadConvention.ASSISTANCE
+            val eligible = completed.filter { BestSets.eligible(it.warmup, it.assistance, assistanceConvention) }
+            val best = BestSets.best(eligible, { it.weightKg }, { it.reps })
+            val bestText = if (best != null) loadByReps(best.weightKg, best.reps) else
+                when (BestSets.whyNone(completed, { it.warmup }, { it.assistance }, assistanceConvention)) {
+                    NoBestSet.WARMUP_ONLY -> texts.warmupOnly
+                    NoBestSet.ASSISTANCE_ONLY -> texts.assistanceOnly
+                    NoBestSet.NO_WORKING_SET -> texts.noWorkingSet
+                }
             val hasWeightPr = entry.pr?.let { record ->
-                eligible.any { sameLoad(it.weightKg, record.newWeightKg) && it.reps == record.reps }
+                eligible.any { BestSets.sameLoad(it.weightKg, record.newWeightKg) && it.reps == record.reps }
             } ?: false
             val hasRepsPr = entry.repsPrs.any { record ->
                 completed.any { set ->
-                    !set.warmup && sameLoad(set.weightKg, record.weightKg) && set.reps == record.newReps &&
+                    !set.warmup && BestSets.sameLoad(set.weightKg, record.weightKg) && set.reps == record.newReps &&
                         (set.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE) == record.assistance
                 }
             }
@@ -221,15 +219,6 @@ object ShareCards {
             "${two(end.hour)}:${two(end.minute)}",
         )
     }
-
-    /** Round-trip unit noise is equal load; both displayed values still come from one real set. */
-    private fun bestSet(sets: List<WorkoutSet>): WorkoutSet? {
-        val highest = sets.maxOfOrNull { it.weightKg } ?: return null
-        return sets.filter { sameLoad(it.weightKg, highest) }.maxByOrNull { it.reps }
-    }
-
-    private fun sameLoad(first: Double, second: Double) =
-        abs(first - second) <= maxOf(first.ulp, second.ulp) * 4
 }
 
 private val placeholder = Regex("%(\\d+)\\$[ds]")
