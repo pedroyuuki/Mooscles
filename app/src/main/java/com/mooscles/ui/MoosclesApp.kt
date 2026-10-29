@@ -198,7 +198,7 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                             workout == null -> MissingScreen("Workout unavailable")
                             asSummary -> SummaryRoute(workout, state, hosted, onDone = { selectTab(ShellTabs.TRAIN) },
                                 onDetails = { nav.navigate(detailRoute(workout.id, summary = false)) })
-                            else -> WorkoutDetailScreen(workout, state, hosted, summary = false, onDeleted = { nav.popBackStack() }, onExerciseHistory = { nav.navigate("exercise/$it") })
+                            else -> WorkoutDetailScreen(workout, state, hosted, onDeleted = { nav.popBackStack() }, onExerciseHistory = { nav.navigate("exercise/$it") })
                         }
                     }
                     composable("exercise/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { page ->
