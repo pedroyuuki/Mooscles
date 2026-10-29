@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.NumberLocale
@@ -61,7 +64,10 @@ const val StepperValueTag = "stepper-value"
 /**
  * A value changed in steps of [step] with a button on each side (64 x 56 dp each, always) and the
  * value between, in `num.lg`, or `num.md` or `num.sm` when that is all the room left fits (large text
- * in a narrow place). A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
+ * in a narrow place). When not even `num.sm` fits between them, the value goes on its own line above
+ * the two buttons, whole, in the largest of the three that fits the width. `BoxWithConstraints`
+ * decides that, and it has no intrinsic measurement: keep the stepper out of `IntrinsicSize`
+ * parents. A short tap is one step on release; holding is one step after `timing.stepperRepeatDelay`
  * and then one every `timing.stepperRepeatInterval`, and releasing adds nothing. Moving the finger past
  * touch slop, off the button or into a scroll cancels the press (no step, no more repeats), so a scroll
  * that starts on a button never changes the value. Every step gives the
@@ -121,35 +127,46 @@ fun Stepper(
             .focusable(interactionSource = groupSource)
             .mFocusRing(RoundedCornerShape(MTheme.radius.md), groupSource)
     }
-    Row(
-        modifier.then(group),
-        horizontalArrangement = Arrangement.spacedBy(MTheme.targets.gap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val type = MTheme.type
+    val measurer = rememberTextMeasurer()
+    val gap = MTheme.targets.gap
+    val buttons = with(LocalDensity.current) { (MTheme.sizes.stepperButtonWidth * 2 + gap * 2).roundToPx() }
+    val minus: @Composable () -> Unit = {
         StepperButton(MIcons.Minus, decreaseLabel, enabled = value > min, tag = StepperDecreaseTag, step = { change(-1) }, finished = finished)
-        // Weighted, so the buttons are measured first and keep their size; the value takes what is left.
-        StepperValue(display, Modifier.weight(1f, fill = false))
+    }
+    val plus: @Composable () -> Unit = {
         StepperButton(MIcons.Plus, increaseLabel, enabled = value < max, tag = StepperIncreaseTag, step = { change(1) }, finished = finished)
+    }
+    BoxWithConstraints(modifier.then(group), contentAlignment = Alignment.Center) {
+        val candidates = listOf(type.numLg, type.numMd, type.numSm)
+        val width = constraints.maxWidth
+        fun fitting(room: Int) = candidates.firstOrNull { measurer.measure(display, it, softWrap = false, maxLines = 1).size.width <= room }
+        // Between the buttons, in the largest style that fits the room they leave.
+        val between = if (constraints.hasBoundedWidth) fitting(width - buttons) else type.numLg
+        if (between != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
+                minus()
+                StepperValue(display, between)
+                plus()
+            }
+        } else {
+            // Not even num.sm fits there (large text in a narrow place): the value goes on its own
+            // line above the buttons, whole, rather than be cut or push a button out.
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
+                StepperValue(display, fitting(width) ?: type.numSm)
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    minus()
+                    plus()
+                }
+            }
+        }
     }
 }
 
-/**
- * The value between the buttons, on one line in the largest of `num.lg`, `num.md` and `num.sm` that
- * fits the room the buttons leave ([modifier] gives it that room), `num.sm` when none does. At
- * large text in a narrow place the value steps down instead of pushing the increase button out.
- * `BoxWithConstraints` has no intrinsic measurement: keep the stepper out of `IntrinsicSize` parents.
- */
+/** The value, on one line in [style] (chosen by [Stepper] to fit). */
 @Composable
-private fun StepperValue(display: String, modifier: Modifier) {
-    val type = MTheme.type
-    val measurer = rememberTextMeasurer()
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val room = constraints.maxWidth
-        val candidates = listOf(type.numLg, type.numMd, type.numSm)
-        val style = candidates.firstOrNull { measurer.measure(display, it, softWrap = false, maxLines = 1).size.width <= room }
-            ?: candidates.last()
-        MText(display, style, modifier = Modifier.testTag(StepperValueTag), softWrap = false, maxLines = 1)
-    }
+private fun StepperValue(display: String, style: TextStyle) {
+    MText(display, style, modifier = Modifier.testTag(StepperValueTag), softWrap = false, maxLines = 1)
 }
 
 @Composable

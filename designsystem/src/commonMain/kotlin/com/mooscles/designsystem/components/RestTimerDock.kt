@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -253,7 +254,7 @@ internal fun Modifier.timerOpener(visual: RestTimerVisual, onOpen: (() -> Unit)?
  * end, not every second. The component is presentational and owns no clock: the caller passes a new
  * [visual] each second, which recomposes the dock (the ring sweep is read while drawing).
  * With [onOpen], tapping the body (ring, name and time) opens the expanded timer; without [canAdd]
- * (the 5:00 ceiling) +15 s is disabled.
+ * (the 5:00 ceiling) +15 s is disabled. The dock is one traversal group.
  */
 @Composable
 fun RestTimerDock(
@@ -304,7 +305,9 @@ fun RestTimerDock(
         padding.roundToPx() * 4 + ring.roundToPx() + time + adjust * 2 + skipSize.roundToPx() + gap.roundToPx() * 2
     }
 
-    BoxWithConstraints(modifier.testTag(TimerDockTag)) {
+    // One traversal group, as the compact timer and the workout bar: a screen reader reads the
+    // body, then -15 s, +15 s and skip, together, wherever the layout puts the buttons.
+    BoxWithConstraints(modifier.testTag(TimerDockTag).semantics { isTraversalGroup = true }) {
         val fits = !constraints.hasBoundedWidth || constraints.maxWidth >= neededPx
         val stacked = density.fontScale >= STACK_FONT_SCALE || !fits
         val buttons: @Composable (Modifier) -> Unit = { each ->

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -168,6 +169,48 @@ class StepperTest {
             val roomy = valueLayout().layoutInput.style.fontSize.value
             assertEquals(44f, roomy, "num.lg with room")
             assertTrue(narrow < roomy, "the narrow value stepped down: $narrow sp")
+        }
+    }
+
+    /**
+     * Where not even `num.sm` fits between the buttons ("82,5 kg" in the set edit panel of a 320 dp
+     * phone, already at 1.0: the accessibility sweep, Task 29), the value goes on its own line above
+     * them, whole, and the buttons keep their 64 x 56 dp side by side under it.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun valueGoesAboveTheButtonsWhenItCannotFitBetween() {
+        for ((scale, width) in listOf(1f to 170.dp, LINEAR_TWO_X_FONT_SCALE to 230.dp)) {
+            runComposeUiTest {
+                withTheme(fontScale = scale) {
+                    Box(Modifier.width(width)) {
+                        Stepper(82.5, {}, step = 2.5, min = 0.0, display = "82,5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase")
+                    }
+                }
+                waitForIdle()
+                val where = "at $scale in $width"
+                val sizes = MoosclesSizes()
+                val minus = onNodeWithTag(StepperDecreaseTag).getBoundsInRoot()
+                val plus = onNodeWithTag(StepperIncreaseTag).getBoundsInRoot()
+                val value = onNodeWithTag(StepperValueTag, useUnmergedTree = true).getBoundsInRoot()
+                for ((tag, bounds) in listOf("decrease" to minus, "increase" to plus)) {
+                    assertTrue(bounds.right - bounds.left >= sizes.stepperButtonWidth - 0.5.dp && bounds.bottom - bounds.top >= sizes.stepperButtonHeight - 0.5.dp, "$where $tag is $bounds")
+                    assertTrue(bounds.right <= width + 0.5.dp, "$where $tag ends at ${bounds.right}")
+                }
+                assertTrue(value.bottom <= minus.top + 0.5.dp && value.bottom <= plus.top + 0.5.dp, "$where the value $value is not above the buttons $minus $plus")
+                assertTrue(minus.right <= plus.left + 0.5.dp && minus.top == plus.top, "$where the buttons are not side by side: $minus $plus")
+                assertShownWhole(valueLayout(), "stepper value $where")
+                onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("82,5 kg")
+            }
+        }
+        // With room, the value stays between the buttons.
+        runComposeUiTest {
+            withTheme { Stepper(82.5, {}, step = 2.5, min = 0.0, display = "82,5 kg", decreaseLabel = "Decrease", increaseLabel = "Increase") }
+            waitForIdle()
+            val minus = onNodeWithTag(StepperDecreaseTag).getBoundsInRoot()
+            val plus = onNodeWithTag(StepperIncreaseTag).getBoundsInRoot()
+            val value = onNodeWithTag(StepperValueTag, useUnmergedTree = true).getBoundsInRoot()
+            assertTrue(minus.right <= value.left && value.right <= plus.left, "the value is not between the buttons: $minus $value $plus")
         }
     }
 

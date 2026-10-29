@@ -57,6 +57,31 @@ class RestTimerDockTest {
         assertShownWhole(layout)
     }
 
+    /**
+     * The dock is one traversal group, like the compact timer and the workout bar, so a screen
+     * reader reads its body and its buttons together, whichever row the buttons are on.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun dockIsATraversalGroup() {
+        for (scale in listOf(1f, 2f)) {
+            runComposeUiTest {
+                withTheme(fontScale = scale) { Box(Modifier.width(320.dp)) { RestTimerDock(visual(84), {}, {}, {}, onOpen = {}) } }
+                waitForIdle()
+                val dock = onNodeWithTag(TimerDockTag, useUnmergedTree = true).fetchSemanticsNode()
+                assertEquals(true, dock.config.getOrNull(SemanticsProperties.IsTraversalGroup), "at $scale the dock is not a traversal group")
+                for (tag in listOf(TimerOpenTag, TimerMinusTag, TimerPlusTag, TimerSkipTag)) {
+                    var node = onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().parent
+                    while (node != null && node.id != dock.id) {
+                        assertNotEquals(true, node.config.getOrNull(SemanticsProperties.IsTraversalGroup), "at $scale $tag is in a group of its own")
+                        node = node.parent
+                    }
+                    assertEquals(dock.id, node?.id, "at $scale $tag is not in the dock")
+                }
+            }
+        }
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun announcementChangesOnlyOnStartAdjustAndFinish() = runComposeUiTest {
