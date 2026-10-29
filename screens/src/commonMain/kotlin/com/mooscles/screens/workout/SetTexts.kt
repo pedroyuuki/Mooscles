@@ -17,9 +17,6 @@ import org.jetbrains.compose.resources.stringResource
 /** The unit symbol, the same in every language. */
 internal fun unitSymbol(pounds: Boolean): String = if (pounds) "lb" else "kg"
 
-/** Shown for a set the previous session has no pair for. */
-internal const val NO_PREVIOUS = "—"
-
 /** [weightKg] as shown in a field, in the unit of [pounds], without the unit: "82,5", "80". */
 @Composable
 internal fun loadText(weightKg: Double, pounds: Boolean): String =
@@ -30,10 +27,12 @@ internal fun loadText(weightKg: Double, pounds: Boolean): String =
 internal fun loadSpoken(weightKg: Double, pounds: Boolean): String =
     stringResource(if (pounds) Res.string.ds_unit_lb_spoken else Res.string.ds_unit_kg_spoken, loadText(weightKg, pounds))
 
-/** The previous session's set as the "previous" column shows it: "80 kg × 6", or [NO_PREVIOUS] without a pair. */
+/**
+ * The previous session's set as the "previous" column shows it: "80 kg × 6". A set without a pair
+ * passes null to the row, which draws the design system's "—" and leaves "previous" out of its reading.
+ */
 @Composable
-internal fun previousText(previous: PreviousSetUi?, pounds: Boolean): String {
-    if (previous == null) return NO_PREVIOUS
+internal fun previousText(previous: PreviousSetUi, pounds: Boolean): String {
     val plain = MoosclesNumbers.plain(WeightUnits.fromKg(previous.weightKg, pounds))
     return MoosclesNumbers.setText(plain, unitSymbol(pounds), previous.reps, currentNumberLocale())
 }

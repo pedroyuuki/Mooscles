@@ -148,8 +148,8 @@ jobs:
           # Phase 3 task 10 (:screens): ScreenDatesTest 4 (commonTest), ScreenDatesJvmEquivalenceTest 2.
           # Phase 3 task 11 (:designsystem commonTest): IconsTest +1, SizesTimingElevationTest +1.
           # Phase 3 task 27 (:app): UpdaterDisabledHostTest 2, LauncherIconHostTest 1.
-          # Phase 3 task 14 (:screens commonTest): ActiveWorkoutScreenStateTest 1.
-          MIN_HOST_TESTS: 726
+          # Phase 3 task 14 (:screens commonTest): ActiveWorkoutScreenStateTest 2.
+          MIN_HOST_TESTS: 727
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -348,10 +348,10 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         env:
-          # Per class: EquipmentIconsTest 1, ScreenDatesTest 4, ActiveWorkoutScreenStateTest 1 (commonTest);
+          # Per class: EquipmentIconsTest 1, ScreenDatesTest 4, ActiveWorkoutScreenStateTest 2 (commonTest);
           # CatalogLabelsTest 4, ScreensHelpersTest 4, DateTextsTest 5, WorkoutSetRowTest 13 (uiTest).
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 32
+          MIN_SCREENS_IOS_TESTS: 33
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -307,8 +307,8 @@ class WorkoutSetRowTest {
         val actions = Actions(entry, echo = true)
         val shown = showRows(entry, actions)
         onNodeWithTag(workoutSetRowTag("s2")).performTouchInput {
-            // From the previous result (not a target without one) leftward, past 35% of the width.
-            swipe(start = Offset(width * 0.42f, centerY), end = Offset(width * 0.02f, centerY), durationMillis = 400)
+            // From the check, pinned to the right edge, so the drag cannot start on a text field.
+            swipe(start = Offset(width * 0.97f, centerY), end = Offset(width * 0.5f, centerY), durationMillis = 400)
         }
         waitForIdle()
         assertEquals(listOf("s2" to 1), shown.removed)

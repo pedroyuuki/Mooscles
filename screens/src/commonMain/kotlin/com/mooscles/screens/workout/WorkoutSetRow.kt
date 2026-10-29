@@ -80,9 +80,10 @@ internal fun WorkoutSetRow(
     val haptics = MTheme.haptics
     // Read through derived states, so a change for another set does not recompose this row.
     val optimistic by remember(screen, set.id) { derivedStateOf { screen.optimistic[set.id] } }
+    val doneNow by remember(screen, set) { derivedStateOf { screen.completedOf(set) } }
     val editingThis by remember(screen, set.id) { derivedStateOf { screen.editing?.takeIf { it.setId == set.id } } }
     val editing = editingThis
-    val done = optimistic ?: set.completed
+    val done = doneNow
     LaunchedEffect(set.id, set.completed, optimistic) {
         if (optimistic != null) screen.settle(set.id, set.completed)
     }
@@ -175,6 +176,7 @@ internal fun WorkoutSetRow(
     val state = SetRowState(
         index = number,
         total = total,
+        // Null without a pair: the design system then draws "—" and reads the row without it.
         previous = previous?.let { previousText(it, pounds) },
         previousSpoken = previous?.let { previousSpoken(it, pounds) },
         load = loadText(effective.weightKg, pounds),
@@ -187,7 +189,7 @@ internal fun WorkoutSetRow(
         editing = editing != null,
     )
     val editLoad = { screen.editing = SetEditTarget(set.id, SetField.LOAD) }
-    val position = entry.sets.indexOfFirst { it.id == set.id }
+    val position = number - 1
     SetRow(
         state = state,
         onCompleteChange = { if (it) complete() else uncheck() },

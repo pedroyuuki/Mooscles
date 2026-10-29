@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.mooscles.ui.SetField
+import com.mooscles.ui.SetUi
 
 /**
  * The field of a set row being edited. [keyboard] is true once the field has the keyboard (a
@@ -23,7 +24,9 @@ data class SetEditTarget(val setId: String, val field: SetField, val keyboard: B
  * - [cleared]: the (set, field) pairs the person emptied on purpose, which get no suggestion again
  *   this session (spec D10);
  * - [optimistic]: the done state a check asked for and the database has not echoed yet, by set
- *   id; the disc draws it at once and it goes away when the state arrives equal;
+ *   id; the disc draws it at once and it goes away when the state arrives equal, or when the
+ *   screen drops it because the write failed ([dropOptimistic], [dropAllOptimistic]). It is not
+ *   saved: it only bridges one echo, and after a recreation the database is the truth;
  * - [editing]: the row and field being edited, if any.
  */
 @Stable
@@ -54,17 +57,33 @@ class ActiveWorkoutScreenState(
         if (optimistic[setId] == completed) optimistic = optimistic - setId
     }
 
+    /** Whether [set] is drawn as done: the optimistic value while there is one, the database's otherwise. */
+    fun completedOf(set: SetUi): Boolean = optimistic[set.id] ?: set.completed
+
+    /**
+     * Forgets the optimistic value of [setId], so its row shows the database's done state again.
+     * For a write that failed: no echo will come to settle it.
+     */
+    fun dropOptimistic(setId: String) {
+        if (setId in optimistic) optimistic = optimistic - setId
+    }
+
+    /** [dropOptimistic] for every set, as when an error arrives and the screen cannot tell which write failed. */
+    fun dropAllOptimistic() {
+        if (optimistic.isNotEmpty()) optimistic = emptyMap()
+    }
+
     companion object {
         /**
          * Saves the fields as lists of strings and booleans, which every platform can keep: a
-         * cleared pair as "FIELD:setId", an optimistic entry as "1:setId" or "0:setId", the edit
-         * target as [setId, field, keyboard, error]. The field name has no colon; an id may.
+         * cleared pair as "FIELD:setId" (the field name has no colon; an id may), the edit target
+         * as [setId, field, keyboard, error]. [optimistic] is left out on purpose: a write lost
+         * with the process must not come back as a full disc.
          */
         val Saver: Saver<ActiveWorkoutScreenState, Any> = listSaver<ActiveWorkoutScreenState, Any?>(
             save = { state ->
                 listOf(
                     ArrayList(state.cleared.map { (id, field) -> "${field.name}:$id" }),
-                    ArrayList(state.optimistic.map { (id, done) -> "${if (done) 1 else 0}:$id" }),
                     state.editing?.let { arrayListOf<Any>(it.setId, it.field.name, it.keyboard, it.error) },
                 )
             },
@@ -72,12 +91,10 @@ class ActiveWorkoutScreenState(
                 @Suppress("UNCHECKED_CAST")
                 val cleared = (saved[0] as List<String>).map { it.substringAfter(':') to SetField.valueOf(it.substringBefore(':')) }.toSet()
                 @Suppress("UNCHECKED_CAST")
-                val optimistic = (saved[1] as List<String>).associate { it.substringAfter(':') to (it.substringBefore(':') == "1") }
-                @Suppress("UNCHECKED_CAST")
-                val editing = (saved[2] as List<Any>?)?.let {
+                val editing = (saved[1] as List<Any>?)?.let {
                     SetEditTarget(it[0] as String, SetField.valueOf(it[1] as String), it[2] as Boolean, it[3] as Boolean)
                 }
-                ActiveWorkoutScreenState(cleared, optimistic, editing)
+                ActiveWorkoutScreenState(cleared = cleared, editing = editing)
             },
         )
     }
