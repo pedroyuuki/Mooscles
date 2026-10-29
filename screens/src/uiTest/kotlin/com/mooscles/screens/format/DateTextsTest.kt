@@ -23,16 +23,17 @@ class DateTextsTest {
     }
 
     @Test
-    fun shortDateBothLanguages() = runComposeUiTest {
+    fun shortDateBothLanguages() {
         val ms = at(2026, 10, 21, 9, 0)
-        var en = ""
-        var pt = ""
-        withScreen(locale = "en") { en = shortDate(ms, utc) }
-        waitForIdle()
-        withScreen(locale = "pt-BR") { pt = shortDate(ms, utc) }
-        waitForIdle()
-        assertEquals("Oct 21", en)
-        assertEquals("21 out", pt)
+        for ((locale, expected) in listOf("en" to "Oct 21", "pt-BR" to "21 out")) {
+            runComposeUiTest {
+                var text = ""
+                withScreen(locale = locale) { text = shortDate(ms, utc) }
+                waitForIdle()
+                assertEquals(expected, text, locale)
+            }
+            LocalAppLocale.restore()
+        }
     }
 
     // 2024-10-29 is a Tuesday (the plan's example date).
@@ -58,5 +59,15 @@ class DateTextsTest {
         withScreen(locale = "en") { texts += durationText(2520); texts += durationText(4320) }
         waitForIdle()
         assertEquals(listOf("42 min", "1 h 12 min"), texts)
+    }
+
+    @Test
+    fun wholeHoursAndSubMinute() = runComposeUiTest {
+        val texts = mutableListOf<String>()
+        withScreen(locale = "en") {
+            texts += durationText(40); texts += durationText(3600); texts += durationText(7200); texts += durationText(3660)
+        }
+        waitForIdle()
+        assertEquals(listOf("< 1 min", "1 h", "2 h", "1 h 1 min"), texts)
     }
 }

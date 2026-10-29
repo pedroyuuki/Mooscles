@@ -13,7 +13,10 @@ class ScreenDatesJvmEquivalenceTest {
     private val zones = listOf("America/Sao_Paulo", "Europe/Berlin", "UTC", "Asia/Kolkata")
 
     /** Every 7 minutes, 3 days either side of each change. */
-    private fun instants(): List<Long> {
+    private val sample: List<Long> by lazy { buildInstants() }
+    private fun instants() = sample
+
+    private fun buildInstants(): List<Long> {
         val centers = listOf(
             "2018-11-04T03:00:00Z", "2019-02-17T02:00:00Z", // Sao Paulo (clocks forward, then back)
             "2026-03-29T01:00:00Z", "2026-10-25T01:00:00Z", // Berlin
