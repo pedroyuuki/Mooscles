@@ -75,3 +75,9 @@ compose.resources {
     packageOfResClass = "com.mooscles.designsystem.resources"
     generateResClass = ResourceClassGeneration.Always
 }
+
+// Spike branch only (spike/phase3, never merged): print the SPIKE lines of the simulator tests
+// in the CI log too, a second source next to the <system-out> of the XML reports.
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest>().configureEach {
+    testLogging { showStandardStreams = true }
+}

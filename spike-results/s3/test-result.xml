@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="2" failures="0" errors="0" skipped="0" time="8.105" timestamp="2026-10-29T00:47:22" hostname="localhost">
+  <testsuite name="com.mooscles.designsystem.spike.ImeSpikeTest" tests="2" failures="0" errors="0" skipped="0" time="6.101" timestamp="2026-10-29T00:47:22" hostname="localhost">
+    <properties>
+      <property name="device" value="Mooscles_Pixel8_API35(AVD) - 15" />
+      <property name="flavor" value="" />
+      <property name="project" value=":designsystem" />
+    </properties>
+    <testcase name="injectedInsetsPlaceTheCompactDockAboveThem" classname="com.mooscles.designsystem.spike.ImeSpikeTest" time="2.8" />
+    <testcase name="focusingAFieldRecordsTheImeInset" classname="com.mooscles.designsystem.spike.ImeSpikeTest" time="3.301" />
+  </testsuite>
+</testsuites>

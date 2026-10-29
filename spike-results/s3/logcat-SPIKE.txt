@@ -1,0 +1,3 @@
+10-28 21:47:17.504 26928 26942 I System.out: SPIKE injected screen=Rect.fromLTRB(0.0, 0.0, 1080.0, 2400.0) dock=Rect.fromLTRB(0.0, 1465.0, 1080.0, 1612.0) expectedBottom=1612.5 imeBottom=788
+10-28 21:47:17.753 26928 26942 I System.out: SPIKE injected afterBringIntoView field=Rect.fromLTRB(0.0, 1339.0, 1080.0, 1465.0) dock=Rect.fromLTRB(0.0, 1465.0, 1080.0, 1612.0)
+10-28 21:47:21.769 26928 26942 I System.out: SPIKE ime bottom=63 fieldVisible=true maxBottom=63 screen=Rect.fromLTRB(0.0, 0.0, 1080.0, 2400.0) dock=Rect.fromLTRB(0.0, 2190.0, 1080.0, 2337.0) field=Rect.fromLTRB(0.0, 2064.0, 1080.0, 2190.0)
