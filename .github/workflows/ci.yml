@@ -145,7 +145,8 @@ jobs:
           # Phase 3 tasks 7 and 8: SetSuggestionsTest +20, InProcessRestTimerTest +12 (shared).
           # Phase 3 task 9 (:screens): StringsParityTest 6, EquipmentIconsTest 1;
           # DesignSystemResourcesHostTest +1 (:app).
-          MIN_HOST_TESTS: 714
+          # Phase 3 task 11 (:designsystem commonTest): IconsTest +1, SizesTimingElevationTest +1.
+          MIN_HOST_TESTS: 716
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -313,8 +314,9 @@ jobs:
           # ComponentColorsTest 5. Task 16 critique: LicenseTextTest 5, MButtonIconScaleTest 1, GallerySmokeTest +4, FullWidthTest 3.
           # Final fix wave: StepperTest +4, MToastTest +2, MDialogTest +2, RestTimerDockTest +1, RestTimerExpandedTest +2, TextFitTest 3.
           # Set row density fix: SetRowTest +4.
+          # Phase 3 task 11: IconsTest +1, SizesTimingElevationTest +1, MTabBarTest 8, ActiveWorkoutBarTest 7.
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 204
+          MIN_DS_IOS_TESTS: 221
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

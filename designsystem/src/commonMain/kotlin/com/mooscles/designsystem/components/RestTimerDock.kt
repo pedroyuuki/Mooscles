@@ -42,6 +42,8 @@ import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_duration_and
+import com.mooscles.designsystem.resources.ds_duration_list
+import com.mooscles.designsystem.resources.ds_hours
 import com.mooscles.designsystem.resources.ds_minutes
 import com.mooscles.designsystem.resources.ds_seconds
 import com.mooscles.designsystem.resources.ds_timer_announce
@@ -72,19 +74,30 @@ private const val TICK_SECONDS = 2
 /** The widest time the dock shows, so the layout is chosen from a value that does not change every second. */
 private const val DOCK_WIDEST_TIME = "00:00"
 
-/** The text of the spoken duration, "1 minute and 24 seconds". Zero stays plural. */
+private const val SECONDS_PER_MINUTE = 60
+private const val SECONDS_PER_HOUR = 3600
+
+/**
+ * A duration as it is read aloud: "1 minute and 24 seconds", "42 minutes", "1 hour and 5 minutes"
+ * (pt-BR "1 minuto e 24 segundos", "1 hora e 5 minutos"). Parts that are zero are left out, and a
+ * zero duration reads "0 seconds" (zero stays plural). Ruling F5: public, so the screens speak the
+ * workout clock and the in-progress bar with the same words as the timer; pass whole minutes
+ * (`minutes * 60`) for a reading without seconds.
+ */
 @Composable
-internal fun spokenDuration(totalSeconds: Int): String {
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return when {
-        minutes > 0 && seconds > 0 -> stringResource(
-            Res.string.ds_duration_and,
-            pluralCount(Res.plurals.ds_minutes, minutes),
-            pluralCount(Res.plurals.ds_seconds, seconds),
-        )
-        minutes > 0 -> pluralCount(Res.plurals.ds_minutes, minutes)
-        else -> pluralCount(Res.plurals.ds_seconds, seconds)
+fun spokenDuration(totalSeconds: Int): String {
+    val hours = totalSeconds / SECONDS_PER_HOUR
+    val minutes = totalSeconds % SECONDS_PER_HOUR / SECONDS_PER_MINUTE
+    val seconds = totalSeconds % SECONDS_PER_MINUTE
+    val parts = buildList {
+        if (hours > 0) add(pluralCount(Res.plurals.ds_hours, hours))
+        if (minutes > 0) add(pluralCount(Res.plurals.ds_minutes, minutes))
+        if (seconds > 0 || (hours == 0 && minutes == 0)) add(pluralCount(Res.plurals.ds_seconds, seconds))
+    }
+    return when (parts.size) {
+        1 -> parts[0]
+        2 -> stringResource(Res.string.ds_duration_and, parts[0], parts[1])
+        else -> stringResource(Res.string.ds_duration_list, parts[0], parts[1], parts[2])
     }
 }
 

@@ -6,9 +6,9 @@ import com.mooscles.designsystem.icons.own.*
 
 /**
  * Every icon of the design system, as image vectors on a 24 x 24 grid with a 2 stroke, round
- * caps and joins. The first 28 are a closed subset of Lucide (ISC, see the license in
- * resources); the last 10 are Mooscles' own equipment icons. All are drawn in black and
- * tinted by [MIcon].
+ * caps and joins. 37 are a closed subset of Lucide 1.63.0 (ISC, see the license in resources),
+ * 10 are Mooscles' own equipment icons, and the 4 `*Filled` ones are own solid variants for a
+ * selected tab (the only icons with fills). All are drawn in black and tinted by [MIcon].
  */
 object MIcons {
     val ArrowLeft: ImageVector get() = LucideArrowLeft
@@ -39,6 +39,15 @@ object MIcons {
     val FileText: ImageVector get() = LucideFileText
     val Wifi: ImageVector get() = LucideWifi
     val ImageOff: ImageVector get() = LucideImageOff
+    val History: ImageVector get() = LucideHistory
+    val LayoutGrid: ImageVector get() = LucideLayoutGrid
+    val Search: ImageVector get() = LucideSearch
+    val Keyboard: ImageVector get() = LucideKeyboard
+    val Share2: ImageVector get() = LucideShare2
+    val Pencil: ImageVector get() = LucidePencil
+    val ArrowUp: ImageVector get() = LucideArrowUp
+    val ArrowDown: ImageVector get() = LucideArrowDown
+    val ArrowLeftRight: ImageVector get() = LucideArrowLeftRight
 
     val Plate: ImageVector get() = OwnPlate
     val PlateRecord: ImageVector get() = OwnPlateRecord
@@ -51,7 +60,12 @@ object MIcons {
     val Rope: ImageVector get() = OwnRope
     val Body: ImageVector get() = OwnBody
 
-    /** Name and icon of all 38, Lucide first. Used by the gallery and the tests. */
+    val DumbbellFilled: ImageVector get() = OwnDumbbellFilled
+    val LayoutGridFilled: ImageVector get() = OwnLayoutGridFilled
+    val HistoryFilled: ImageVector get() = OwnHistoryFilled
+    val PlateRecordFilled: ImageVector get() = OwnPlateRecordFilled
+
+    /** Name and icon of all 51: Lucide, own, then the filled variants. Used by the gallery and the tests. */
     val all: List<Pair<String, ImageVector>> by lazy(LazyThreadSafetyMode.NONE) {
         listOf(
             "ArrowLeft" to ArrowLeft,
@@ -82,6 +96,15 @@ object MIcons {
             "FileText" to FileText,
             "Wifi" to Wifi,
             "ImageOff" to ImageOff,
+            "History" to History,
+            "LayoutGrid" to LayoutGrid,
+            "Search" to Search,
+            "Keyboard" to Keyboard,
+            "Share2" to Share2,
+            "Pencil" to Pencil,
+            "ArrowUp" to ArrowUp,
+            "ArrowDown" to ArrowDown,
+            "ArrowLeftRight" to ArrowLeftRight,
             "Plate" to Plate,
             "PlateRecord" to PlateRecord,
             "Dumbbell" to Dumbbell,
@@ -92,6 +115,10 @@ object MIcons {
             "Machine" to Machine,
             "Rope" to Rope,
             "Body" to Body,
+            "DumbbellFilled" to DumbbellFilled,
+            "LayoutGridFilled" to LayoutGridFilled,
+            "HistoryFilled" to HistoryFilled,
+            "PlateRecordFilled" to PlateRecordFilled,
         )
     }
 }
