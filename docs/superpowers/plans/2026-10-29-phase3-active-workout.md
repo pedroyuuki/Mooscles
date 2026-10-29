@@ -917,3 +917,15 @@ Todo o resto é sequencial: as Tasks 4–6 tocam `MoosclesViewModel.kt` e `UiCon
 | 4 → 27 | `UpdateManager.kt` (4: `TrainingBlockedException`; 27: `enabled`) | sim; a 25 não toca nesse arquivo, então 25 ∥ 26 e 27 não se cruzam nele |
 | 6 → 9 | `MoosclesActions.restoreSet`, que o `RecordingActions` implementa | sim: a 9 vem depois da 6 e já implementa a interface com `restoreSet` |
 | 26 → 30, 31 | o painter e o `WorkoutSharePreview` usados nas capturas `share-card-*` | sim |
+
+
+## Notas
+
+- **2026-10-29, varredura prévia.** Antes da Task 3, uma varredura só de leitura cruzou o plano com a spec e com o código pós-fase 2 e encontrou 41 pontos (F1–F41). Cada task segue as decisões que levam o seu número; a tabela fica no workspace de execução, fora do git. As que mudam o texto acima:
+  - **F1:** a notificação em andamento do descanso usa o id 3 (o 2 é do updater). Desvio do D16, registrado na spec e no AGENTS.md na Task 32.
+  - **F2:** `app_name` com `translatable="false"` e `share_strings.xml` com `tools:ignore="MissingTranslation"`, para o lint não quebrar quando a Task 25 criar `values-pt-rBR`.
+  - **F4:** o formatador do CMP só troca `%N$s` e `%N$d`; nada de largura (`%2$02d`). O `StringsParityTest` passa a reprovar isso.
+  - **F9:** no CI, os relatórios do iOS são enviados também com o job verde (`if: !cancelled()`), para os spikes e as capturas da Task 28.
+  - **F23:** cada lane paralela tem a sua branch; o controlador mescla. O relatório dos spikes (Task 3) entra na branch da fase depois da Task 6.
+  - **F25:** a Task 4 leva o `MIN_HOST_TESTS` à contagem real (≥ 624), e as Tasks 11, 13 e 27 o sobem.
+- **2026-10-29, resultados dos spikes S1 (Android) e S2.** S1 no Android: PNG igual ao bitmap, mediana 446 ms, thread principal livre; a metade iOS é decidida na Task 3. S2: nenhuma estratégia leva o rótulo ao nó editável e o TalkBack do emulador não pôde ser conduzido, então, pela regra de decisão, o `MTextField` não muda e o #11 continua aberto.
