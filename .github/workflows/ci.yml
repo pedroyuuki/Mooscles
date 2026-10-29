@@ -166,7 +166,9 @@ jobs:
           # WorkoutInputHostTest -4, InlineRestEditorHostTest -3, InlineRestVisualHostTest -1.
           # RestTimerHostTest, DiscardNavigationHostTest, UiFlowHostTest and TimerKeyboardInsetsHostTest
           # keep their names on the shell (0). 776 + 13 - 14 = 775.
-          MIN_HOST_TESTS: 775
+          # Task 24 fix round 1 (:app): ShellNavigationHostTest +4 (one workout entry, saved tabs
+          # without the workout, the summary's error, the shell's system-bar insets). 775 + 4 = 779.
+          MIN_HOST_TESTS: 779
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

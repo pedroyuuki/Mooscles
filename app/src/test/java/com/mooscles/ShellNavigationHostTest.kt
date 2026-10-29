@@ -1,15 +1,24 @@
 package com.mooscles
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.MTabBarTag
 import com.mooscles.designsystem.licenses.LicensesContentTag
+import androidx.compose.ui.unit.dp
 import com.mooscles.ui.*
 import java.lang.reflect.Proxy
 import org.junit.After
@@ -152,6 +161,8 @@ class ShellNavigationHostTest {
         compose.onNodeWithTag("workout-route").assertDoesNotExist()
     }
 
+    /** Pins the behavior, not the mechanism: the graph never has the workout at its root, so the
+     *  NavHost's own Back would pop the same entry as the route's BackHandler. */
     @Test fun systemBackFromTheWorkoutMinimizes() {
         show(activeState())
         tab("records").performClick()
@@ -229,6 +240,89 @@ class ShellNavigationHostTest {
         compose.onNodeWithTag(MTabBarTag).assertDoesNotExist()
     }
 
+    @Test fun theBarFromAScreenOpenedInTheWorkoutReturnsToThatWorkout() {
+        show(activeState(completed = true))
+        tab("library").performClick()
+        openFromTheBar()
+        openExerciseHistory()
+        // The bar goes back to the workout already in the stack: one entry, not a second one.
+        openFromTheBar()
+        compose.onNodeWithTag("workout-minimize").performClick()
+        assertLibraryRoot()
+        openFromTheBar()
+        finish()
+        back()
+        assertLibraryRoot()
+        compose.onNodeWithTag("workout-route").assertDoesNotExist()
+        compose.onNodeWithTag("workout-none").assertDoesNotExist()
+    }
+
+    @Test fun aSavedTabNeverKeepsTheWorkoutAfterItEnds() {
+        show(activeState(completed = true))
+        tab("library").performClick()
+        openFromTheBar()
+        openExerciseHistory()
+        // Leaving for another tab from a screen opened in the workout, then finishing there.
+        tab("history").performClick()
+        openFromTheBar()
+        finish()
+        compose.onNodeWithText("Done").performScrollTo().performClick()
+        tab("library").performClick()
+        compose.onNodeWithTag("workout-none").assertDoesNotExist()
+        compose.onNodeWithTag("workout-route").assertDoesNotExist()
+        assertLibraryRoot()
+        back()
+        compose.onNodeWithTag("workout-none").assertDoesNotExist()
+        compose.onNodeWithTag("routines-list").assertIsDisplayed()
+    }
+
+    @Test fun theSummaryShowsAndClearsItsErrorWithoutTheSnackbar() {
+        show(activeState(completed = true))
+        openFromTheBar()
+        finish()
+        compose.runOnIdle { state.value = state.value.copy(error = "Raw summary failure", errorCode = UiError.SAVE_FAILED) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Raw summary failure").assertDoesNotExist()
+        compose.onNodeWithText("Couldn't save the last change", substring = true).assertExists()
+        compose.runOnIdle {
+            assertEquals(1, calls.count { it == "clearError:" })
+            assertNull(state.value.error)
+        }
+    }
+
+    @Test fun theShellPadsTheSystemBarsAndRidesTheKeyboard() {
+        val ime = mutableIntStateOf(0)
+        val density = compose.activity.resources.displayMetrics.density
+        state = mutableStateOf(activeState().copy(timer = TimerUi("Bench press", 90, 120, running = true)))
+        val timer = mutableStateOf(state.value.timer)
+        compose.setContent {
+            MoosclesTheme("light") {
+                Column(Modifier.fillMaxSize().testTag("window")) {
+                    Box(Modifier.weight(1f).fillMaxWidth())
+                    ShellBottom(state.value, timer, "routines", {}, {}, {}, actions,
+                        systemBars = WindowInsets(left = 40.dp, right = 24.dp, bottom = 32.dp),
+                        ime = WindowInsets(bottom = ime.intValue))
+                }
+            }
+        }
+        val window = bounds("window")
+        val tabs = bounds(MTabBarTag)
+        val bar = bounds("shell-workout-bar")
+        val room = bounds(SHELL_SYSTEM_BAR_TAG)
+        assertEquals("The tabs clear the left bar", 40 * density, tabs.left, 1f)
+        assertEquals("The tabs clear the right bar", window.right - 24 * density, tabs.right, 1f)
+        assertEquals(tabs.left, bar.left, 1f)
+        assertEquals(tabs.right, bar.right, 1f)
+        assertEquals("The navigation bar's room is under the tabs", tabs.bottom, room.top, 1f)
+        assertEquals(window.bottom, room.bottom, 1f)
+        assertEquals(32 * density, room.height, 1f)
+        // A keyboard 300 dp tall (navigation bar included): the bar on it, the tabs where they were.
+        compose.runOnIdle { ime.intValue = (300 * density).toInt() }
+        assertEquals(tabs, bounds(MTabBarTag))
+        assertEquals(window.bottom - 300 * density, bounds("shell-workout-bar").bottom, 1f)
+        assertEquals(bar.height, bounds("shell-workout-bar").height, 1f)
+    }
+
     @Test fun globalSnackbarNeverShowsOnTheWorkoutRoute() {
         // The error stays in the state after clearError here, so a snackbar would stay on screen too.
         clearErrorClears = false
@@ -293,6 +387,12 @@ class ShellNavigationHostTest {
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
     }
+    private fun openExerciseHistory() {
+        compose.onNodeWithTag(ExerciseMenuTag).performClick()
+        compose.onNodeWithTag("exercise-menu-history").performClick()
+        compose.onNodeWithText("Movement history", substring = true, ignoreCase = true).assertIsDisplayed()
+    }
+    private fun bounds(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
     private fun assertLibraryRoot() {
         tab("library").assertIsSelected()
         compose.onNodeWithText("Exercise library").assertExists()

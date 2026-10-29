@@ -10,6 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -21,6 +25,7 @@ import com.mooscles.screens.shell.AppShellBottom
 import com.mooscles.screens.shell.ShellTabs
 import com.mooscles.screens.summary.WorkoutSummaryScreen
 import com.mooscles.screens.workout.ActiveWorkoutRoute
+import com.mooscles.screens.workout.ScreenErrorToast
 
 /** The full-screen active workout (spec D1): the only route without the shell. */
 internal const val WORKOUT_ROUTE = "workout"
@@ -54,10 +59,15 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
         val fallbackTimer = rememberUpdatedState(state.timer)
         val timer = timerState ?: fallbackTimer
 
-        // The root of the stack in view: set by a tab, and by reaching a tab's route any other way.
-        var selectedTab by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
-        LaunchedEffect(route) { if (route in ShellTabs.keys) selectedTab = route }
+        // The root of the stack in view: set by a tab, and by reaching a tab's route any other way
+        // (shown at once, in the same frame; kept for the routes above it).
+        var savedTab by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
+        val selectedTab = if (route in ShellTabs.keys) route else savedTab
+        SideEffect { if (route in ShellTabs.keys) savedTab = route }
         fun selectTab(tab: String) {
+            // A saved tab stack never keeps the workout: restored after the workout ended, it
+            // would show "No workout in progress". Leaving drops what was opened from it.
+            nav.popBackStack(WORKOUT_ROUTE, inclusive = true)
             // Train is the root itself, never a restored tail that happens to have been saved under its ID.
             if (tab == ShellTabs.TRAIN) nav.clearBackStack(ShellTabs.TRAIN)
             nav.navigate(tab) {
@@ -65,13 +75,16 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                 launchSingleTop = true
                 restoreState = tab != ShellTabs.TRAIN
             }
-            selectedTab = tab
+            savedTab = tab
         }
         // Back to the tab's own root, dropping what was opened on it (the gallery and licenses too).
         fun reselectTab(tab: String) {
             if (!nav.popBackStack(tab, inclusive = false)) selectTab(tab)
         }
-        fun openWorkout() = nav.navigate(WORKOUT_ROUTE) { launchSingleTop = true }
+        // Back to the workout already in the stack (a screen opened from it), never a second one.
+        fun openWorkout() {
+            if (!nav.popBackStack(WORKOUT_ROUTE, inclusive = false)) nav.navigate(WORKOUT_ROUTE) { launchSingleTop = true }
+        }
 
         // Decision 17: the routine of the last start gives the skeleton one card per exercise.
         var startedRoutineId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -100,7 +113,7 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                     launchSingleTop = true
                     restoreState = false
                 }
-                selectedTab = ShellTabs.TRAIN
+                savedTab = ShellTabs.TRAIN
                 handledDiscard = state.discardNavigationRequest
             }
         }
@@ -172,7 +185,7 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                         val asSummary = page.arguments?.getBoolean(SUMMARY_ARG) ?: false
                         when {
                             workout == null -> MissingScreen("Workout unavailable")
-                            asSummary -> SummaryRoute(workout, state, onDone = { selectTab(ShellTabs.TRAIN) },
+                            asSummary -> SummaryRoute(workout, state, hosted, onDone = { selectTab(ShellTabs.TRAIN) },
                                 onDetails = { nav.navigate(detailRoute(workout.id, summary = false)) })
                             else -> WorkoutDetailScreen(workout, state, hosted, summary = false, onDeleted = { nav.popBackStack() }, onExerciseHistory = { nav.navigate("exercise/$it") })
                         }
@@ -200,12 +213,14 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
 
 /**
  * The shell under every route but the workout. The tab bar does not pad itself for the system
- * navigation bar, so that room is added under it in the bar's own color; the keyboard is then
- * counted without it, which keeps the old `WorkoutBottomBar` geometry: the tabs stay put and the
- * workout bar rides on the keyboard.
+ * bars, so the room they take is added here in the bar's own color: under it for the navigation
+ * bar, and at the sides for a navigation bar or a cutout there (landscape). The keyboard is then
+ * counted without the bottom room, which keeps the old `WorkoutBottomBar` geometry: the tabs stay
+ * put and the workout bar rides on the keyboard. [systemBars] and [ime] are the real insets in the
+ * app; tests inject their own.
  */
 @Composable
-private fun ShellBottom(
+internal fun ShellBottom(
     state: UiState,
     timer: State<TimerUi>,
     selectedTab: String,
@@ -213,13 +228,30 @@ private fun ShellBottom(
     onReselectTab: (String) -> Unit,
     onOpenWorkout: () -> Unit,
     actions: MoosclesActions,
+    systemBars: WindowInsets = WindowInsets.navigationBars.union(WindowInsets.displayCutout),
+    ime: WindowInsets = WindowInsets.ime,
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        AppShellBottom(state, timer, selectedTab, onSelectTab, onReselectTab, onOpenWorkout, actions,
-            imeInsets = WindowInsets.ime.exclude(WindowInsets.navigationBars))
-        Spacer(Modifier.fillMaxWidth().background(MTheme.colors.bgRaised).windowInsetsBottomHeight(WindowInsets.navigationBars))
+    val raised = MTheme.colors.bgRaised
+    val keyboard = remember(ime, systemBars) { ime.exclude(systemBars.only(WindowInsetsSides.Bottom)) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            // Only the side strips: behind the bar's rounded top the screen shows through.
+            .drawBehind {
+                val left = systemBars.getLeft(this, layoutDirection).toFloat()
+                val right = systemBars.getRight(this, layoutDirection).toFloat()
+                if (left > 0f) drawRect(raised, size = Size(left, size.height))
+                if (right > 0f) drawRect(raised, topLeft = Offset(size.width - right, 0f), size = Size(right, size.height))
+            }
+            .windowInsetsPadding(systemBars.only(WindowInsetsSides.Horizontal)),
+    ) {
+        AppShellBottom(state, timer, selectedTab, onSelectTab, onReselectTab, onOpenWorkout, actions, imeInsets = keyboard)
+        Spacer(Modifier.fillMaxWidth().background(raised).windowInsetsBottomHeight(systemBars).testTag(SHELL_SYSTEM_BAR_TAG))
     }
 }
+
+/** The room under the tab bar for the system navigation bar. */
+internal const val SHELL_SYSTEM_BAR_TAG = "shell-system-bar"
 
 /**
  * The `workout` route: minimizing, and the system Back, return to where the workout was opened
@@ -249,11 +281,17 @@ private fun WorkoutRoute(
     )
 }
 
-/** The summary of a finished [workout]; Share opens the card preview over it. */
+/**
+ * The summary of a finished [workout]; Share opens the card preview over it. An error shows in the
+ * app's language and is handed back, as in the workout (decision 19).
+ */
 @Composable
-private fun SummaryRoute(workout: WorkoutUi, state: UiState, onDone: () -> Unit, onDetails: () -> Unit) {
+private fun SummaryRoute(workout: WorkoutUi, state: UiState, actions: MoosclesActions, onDone: () -> Unit, onDetails: () -> Unit) {
     var share by rememberSaveable(workout.id) { mutableStateOf(false) }
-    WorkoutSummaryScreen(workout, state.history, state.preferences.pounds, onDone = onDone, onShare = { share = true }, onDetails = onDetails)
+    Box(Modifier.fillMaxSize()) {
+        WorkoutSummaryScreen(workout, state.history, state.preferences.pounds, onDone = onDone, onShare = { share = true }, onDetails = onDetails)
+        ScreenErrorToast(state.errorCode, actions, Modifier.fillMaxSize())
+    }
     if (share) WorkoutSharePreview(workout.id, state.preferences.pounds, onDismiss = { share = false })
 }
 
