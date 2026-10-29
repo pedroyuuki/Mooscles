@@ -161,7 +161,12 @@ jobs:
           # Task 17 fix round 1 (:screens commonTest): CardExpansionTest +1.
           # Phase 3 task 20 (:screens commonTest): RestUpNextTest 3.
           # Phase 3 task 21 (:screens commonTest): RecordAnnouncerTest 9, ActiveWorkoutScreenStateTest +1.
-          MIN_HOST_TESTS: 776
+          # Phase 3 task 24 (:app): ShellNavigationHostTest +13; retired with the old workout screen
+          # (ported to :screens uiTests or retired, see the commit): WorkoutLazyRowsHostTest -6,
+          # WorkoutInputHostTest -4, InlineRestEditorHostTest -3, InlineRestVisualHostTest -1.
+          # RestTimerHostTest, DiscardNavigationHostTest, UiFlowHostTest and TimerKeyboardInsetsHostTest
+          # keep their names on the shell (0). 776 + 13 - 14 = 775.
+          MIN_HOST_TESTS: 775
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
