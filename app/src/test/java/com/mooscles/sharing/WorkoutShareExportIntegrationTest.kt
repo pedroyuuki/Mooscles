@@ -78,7 +78,7 @@ class WorkoutShareExportIntegrationTest {
             zone = TimeZone.UTC, texts = inputs.texts)
         assertEquals(2, card.workoutNumber)
         assertEquals("Upper body · New milestones", card.workoutName)
-        assertEquals("Thu, Oct 22 · 18:00–18:44", card.dateText)
+        assertEquals("Thu, Oct 22, 2026 · 18:00–18:44", card.dateText)
         assertEquals(listOf("Barbell bench press", "Wide-grip pull-up"), card.rows.map { it.name })
         assertEquals(listOf(2, 3), card.rows.map { it.completedSets })
         assertEquals(listOf("22\u00A0kg × 6", "Bodyweight × 12"), card.rows.map { it.bestSet })

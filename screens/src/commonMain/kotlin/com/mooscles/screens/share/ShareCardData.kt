@@ -34,12 +34,11 @@ import com.mooscles.screens.resources.date_month_may
 import com.mooscles.screens.resources.date_month_nov
 import com.mooscles.screens.resources.date_month_oct
 import com.mooscles.screens.resources.date_month_sep
-import com.mooscles.screens.resources.date_range_format
-import com.mooscles.screens.resources.date_short_format
 import com.mooscles.screens.resources.share_assistance_only
 import com.mooscles.screens.resources.share_assisted_set
 import com.mooscles.screens.resources.share_best_set
 import com.mooscles.screens.resources.share_bodyweight_set
+import com.mooscles.screens.resources.share_date_format
 import com.mooscles.screens.resources.share_duration
 import com.mooscles.screens.resources.share_exercises
 import com.mooscles.screens.resources.share_no_completed_sets
@@ -88,10 +87,8 @@ data class ShareCardTexts(
     val months: List<String>,
     /** Monday to Sunday (the order of `DayOfWeek`). */
     val weekdays: List<String>,
-    /** Day, then month name: `%2$s %1$d` / `%1$d %2$s`. */
-    val shortDateFormat: String,
-    /** Weekday, short date, start and end time. */
-    val dateRangeFormat: String,
+    /** Weekday, day, month name, year, start and end time: `%1$s, %3$s %2$d, %4$d · %5$s–%6$s`. */
+    val dateFormat: String,
     /** Repetitions with the body's weight only. */
     val bodyweightSet: String,
     /** Assistance load, then repetitions. */
@@ -207,15 +204,19 @@ object ShareCards {
         )
     }
 
-    /** `Tue, Oct 29 · 18:02–18:44` / `ter., 29 out · 18:02–18:44`, as the summary writes it. */
+    /**
+     * `Tue, Oct 29, 2024 · 18:02–18:44` / `ter., 29 de out. de 2024 · 18:02–18:44`: the summary's
+     * names and 24 h clock, with the year, since a shared picture outlives the season it was taken in.
+     */
     private fun dateRange(startMillis: Long, endMillis: Long, zone: TimeZone, texts: ShareCardTexts): String {
         val start = ScreenDates.localDateTime(startMillis, zone)
         val end = ScreenDates.localDateTime(endMillis, zone)
-        val shortDate = fillTemplate(texts.shortDateFormat, start.date.day, texts.months[start.date.month.number - 1])
         return fillTemplate(
-            texts.dateRangeFormat,
+            texts.dateFormat,
             texts.weekdays[start.dayOfWeek.ordinal],
-            shortDate,
+            start.date.day,
+            texts.months[start.date.month.number - 1],
+            start.date.year,
             "${two(start.hour)}:${two(start.minute)}",
             "${two(end.hour)}:${two(end.minute)}",
         )
@@ -235,7 +236,11 @@ private val placeholder = Regex("%(\\d+)\\$[ds]")
 
 /** Fills `%N$s` and `%N$d` with the N-th argument, as the Compose resources formatter does. */
 internal fun fillTemplate(template: String, vararg args: Any): String =
-    placeholder.replace(template) { match -> args[match.groupValues[1].toInt() - 1].toString() }
+    placeholder.replace(template) { match ->
+        val index = match.groupValues[1].toInt()
+        require(index in 1..args.size) { "\"${match.value}\" in \"$template\" has no argument (${args.size} given)" }
+        args[index - 1].toString()
+    }
 
 /** Resolves every text of the card in the composition's language. */
 @Composable
@@ -254,8 +259,7 @@ fun rememberShareCardTexts(): ShareCardTexts {
     return ShareCardTexts(
         months = months,
         weekdays = weekdays,
-        shortDateFormat = stringResource(Res.string.date_short_format),
-        dateRangeFormat = stringResource(Res.string.date_range_format),
+        dateFormat = stringResource(Res.string.share_date_format),
         bodyweightSet = stringResource(Res.string.share_bodyweight_set),
         assistedSet = stringResource(Res.string.share_assisted_set),
         warmupOnly = stringResource(Res.string.share_warmup_only),

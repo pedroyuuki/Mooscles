@@ -220,9 +220,9 @@ class ShareCardDataTest {
         val shifted = card(source, zone = TimeZone.of("America/Sao_Paulo"))
         assertEquals("22.5\u00A0kg × 6", en.rows.single().bestSet)
         assertEquals("22,5\u00A0kg × 6", pt.rows.single().bestSet)
-        assertEquals("Tue, Oct 29 · 18:02–18:44", en.dateText)
-        assertEquals("ter., 29 out · 18:02–18:44", pt.dateText)
-        assertEquals("Tue, Oct 29 · 15:02–15:44", shifted.dateText)
+        assertEquals("Tue, Oct 29, 2024 · 18:02–18:44", en.dateText)
+        assertEquals("ter., 29 de out. de 2024 · 18:02–18:44", pt.dateText)
+        assertEquals("Tue, Oct 29, 2024 · 15:02–15:44", shifted.dateText)
         assertNotEquals(en.dateText, shifted.dateText)
         assertEquals(EnglishTexts.labels, en.labels)
         assertEquals(PortugueseTexts.labels, pt.labels)
@@ -241,7 +241,7 @@ class ShareCardDataTest {
         assertEquals("1:01:01", long.durationText)
         val incompleteOldSnapshot = card(AppData(workouts = listOf(workout(end = null))))
         assertEquals("0:00", incompleteOldSnapshot.durationText)
-        assertEquals("Thu, Jan 1 · 00:00–00:00", incompleteOldSnapshot.dateText)
+        assertEquals("Thu, Jan 1, 1970 · 00:00–00:00", incompleteOldSnapshot.dateText)
     }
 
     @Test fun missingAndActiveWorkoutsFailWithAUsefulSharingMessage() {
@@ -260,9 +260,21 @@ class ShareCardDataTest {
         assertEquals(listOf(ShareRecordRow("Saved bench", "20\u00A0kg assistance × 8")), result.records)
     }
 
+    /** The card is a lasting picture: its date says the year, in both languages, at the turn of a year too. */
+    @Test fun dateKeepsTheYear() {
+        val source = AppData(workouts = listOf(Workout("selected", "New year", at(2025, 12, 31, 23, 30),
+            at(2026, 1, 1, 0, 40), WorkoutStatus.FINISHED)))
+        assertEquals("Wed, Dec 31, 2025 · 23:30–00:40", card(source).dateText)
+        assertEquals("qua., 31 de dez. de 2025 · 23:30–00:40",
+            card(source, locale = NumberLocale.PT_BR, texts = PortugueseTexts).dateText)
+        assertEquals("Thu, Jan 1, 2026 · 00:30–01:40", card(source, zone = TimeZone.of("Europe/Berlin")).dateText)
+    }
+
     @Test fun templatesReplaceOnlyNumberedPlaceholders() {
         assertEquals("b a 3", fillTemplate("%2\$s %1\$s %3\$d", "a", "b", 3))
         assertEquals("100% a", fillTemplate("100% %1\$s", "a"))
+        val missing = assertFailsWith<IllegalArgumentException> { fillTemplate("%1\$s %2\$s", "a") }
+        assertTrue(missing.message!!.contains("%2\$s"))
     }
 }
 
@@ -270,8 +282,7 @@ class ShareCardDataTest {
 internal val EnglishTexts = ShareCardTexts(
     months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
     weekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
-    shortDateFormat = "%2\$s %1\$d",
-    dateRangeFormat = "%1\$s, %2\$s · %3\$s–%4\$s",
+    dateFormat = "%1\$s, %3\$s %2\$d, %4\$d · %5\$s–%6\$s",
     bodyweightSet = "Bodyweight × %1\$d",
     assistedSet = "%1\$s assistance × %2\$d",
     warmupOnly = "Warm-up only",
@@ -288,8 +299,7 @@ internal val EnglishTexts = ShareCardTexts(
 internal val PortugueseTexts = ShareCardTexts(
     months = listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"),
     weekdays = listOf("seg.", "ter.", "qua.", "qui.", "sex.", "sáb.", "dom."),
-    shortDateFormat = "%1\$d %2\$s",
-    dateRangeFormat = "%1\$s, %2\$s · %3\$s–%4\$s",
+    dateFormat = "%1\$s, %2\$d de %3\$s. de %4\$d · %5\$s–%6\$s",
     bodyweightSet = "Peso corporal × %1\$d",
     assistedSet = "%1\$s de assistência × %2\$d",
     warmupOnly = "Só aquecimento",

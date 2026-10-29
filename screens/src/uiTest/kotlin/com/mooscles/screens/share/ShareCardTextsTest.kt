@@ -55,7 +55,7 @@ class ShareCardTextsTest {
     @Test
     fun englishCard() {
         val card = ShareCards.from(source, "w", false, NumberLocale.EN, utc, texts("en"))
-        assertEquals("Tue, Oct 29 · 18:02–18:44", card.dateText)
+        assertEquals("Tue, Oct 29, 2024 · 18:02–18:44", card.dateText)
         assertEquals("Bodyweight × 12", card.rows.single().bestSet)
         assertEquals("Duration", card.labels.duration)
         assertEquals("PR", card.labels.recordBadge)
@@ -64,7 +64,7 @@ class ShareCardTextsTest {
     @Test
     fun portugueseCard() {
         val card = ShareCards.from(source, "w", false, NumberLocale.PT_BR, utc, texts("pt-BR"))
-        assertEquals("ter., 29 out · 18:02–18:44", card.dateText)
+        assertEquals("ter., 29 de out. de 2024 · 18:02–18:44", card.dateText)
         assertEquals("Peso corporal × 12", card.rows.single().bestSet)
         assertEquals("Duração", card.labels.duration)
         assertEquals("Nenhuma série concluída", card.labels.noCompletedSets)

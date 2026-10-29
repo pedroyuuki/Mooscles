@@ -333,8 +333,8 @@ class ShareCardPainter(private val styles: ShareCardStyles, private val density:
                 val name = measure(record.name, styles.rowName, right - rowGap - value.size.width - nameX)
                 // The badge is taller than one line of the name: the first part makes room for it.
                 result += Block(ShareCardSlice.Kind.Record, index, name, nameX, colors.textPrimary, value, right,
-                    colors.prText, badge = badge, padTop = pad, padBottom = pad)
-                    .also { block -> block.nameExtra = max(0, badge.height - lineHeight(name, 0, 1)) }
+                    colors.prText, badge = badge, padTop = pad, padBottom = pad,
+                    nameExtra = max(0, badge.height - lineHeight(name, 0, 1)))
             }
             result += spacer(px(space.s6))
         }
@@ -353,8 +353,7 @@ class ShareCardPainter(private val styles: ShareCardStyles, private val density:
             val name = measure(row.name, styles.rowName, inner - rowGap - valueColumn)
             result += Block(ShareCardSlice.Kind.Exercise, index, name, margin, colors.textPrimary, value, right,
                 if (row.hasRecord) colors.prText else colors.textPrimary, caption = caption, valueIcon = row.hasRecord,
-                padTop = pad, padBottom = pad, rule = index < card.rows.lastIndex)
-                .also { it.valueExtra = caption.size.height }
+                padTop = pad, padBottom = pad, rule = index < card.rows.lastIndex, valueExtra = caption.size.height)
         }
         return result
     }
@@ -541,13 +540,14 @@ internal class Block(
     val padBottom: Int = 0,
     val rule: Boolean = false,
     val fixedHeight: Int = 0,
+    /** Height the first part adds under the name's lines (room for a badge taller than a line). */
+    val nameExtra: Int = 0,
+    /** Height the first part adds under the value's lines (the caption). */
+    val valueExtra: Int = 0,
 ) {
     val nameLines get() = name?.lineCount ?: 0
     val valueLines get() = value?.lineCount ?: 0
     val padding get() = padTop + padBottom
-    /** Height on the first part besides the name's lines. */
-    var nameExtra = 0
-    var valueExtra = 0
 }
 
 internal class Badge(val label: TextLayoutResult, val width: Int, val height: Int)

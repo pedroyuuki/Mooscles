@@ -67,7 +67,8 @@ fun WorkoutSharePreview(workoutId: String, pounds: Boolean, onDismiss: () -> Uni
     val styles = rememberShareCardStyles()
     val fonts = LocalFontFamilyResolver.current
     val locale = currentNumberLocale()
-    LaunchedEffect(workoutId, pounds, attempt) {
+    // The texts, fonts and number style are keys too: a language change redraws the card in it.
+    LaunchedEffect(workoutId, pounds, attempt, texts, styles, fonts, locale) {
         state = try {
             withContext(Dispatchers.IO) {
                 val app = context.applicationContext as MoosclesApplication

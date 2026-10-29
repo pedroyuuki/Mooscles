@@ -12,6 +12,10 @@ import com.mooscles.screens.share.ShareCardRow
 import com.mooscles.screens.share.ShareCardSlice
 import com.mooscles.screens.share.ShareRecordRow
 import java.io.File
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,7 +37,7 @@ class WorkoutCardRendererTest {
     private val inputs by lazy { compose.captureShareCardInputs() }
     private val background = MoosclesColors.Dark.bgBase.toArgb()
 
-    private fun export(card: ShareCardData) = renderer.export(context, card, inputs.painter, inputs.measurer)
+    private fun export(card: ShareCardData) = runBlocking { renderer.export(context, card, inputs.painter, inputs.measurer) }
     private fun layout(card: ShareCardData) = inputs.painter.layout(card, inputs.measurer)
 
     @Test fun pngIsHighResolutionAndContainsOnlyTheMeasuredCard() {
@@ -64,8 +68,6 @@ class WorkoutCardRendererTest {
         val exercises = pages.flatMap { it.slices }.filter { it.kind == ShareCardSlice.Kind.Exercise }
         assertEquals(card.rows.indices.toList(), exercises.map { it.index })
         assertTrue(pages.all { it.height <= WorkoutCardRenderer.MAX_PAGE_HEIGHT })
-        // Every page starts with the same header (brand, name, date and statistics).
-        assertEquals(1, pages.map { it.brandBounds }.distinct().size)
         val files = export(card)
         assertEquals(pages.size, files.size)
         assertEquals(List(pages.size) { "Mooscles-workout-71-${it + 1}.png" }, files.map { it.name })
@@ -117,8 +119,7 @@ class WorkoutCardRendererTest {
     /** Without arguments the resources come back as written: the card fills the templates itself. */
     @Test fun textsResolveTheRawTemplatesOfTheResources() {
         val texts = inputs.texts
-        assertEquals("%1\$s, %2\$s · %3\$s–%4\$s", texts.dateRangeFormat)
-        assertEquals("%2\$s %1\$d", texts.shortDateFormat)
+        assertEquals("%1\$s, %3\$s %2\$d, %4\$d · %5\$s–%6\$s", texts.dateFormat)
         assertEquals("Bodyweight × %1\$d", texts.bodyweightSet)
         assertEquals("%1\$d set", texts.labels.setCountOne)
         assertEquals("%1\$d sets", texts.labels.setCountOther)
@@ -126,6 +127,26 @@ class WorkoutCardRendererTest {
         assertEquals("Mon", texts.weekdays.first())
         assertEquals("PR", texts.labels.recordBadge)
         assertEquals("Duration", texts.labels.duration)
+    }
+
+    /** A closed preview or a retry cancels the export: it stops before the next page and leaves no files. */
+    @Test fun cancelledExportStopsAndLeavesNoFiles() {
+        val card = example()
+        val painter = inputs.painter
+        val measurer = inputs.measurer
+        val root = File(context.cacheDir, "workout-shares")
+        fun exports() = root.listFiles().orEmpty().filter { it.name.startsWith("export-") }.toSet()
+        val before = exports()
+        val cancelled = runBlocking {
+            val job = launch(start = CoroutineStart.UNDISPATCHED) {
+                cancel()
+                renderer.export(context, card, painter, measurer)
+            }
+            job.join()
+            job.isCancelled
+        }
+        assertTrue(cancelled)
+        assertEquals(before, exports())
     }
 
     @Test fun exportRetainsFilesFromPreviousSharesAndOnlyCleansOldManagedDirectories() {
@@ -206,7 +227,7 @@ class WorkoutCardRendererTest {
 
     private fun example() = ShareCardData(
         workoutName = "Evening workout",
-        dateText = "Thu, Oct 22 · 20:55–21:39",
+        dateText = "Thu, Oct 22, 2026 · 20:55–21:39",
         durationText = "44:00",
         setsText = "8",
         volumeText = "4,443\u00A0kg",

@@ -10,6 +10,8 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.util.UUID
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Writes the common share card ([ShareCardPainter]) as PNG files in the app's private cache: one
@@ -17,8 +19,11 @@ import java.util.UUID
  * bitmap. The images come from saved workout data, never a screen capture.
  */
 class WorkoutCardRenderer {
-    /** Call on a background dispatcher. The receiver can retain these files after the chooser closes. */
-    fun export(context: Context, card: ShareCardData, painter: ShareCardPainter, measurer: TextMeasurer): List<File> {
+    /**
+     * Call on a background dispatcher. The receiver can retain these files after the chooser closes.
+     * Cancelling the caller stops the export before the next page and removes what it wrote.
+     */
+    suspend fun export(context: Context, card: ShareCardData, painter: ShareCardPainter, measurer: TextMeasurer): List<File> {
         val root = shareDirectory(context)
         check(root.isDirectory || root.mkdirs()) { "Could not create workout sharing cache" }
         cleanupObsoleteExports(context)
@@ -26,6 +31,7 @@ class WorkoutCardRenderer {
         check(directory.mkdir()) { "Could not create workout export" }
         return try {
             painter.layout(card, measurer).mapIndexed { index, page ->
+                currentCoroutineContext().ensureActive()
                 val bitmap = painter.paint(page).asAndroidBitmap()
                 try {
                     val file = File(directory, "Mooscles-workout-${card.workoutNumber}-${index + 1}.png")
