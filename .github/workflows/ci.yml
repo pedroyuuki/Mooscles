@@ -518,7 +518,8 @@ jobs:
           # failedEditKeepsTheFormAndThePhoto, lostCommandFreesTheFormAfterTheCapWithItsToast, cancelWhileSavingDoesNothing,
           # resaveAfterTheEchoSendsNothing), ExerciseInfoScreenTest +1 (photoThatTheSaveCouldNotKeepIsToastedOnce);
           # LibraryScreenTest's photo-toast test was replaced by the navigation one (net 0). Device XML: 21 + 22 + 26 tests. 487 + 6 = 493.
-          MIN_SCREENS_IOS_TESTS: 493
+          # Phase 4B task 10 fix round 2: CustomExerciseFormPhotoTest +2 (saveWaitsWhileAChosenPhotoIsPrepared, failedStagingReleasesTheForm). 493 + 2 = 495.
+          MIN_SCREENS_IOS_TESTS: 495
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

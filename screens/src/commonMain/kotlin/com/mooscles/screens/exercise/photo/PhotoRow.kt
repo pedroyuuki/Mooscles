@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.ExerciseThumbnail
 import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonVariant
+import com.mooscles.designsystem.components.Skeleton
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.exercise_form_photo
@@ -35,6 +38,8 @@ internal object PhotoRowTags {
 
     /** The preview tile while there is none (the equipment's icon). */
     const val EMPTY = "exercise-form-photo-empty"
+    /** The placeholder shown while a chosen photo is prepared. */
+    const val PREPARING = "exercise-form-photo-preparing"
     const val GALLERY = "exercise-form-photo-gallery"
     const val CAMERA = "exercise-form-photo-camera"
     const val REMOVE = "exercise-form-photo-remove"
@@ -50,6 +55,7 @@ internal object PhotoRowTags {
 internal fun PhotoRow(
     preview: ImageBitmap?,
     icon: ImageVector,
+    preparing: Boolean,
     canRemove: Boolean,
     cameraAvailable: Boolean,
     onGallery: () -> Unit,
@@ -60,7 +66,9 @@ internal fun PhotoRow(
     val label = stringResource(Res.string.exercise_form_photo)
     val media = remember(preview) { preview?.let { ExerciseMedia.Image(BitmapPainter(it)) } ?: ExerciseMedia.None }
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3), verticalAlignment = Alignment.Top) {
-        ExerciseThumbnail(
+        if (preparing) {
+            Skeleton(Modifier.size(MTheme.sizes.media).testTag(PhotoRowTags.PREPARING), RoundedCornerShape(MTheme.radius.md))
+        } else ExerciseThumbnail(
             media,
             icon,
             MTheme.sizes.media,

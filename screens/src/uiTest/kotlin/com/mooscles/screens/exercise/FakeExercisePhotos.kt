@@ -10,6 +10,7 @@ import com.mooscles.screens.exercise.photo.PhotoCapture
 import kotlin.concurrent.Volatile
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -38,6 +39,9 @@ internal class FakeExercisePhotoStore : ExercisePhotoStore {
     override val revision: StateFlow<Long> = revisionFlow
 
     @Volatile var stageWorks = true
+
+    /** While set, [stage] waits for it (the photo is still being prepared). */
+    @Volatile var stageGate: CompletableDeferred<Unit>? = null
     @Volatile var commitWorks = true
 
     /** The calls so far, in order. */
@@ -58,6 +62,7 @@ internal class FakeExercisePhotoStore : ExercisePhotoStore {
 
     override suspend fun stage(draftKey: String, source: String): Boolean {
         note("stage:$draftKey:$source")
+        stageGate?.await()
         if (!stageWorks) return false
         data.update { it.copy(drafts = it.drafts + (draftKey to PhotoFile(TinyPng, it.versions + 1)), versions = it.versions + 1) }
         revisionFlow.update { it + 1 }

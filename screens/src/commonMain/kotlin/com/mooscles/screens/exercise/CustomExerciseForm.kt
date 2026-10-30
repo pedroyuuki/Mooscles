@@ -219,7 +219,10 @@ internal fun CustomExerciseForm(
     var wait by remember { mutableStateOf<SaveWait?>(null) }
     // The save was echoed and the photo is being applied; nothing else can be sent meanwhile.
     var finishing by remember { mutableStateOf(false) }
-    val busy = wait != null || finishing
+    // A chosen photo is being prepared by the store (stage): a Save now would commit no draft yet and orphan it. Transient,
+    // never saved.
+    var staging by remember { mutableStateOf(false) }
+    val busy = wait != null || finishing || staging
     val scope = rememberCoroutineScope()
     val toast = remember { MToastHostState() }
     val photoFailedText = stringResource(Res.string.exercise_photo_failed)
@@ -227,11 +230,18 @@ internal fun CustomExerciseForm(
     val capture = photos?.capture
     val staged: (String?) -> Unit = { uri ->
         if (uri != null && photos != null && !busy) {
+            staging = true
             scope.launch {
-                if (photos.store.stage(id, uri)) {
+                val ok = try {
+                    photos.store.stage(id, uri)
+                } finally {
+                    staging = false
+                }
+                if (ok) {
                     hasDraft = true
                     removeOnSave = false
                 } else {
+                    // After staging is released: a toast is shown until it closes.
                     toast.show(photoFailedText, MToastKind.Error)
                 }
             }
@@ -462,6 +472,7 @@ internal fun CustomExerciseForm(
                             PhotoRow(
                                 preview = preview,
                                 icon = EquipmentIcons.forEquipment(equipment ?: ""),
+                                preparing = staging,
                                 canRemove = hasDraft || (initial != null && !removeOnSave && preview != null),
                                 cameraAvailable = pickCamera != null,
                                 onGallery = { if (!busy) pickGallery() },

@@ -28,6 +28,7 @@ import com.mooscles.designsystem.tokens.MoosclesTiming
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CompletableDeferred
 import com.mooscles.data.Equipment
 import com.mooscles.data.MuscleGroup
 import com.mooscles.designsystem.i18n.LocalAppLocale
@@ -491,6 +492,47 @@ class CustomExerciseFormPhotoTest {
         assertEquals(1, outcome.creations.size)
         assertEquals(listOf(id), outcome.saved)
         assertTrue(outcome.photos.store.hasPhoto(id))
+    }
+
+    @Test
+    fun saveWaitsWhileAChosenPhotoIsPrepared() = runComposeUiTest {
+        val photos = FakeExercisePhotos()
+        val gate = CompletableDeferred<Unit>().also { photos.store.stageGate = it }
+        val outcome = showForm(photos = photos)
+        onNodeWithTag(CustomExerciseFormTags.NAME).performTextReplacement("Remada articulada")
+        tap(CustomExerciseFormTags.muscle(MuscleGroup.BACK.label))
+        tap(CustomExerciseFormTags.equipment(Equipment.PLATE_LOADED_MACHINE.label))
+        tap(PhotoRowTags.GALLERY)
+        // Still preparing: the row says so, and Save does nothing (and looks busy).
+        assertTrue(exists(PhotoRowTags.PREPARING))
+        assertBusy(true)
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        assertEquals(0, outcome.creations.size)
+        gate.complete(Unit)
+        waitUntilAtLeastOneExists(hasTestTag(PhotoRowTags.PREVIEW), timeoutMillis = 5_000)
+        assertTrue(!exists(PhotoRowTags.PREPARING))
+        assertBusy(false)
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        assertEquals(1, outcome.creations.size)
+        ExerciseUi(outcome.id, "Remada articulada", "Back", "Plate-loaded machine", custom = true).arrived(outcome.state)
+        waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
+        assertTrue(photos.store.hasPhoto(outcome.id), "the photo is committed under the new id")
+    }
+
+    @Test
+    fun failedStagingReleasesTheForm() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.stageWorks = false }
+        val gate = CompletableDeferred<Unit>().also { photos.store.stageGate = it }
+        showForm(photos = photos)
+        tap(PhotoRowTags.GALLERY)
+        assertTrue(exists(PhotoRowTags.PREPARING))
+        gate.complete(Unit)
+        waitForIdle()
+        assertTrue(!exists(PhotoRowTags.PREPARING) && exists(PhotoRowTags.EMPTY))
+        assertBusy(false)
+        onNode(hasText("Não foi possível salvar a foto.") and hasAnyAncestor(hasTestTag("toast")), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
