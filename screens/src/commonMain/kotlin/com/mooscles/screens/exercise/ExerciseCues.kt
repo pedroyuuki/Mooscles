@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.mooscles.data.ExerciseCatalog
 import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.resources.Res
 import kotlinx.coroutines.Dispatchers
@@ -25,8 +26,6 @@ import kotlin.coroutines.cancellation.CancellationException
  * and kept in memory (plan decision 20).
  */
 internal object ExerciseCues {
-    private const val CATALOG_PREFIX = "catalog_"
-
     /** The file of one language, as [Res.readBytes] takes it. */
     fun path(portuguese: Boolean): String = "files/exercise_cues/${if (portuguese) "pt-BR" else "en"}.json"
 
@@ -42,7 +41,7 @@ internal object ExerciseCues {
 
     /** The cues of [exerciseId]; none for a custom exercise (its id never has the catalog prefix). */
     fun cuesFor(cues: Map<String, List<String>>, exerciseId: String): List<String> =
-        if (exerciseId.startsWith(CATALOG_PREFIX)) cues[exerciseId.removePrefix(CATALOG_PREFIX)].orEmpty() else emptyList()
+        if (exerciseId.startsWith(ExerciseCatalog.ID_PREFIX)) cues[exerciseId.removePrefix(ExerciseCatalog.ID_PREFIX)].orEmpty() else emptyList()
 
     @OptIn(ExperimentalResourceApi::class)
     private val process = CueCache { Res.readBytes(it) }

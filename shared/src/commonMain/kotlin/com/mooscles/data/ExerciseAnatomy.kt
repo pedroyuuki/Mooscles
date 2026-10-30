@@ -8,8 +8,6 @@ data class Anatomy(val primary: List<MuscleRegion>, val secondary: List<MuscleRe
  * (not copied from a dataset), plus the fallback that custom exercises get from their muscle group.
  */
 object ExerciseAnatomy {
-    private const val CATALOG_PREFIX = "catalog_"
-
     /** Keyed by catalog stable id, without the `catalog_` prefix. */
     val catalog: Map<String, Anatomy> = anatomyTable
 
@@ -52,8 +50,8 @@ object ExerciseAnatomy {
      * muscle group whose label is [muscleLabel], or null for full body and unknown labels.
      */
     fun forExercise(id: String, muscleLabel: String): Anatomy? {
-        if (id.startsWith(CATALOG_PREFIX)) {
-            catalog[id.removePrefix(CATALOG_PREFIX)]?.let { return it }
+        if (id.startsWith(ExerciseCatalog.ID_PREFIX)) {
+            catalog[id.removePrefix(ExerciseCatalog.ID_PREFIX)]?.let { return it }
         }
         val group = MuscleGroup.entries.firstOrNull { it.label == muscleLabel } ?: return null
         return forMuscleGroup(group)

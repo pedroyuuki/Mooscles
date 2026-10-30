@@ -12,6 +12,9 @@ import com.mooscles.data.MuscleGroup as Muscle
  * Machine entries identify resistance type so their performance histories remain independent.
  */
 object ExerciseCatalog {
+    /** The prefix of every catalog id (`catalog_<stableId>`); custom exercises never take it. */
+    const val ID_PREFIX = "catalog_"
+
     val exercises: List<Exercise> = section(Gear.BARBELL) {
         exercise("barbell_bench_flat", "Barbell bench press", Muscle.CHEST)
         exercise("barbell_bench_incline", "Incline barbell bench press", Muscle.CHEST)
@@ -331,7 +334,7 @@ object ExerciseCatalog {
             convention: Load = defaultConvention
         ) {
             items += Exercise(
-                id = "catalog_$stableId",
+                id = "$ID_PREFIX$stableId",
                 name = name,
                 muscle = muscle,
                 equipment = equipment,

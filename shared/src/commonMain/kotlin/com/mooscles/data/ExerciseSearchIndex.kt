@@ -44,14 +44,12 @@ class ExerciseSearchIndex private constructor(
         own.any { candidate -> terms.all { candidate.contains(it) } }
 
     companion object {
-        private const val CATALOG_PREFIX = "catalog_"
-
         fun build(entries: List<SearchEntry>): ExerciseSearchIndex =
             ExerciseSearchIndex(entries.map(SearchEntry::id), entries.map(::candidatesOf))
 
         private fun candidatesOf(entry: SearchEntry): List<String> {
-            val portugueseName = if (entry.id.startsWith(CATALOG_PREFIX)) {
-                ExerciseNames.portuguese[entry.id.removePrefix(CATALOG_PREFIX)]
+            val portugueseName = if (entry.id.startsWith(ExerciseCatalog.ID_PREFIX)) {
+                ExerciseNames.portuguese[entry.id.removePrefix(ExerciseCatalog.ID_PREFIX)]
             } else {
                 null
             }

@@ -388,7 +388,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         name: String, muscle: MuscleGroup, equipment: Equipment, convention: LoadConvention, id: String = newId(),
     ): String = db.writeTransaction {
         val valid = EditRules.name(name)
-        dataRequire(id.isNotBlank() && !id.startsWith(CATALOG_ID_PREFIX), DataError.INVALID_VALUE) { "Invalid exercise id." }
+        dataRequire(id.isNotBlank() && !id.startsWith(ExerciseCatalog.ID_PREFIX), DataError.INVALID_VALUE) { "Invalid exercise id." }
         dataRequire(dao.exercise(id) == null, DataError.INVALID_VALUE) { "Exercise already exists." }
         dao.insertExercise(Exercise(id = id, name = valid, muscle = muscle, equipment = equipment, convention = convention, custom = true))
         id
@@ -581,7 +581,5 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
 
     private companion object {
         const val RESTORE_UNAVAILABLE = "This set can no longer be restored."
-        /** The prefix of every catalog id (`ExerciseCatalog`); custom exercises never take it. */
-        const val CATALOG_ID_PREFIX = "catalog_"
     }
 }

@@ -63,8 +63,8 @@ private fun FiguresPage() {
     val entries = remember {
         val catalog = ExerciseCatalog.exercises.associateBy { it.id }
         ExerciseFigures.stableIds.mapNotNull { stableId ->
-            val frames = ExerciseFigures.forExercise("catalog_$stableId") ?: return@mapNotNull null
-            val exercise = catalog.getValue("catalog_$stableId").let {
+            val frames = ExerciseFigures.forExercise("${ExerciseCatalog.ID_PREFIX}$stableId") ?: return@mapNotNull null
+            val exercise = catalog.getValue("${ExerciseCatalog.ID_PREFIX}$stableId").let {
                 ExerciseUi(it.id, it.name, it.muscle.label, it.equipment.label, it.convention.label)
             }
             FigureEntry(stableId, exercise, frames, exerciseMedia(exercise))

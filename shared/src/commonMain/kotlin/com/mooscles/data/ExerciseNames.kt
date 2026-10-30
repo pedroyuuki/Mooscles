@@ -6,8 +6,6 @@ package com.mooscles.data
  * database, and screens pick the language of the label when they show it.
  */
 object ExerciseNames {
-    private const val CATALOG_PREFIX = "catalog_"
-
     /** Keyed by catalog stable id, without the `catalog_` prefix. */
     val portuguese: Map<String, String> = portugueseNameEntries.toMap()
 
@@ -18,8 +16,8 @@ object ExerciseNames {
      * The parameter [portuguese] (the screen language) shadows the map; `this.portuguese` is the map.
      */
     fun display(id: String, storedName: String, custom: Boolean, portuguese: Boolean): String {
-        if (custom || !id.startsWith(CATALOG_PREFIX)) return storedName
-        val stableId = id.removePrefix(CATALOG_PREFIX)
+        if (custom || !id.startsWith(ExerciseCatalog.ID_PREFIX)) return storedName
+        val stableId = id.removePrefix(ExerciseCatalog.ID_PREFIX)
         val englishName = ExerciseSearch.catalogNames[id] ?: return storedName
         return if (portuguese) this.portuguese[stableId] ?: englishName else englishName
     }

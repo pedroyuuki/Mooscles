@@ -1,5 +1,6 @@
 package com.mooscles.screens.exercise.figures
 
+import com.mooscles.data.ExerciseCatalog
 import com.mooscles.data.MuscleRegion
 import com.mooscles.designsystem.illustration.FigureSegment
 
@@ -8,8 +9,6 @@ import com.mooscles.designsystem.illustration.FigureSegment
  * `stableId`. The pilot has 20; the lots after the G1 gate add the rest, family by family.
  */
 internal object ExerciseFigures {
-    private const val CATALOG_PREFIX = "catalog_"
-
     /** The 20 pilot exercises of spec D4, in its order. */
     val PILOT: List<String> = listOf(
         "barbell_bench_flat", "barbell_back_squat_high_bar", "barbell_deadlift_conventional",
@@ -45,7 +44,7 @@ internal object ExerciseFigures {
 
     /** The figure of the exercise whose id is [exerciseId] (`catalog_…`); null for a custom exercise or one still without a figure. */
     fun forExercise(exerciseId: String): FigureFrames? =
-        if (exerciseId.startsWith(CATALOG_PREFIX)) all[exerciseId.removePrefix(CATALOG_PREFIX)] else null
+        if (exerciseId.startsWith(ExerciseCatalog.ID_PREFIX)) all[exerciseId.removePrefix(ExerciseCatalog.ID_PREFIX)] else null
 }
 
 /**
