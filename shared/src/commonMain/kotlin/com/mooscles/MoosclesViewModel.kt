@@ -162,7 +162,6 @@ abstract class MoosclesViewModel(
         if (services.preferences.snapshot().selectedRoutineFolderId == id) services.preferences.selectRoutineFolder(RoutineFolder.DEFAULT_ID)
     }
     override fun deleteRoutine(id: String) = act { repo.deleteRoutine(id) }
-    override fun moveRoutine(id: String, direction: Int) = act { repo.moveRoutine(id, direction) }
     override fun createRoutineFolder(name: String) = act {
         val id = repo.createRoutineFolder(name)
         services.preferences.selectRoutineFolder(id)
@@ -178,7 +177,6 @@ abstract class MoosclesViewModel(
     override fun reorderRoutineExercises(routineId: String, ids: List<String>) = act { repo.reorderRoutineExercises(routineId, ids) }
     override fun replaceRoutineExercise(entryId: String, exerciseId: String) = act { repo.replaceRoutineExercise(entryId, exerciseId) }
     override fun removeRoutineExercise(entryId: String) = act { repo.removeRoutineExercise(entryId) }
-    override fun moveRoutineExercise(entryId: String, direction: Int) = act { repo.moveRoutineExercise(entryId, direction) }
     override fun addRoutineSet(entryId: String) = act { repo.addRoutineSet(entryId) }
     override fun removeRoutineSet(setId: String) = act { repo.removeRoutineSet(setId) }
     override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = act { repo.updateRoutineSet(setId, reps, weightKg) }
@@ -189,10 +187,6 @@ abstract class MoosclesViewModel(
             targetReps = set.reps, targetWeightKg = set.weightKg, inheritPr = set.inherited, warmup = set.warmup))
     }
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = act { repo.updateRoutineExerciseRest(entryId, seconds) }
-    override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) = act {
-        val item = dataRequireNotNull(repo.routineExercise(entryId), DataError.ROUTINE_NOT_FOUND) { "Routine exercise unavailable" }
-        repo.updateRoutineExercise(item.copy(plannedSets = sets, targetReps = reps, targetWeightKg = weightKg, restSeconds = restSeconds))
-    }
     override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) = act(id) {
         repo.createCustomExercise(name, muscleOf(muscle), equipmentOf(equipment), conventionOf(convention), id)
     }

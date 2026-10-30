@@ -64,9 +64,21 @@ class UiFlowTest {
             entry != null && data.plannedSets(entry.id).size == 2
         }
         // The routine's rest, from the editor's rest chip (Task 13), with a value that is not the default: 2:00 + 0:15.
-        // Planned reps wait for Task 14 and stay blank here.
         val editorData = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
         val entryId = editorData.routineItems(editorData.routines.single { it.name == name }.id).single().id
+        // Planned reps first (Task 14): the new set starts empty; the first tap shows the stepper, the second opens the keyboard.
+        val firstSetId = editorData.plannedSets(entryId).first().id
+        val repsTag = "routine-set-$firstSetId-reps"
+        val repsField = hasSetTextAction() and hasAnyAncestor(hasTestTag(repsTag))
+        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(repsTag))
+        compose.onNode(repsField, useUnmergedTree = true)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
+        compose.onNode(repsField, useUnmergedTree = true).performClick()
+        compose.onNode(repsField, useUnmergedTree = true).performClick()
+        compose.onNode(repsField, useUnmergedTree = true).performTextReplacement("8")
+        compose.waitUntil(10_000) {
+            runBlocking(Dispatchers.IO) { app.repository.snapshot() }.plannedSets(entryId).firstOrNull()?.targetReps == 8
+        }
         val restTag = "routine-exercise-$entryId-rest"
         compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(restTag))
         compose.onNodeWithTag(restTag).performClick()
@@ -85,13 +97,13 @@ class UiFlowTest {
         val started = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
         val planned = started.routineItems(started.routines.single { it.name == name }.id).single()
         val workoutExercise = started.workoutItems(started.activeWorkout!!.id).single()
-        assertEquals(0, planned.targetReps)
+        assertEquals(8, planned.targetReps)
         assertEquals(135, planned.restSeconds)
         assertEquals(135, workoutExercise.restSeconds)
         assertEquals(planned.routineId, started.activeWorkout!!.sourceRoutineId)
-        assertEquals(listOf(0, 0), started.plannedSets(planned.id).map { it.targetReps })
+        assertEquals(listOf(8, 0), started.plannedSets(planned.id).map { it.targetReps })
         val sets = started.exerciseSets(workoutExercise.id)
-        assertEquals(listOf(0, 0), sets.map { it.reps })
+        assertEquals(listOf(8, 0), sets.map { it.reps })
         assertTrue(sets.none { it.completed })
         // This workout's next rests, from the exercise's rest sheet: 2:15 - 0:15.
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("exercise-rest-${workoutExercise.id}"))
@@ -105,7 +117,7 @@ class UiFlowTest {
             runBlocking(Dispatchers.IO) { app.repository.snapshot() }.workoutExercises.single { it.id == workoutExercise.id }.restSeconds == 120
         }
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("workout-set-${sets[0].id}"))
-        field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
+        field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("8")))
         field(sets[0].id, SetRowLoadTag).performTextReplacement("20")
         field(sets[0].id, SetRowRepsTag).performTextReplacement("10")
         compose.onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(hasTestTag("workout-set-${sets[0].id}"))).performClick()

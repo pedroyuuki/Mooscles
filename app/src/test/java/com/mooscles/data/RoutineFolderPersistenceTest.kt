@@ -142,26 +142,6 @@ class RoutineFolderPersistenceTest {
         }
     }
 
-    @Test fun routineMoveUsesNeighborsInItsFolderWithoutChangingOtherFoldersOrActiveWorkout() = runBlocking {
-        val repo = open()
-        val split = repo.createRoutineFolder("Split")
-        val first = repo.createRoutine("First", split)
-        val elsewhere = repo.createRoutine("Elsewhere")
-        val second = repo.createRoutine("Second", split)
-        repo.startEmpty("Keep tracking", now = 1000)
-        val before = repo.snapshot()
-        repo.moveRoutine(second, -1)
-        val changed = repo.snapshot()
-        assertEquals(listOf(second, elsewhere, first), changed.routines.map { it.id })
-        assertEquals(before.routines.single { it.id == elsewhere }, changed.routines.single { it.id == elsewhere })
-        assertEquals(before.workouts, changed.workouts)
-        assertEquals(listOf(second, first), changed.routines.filter { it.folderId == split }.map { it.id })
-        repo.moveRoutine(second, -1)
-        assertEquals(changed, repo.snapshot())
-        repo.moveRoutine(second, 1)
-        assertEquals(before, repo.snapshot())
-    }
-
     private fun createSchemaFourFixture(): Map<String, List<List<Any?>>> {
         val schema = JSONObject(javaClass.classLoader!!.getResourceAsStream("rollback/v142-room-schema4.json")!!
             .bufferedReader().use { it.readText() }).getJSONObject("database")

@@ -48,7 +48,6 @@ class RecordingActions : MoosclesActions {
     override fun reorderRoutineFolders(ids: List<String>) = record("reorderRoutineFolders", ids)
     override fun deleteRoutineFolder(id: String) = record("deleteRoutineFolder", id)
     override fun deleteRoutine(id: String) = record("deleteRoutine", id)
-    override fun moveRoutine(id: String, direction: Int) = record("moveRoutine", id, direction)
     override fun createRoutineFolder(name: String) = record("createRoutineFolder", name)
     override fun renameRoutineFolder(id: String, name: String) = record("renameRoutineFolder", id, name)
     override fun selectRoutineFolder(id: String) = record("selectRoutineFolder", id)
@@ -58,9 +57,6 @@ class RecordingActions : MoosclesActions {
     override fun reorderRoutineExercises(routineId: String, ids: List<String>) = record("reorderRoutineExercises", routineId, ids)
     override fun replaceRoutineExercise(entryId: String, exerciseId: String) = record("replaceRoutineExercise", entryId, exerciseId)
     override fun removeRoutineExercise(entryId: String) = record("removeRoutineExercise", entryId)
-    override fun moveRoutineExercise(entryId: String, direction: Int) = record("moveRoutineExercise", entryId, direction)
-    override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) =
-        record("updateRoutineExercise", entryId, sets, reps, weightKg, restSeconds)
     override fun addRoutineSet(entryId: String) = record("addRoutineSet", entryId)
     override fun removeRoutineSet(setId: String) = record("removeRoutineSet", setId)
     override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = record("updateRoutineSet", setId, reps, weightKg)

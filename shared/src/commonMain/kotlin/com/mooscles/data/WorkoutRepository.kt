@@ -324,14 +324,6 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.routines().forEachIndexed { index, item -> dao.updateRoutine(item.copy(position = index)) }
     }
 
-    suspend fun moveRoutine(id: String, direction: Int) = db.writeTransaction {
-        val selected = dataRequireNotNull(dao.routine(id), DataError.ROUTINE_NOT_FOUND) { "Routine not found." }
-        val items = dao.routines().filter { it.folderId == selected.folderId }.toMutableList()
-        val positions = items.map { it.position }
-        move(items, id, direction) { it.id }
-        items.forEachIndexed { index, item -> dao.updateRoutine(item.copy(position = positions[index])) }
-    }
-
     suspend fun reorderRoutines(ids: List<String>) = db.writeTransaction {
         val items = dao.routines()
         dataRequire(ids.toSet() == items.map { it.id }.toSet() && ids.size == items.size, DataError.INVALID_VALUE) { "Invalid routine order." }
@@ -491,13 +483,6 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         val item = dao.routineExercise(id) ?: return@writeTransaction
         dao.deleteRoutineExercise(id)
         dao.routineItems(item.routineId).forEachIndexed { index, entry -> dao.updateRoutineExercise(entry.copy(position = index)) }
-    }
-
-    suspend fun moveRoutineExercise(id: String, direction: Int) = db.writeTransaction {
-        val entry = dataRequireNotNull(dao.routineExercise(id), DataError.ROUTINE_NOT_FOUND) { "Routine exercise not found." }
-        val items = dao.routineItems(entry.routineId).toMutableList()
-        move(items, id, direction) { it.id }
-        items.forEachIndexed { index, item -> dao.updateRoutineExercise(item.copy(position = index)) }
     }
 
     suspend fun reorderRoutineExercises(routineId: String, ids: List<String>) = db.writeTransaction {
