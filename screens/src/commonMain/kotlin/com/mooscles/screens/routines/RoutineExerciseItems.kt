@@ -1,35 +1,25 @@
 package com.mooscles.screens.routines
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import com.mooscles.designsystem.components.ExerciseCardFooter
 import com.mooscles.designsystem.components.ExerciseCardHeader
 import com.mooscles.designsystem.components.ExerciseCardSegment
 import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonSize
 import com.mooscles.designsystem.components.MButtonVariant
-import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.format.MoosclesNumbers
-import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.ReorderHandle
 import com.mooscles.designsystem.interaction.ReorderState
 import com.mooscles.designsystem.interaction.reorderItem
 import com.mooscles.designsystem.theme.MTheme
-import com.mooscles.domain.WeightUnits
 import com.mooscles.screens.exercise.photo.rememberExerciseMedia
 import com.mooscles.screens.format.equipmentLabel
 import com.mooscles.screens.format.exerciseName
@@ -38,10 +28,9 @@ import com.mooscles.screens.format.targetLine
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.editor_exercise_more
 import com.mooscles.screens.resources.editor_rest_chip
-import com.mooscles.screens.resources.editor_set_warmup_short
+import com.mooscles.screens.resources.editor_set_limit
 import com.mooscles.screens.resources.workout_card_meta_short
 import com.mooscles.screens.workout.EquipmentIcons
-import com.mooscles.screens.workout.unitSymbol
 import com.mooscles.ui.PlannedExerciseUi
 import com.mooscles.ui.RoutineSetUi
 import com.mooscles.ui.RoutineTargetUi
@@ -56,6 +45,13 @@ internal class RoutineExerciseCallbacks(
     val onRest: (PlannedExerciseUi) -> Unit,
     /** The footer's "Add set". */
     val onAddSet: (PlannedExerciseUi) -> Unit,
+    /** What the planned set rows have typed and not seen come back, and the set in edit. */
+    val drafts: PlannedSetDrafts,
+    val editing: PlannedEditing,
+    /** One write of a planned set (`updateRoutineSet`). */
+    val onWrite: (PlannedSave) -> Unit,
+    /** The label of a set: its menu. */
+    val onSetMenu: (entryId: String, setId: String) -> Unit,
 )
 
 /** The lazy key of the planned set [setId]'s line, and of the footer of [entryId]: both outside the reorder keys, the entry ids. */
@@ -66,14 +62,11 @@ private const val HEADER_TYPE = "routine-exercise-header"
 private const val SET_TYPE = "routine-exercise-set"
 private const val FOOTER_TYPE = "routine-exercise-footer"
 
-/** A load or a repetition count nobody planned. */
-private const val BLANK = "—"
-
 /**
  * The cards of [entries] (in the order shown, which is the reorder state's) as lazy list items that draw one card each
  * (spec "Editor de rotina"): the header (lazy key = the entry's id, the one reorderable item, with the drag handle,
  * the media, the name, "Chest · Barbell", the options, the rest chip and the target line), one line per planned set
- * (key `set:<id>`; a read-only line here, the editable row in Task 14) and the "Add set" footer (`footer:<id>`).
+ * (key `set:<id>`: the editable [PlannedSetRow]) and the "Add set" footer (`footer:<id>`, off at [MAX_PLANNED_SETS] sets and saying why).
  * While [collapsed] (an exercise is being dragged, plan decision 14) only the headers are emitted, so the reorderable
  * items are contiguous; the list must have no spacing of its own, or the card splits. Put a [com.mooscles.designsystem.interaction.ReorderAnnouncer]
  * beside the list, and no `animateItem`: [reorderItem] animates the placement.
@@ -93,13 +86,27 @@ internal fun LazyListScope.routineExerciseItems(
         val numbers = workingNumbers(entry.setTargets)
         itemsIndexed(entry.setTargets, key = { _, set -> plannedSetKey(set.id) }, contentType = { _, _ -> SET_TYPE }) { index, set ->
             ExerciseCardSegment {
-                PlannedSetLine(set, numbers[index], pounds)
+                PlannedSetRow(
+                    set = set,
+                    entry = entry,
+                    number = numbers[index],
+                    position = index + 1,
+                    pounds = pounds,
+                    drafts = callbacks.drafts,
+                    editing = callbacks.editing,
+                    onWrite = callbacks.onWrite,
+                    onMenu = { callbacks.onSetMenu(entry.id, set.id) },
+                )
             }
         }
+        val full = entry.setTargets.size >= MAX_PLANNED_SETS
         item(key = plannedFooterKey(entry.id), contentType = FOOTER_TYPE) {
             ExerciseCardFooter(
                 onAddSet = { callbacks.onAddSet(entry) },
                 modifier = Modifier.testTag(RoutineEditorTags.footer(entry.id)).padding(bottom = MTheme.space.s3),
+                addEnabled = !full,
+                addTag = RoutineEditorTags.addSet(entry.id),
+                note = if (full) stringResource(Res.string.editor_set_limit) else null,
             )
         }
     }
@@ -162,31 +169,4 @@ private fun RowScope.RestChip(entry: PlannedExerciseUi, callbacks: RoutineExerci
         size = MButtonSize.S,
         icon = MIcons.Timer,
     )
-}
-
-/**
- * One planned set, read-only: its label (the number of a working set, "W"/"A" for a warm-up), its load and its
- * repetitions, "—" when nobody planned one. Read as one node. Task 14 replaces it with the editable row.
- */
-@Composable
-private fun PlannedSetLine(set: RoutineSetUi, number: Int, pounds: Boolean) {
-    val colors = MTheme.colors
-    val label = if (set.warmup) stringResource(Res.string.editor_set_warmup_short) else number.toString()
-    val load = set.weightKg?.takeIf { it != 0.0 }?.let {
-        MoosclesNumbers.weight(MoosclesNumbers.plain(WeightUnits.fromKg(it, pounds)), unitSymbol(pounds), currentNumberLocale())
-    } ?: BLANK
-    val reps = set.reps.takeIf { it > 0 }?.toString() ?: BLANK
-    Row(
-        Modifier
-            .testTag(RoutineEditorTags.set(set.id))
-            .fillMaxWidth()
-            .heightIn(min = MTheme.sizes.rowMin)
-            .semantics(mergeDescendants = true) {},
-        horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MText(label, MTheme.type.numMd, color = colors.textSecondary, modifier = Modifier.weight(1f))
-        MText(load, MTheme.type.numMd, color = colors.textPrimary, modifier = Modifier.weight(2f).testTag(RoutineEditorTags.setLoad(set.id)))
-        MText(reps, MTheme.type.numMd.copy(textAlign = TextAlign.End), color = colors.textPrimary, modifier = Modifier.weight(2f))
-    }
 }

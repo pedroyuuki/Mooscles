@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.mooscles.designsystem.components.MBottomSheet
 import com.mooscles.designsystem.components.MDialog
@@ -178,7 +179,10 @@ private fun SheetTitle(text: String) {
     )
 }
 
-/** One item of a menu sheet: an icon and a label in a 56 dp row, the whole row a button. */
+/**
+ * One item of a menu sheet: an icon and a label in a 56 dp row, the whole row a button. A [selected] item (the current
+ * choice of a list of types) is marked with a check and reported as selected.
+ */
 @Composable
 internal fun MenuItem(
     icon: ImageVector,
@@ -186,6 +190,7 @@ internal fun MenuItem(
     tag: String,
     enabled: Boolean = true,
     destructive: Boolean = false,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = MTheme.colors
@@ -205,6 +210,7 @@ internal fun MenuItem(
             .mFocusRing(shape, source)
             .background(if (pressed && enabled) colors.bgInset else Color.Transparent, shape)
             .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { this.selected = selected }
             .sizeIn(minHeight = MTheme.sizes.rowMin)
             .padding(horizontal = MTheme.space.s2, vertical = MTheme.space.s2),
         horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3),
@@ -212,5 +218,6 @@ internal fun MenuItem(
     ) {
         MIcon(icon, contentDescription = null, size = MTheme.sizes.icon20, tint = if (destructive && enabled) colors.dangerText else if (enabled) colors.textSecondary else colors.textDisabled)
         MText(label, MTheme.type.bodyLg, color = content, modifier = Modifier.weight(1f))
+        if (selected) MIcon(MIcons.Check, contentDescription = null, size = MTheme.sizes.icon20, tint = colors.accentText)
     }
 }

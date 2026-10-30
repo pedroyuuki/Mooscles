@@ -24,4 +24,18 @@
     <!-- The label of a planned warm-up set in the set list (the working sets are numbered). -->
     <string name="editor_set_warmup_short">W</string>
     <string name="editor_rest_note">Applies to workouts you start from this routine.</string>
+    <!-- Task 14: the planned sets of the editor. -->
+    <string name="editor_set_follows_record">follows the record</string>
+    <string name="editor_set_no_load">No load</string>
+    <string name="editor_set_bodyweight">Bodyweight</string>
+    <string name="editor_set_type">Set type</string>
+    <string name="editor_set_normal">Normal</string>
+    <string name="editor_set_warmup">Warm-up</string>
+    <string name="editor_set_follow_record">Follow the record</string>
+    <string name="editor_set_remove">Remove set</string>
+    <string name="editor_set_last">A routine needs at least one set per exercise.</string>
+    <string name="editor_add_set">Add set</string>
+    <string name="editor_set_limit">Up to 50 sets per exercise.</string>
+    <string name="editor_set_label">Set %1$d</string>
+    <string name="editor_set_warmup_label">Warm-up set</string>
 </resources>

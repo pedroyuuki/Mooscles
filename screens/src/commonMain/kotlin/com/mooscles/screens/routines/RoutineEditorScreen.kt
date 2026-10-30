@@ -52,6 +52,7 @@ import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.designsystem.components.MToastResult
 import com.mooscles.designsystem.components.Skeleton
 import com.mooscles.designsystem.components.TopBar
+import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.ReorderAnnouncer
@@ -77,7 +78,10 @@ import com.mooscles.screens.resources.editor_replace
 import com.mooscles.screens.resources.editor_replace_body
 import com.mooscles.screens.resources.editor_replace_confirm
 import com.mooscles.screens.resources.editor_replace_title
+import com.mooscles.screens.resources.editor_set_limit
 import com.mooscles.screens.resources.editor_start
+import com.mooscles.screens.resources.workout_set_removed
+import com.mooscles.screens.resources.workout_undo
 import com.mooscles.screens.resources.routines_cancel
 import com.mooscles.screens.resources.routines_copy_name
 import com.mooscles.screens.resources.routines_duplicate
@@ -96,8 +100,10 @@ import com.mooscles.screens.workout.ScreenErrorToast
 import com.mooscles.screens.workout.uiErrorText
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.PlannedExerciseUi
+import com.mooscles.ui.RoutineSetUi
 import com.mooscles.ui.UiError
 import com.mooscles.ui.UiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -144,6 +150,10 @@ internal object RoutineEditorTags {
     fun footer(entryId: String) = "routine-exercise-$entryId-footer"
     fun set(setId: String) = "routine-set-$setId"
     fun setLoad(setId: String) = "routine-set-$setId-load"
+    fun setReps(setId: String) = "routine-set-$setId-reps"
+    fun setLabel(setId: String) = "routine-set-$setId-label"
+    fun setRecord(setId: String) = "routine-set-$setId-record"
+    fun addSet(entryId: String) = "routine-exercise-$entryId-add-set"
 }
 
 // Keys of the list's items that are not exercises: none can equal an entry id, which the reorder state uses as its keys.
@@ -151,6 +161,9 @@ private const val KEY_NAME = "editor:name"
 private const val KEY_EMPTY = "editor:empty"
 private const val KEY_ADD = "editor:add"
 private const val KEY_SKELETON = "editor:skeleton"
+
+/** Stands for the number of a removed set in the toast's text, which is read before the number is known. */
+private const val SET_NUMBER_TOKEN = "\u0000"
 
 /** What a copy or an addition is waiting to see in the state. */
 private enum class WaitKind { COPY, ADD }
@@ -228,6 +241,9 @@ fun RoutineEditorRoute(
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmReplace by rememberSaveable { mutableStateOf<String?>(null) }
     var replacing by rememberSaveable { mutableStateOf<String?>(null) }
+    // The planned set whose menu is open (its id), and the set in edit (its id and field; the keyboard is not kept).
+    var setMenuFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val editing = rememberPlannedEditing()
     // The id of the workout the "in progress" dialog was opened for: it closes when that workout is not the one under way.
     var blockedFor by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(active?.id) { if (blockedFor != active?.id) blockedFor = null }
@@ -280,15 +296,56 @@ fun RoutineEditorRoute(
         }
     }
 
-    val callbacks = remember {
+    // The drafts of the planned sets: in memory only (a value nobody confirmed is never saved by a recreation), keyed
+    // on the unit and the number format, and reading the sets from the state as it is now.
+    val locale = currentNumberLocale()
+    val sets = remember(entries) { entries.flatMap { it.setTargets }.associateBy { it.id } }
+    val currentSets by rememberUpdatedState(sets)
+    val drafts = remember(pounds, locale) { PlannedSetDrafts(pounds, locale) { currentSets[it] } }
+    // Sets that are gone (removed here or elsewhere) take their drafts and their edit with them; so does a replaced
+    // exercise (its sets keep their ids but are another movement's: nothing typed for the old one may be written).
+    val exerciseOf = remember { HashMap<String, String>() }
+    LaunchedEffect(entries, drafts) {
+        if (state.loading) return@LaunchedEffect
+        drafts.retain(sets.keys)
+        for (entry in entries) {
+            val before = exerciseOf.put(entry.id, entry.exercise.id)
+            if (before != null && before != entry.exercise.id) entry.setTargets.forEach { drafts.drop(it.id) }
+        }
+        editing.setId?.let { if (it !in sets) editing.end() }
+    }
+    val removedTemplate = stringResource(Res.string.workout_set_removed, SET_NUMBER_TOKEN)
+    val undoText = stringResource(Res.string.workout_undo)
+    var undoJob by remember { mutableStateOf<Job?>(null) }
+    val callbacks = remember(drafts) {
         RoutineExerciseCallbacks(
             onMenu = { menuFor = it.id },
             onRest = { restFor = it.id },
             onAddSet = { currentActions.addRoutineSet(it.id) },
+            drafts = drafts,
+            editing = editing,
+            onWrite = { currentActions.updateRoutineSet(it.setId, it.reps, it.weightKg) },
+            onSetMenu = { _, setId ->
+                editing.end()
+                setMenuFor = setId
+            },
         )
     }
+    // "Set 3 removed" with "Undo", which puts the set back as it stood (F15). Launched from the screen's own scope, not
+    // from an effect, and a newer removal takes the toast: the previous one closes.
+    val removeSet: (PlannedExerciseUi, RoutineSetUi, Int, Int) -> Unit = { entry, set, index, number ->
+        val snapshot = drafts.snapshot(set)
+        drafts.drop(set.id)
+        if (editing.isEditing(set.id)) editing.end()
+        currentActions.removeRoutineSet(set.id)
+        undoJob?.cancel()
+        undoJob = toastScope.launch {
+            val shown = host.show(removedTemplate.replace(SET_NUMBER_TOKEN, number.toString()), MToastKind.Info, undoText)
+            if (shown == MToastResult.ActionPerformed) currentActions.restoreRoutineSet(entry.id, index, snapshot)
+        }
+    }
     val space = MTheme.space
-    Box(modifier.fillMaxSize().background(MTheme.colors.bgBase)) {
+    Box(modifier.fillMaxSize().background(MTheme.colors.bgBase).endsPlannedEditingOnOutsideTap(editing)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             TopBar(
                 title = null,
@@ -372,7 +429,16 @@ fun RoutineEditorRoute(
             }
         }
         ReorderAnnouncer(reorder)
-        ScreenErrorToast(state.errorCode, actions, host)
+        // The 51st set coming back says this screen's limit (50), not the workout's.
+        val setLimit = state.errorCode == UiError.SET_LIMIT
+        ScreenErrorToast(state.errorCode.takeUnless { setLimit }, actions, host)
+        val setLimitText = stringResource(Res.string.editor_set_limit)
+        LaunchedEffect(setLimit) {
+            if (setLimit) {
+                actions.clearError()
+                toastScope.launch { host.show(setLimitText, MToastKind.Error) }
+            }
+        }
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing))
     }
 
@@ -452,6 +518,41 @@ fun RoutineEditorRoute(
                         actions.addRoutineExercises(routine.id, picked.map { it.id })
                     }
                 },
+            )
+        }
+    }
+
+    setMenuFor?.let { id ->
+        val entry = entries.firstOrNull { e -> e.setTargets.any { it.id == id } }
+        val set = entry?.setTargets?.firstOrNull { it.id == id }
+        if (entry == null || set == null) {
+            if (!state.loading) LaunchedEffect(id) { setMenuFor = null }
+        } else {
+            val index = entry.setTargets.indexOf(set)
+            val number = if (set.warmup) index + 1 else entry.setTargets.take(index + 1).count { !it.warmup }
+            PlannedSetMenuSheet(
+                set = set,
+                number = number,
+                last = entry.setTargets.size <= 1,
+                onNormal = {
+                    setMenuFor = null
+                    if (set.warmup) actions.setRoutineSetWarmup(set.id, false)
+                },
+                onWarmup = {
+                    setMenuFor = null
+                    if (!set.warmup) actions.setRoutineSetWarmup(set.id, true)
+                },
+                onFollowRecord = {
+                    setMenuFor = null
+                    // The person's own edits of this set give way to the record, and a late echo of them must not bring them back.
+                    drafts.drop(set.id)
+                    actions.inheritRoutineSet(set.id)
+                },
+                onRemove = {
+                    setMenuFor = null
+                    removeSet(entry, set, index, number)
+                },
+                onDismiss = { setMenuFor = null },
             )
         }
     }

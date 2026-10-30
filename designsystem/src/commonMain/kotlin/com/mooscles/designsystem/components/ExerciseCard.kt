@@ -198,26 +198,37 @@ fun ExerciseCardSegment(modifier: Modifier = Modifier, content: @Composable () -
     }
 }
 
-/** The bottom of a segmented exercise card: a full-width, 56 dp tonal "Add set", disabled without [addEnabled]. */
+/**
+ * The bottom of a segmented exercise card: a full-width, 56 dp tonal "Add set", disabled without [addEnabled]. [addTag]
+ * is the button's test tag; [note] is a line under it (why the button is disabled), in `text.secondary`.
+ */
 @Composable
-fun ExerciseCardFooter(onAddSet: () -> Unit, modifier: Modifier = Modifier, addEnabled: Boolean = true) {
+fun ExerciseCardFooter(
+    onAddSet: () -> Unit,
+    modifier: Modifier = Modifier,
+    addEnabled: Boolean = true,
+    addTag: String = ExerciseAddSetTag,
+    note: String? = null,
+) {
     val space = MTheme.space
     val radius = MTheme.radius.lg
-    Box(
+    Column(
         modifier
             .testTag(ExerciseCardFooterTag)
             .fillMaxWidth()
             .cardSurface(RoundedCornerShape(bottomStart = radius, bottomEnd = radius), openTop = true, openBottom = false)
             .padding(start = space.s3, end = space.s3, top = space.s2, bottom = space.s3),
+        verticalArrangement = Arrangement.spacedBy(space.s2),
     ) {
         MButton(
             stringResource(Res.string.ds_add_set), onAddSet,
-            modifier = Modifier.fillMaxWidth().testTag(ExerciseAddSetTag),
+            modifier = Modifier.fillMaxWidth().testTag(addTag),
             variant = MButtonVariant.Tonal,
             size = MButtonSize.L,
             icon = MIcons.Plus,
             enabled = addEnabled,
         )
+        if (note != null) MText(note, MTheme.type.caption, color = MTheme.colors.textSecondary)
     }
 }
 

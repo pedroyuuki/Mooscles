@@ -236,7 +236,8 @@ jobs:
           # Phase 4B task 11: (:screens commonTest) RoutineSummariesTest 3; (:designsystem commonTest)
           # SizesTimingElevationTest +1 (mediaStripIsFiftySix). 1062 + 4 = 1066.
           # Phase 4B task 11 fix round 1: (:screens commonTest) RoutineNamesTest 3. 1066 + 3 = 1069.
-          MIN_HOST_TESTS: 1069
+          # Phase 4B task 14: (:screens commonTest) PlannedSetDraftsTest 13. 1069 + 13 = 1082.
+          MIN_HOST_TESTS: 1082
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -535,7 +536,9 @@ jobs:
           # duplicatedToastOpensTheCopyWhenTheHostCanOpenIt). 561 + 2 = 563.
           # Phase 4B task 12: FolderManagerSheetTest 15 (uiTest). 563 + 15 = 578.
           # Phase 4B task 12 fix round 1: FolderManagerSheetTest +2 (uiTest: menuMovesReorderAndAnnounce, errorWhileManagingShowsInTheSheet). 578 + 2 = 580.
-          MIN_SCREENS_IOS_TESTS: 580
+          # Phase 4B task 14: PlannedSetDraftsTest 13 (commonTest); RoutineEditorSetsTest 19 (uiTest: the 17 of the brief,
+          # removeKeepsAPendingEditInTheSnapshot, restoringTheFiftyFirstSetSaysTheLimit). 580 + 32 = 612.
+          MIN_SCREENS_IOS_TESTS: 612
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

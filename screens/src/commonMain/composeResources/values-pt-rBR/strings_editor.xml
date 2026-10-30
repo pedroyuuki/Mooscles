@@ -24,4 +24,18 @@
     <!-- O rótulo de uma série planejada de aquecimento na lista de séries (as de trabalho são numeradas). -->
     <string name="editor_set_warmup_short">A</string>
     <string name="editor_rest_note">Vale para os treinos que você começar com esta rotina.</string>
+    <!-- Task 14: as séries planejadas do editor. -->
+    <string name="editor_set_follows_record">segue o recorde</string>
+    <string name="editor_set_no_load">Sem carga</string>
+    <string name="editor_set_bodyweight">Peso corporal</string>
+    <string name="editor_set_type">Tipo da série</string>
+    <string name="editor_set_normal">Normal</string>
+    <string name="editor_set_warmup">Aquecimento</string>
+    <string name="editor_set_follow_record">Seguir o recorde</string>
+    <string name="editor_set_remove">Remover série</string>
+    <string name="editor_set_last">Uma rotina precisa de pelo menos uma série por exercício.</string>
+    <string name="editor_add_set">Adicionar série</string>
+    <string name="editor_set_limit">Até 50 séries por exercício.</string>
+    <string name="editor_set_label">Série %1$d</string>
+    <string name="editor_set_warmup_label">Série de aquecimento</string>
 </resources>
