@@ -343,10 +343,12 @@ class GallerySmokeTest {
         waitForIdle()
         onNodeWithText(getString(Res.string.gallery_section_reorder)).assertExists()
         val bench = getString(Res.string.gallery_sample_exercise)
-        onNode(hasContentDescription("Reorder $bench")).assertExists()
-        val item = onNodeWithTag(galleryReorderItemTag(0))
+        // The handle is the screen reader's stop (it merges its descendants) and carries the moves.
+        val handle = onNode(hasContentDescription("Reorder $bench")).fetchSemanticsNode()
+        assertTrue(handle.config.isMergingSemanticsOfDescendants)
+        onNodeWithTag(galleryReorderItemTag(0)).assertExists()
         val down = getString(Res.string.ds_reorder_down)
-        val action = item.fetchSemanticsNode().config[SemanticsActions.CustomActions].single { it.label == down }
+        val action = handle.config[SemanticsActions.CustomActions].single { it.label == down }
         runOnIdle { action.action() }
         waitForIdle()
         onNodeWithTag(ReorderAnnouncerTag, useUnmergedTree = true)

@@ -22,6 +22,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import kotlin.test.assertFalse
+import com.mooscles.designsystem.tokens.MoosclesColors
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -119,8 +125,7 @@ private fun ReorderList(h: Harness, height: Dp = LIST_HEIGHT, width: Dp? = null)
                         .reorderItem(state, key)
                         .fillMaxWidth()
                         .height(h.heightFor(key))
-                        .testTag(key)
-                        .reorderActions(state, key, key),
+                        .testTag(key),
                 ) {
                     ReorderHandle(state, key, key, Modifier.testTag(handle(key)))
                     BasicText(key)
@@ -330,10 +335,17 @@ class ReorderTest {
         val bottom = getString(Res.string.ds_reorder_bottom)
         assertEquals("Move up", up)
 
-        fun labels(key: String) = onNodeWithTag(key).fetchSemanticsNode().config[SemanticsActions.CustomActions].map { it.label }
+        // The node a screen reader stops on: the handle, "Reorder <name>", merging its descendants.
+        fun stop(key: String): SemanticsNode {
+            val node = onNode(hasContentDescription("Reorder $key")).fetchSemanticsNode()
+            assertTrue(node.config.isMergingSemanticsOfDescendants, "$key: the handle is a stop of its own")
+            return node
+        }
+
+        fun labels(key: String) = stop(key).config[SemanticsActions.CustomActions].map { it.label }
 
         fun perform(key: String, label: String) {
-            val action = onNodeWithTag(key).fetchSemanticsNode().config[SemanticsActions.CustomActions].single { it.label == label }
+            val action = stop(key).config[SemanticsActions.CustomActions].single { it.label == label }
             runOnIdle { assertTrue(action.action()) }
             waitForIdle()
         }
@@ -344,6 +356,8 @@ class ReorderTest {
             assertEquals(LiveRegionMode.Polite, announcer.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
         }
 
+        // The item's own node, which a screen reader does not stop on, has none.
+        assertNull(onNodeWithTag("item-0").fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions))
         // The first has no "up" nor "to top"; a middle one has all four; the last no "down" nor "to bottom".
         assertEquals(listOf(down, bottom), labels("item-0"))
         assertEquals(listOf(up, down, top, bottom), labels("item-2"))
@@ -521,6 +535,77 @@ class ReorderTest {
         mainClock.advanceTimeBy(MoosclesTiming().reorderEchoHold + LONG_PRESS_MARGIN)
         waitForIdle()
         assertEquals(INITIAL, h.state.order, "a write that never echoes gives the keys back")
+    }
+
+    /**
+     * Review I2: the lift shows in both themes, also with reduced motion (no scale): the light
+     * theme's shadow around the item, the dark theme's `border.strong` outline on its edge.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun liftIsVisibleInBothThemes() {
+        for (dark in listOf(false, true)) {
+            runComposeUiTest {
+                if (!INJECTS_DRAG) return@runComposeUiTest
+                val h = Harness()
+                withTheme(dark = dark, reducedMotion = true) { ReorderList(h, width = 300.dp) }
+                waitForIdle()
+                val before = onNodeWithTag(LIST).captureToImage().toPixelMap()
+                lift("item-1")
+                assertTrue(h.state.isLifted("item-1"))
+                val after = onNodeWithTag(LIST).captureToImage().toPixelMap()
+                var changed = 0
+                for (x in 0 until after.width) for (y in 0 until after.height) if (before[x, y] != after[x, y]) changed++
+                assertTrue(changed > after.width, "dark=$dark: the lift must show, $changed pixels changed")
+                if (dark) {
+                    // A pixel just inside the item's left edge, halfway down, is the outline.
+                    val list = onNodeWithTag(LIST).getBoundsInRoot()
+                    val item = onNodeWithTag("item-1").getBoundsInRoot()
+                    val x = with(density) { (item.left - list.left).toPx() + 0.5f }.toInt()
+                    val y = with(density) { ((item.top + item.bottom) / 2 - list.top).toPx() }.toInt()
+                    assertEquals(MoosclesColors.Dark.borderStrong, after[x, y], "the outline at ($x, $y)")
+                }
+                release()
+                assertFalse(h.state.isLifted("item-1"))
+            }
+        }
+    }
+
+    /** Review M3: a finger trembling on a neighbor's middle (items with no gap) does not swap back and forth. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aTremblingFingerOnTheThresholdSwapsAtMostOnce() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        val h = Harness()
+        val haptics = RecordingHaptics()
+        withTheme(haptics = haptics) { ReorderList(h) }
+        waitForIdle()
+        lift("item-0")
+        fun swaps() = haptics.events.count { it == HapticEvent.StepperStep }
+        fun move(px: Float) {
+            onNodeWithTag(LIST).performTouchInput { moveBy(Offset(0f, px)) }
+            waitForIdle()
+        }
+        // item-1 is 96 dp: around 48 dp down item-0's bottom reaches its middle. Find the exact
+        // point a pixel at a time: the first swap.
+        drag(40.dp, steps = 8)
+        var steps = 0
+        while (swaps() == 0 && steps < 80) {
+            move(1f)
+            steps++
+        }
+        assertEquals(1, swaps(), "it swaps once past the middle")
+        // Trembling there, 2 px each way, must not swap back and forth.
+        repeat(10) {
+            move(-2f)
+            move(2f)
+        }
+        assertEquals(1, swaps(), "swapped back and forth on the threshold")
+        // A clear move still swaps.
+        drag(16.dp, steps = 4)
+        assertEquals(moved(1, 0), h.state.order)
+        release()
+        assertEquals(listOf(moved(1, 0)), h.drops)
     }
 
     @OptIn(ExperimentalTestApi::class)

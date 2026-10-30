@@ -32,7 +32,6 @@ import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.ReorderAnnouncer
 import com.mooscles.designsystem.interaction.ReorderHandle
 import com.mooscles.designsystem.interaction.rememberReorderState
-import com.mooscles.designsystem.interaction.reorderActions
 import com.mooscles.designsystem.interaction.reorderItem
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.gallery_reorder_hint
@@ -60,7 +59,7 @@ private val names = listOf(
 /**
  * Phase 4B (spike S2): a list to reorder by dragging the handles, with items of three heights (a
  * card header with the target line, one without, a plain row). Screen readers get the four move
- * actions on each item, and the announcer says where it went.
+ * actions on each handle, and the announcer says where it went.
  */
 @Composable
 fun ReorderPage() {
@@ -85,7 +84,7 @@ fun ReorderPage() {
             ) {
                 items(state.order, key = { it }) { index ->
                     val name = labels[index]
-                    Box(Modifier.reorderItem(state, index).testTag(galleryReorderItemTag(index)).reorderActions(state, index, name)) {
+                    Box(Modifier.reorderItem(state, index).testTag(galleryReorderItemTag(index))) {
                         val handle: @Composable () -> Unit = { ReorderHandle(state, index, name) }
                         when (index % 3) {
                             0 -> ExerciseCardHeader(

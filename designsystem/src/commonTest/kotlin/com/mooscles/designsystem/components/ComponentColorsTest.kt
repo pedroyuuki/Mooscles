@@ -4,6 +4,8 @@ import com.mooscles.designsystem.illustration.bodyMapPalette
 import com.mooscles.designsystem.illustration.figurePalette
 import com.mooscles.designsystem.tokens.Contrast
 import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesElevation
+import com.mooscles.designsystem.interaction.reorderLiftLook
 import com.mooscles.designsystem.tokens.MoosclesFigureColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -125,5 +127,25 @@ class ComponentColorsTest {
     @Test
     fun emptyValueIsAnEmDash() {
         assertEquals("—", EMPTY_VALUE)
+    }
+
+    /**
+     * Phase 4B review I2: a lifted item shows `elevation.e3` in both themes. Light: the e3 shadow.
+     * Dark (e3 has no shadow there): a `border.strong` outline, a 3:1 line on every surface an item
+     * is drawn on or over.
+     */
+    @Test
+    fun reorderLiftShowsInBothThemes() {
+        val elevation = MoosclesElevation()
+        val light = reorderLiftLook(MoosclesColors.Light, elevation, dark = false)
+        assertEquals(elevation.e3.shadowLight, light.shadow)
+        assertNull(light.outline)
+        val colors = MoosclesColors.Dark
+        val dark = reorderLiftLook(colors, elevation, dark = true)
+        assertNull(dark.shadow)
+        assertEquals(colors.borderStrong, dark.outline)
+        for ((what, surface) in listOf("base" to colors.bgBase, "surface" to colors.bgSurface, "overlay" to colors.bgOverlay)) {
+            atLeast(3.0, dark.outline!!, surface, "dark lift outline on $what")
+        }
     }
 }

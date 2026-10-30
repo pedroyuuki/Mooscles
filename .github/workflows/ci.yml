@@ -218,7 +218,8 @@ jobs:
           # Phase 4A task 23 (:app): ShellNavigationHostTest +1; (:designsystem commonTest) LicenseTextTest +1. 926 + 2 = 928.
           # Phase 4A final review fixes: AppViewModelRestoreHostTest +1, LibraryNavigationHostTest +2 (:app); RoutineGroupsTest 2 (:screens commonTest); ExerciseAnatomyTest +2 (:shared commonTest). 928 + 7 = 935.
           # Phase 4B task 4 (:designsystem commonTest): SizesTimingElevationTest.reorderTokens +1, MotionTokensTest.dragLiftScale +1. 935 + 2 = 937.
-          MIN_HOST_TESTS: 937
+          # Phase 4B task 4 fix round 1 (:designsystem commonTest): ComponentColorsTest.reorderLiftShowsInBothThemes +1. 937 + 1 = 938.
+          MIN_HOST_TESTS: 938
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -421,7 +422,8 @@ jobs:
           # Phase 4A task 21: MBottomSheetTest +1, MDialogTest +1 (the host's density in the window, uiTest). 337 + 2 = 339.
           # Phase 4A task 23: LicenseTextTest +1 (commonTest). 339 + 1 = 340.
           # Phase 4B task 4: SizesTimingElevationTest +1, MotionTokensTest +1 (commonTest); ReorderTest 15, ExerciseCardTest +1, GallerySmokeTest +1 (uiTest). 340 + 19 = 359.
-          MIN_DS_IOS_TESTS: 359
+          # Phase 4B task 4 fix round 1: ComponentColorsTest +1 (commonTest); ReorderTest +2 (uiTest). 359 + 3 = 362.
+          MIN_DS_IOS_TESTS: 362
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

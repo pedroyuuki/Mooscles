@@ -32,6 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import com.mooscles.designsystem.tokens.MoosclesElevation
+import com.mooscles.designsystem.tokens.MoosclesColors
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.LocalPinnableContainer
@@ -106,11 +115,18 @@ internal fun <K> reconcile(local: List<K>, keys: List<K>): List<K> {
 
 /**
  * The state of a reorderable lazy list (spec D15): the order shown, the item being dragged and the
- * drag itself. Made by [rememberReorderState]; the list renders [order] with each item's lazy key
- * equal to its [K], puts [reorderItem] on each item, [reorderHandle] (or a [ReorderHandle]) on its
- * handle and [reorderActions] on the node a screen reader lands on, and places one
- * [ReorderAnnouncer] beside the list.
+ * drag itself. Made by [rememberReorderState]; the list renders [order], puts [reorderItem] on each
+ * item and a [ReorderHandle] in it (the handle carries the screen reader's four move actions), and
+ * places one [ReorderAnnouncer] beside the list, outside it.
  *
+ * Assumptions the drag relies on:
+ * - each [K] is exactly one item of the lazy list, and that item's lazy key is the [K] itself (on
+ *   Android the key must also fit in a `Bundle`);
+ * - the reorderable items are contiguous: no other item (a footer, a set row, an item of zero
+ *   height) sits between two of them during a drag. A list that shows more per entry (the routine
+ *   editor's sets, plan decision 14) leaves only one item per entry while dragging.
+ *
+
  * Rules: `onDrop` is called once, on release, only when the order changed; a cancelled gesture
  * writes nothing and gives the item back; keys that change during a drag are reconciled (keys that
  * left go, new keys come in at their index in `keys`) and the drop carries exactly the current keys;
@@ -210,6 +226,12 @@ class ReorderState<K : Any> internal constructor(
     }
 
     internal fun isActive(id: Int): Boolean = id == session && dragging != null
+
+    /**
+     * True while [key] is lifted. Item content can use it to show the lift in its own surface (such
+     * as `bg.overlay`, the dark theme's `elevation.3` tone); [reorderItem] already draws it.
+     */
+    fun isLifted(key: Any): Boolean = dragging == key
 
     /** Lifts [key], grabbed [grabInItem] px below its top. Returns the drag's id, or -1 when it cannot lift. */
     internal fun start(key: Any, grabInItem: Float, pinnable: PinnableContainer?, touchSlop: Float): Int {
@@ -372,19 +394,26 @@ class ReorderState<K : Any> internal constructor(
         if (displacement > 0f) {
             val next = current.getOrNull(index + 1) ?: return
             val other = itemInfo(next, info) ?: return
-            // Down when the item's bottom passes the middle of the next one.
-            if (logical + item.size > other.offset + other.size / 2f) {
+            // Down when the item's bottom passes the middle of the next one (and the hysteresis).
+            if (logical + item.size > other.offset + other.size / 2f + hysteresis) {
                 swap(current, index, index + 1, info, other, newTop = other.offset + other.size - item.size, otherNewTop = item.offset)
             }
         } else if (displacement < 0f) {
             val previous = current.getOrNull(index - 1) ?: return
             val other = itemInfo(previous, info) ?: return
-            // Up when the item's top passes the middle of the previous one.
-            if (logical < other.offset + other.size / 2f) {
+            // Up when the item's top passes the middle of the previous one (and the hysteresis).
+            if (logical < other.offset + other.size / 2f - hysteresis) {
                 swap(current, index, index - 1, info, other, newTop = other.offset, otherNewTop = item.offset + item.size - other.size)
             }
         }
     }
+
+    /**
+     * How far past a neighbor's middle the item must go to swap: half the touch slop. With no gap
+     * between the items, the way back is the same middle, and a finger trembling there would swap
+     * back and forth.
+     */
+    private val hysteresis: Float get() = slop / 2f
 
     private fun swap(current: List<K>, from: Int, to: Int, info: LazyListLayoutInfo, other: LazyListItemInfo, newTop: Int, otherNewTop: Int) {
         val key = current[from]
@@ -481,8 +510,18 @@ fun <K : Any> rememberReorderState(
 }
 
 /**
+ * How a lifted item shows `elevation.e3`: in the light theme its shadow; in the dark, where that
+ * level has no shadow, a `border.strong` outline (a 3:1 line on every surface it can be on).
+ */
+internal class ReorderLiftLook(val shadow: Dp?, val outline: Color?)
+
+internal fun reorderLiftLook(colors: MoosclesColors, elevation: MoosclesElevation, dark: Boolean): ReorderLiftLook =
+    if (dark) ReorderLiftLook(shadow = null, outline = colors.borderStrong) else ReorderLiftLook(shadow = elevation.e3.shadowLight, outline = null)
+
+/**
  * Goes on each item of the list (its outermost modifier, before any padding the lift should not
- * scale): the item follows the finger while dragged, drawn above the others with `elevation.e3` and
+ * scale): the item follows the finger while dragged, drawn above the others with `elevation.e3` (a
+ * shadow in the light theme, a `border.strong` outline in the dark, see [ReorderState.isLifted]) and
  * scaled to `motion.dragLiftScale` (only the elevation with reduced motion); its neighbors glide to
  * their new place with `spring.snappy` (instantly with reduced motion). Do not also give the item a
  * placement animation (`animateItem`'s `placementSpec`): this one does it.
@@ -493,7 +532,8 @@ fun Modifier.reorderItem(state: ReorderState<*>, key: Any): Modifier = composed 
     val reduced = MTheme.reducedMotion
     val motion = MTheme.motion
     val elevation = MTheme.elevation.e3
-    val dark = MTheme.isDark
+    val look = reorderLiftLook(MTheme.colors, MTheme.elevation, MTheme.isDark)
+    val outlineWidth = MTheme.sizes.borderSelected
     val shape = RoundedCornerShape(MTheme.radius.lg)
     val scale by animateFloatAsState(
         targetValue = if (lifted && !reduced) motion.dragLiftScale else 1f,
@@ -506,11 +546,23 @@ fun Modifier.reorderItem(state: ReorderState<*>, key: Any): Modifier = composed 
             translationY = state.translationOf(key)
             scaleX = scale
             scaleY = scale
-            // Light theme only: in the dark the surface tone does the work (spec "elevation").
-            if (lifted && !dark) {
-                shadowElevation = elevation.shadowLight.toPx()
+            val shadow = look.shadow
+            if (lifted && shadow != null) {
+                shadowElevation = shadow.toPx()
                 this.shape = shape
                 clip = false
+            }
+        }
+        .drawWithContent {
+            drawContent()
+            val outline = look.outline
+            if (lifted && outline != null) {
+                // Inside the edge, as Modifier.border draws it.
+                val stroke = outlineWidth.toPx()
+                translate(left = stroke / 2f, top = stroke / 2f) {
+                    val inner = Size(size.width - stroke, size.height - stroke)
+                    drawOutline(shape.createOutline(inner, layoutDirection, this), outline, style = Stroke(stroke))
+                }
             }
         }
         .onPlaced { state.itemCoordinates[key] = it }
@@ -557,8 +609,11 @@ private class HandleCoordinates {
 /**
  * The alternatives to dragging (WCAG 2.5.7): "Move up", "Move down", "Move to top" and "Move to
  * bottom" as accessibility actions of the node it is on, only the possible ones. Each calls `onDrop`
- * with the new order and has the [ReorderAnnouncer] say "[name] moved to position 2 of 5". It sets
- * the node's custom actions: a node with other custom actions should list these with its own.
+ * with the new order and has the [ReorderAnnouncer] say "[name] moved to position 2 of 5".
+ * [ReorderHandle] already carries them. Put them elsewhere only on a node a screen reader focuses
+ * (one that merges its descendants, or a leaf with a description): actions on any other node are
+ * out of reach. It sets the node's custom actions: a node with other custom actions should list
+ * these with its own.
  */
 @Composable
 fun <K : Any> Modifier.reorderActions(state: ReorderState<K>, key: K, name: String): Modifier {
@@ -591,17 +646,19 @@ fun <K : Any> Modifier.reorderActions(state: ReorderState<K>, key: K, name: Stri
 fun reorderHandleLabel(name: String): String = stringResource(Res.string.ds_reorder_handle, name)
 
 /**
- * The drag handle of [key]'s item: the grip icon in a 48 dp target, labelled "Reorder [name]" as a
- * stop of its own for a screen reader (which moves the item with [reorderActions] instead).
+ * The drag handle of [key]'s item: the grip icon in a 48 dp target. For a screen reader it is a stop
+ * of its own, "Reorder [name]", that carries the four move actions ([reorderActions]) in place of
+ * the drag.
  */
 @Composable
-fun ReorderHandle(state: ReorderState<*>, key: Any, name: String, modifier: Modifier = Modifier) {
+fun <K : Any> ReorderHandle(state: ReorderState<K>, key: K, name: String, modifier: Modifier = Modifier) {
     val label = reorderHandleLabel(name)
     Box(
         modifier
             .size(MTheme.targets.min)
             .reorderHandle(state, key)
-            .semantics(mergeDescendants = true) { contentDescription = label },
+            .semantics(mergeDescendants = true) { contentDescription = label }
+            .reorderActions(state, key, name),
         contentAlignment = Alignment.Center,
     ) {
         MIcon(MIcons.GripVertical, null, size = MTheme.sizes.icon24, tint = MTheme.colors.textSecondary)
