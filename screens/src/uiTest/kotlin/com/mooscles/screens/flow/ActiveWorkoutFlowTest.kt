@@ -37,6 +37,7 @@ import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.assertNumbersWhole
 import com.mooscles.screens.assertWorkoutTargets
+import com.mooscles.screens.library.LibraryTags
 import com.mooscles.screens.summary.SummaryRecordsTag
 import com.mooscles.screens.summary.SummaryStat
 import com.mooscles.screens.summary.SummaryStatsTag
@@ -285,6 +286,8 @@ class ActiveWorkoutFlowTest {
     /** In the open exercise picker: sweeps it, searches [query] and picks [exerciseId]. */
     private fun ComposeUiTest.pick(name: String, state: String, query: String, exerciseId: String) {
         await("the exercise picker opens") { exists(hasTestTag(ExercisePickerListTag)) }
+        // Its list is the library's model, built off the main thread: skeleton rows until then.
+        await("the exercise picker's list is built") { !exists(hasTestTag(LibraryTags.SKELETON_ROW)) }
         waitForIdle()
         sweep(name, state)
         onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(SHEET))).performTextReplacement(query)

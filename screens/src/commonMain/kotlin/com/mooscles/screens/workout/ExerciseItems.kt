@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.IntSize
 import com.mooscles.data.LoadConvention
 import com.mooscles.designsystem.components.ExerciseCardHeader
 import com.mooscles.designsystem.components.ExerciseCardSegment
-import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.MButton
 import com.mooscles.designsystem.components.MButtonSize
 import com.mooscles.designsystem.components.MButtonVariant
@@ -34,6 +33,7 @@ import com.mooscles.designsystem.components.setsDoneOf
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.screens.exercise.exerciseMedia
 import com.mooscles.screens.format.conventionCaption
 import com.mooscles.screens.format.equipmentLabel
 import com.mooscles.screens.format.exerciseName
@@ -61,6 +61,7 @@ import org.jetbrains.compose.resources.stringResource
  *
  * - [onRestChip]: the "Rest 2:00" chip, which opens the exercise's rest sheet;
  * - [onSwap]: "Swap exercise", after the confirmation when the exercise has done sets; opens the picker;
+ * - [onAbout]: "About the exercise", with the catalog exercise's id (the library's detail);
  * - [onHistory]: "Exercise history", with the catalog exercise's id;
  * - [onHowToLog]: "How to log", which opens [HowToLogSheet];
  * - [onChangeType]: a set's number or "change type" action (`screen.openTypeSheet(set.id)`);
@@ -69,6 +70,7 @@ import org.jetbrains.compose.resources.stringResource
 data class ExerciseCallbacks(
     val onRestChip: (WorkoutExerciseUi) -> Unit,
     val onSwap: (WorkoutExerciseUi) -> Unit,
+    val onAbout: (exerciseId: String) -> Unit,
     val onHistory: (exerciseId: String) -> Unit,
     val onHowToLog: (WorkoutExerciseUi) -> Unit,
     val onChangeType: (SetUi, WorkoutExerciseUi) -> Unit,
@@ -110,7 +112,8 @@ internal fun LazyListScope.exerciseCards(
  * on screen are composed, so an exercise of 100 sets does not compose 100 rows. The items enter
  * and move with [setRowItemMotion]; the list must have no spacing of its own, or the card splits.
  *
- * The header shows the equipment icon, the name, "Barbell · Chest · set 4 of 5" (the first set
+ * The header shows the media (the still figure, frame B, of a catalog exercise that has one, with
+ * the equipment's small icon beside the meta; otherwise the equipment icon), the name, "Barbell · Chest · set 4 of 5" (the first set
  * not done, only while open), the convention caption when the load is not the total load, the
  * rest chip and "Previous: Oct 21" (or "First time"). Collapsed, it is the whole card, with "3 of
  * 3 sets" and a check when all are done. A tap on it opens or closes the card by hand
@@ -188,12 +191,14 @@ private fun ExerciseHeaderItem(
     } else {
         stringResource(Res.string.workout_card_meta_short, equipment, muscle)
     }
+    // The still figure (frame B) of a catalog exercise that has one, or the equipment's icon (spec D5).
+    val media = remember(entry.exercise) { exerciseMedia(entry.exercise) }
     val reduced = MTheme.reducedMotion
     val snappy = MTheme.motion.springSnappy
     ExerciseCardHeader(
         name = exerciseName(entry.exercise),
         meta = meta,
-        media = ExerciseMedia.None,
+        media = media,
         equipmentIcon = EquipmentIcons.forEquipment(entry.exercise.equipment),
         onMenu = { menu = true },
         collapsed = !open,
@@ -214,6 +219,10 @@ private fun ExerciseHeaderItem(
             entry = entry,
             index = index,
             count = count,
+            onAbout = {
+                menu = false
+                callbacks.onAbout(entry.exercise.id)
+            },
             onHistory = {
                 menu = false
                 callbacks.onHistory(entry.exercise.id)

@@ -191,6 +191,7 @@ class ActiveWorkoutScreenTest {
                 onOpenSummary = { events.list += "summary:$it" },
                 onExerciseHistory = { events.list += "history:$it" },
                 onChooseRoutine = { events.list += "chooseRoutine" },
+                onExerciseInfo = { events.list += "info:$it" },
                 skeletonCards = skeletonCards,
                 nowMillis = now,
             )
@@ -236,6 +237,16 @@ class ActiveWorkoutScreenTest {
     }
 
     private fun ComposeUiTest.row(id: String): SemanticsNodeInteraction = onNodeWithTag(workoutSetRowTag(id))
+
+    /**
+     * The "All" row of [exerciseId] in the open picker, once its list is built: the route's picker
+     * builds the library's model off the main thread, which the test's idle does not wait for.
+     */
+    private fun ComposeUiTest.pickerAllRow(exerciseId: String): SemanticsNodeInteraction {
+        val tag = exercisePickerRowTag(exerciseId, recent = false)
+        waitUntil(timeoutMillis = 5_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+        return onNode(hasTestTag(tag))
+    }
 
     private fun ComposeUiTest.check(id: String): SemanticsNodeInteraction =
         onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(hasTestTag(workoutSetRowTag(id))))
@@ -322,7 +333,7 @@ class ActiveWorkoutScreenTest {
         // "Add exercise" opens the picker; a pick adds to this workout.
         onNodeWithTag(ActiveWorkoutTags.ADD_EXERCISE).performClick()
         waitForIdle()
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("addWorkoutExercise:w1,curl", fake.calls.last())
     }
@@ -679,10 +690,23 @@ class ActiveWorkoutScreenTest {
         onNodeWithTag(ExerciseMenuTags.SWAP).performClick()
         waitForIdle()
         // No set done: the picker opens directly, and the pick replaces this entry.
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
         assertFalse(fake.calls.any { it.startsWith("addWorkoutExercise") })
+    }
+
+    @Test
+    fun menuAboutOpensTheExerciseInfo() = runComposeUiTest {
+        val events = Events()
+        show(Fake(stateOf(nothingDone)), events)
+        openCardMenuItem("e2", ExerciseMenuTags.ABOUT)
+        // The menu closed and the app was asked for the detail of the catalog exercise, not the entry.
+        assertEquals(listOf("info:row"), events.list)
+        onNodeWithTag(ExerciseMenuTags.ABOUT).assertDoesNotExist()
+        // "Exercise history" stays, after it, with its own callback.
+        openCardMenuItem("e2", ExerciseMenuTags.HISTORY)
+        assertEquals(listOf("info:row", "history:row"), events.list)
     }
 
     private fun ComposeUiTest.openCardMenuItem(entryId: String, tag: String) {
@@ -700,13 +724,13 @@ class ActiveWorkoutScreenTest {
         toast("Série 3 removida").assertIsDisplayed()
         // Swapping another exercise leaves the undo up: the set still has its own entry to go back to.
         openCardMenuItem("e2", ExerciseMenuTags.SWAP)
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e2,curl", fake.calls.last())
         toast("Série 3 removida").assertExists()
         // Swapping its own exercise closes it: "Undo" would put the bench set into the new exercise.
         openCardMenuItem("e1", ExerciseMenuTags.SWAP)
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
         toast("Série 3 removida").assertDoesNotExist()

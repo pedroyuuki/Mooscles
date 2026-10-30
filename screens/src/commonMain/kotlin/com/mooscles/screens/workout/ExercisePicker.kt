@@ -1,11 +1,12 @@
 package com.mooscles.screens.workout
 
-import com.mooscles.data.ExerciseSearch
-import com.mooscles.data.SearchFolding
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.WorkoutUi
 
-/** What the exercise picker lists (spec "Seletor de exercício"): the recent exercises, and the search over all of them. */
+/**
+ * The recent exercises of the exercise picker and the library (spec "Seletor de exercício"). The
+ * search, the filters and the order of both are the library's [com.mooscles.screens.library.LibraryModel].
+ */
 object ExercisePicker {
     /** How many recent exercises the picker shows. */
     const val RECENT_LIMIT = 8
@@ -35,15 +36,4 @@ object ExercisePicker {
      */
     fun currentRecents(history: List<WorkoutUi>, current: Map<String, ExerciseUi>, limit: Int = RECENT_LIMIT): List<ExerciseUi> =
         recents(history, limit = Int.MAX_VALUE).mapNotNull { current[it.id] }.take(limit)
-
-    /**
-     * The [exercises] that match [query] with the library's search ([ExerciseSearch]: accents,
-     * case and word order do not matter; muscle, equipment and aliases count), in alphabetical
-     * order of their names with case and accents folded, so "agachamento" sits beside "Abdominal"
-     * and "Élevation" among the E's. A blank query keeps them all.
-     */
-    fun filter(exercises: List<ExerciseUi>, query: String): List<ExerciseUi> =
-        exercises
-            .filter { ExerciseSearch.matches(it.id, it.name, it.muscle, it.equipment, query) }
-            .sortedWith(compareBy<ExerciseUi> { SearchFolding.fold(it.name) }.thenBy { it.name }.thenBy { it.id })
 }

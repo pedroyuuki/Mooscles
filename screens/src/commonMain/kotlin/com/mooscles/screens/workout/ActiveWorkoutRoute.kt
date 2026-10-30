@@ -53,7 +53,8 @@ import com.mooscles.ui.UiState
  * workout, and the summary still opens when the history brings it. [timer] is not
  * read here: only the screen's rest timer reads it ([WorkoutTimerLayer]); the toasts sit above
  * it ([WorkoutToastHost]). [imeInsets] is the keyboard, which the list, the timer and the toasts
- * keep clear of; [nowMillis] is the clock the header's time reads.
+ * keep clear of; [nowMillis] is the clock the header's time reads. A card menu's "About the
+ * exercise" calls [onExerciseInfo] with the catalog exercise's id (the app opens its detail).
  */
 @Composable
 fun ActiveWorkoutRoute(
@@ -65,6 +66,7 @@ fun ActiveWorkoutRoute(
     onExerciseHistory: (exerciseId: String) -> Unit,
     onChooseRoutine: () -> Unit,
     modifier: Modifier = Modifier,
+    onExerciseInfo: (exerciseId: String) -> Unit = {},
     skeletonCards: Int = 1,
     imeInsets: WindowInsets = WindowInsets.ime,
     nowMillis: () -> Long = { currentTimeMillis() },
@@ -117,6 +119,7 @@ fun ActiveWorkoutRoute(
                 },
                 onMinimize = onMinimize,
                 onExerciseHistory = onExerciseHistory,
+                onExerciseInfo = onExerciseInfo,
                 imeInsets = imeInsets,
                 nowMillis = nowMillis,
                 timer = timer,

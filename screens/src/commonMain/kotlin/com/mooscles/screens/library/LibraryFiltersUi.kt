@@ -139,9 +139,10 @@ internal fun EquipmentFilterSheet(selected: Set<String>, onChange: (Set<String>)
 
 /**
  * The library's filters, above the count: [MuscleFilterRow], then a wrapping line with
- * [EquipmentFilterChip], "My exercises" (a checkbox chip) and, only while a filter is on, "Clear
- * filters", which turns them all off (the search stays). The line wraps, so at 360 dp or with
- * large text nothing runs off the screen; 8 dp between targets either way.
+ * [EquipmentFilterChip], "My exercises" (a checkbox chip; only with [mine], the exercise picker
+ * leaves it out) and, only while a filter is on, "Clear filters", which turns them all off (the
+ * search stays). The line wraps, so at 360 dp or with large text nothing runs off the screen; 8 dp
+ * between targets either way.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -151,6 +152,7 @@ internal fun LibraryFilterBar(
     onOpenEquipment: () -> Unit,
     equipmentFocus: FocusRequester,
     modifier: Modifier = Modifier,
+    mine: Boolean = true,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
         MuscleFilterRow(
@@ -170,13 +172,15 @@ internal fun LibraryFilterBar(
                 modifier = Modifier.testTag(LibraryTags.EQUIPMENT_CHIP),
                 focusRequester = equipmentFocus,
             )
-            MChip(
-                label = stringResource(Res.string.library_mine),
-                selected = filters.mineOnly,
-                onClick = { onChange(filters.copy(mineOnly = !filters.mineOnly)) },
-                modifier = Modifier.testTag(LibraryTags.MINE_CHIP),
-                kind = MChipKind.Filter,
-            )
+            if (mine) {
+                MChip(
+                    label = stringResource(Res.string.library_mine),
+                    selected = filters.mineOnly,
+                    onClick = { onChange(filters.copy(mineOnly = !filters.mineOnly)) },
+                    modifier = Modifier.testTag(LibraryTags.MINE_CHIP),
+                    kind = MChipKind.Filter,
+                )
+            }
             if (filters.active) {
                 MButton(
                     stringResource(Res.string.library_clear_filters),
