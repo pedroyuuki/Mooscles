@@ -133,7 +133,8 @@ internal fun <K> reconcile(local: List<K>, keys: List<K>): List<K> {
  * the dragged key leaving ends the drag without a write. When the items change height during the
  * drag (plan decision 14: the editor collapses its cards on lift) the dragged item stays under the
  * finger: the list is scrolled to keep its slot there, and what scrolling cannot absorb is taken
- * out of the gesture, so a resize alone never reorders anything.
+ * out of the gesture, so a resize alone never reorders anything; once the finger moves on (two
+ * touch slops), the slot follows the item drawn under it again.
  */
 @Stable
 class ReorderState<K : Any> internal constructor(
@@ -188,6 +189,13 @@ class ReorderState<K : Any> internal constructor(
     private var armedStart = false
     private var armedEnd = false
     private var slop = 0f
+
+    /**
+     * True while the slot is away from the drawn item by what a scroll could not absorb ([followSlot]); [travel] is
+     * how far the finger has moved since.
+     */
+    private var adrift = false
+    private var travel = 0f
     private var dragJob: Job? = null
     private var pin: PinnableContainer.PinnedHandle? = null
 
@@ -257,6 +265,8 @@ class ReorderState<K : Any> internal constructor(
         swappedOn = null
         seen = info
         slop = touchSlop
+        adrift = false
+        travel = 0f
         armedStart = liftFinger >= info.viewportStartOffset + config.edgeZonePx
         armedEnd = liftFinger <= info.viewportEndOffset - config.edgeZonePx
         pin = pinnable?.pin()
@@ -273,6 +283,7 @@ class ReorderState<K : Any> internal constructor(
         if (!isActive(id)) return
         fingerDelta += dy
         val info = listState.layoutInfo
+        if (adrift) rejoin(info, dy)
         val y = finger
         if (!armedEnd && (y < info.viewportEndOffset - config.edgeZonePx || y - liftFinger > slop)) armedEnd = true
         if (!armedStart && (y > info.viewportStartOffset + config.edgeZonePx || liftFinger - y > slop)) armedStart = true
@@ -370,11 +381,32 @@ class ReorderState<K : Any> internal constructor(
         expectedTop = if (expected != null && abs(item.offset - expected) > SAME_PX) {
             val shift = item.offset - expected
             val consumed = listState.dispatchRawDelta(shift)
-            logicalBase += shift - consumed
+            val rest = shift - consumed
+            logicalBase += rest
+            if (!adrift && abs(rest) > SAME_PX) {
+                adrift = true
+                travel = 0f
+            }
             item.offset - consumed
         } else {
             item.offset.toFloat()
         }
+    }
+
+    /**
+     * What [followSlot] took out of the gesture keeps the slot away from the item drawn under the finger:
+     * at a list's end that can be more than the finger can still travel (the 2x editor, its cards collapsed:
+     * the slot hundreds of dp below a finger at the top edge), and the places between could never be reached.
+     * Once the finger has moved [REJOIN_SLOPS] touch slops since, a drag and not the resize, the logical
+     * position goes back under the finger, and the swaps that follow, one per layout, bring the slot to where
+     * the item is drawn.
+     */
+    private fun rejoin(info: LazyListLayoutInfo, dy: Float) {
+        travel += abs(dy)
+        if (travel <= REJOIN_SLOPS * slop) return
+        val item = itemInfo(dragging ?: return, info) ?: return
+        logicalBase = drawnTop(item.size) - fingerDelta
+        adrift = false
     }
 
     private fun checkSwap(info: LazyListLayoutInfo) {
@@ -472,6 +504,9 @@ class ReorderState<K : Any> internal constructor(
     private companion object {
         /** Less than this many px between where the slot is and where it should be is the same place. */
         const val SAME_PX = 0.5f
+
+        /** How many touch slops the finger moves before a slot left away from it comes back under it ([rejoin]). */
+        const val REJOIN_SLOPS = 2f
     }
 }
 

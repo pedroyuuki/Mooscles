@@ -27,6 +27,8 @@ import com.mooscles.designsystem.tokens.MoosclesColors
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
@@ -533,6 +535,42 @@ class ReorderTest {
         assertEquals(INITIAL, h.state.order, "the resize alone reorders nothing")
         release()
         assertEquals(emptyList(), h.drops)
+    }
+
+    /**
+     * The 2x routine flow (investigation of 2026-10-30): the list scrolled to the handle of an item not composed yet,
+     * which puts that item first, at the top edge; lifting collapses everything until the whole list fits, and the
+     * list goes back to its top. The slot is then 200 dp below the finger and no scroll can bring it back, while the
+     * item is drawn under the finger, over the first item. Dragged up from there and dropped, it goes first: where it
+     * is drawn, not five places down where its slot was left.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aSlotTheScrollCannotBringBackFollowsTheFingerOnceItMoves() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        // Eight 144 dp items (1152 dp in the 360 dp list); collapsed, 40 dp each, they all fit.
+        val tall = List(8) { "item-${3 * it + 2}" }
+        val dragged = tall[5]
+        val h = Harness().apply {
+            keys = tall
+            collapseOnLift = true
+        }
+        withTheme { ReorderList(h) }
+        waitForIdle()
+        onNodeWithTag(LIST).performScrollToNode(hasTestTag(handle(dragged)))
+        waitForIdle()
+        assertEquals(5, h.list.firstVisibleItemIndex, "$dragged is the first item shown (offset ${h.list.firstVisibleItemScrollOffset})")
+        lift(dragged)
+        assertTrue(h.collapsed)
+        assertEquals(0, h.list.firstVisibleItemIndex + h.list.firstVisibleItemScrollOffset, "the collapsed list is back at its top")
+        val listTop = onNodeWithTag(LIST).getBoundsInRoot().top
+        val first = onNodeWithTag(tall[0]).getBoundsInRoot()
+        val lifted = onNodeWithTag(dragged).getBoundsInRoot()
+        assertTrue(lifted.top < first.bottom, "$dragged is drawn over ${tall[0]}: ${lifted.top - listTop} / ${first.top - listTop}..${first.bottom - listTop}")
+        drag((-40).dp, steps = 20)
+        assertEquals(dragged, h.state.order.first(), "dragged up over the first item: ${h.state.order}")
+        release()
+        assertEquals(listOf(listOf(dragged) + (tall - dragged)), h.drops)
     }
 
     @OptIn(ExperimentalTestApi::class)
