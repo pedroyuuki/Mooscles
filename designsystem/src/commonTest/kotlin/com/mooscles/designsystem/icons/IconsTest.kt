@@ -99,13 +99,15 @@ class IconsTest {
             "ArrowLeftRight",
             // Phase 4A: the library.
             "Settings", "SearchX",
+            // Phase 4B: the drag handle.
+            "GripVertical",
             "Plate", "PlateRecord", "Dumbbell", "Barbell", "Kettlebell", "Bench", "Cable", "Machine",
             "Rope", "Body",
             "DumbbellFilled", "LayoutGridFilled", "HistoryFilled", "PlateRecordFilled",
         )
         assertEquals(expected, MIcons.all.map { it.first })
         for ((name, icon) in MIcons.all) assertEquals(name, icon.name)
-        assertEquals(53, expected.size)
-        assertEquals(53, MIcons.all.map { it.second }.toSet().size)
+        assertEquals(54, expected.size)
+        assertEquals(54, MIcons.all.map { it.second }.toSet().size)
     }
 }

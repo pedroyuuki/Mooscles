@@ -99,4 +99,10 @@
     <string name="ds_body_map_secondary">Secundários</string>
     <string name="ds_licenses_mooscles_media">Ilustrações, dicas de execução e nomes do Mooscles</string>
     <string name="ds_search_clear">Limpar busca</string>
+    <string name="ds_reorder_handle">Reordenar %1$s</string>
+    <string name="ds_reorder_up">Mover para cima</string>
+    <string name="ds_reorder_down">Mover para baixo</string>
+    <string name="ds_reorder_top">Mover para o topo</string>
+    <string name="ds_reorder_bottom">Mover para o fim</string>
+    <string name="ds_reorder_moved">%1$s agora na posição %2$d de %3$d</string>
 </resources>

@@ -116,4 +116,13 @@
     <string name="gallery_sample_search">Search by name, muscle or equipment</string>
     <string name="gallery_sample_menu_chip">Equipment · 2</string>
     <string name="gallery_section_info_chips">Read-only chips</string>
+    <!-- Phase 4B: the reordering page. -->
+    <string name="gallery_page_reorder">Reorder</string>
+    <string name="gallery_section_reorder">Drag and drop</string>
+    <string name="gallery_reorder_hint">Hold a handle, then drag. Screen readers offer Move up, Move down, Move to top and Move to bottom.</string>
+    <string name="gallery_sample_target">Target 3×8 · 80 kg</string>
+    <string name="gallery_sample_squat">Back squat</string>
+    <string name="gallery_sample_deadlift">Deadlift</string>
+    <string name="gallery_sample_pull_up">Pull-up</string>
+    <string name="gallery_sample_lateral_raise">Lateral raise</string>
 </resources>

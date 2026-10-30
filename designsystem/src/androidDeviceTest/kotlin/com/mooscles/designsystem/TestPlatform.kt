@@ -3,6 +3,9 @@ package com.mooscles.designsystem
 /** The emulator's test input sends a real pointer cancel. */
 internal const val INJECTS_TOUCH_CANCEL = true
 
+/** The emulator's test input drives a long press and a drag (phase 4B spike S2). */
+internal const val INJECTS_DRAG = true
+
 /**
  * Puts the emulator back in touch mode after a test that asked for keyboard mode
  * (`InputModeManager.requestInputMode(Keyboard)`). Touch mode is the display's, not the test's:

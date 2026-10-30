@@ -116,4 +116,12 @@
     <string name="gallery_sample_search">Buscar por nome, músculo ou equipamento</string>
     <string name="gallery_sample_menu_chip">Equipamento · 2</string>
     <string name="gallery_section_info_chips">Chips de leitura</string>
+    <string name="gallery_page_reorder">Reordenar</string>
+    <string name="gallery_section_reorder">Arrastar e soltar</string>
+    <string name="gallery_reorder_hint">Segure uma alça e arraste. Leitores de tela oferecem Mover para cima, Mover para baixo, Mover para o topo e Mover para o fim.</string>
+    <string name="gallery_sample_target">Alvo 3×8 · 80 kg</string>
+    <string name="gallery_sample_squat">Agachamento livre</string>
+    <string name="gallery_sample_deadlift">Levantamento terra</string>
+    <string name="gallery_sample_pull_up">Barra fixa</string>
+    <string name="gallery_sample_lateral_raise">Elevação lateral</string>
 </resources>

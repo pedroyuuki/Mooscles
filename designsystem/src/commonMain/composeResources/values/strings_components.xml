@@ -103,4 +103,12 @@
     <string name="ds_licenses_mooscles_media">Mooscles illustrations, exercise tips and names</string>
     <!-- The clear button of the search field. -->
     <string name="ds_search_clear">Clear search</string>
+    <!-- Reordering (phase 4B, spec D15): the drag handle's label and the accessibility actions. -->
+    <string name="ds_reorder_handle">Reorder %1$s</string>
+    <string name="ds_reorder_up">Move up</string>
+    <string name="ds_reorder_down">Move down</string>
+    <string name="ds_reorder_top">Move to top</string>
+    <string name="ds_reorder_bottom">Move to bottom</string>
+    <!-- Announced after a move: the item's name, its new position and the count. -->
+    <string name="ds_reorder_moved">%1$s moved to position %2$d of %3$d</string>
 </resources>

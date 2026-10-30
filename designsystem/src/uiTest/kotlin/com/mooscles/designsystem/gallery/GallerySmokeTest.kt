@@ -37,6 +37,13 @@ import com.mooscles.designsystem.resources.gallery_section_overlays
 import com.mooscles.designsystem.resources.gallery_section_rows
 import com.mooscles.designsystem.resources.gallery_section_set_rows
 import com.mooscles.designsystem.resources.gallery_section_shell
+import com.mooscles.designsystem.resources.gallery_section_reorder
+import com.mooscles.designsystem.resources.ds_reorder_down
+import com.mooscles.designsystem.resources.ds_reorder_moved
+import com.mooscles.designsystem.resources.gallery_sample_exercise
+import com.mooscles.designsystem.interaction.ReorderAnnouncerTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import com.mooscles.designsystem.resources.gallery_section_states
 import com.mooscles.designsystem.resources.gallery_section_text_fields
 import com.mooscles.designsystem.theme.rememberSystemReducedMotion
@@ -70,6 +77,7 @@ class GallerySmokeTest {
         GalleryPage.Records to Res.string.gallery_section_records,
         GalleryPage.ExerciseCard to Res.string.gallery_section_exercise_card,
         GalleryPage.Shell to Res.string.gallery_section_shell,
+        GalleryPage.Reorder to Res.string.gallery_section_reorder,
     )
 
     /** A failed language test must not leak Portuguese into the next test. */
@@ -320,5 +328,30 @@ class GallerySmokeTest {
         waitForIdle()
         val previous = getString(Res.string.ds_load_by_reps_spoken, getString(Res.string.ds_unit_kg_spoken, "55"), 10)
         onNode(hasContentDescription(previous, substring = true)).assertExists()
+    }
+
+    /**
+     * Phase 4B (plan Task 4): the reordering page opens from the list; its items have labelled
+     * handles and the accessibility actions, and a move is announced.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun reorderPageOpens() = runComposeUiTest {
+        withTheme { GalleryScreen(onBack = {}) }
+        waitForIdle()
+        onNodeWithTag(galleryEntryTag(GalleryPage.Reorder)).performScrollTo().performClick()
+        waitForIdle()
+        onNodeWithText(getString(Res.string.gallery_section_reorder)).assertExists()
+        val bench = getString(Res.string.gallery_sample_exercise)
+        // The handle is the screen reader's stop (it merges its descendants) and carries the moves.
+        val handle = onNode(hasContentDescription("Reorder $bench")).fetchSemanticsNode()
+        assertTrue(handle.config.isMergingSemanticsOfDescendants)
+        onNodeWithTag(galleryReorderItemTag(0)).assertExists()
+        val down = getString(Res.string.ds_reorder_down)
+        val action = handle.config[SemanticsActions.CustomActions].single { it.label == down }
+        runOnIdle { action.action() }
+        waitForIdle()
+        onNodeWithTag(ReorderAnnouncerTag, useUnmergedTree = true)
+            .assertContentDescriptionEquals(getString(Res.string.ds_reorder_moved, bench, 2, GALLERY_REORDER_COUNT))
     }
 }

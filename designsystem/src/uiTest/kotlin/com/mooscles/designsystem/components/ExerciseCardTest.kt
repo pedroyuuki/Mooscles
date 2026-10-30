@@ -5,6 +5,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -257,6 +263,43 @@ class ExerciseCardTest {
                 }
                 waitForIdle()
                 for (text in expected) onNodeWithText(text).assertExists("$locale: $text")
+            }
+        }
+    }
+
+    /**
+     * Phase 4B (plan Task 4): the header takes a drag handle before the thumbnail, outside the
+     * toggle (holding it never opens the card), and a styled subline under the meta (the target line).
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun headerShowsTheHandleAndTheSubline() {
+        for (collapsed in listOf(true, false)) {
+            runComposeUiTest {
+                var toggles = 0
+                withTheme {
+                    ProvideAppLocale("en") {
+                        ExerciseCardHeader(
+                            "Bench press", "Barbell, chest", ExerciseMedia.None, MIcons.Barbell,
+                            onMenu = {}, collapsed = collapsed, onToggle = { toggles++ },
+                            handle = { Box(Modifier.size(48.dp).testTag("the-handle")) },
+                            subline = AnnotatedString("Target 3×8 · 80 kg"),
+                        )
+                    }
+                }
+                waitForIdle()
+                val handle = onNodeWithTag("the-handle", useUnmergedTree = true).getBoundsInRoot()
+                val tile = onNodeWithTag(ExerciseEquipmentIconTag, useUnmergedTree = true).getBoundsInRoot()
+                assertTrue(handle.right <= tile.left, "the handle comes first: ${handle.right} / ${tile.left}")
+                val meta = onNodeWithText("Barbell, chest", useUnmergedTree = true).getBoundsInRoot()
+                val subline = onNodeWithTag(ExerciseCardSublineTag, useUnmergedTree = true)
+                subline.assertTextEquals("Target 3×8 · 80 kg")
+                assertTrue(subline.getBoundsInRoot().top >= meta.bottom, "the subline is under the meta (collapsed=$collapsed)")
+                onNodeWithTag("the-handle", useUnmergedTree = true).performTouchInput { click(center) }
+                waitForIdle()
+                assertEquals(0, toggles, "a tap on the handle does not toggle the card")
+                onNodeWithTag(ExerciseHeaderToggleTag).performClick()
+                assertEquals(1, toggles)
             }
         }
     }

@@ -220,7 +220,10 @@ jobs:
           # Phase 4B task 1 (:app): RoutineWarmupMigrationTest 3, SchemaV5FixtureTest 1, MigrationEquivalenceTest +1;
           # (:shared commonTest) BackupCodecTest +3, ImportPlannerTest +1; (:shared androidHostTest) BackupSampleFileTest +1. 935 + 10 = 945.
           # Phase 4B task 2 (:app): RoutineCommandsPersistenceTest 24. 945 + 24 = 969.
-          MIN_HOST_TESTS: 969
+          # Phase 4B task 4 (:designsystem commonTest): SizesTimingElevationTest.reorderTokens +1, MotionTokensTest.dragLiftScale +1. 935 + 2 = 937.
+          # Phase 4B task 4 fix round 1 (:designsystem commonTest): ComponentColorsTest.reorderLiftShowsInBothThemes +1. 937 + 1 = 938.
+          # Merged Task 4 (+3 over 935): 969 + 3 = 972.
+          MIN_HOST_TESTS: 972
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -423,7 +426,9 @@ jobs:
           # Phase 4A task 17 fix round 1: RowsTest +1 (TopBar without a title, uiTest). 336 + 1 = 337.
           # Phase 4A task 21: MBottomSheetTest +1, MDialogTest +1 (the host's density in the window, uiTest). 337 + 2 = 339.
           # Phase 4A task 23: LicenseTextTest +1 (commonTest). 339 + 1 = 340.
-          MIN_DS_IOS_TESTS: 340
+          # Phase 4B task 4: SizesTimingElevationTest +1, MotionTokensTest +1 (commonTest); ReorderTest 15, ExerciseCardTest +1, GallerySmokeTest +1 (uiTest). 340 + 19 = 359.
+          # Phase 4B task 4 fix round 1: ComponentColorsTest +1 (commonTest); ReorderTest +2 (uiTest). 359 + 3 = 362.
+          MIN_DS_IOS_TESTS: 362
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -8,6 +8,7 @@ violation is printed as "file:line: rule". Exit code 1 when there is any, 0 when
 Line comments (//) and KDoc lines are ignored.
 
 Without -Path the target is the component, gallery, licenses and illustration folders of :designsystem
+and its interaction/Reorder.kt
 (folders that do not exist yet are skipped), the files of the pilot screen (Settings) in :app and
 the common code of the redesigned screens (:screens).
 .PARAMETER Path
@@ -24,6 +25,9 @@ if (-not $Path -or $Path.Count -eq 0) {
     $pilot = 'app/src/main/java/com/mooscles/ui'
     $Path = @(
         "$base/components", "$base/gallery", "$base/licenses", "$base/illustration",
+        # Phase 4B: the reordering modifiers (only this file of interaction/: MotionPolicy's
+        # `MotionChoice.Spring(` would match the case-insensitive spring rule).
+        "$base/interaction/Reorder.kt",
         "$pilot/SettingsScreen.kt", "$pilot/UpdateSection.kt", "$pilot/DataSection.kt",
         "$pilot/SettingsRestDurationField.kt", "$pilot/SettingsTexts.kt",
         'screens/src/commonMain/kotlin/com/mooscles/screens'

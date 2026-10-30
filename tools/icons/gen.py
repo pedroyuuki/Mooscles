@@ -28,6 +28,8 @@ LUCIDE_LIST = [
  ("Pencil","pencil"),("ArrowUp","arrow-up"),("ArrowDown","arrow-down"),("ArrowLeftRight","arrow-left-right"),
  # Phase 4A: the library.
  ("Settings","settings"),("SearchX","search-x"),
+ # Phase 4B: the drag handle of reordering.
+ ("GripVertical","grip-vertical"),
 ]
 
 # Own equipment icons: SVG fragments on the same 24 grid, stroke 2, round caps and joins.
