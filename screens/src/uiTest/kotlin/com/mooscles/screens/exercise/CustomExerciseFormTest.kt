@@ -19,6 +19,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -384,6 +385,22 @@ class CustomExerciseFormTest {
         save()
         name().assertIsFocused().assertIsDisplayed()
         assertEquals(emptyList(), creations(outcome.calls))
+    }
+
+    /** "Save", the filled button, ends where the page's content ends (16 dp from the edge), not 8 dp from it. */
+    @Test
+    fun saveEndsWhereTheContentEnds() {
+        for (width in listOf(400.dp, 320.dp)) {
+            runComposeUiTest {
+                showForm(size = DpSize(width, 800.dp))
+                val save = onNodeWithTag(CustomExerciseFormTags.SAVE).getUnclippedBoundsInRoot()
+                val field = name().getUnclippedBoundsInRoot()
+                assertTrue((save.right - field.right).value in -0.5f..0.5f, "at $width: save ends at ${save.right}, the field at ${field.right}")
+                val page = onNodeWithTag(CustomExerciseFormTags.ROOT).getUnclippedBoundsInRoot()
+                assertTrue((page.right - field.right).value in 15.5f..16.5f, "at $width: the field ends at ${field.right}, the page at ${page.right}")
+            }
+            LocalAppLocale.restore()
+        }
     }
 
     @Test

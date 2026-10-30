@@ -258,7 +258,8 @@ internal fun CustomExerciseForm(
                     Modifier
                         .fillMaxWidth()
                         .sizeIn(minHeight = MTheme.sizes.rowMin)
-                        .padding(horizontal = MTheme.space.s2),
+                        // "Cancel" (text) keeps its own inset; "Save" (filled) ends with the content, 16 dp in.
+                        .padding(start = MTheme.space.s2, end = MTheme.space.s4),
                     horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
