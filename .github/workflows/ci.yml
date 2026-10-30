@@ -236,7 +236,10 @@ jobs:
           # Phase 4B task 11: (:screens commonTest) RoutineSummariesTest 3; (:designsystem commonTest)
           # SizesTimingElevationTest +1 (mediaStripIsFiftySix). 1062 + 4 = 1066.
           # Phase 4B task 11 fix round 1: (:screens commonTest) RoutineNamesTest 3. 1066 + 3 = 1069.
-          MIN_HOST_TESTS: 1069
+          # Phase 4B task 15 (:app): new RoutinesNavigationHostTest 11, AndroidPhotoCaptureHostTest 7, DataSectionHostTest +1 = 19;
+          # retired with the old routine screens (logic ported in tasks 11, 13 and 14): RoutineEditorHostTest 13,
+          # RoutineResumeHostTest 7, RoutineFoldersHostTest 2, RoutineEditorVisualHostTest 1 = 23. 1069 + 19 - 23 = 1065.
+          MIN_HOST_TESTS: 1065
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

@@ -23,6 +23,8 @@ import com.mooscles.designsystem.licenses.LicensesScreen
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.exercise.ExerciseInfoRoute
 import com.mooscles.screens.library.LibraryRoute
+import com.mooscles.screens.routines.RoutineEditorRoute
+import com.mooscles.screens.routines.TrainRoute
 import com.mooscles.screens.shell.AppShellBottom
 import com.mooscles.screens.shell.ShellTabs
 import com.mooscles.screens.summary.WorkoutSummaryScreen
@@ -41,6 +43,28 @@ private fun detailRoute(id: String, summary: Boolean) = "workoutDetail/$id?summa
 /** The exercise detail ([ExerciseInfoRoute]), opened from the library and from the workout's menu. */
 internal const val EXERCISE_INFO_ROUTE = "exerciseInfo/{id}"
 
+/** The routine editor ([RoutineEditorRoute]), opened from Train, the exercise detail and a copy's "Open". */
+internal const val ROUTINE_ROUTE = "routine/{id}"
+
+private fun routineRoute(id: String) = "routine/$id"
+
+/** Opens an editor, replacing the one in view (a copy's "Open"), never stacking editors. */
+private fun NavHostController.openRoutine(id: String) = navigate(routineRoute(id)) {
+    if (currentDestination?.route == ROUTINE_ROUTE) popUpTo(ROUTINE_ROUTE) { inclusive = true }
+    launchSingleTop = true
+}
+
+/**
+ * Leaves the editor for Train. Idempotent: it pops to Train instead of popping once, so a second call (the routine going
+ * away in the same frame as Back) lands on the same screen and never pops Train itself.
+ */
+internal fun NavHostController.leaveRoutineEditor() {
+    navigate(ShellTabs.TRAIN) {
+        popUpTo(ShellTabs.TRAIN) { inclusive = false }
+        launchSingleTop = true
+    }
+}
+
 private fun NavHostController.openExerciseInfo(id: String) = navigate("exerciseInfo/$id") {
     // A second tap before the first one lands opens no second detail over it.
     launchSingleTop = true
@@ -51,7 +75,7 @@ private fun NavHostController.openExerciseInfo(id: String) = navigate("exerciseI
  * 17, pre-flight F21) and their own errors (decision 19, plan 4A decision 14). The one list both
  * the snackbar and the loading overlay read.
  */
-private val OWN_PLACEHOLDER_ROUTES = setOf(WORKOUT_ROUTE, ShellTabs.LIBRARY, EXERCISE_INFO_ROUTE)
+private val OWN_PLACEHOLDER_ROUTES = setOf(WORKOUT_ROUTE, ShellTabs.TRAIN, ROUTINE_ROUTE, ShellTabs.LIBRARY, EXERCISE_INFO_ROUTE)
 
 /** The route the app's frame is drawn for, and [summary] when it is the end-of-workout summary. */
 internal data class ShownRoute(val route: String, val summary: Boolean = false) {
@@ -82,7 +106,8 @@ internal fun rememberShownRoute(entryRoute: String?, entrySummary: Boolean): Sho
 }
 
 /**
- * The app: the old screens and, from `:screens`, the active workout ([ActiveWorkoutRoute]), the
+ * The app: the old screens and, from `:screens`, the Train tab ([TrainRoute]), the routine editor
+ * ([RoutineEditorRoute], [ROUTINE_ROUTE]), the active workout ([ActiveWorkoutRoute]), the
  * end-of-workout summary ([WorkoutSummaryScreen]), the library tab ([LibraryRoute]), the exercise
  * detail ([ExerciseInfoRoute], [EXERCISE_INFO_ROUTE]) and the shell's bottom ([AppShellBottom]).
  *
@@ -95,8 +120,9 @@ internal fun rememberShownRoute(entryRoute: String?, entrySummary: Boolean): Sho
  *
  * The new screens bring their own top bar, show their own errors in the app's language (the global
  * snackbar waits until they are left) and their own placeholders while the state loads (the
- * spinner overlay is only the old screens'). The library opens the detail, and Settings from its
- * shortcut; the detail opens the old exercise history, the routine editor and the workout.
+ * spinner overlay is only the old screens'). Train and the library open Settings from their
+ * shortcut; Train opens the editor, whose "Open" on a copy replaces it, and whose deleted routine
+ * returns to Train ([leaveRoutineEditor]); the detail opens the old exercise history, the editor and the workout.
  *
  * [timerState] is the ticking rest timer, read only by the workout bar and the workout's timer;
  * without it they read [UiState.timer]. [foreground] is whether the app is in the foreground (the
@@ -245,11 +271,21 @@ fun MoosclesApp(
             Box(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize()) {
                 // Keep the graph installed even while loading, including restores.
                 NavHost(nav, startDestination = ShellTabs.TRAIN, modifier = Modifier.fillMaxSize()) {
-                    composable(ShellTabs.TRAIN) { RoutinesScreen(state, hosted, onEdit = { nav.navigate("routine/$it") }, onWorkout = ::openWorkout) }
-                    composable("routine/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { page ->
-                        val routine = state.routines.find { it.id == page.arguments?.getString("id") }
-                        if (routine != null) RoutineEditor(routine, state, hosted, onWorkout = ::openWorkout)
-                        else MissingScreen("Routine unavailable")
+                    composable(ShellTabs.TRAIN) {
+                        TrainRoute(state, hosted, onOpenRoutine = { nav.openRoutine(it) }, onOpenWorkout = ::openWorkout,
+                            onOpenSettings = { nav.navigate(SettingsRoutes.settings()) { launchSingleTop = true } })
+                    }
+                    composable(ROUTINE_ROUTE, arguments = listOf(navArgument("id") { type = NavType.StringType })) { page ->
+                        RoutineEditorRoute(
+                            routineId = page.arguments?.getString("id").orEmpty(),
+                            state = state,
+                            actions = hosted,
+                            onBack = { nav.popBackStack() },
+                            onGone = { nav.leaveRoutineEditor() },
+                            onOpenWorkout = ::openWorkout,
+                            onExerciseInfo = { nav.openExerciseInfo(it) },
+                            onOpenRoutine = { nav.openRoutine(it) },
+                        )
                     }
                     composable(WORKOUT_ROUTE) { WorkoutRoute(state, timer, hosted, nav, skeletonCards, workoutScreen, onChooseRoutine = { selectTab(ShellTabs.TRAIN) }) }
                     composable(ShellTabs.LIBRARY) {
@@ -263,7 +299,7 @@ fun MoosclesApp(
                             actions = hosted,
                             onBack = { nav.popBackStack() },
                             onOpenHistory = { nav.navigate("exercise/$it") },
-                            onOpenRoutine = { nav.navigate("routine/$it") },
+                            onOpenRoutine = { nav.openRoutine(it) },
                             onOpenWorkout = ::openWorkout,
                             foreground = foreground,
                         )

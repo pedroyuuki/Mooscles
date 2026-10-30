@@ -57,7 +57,9 @@ class MainActivity : ComponentActivity(), AppThemeBars {
             // Plan 4A decision 15: the common code reads no platform state; the detail's figure
             // stops while the Activity is not started (in the background).
             val lifecycleState = lifecycle.currentStateAsState()
-            MoosclesApp(state.value, vm, timer, workoutRequest.value, foreground = lifecycleState.value.isAtLeast(Lifecycle.State.STARTED))
+            ProvideExercisePhotos(application as MoosclesApplication, this) {
+                MoosclesApp(state.value, vm, timer, workoutRequest.value, foreground = lifecycleState.value.isAtLeast(Lifecycle.State.STARTED))
+            }
         }
         // Only a fresh launch from a notification asks for its screen: a recreated Activity
         // (rotation, process restore) keeps the same intent, and asking again would navigate

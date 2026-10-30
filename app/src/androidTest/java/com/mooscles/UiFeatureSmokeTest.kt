@@ -173,17 +173,17 @@ class UiFeatureSmokeTest {
         edgeToEdgeTestActivity()
         compose.setContent { MoosclesApp(state.value, actions) }
         chooseFolder("full")
-        compose.onNodeWithTag("selected-routine-folder", useUnmergedTree = true).assertTextEquals("FULLBODY")
+        compose.onNodeWithTag("train-folder-full").assertIsSelected()
         compose.onNodeWithTag("routines-list").performScrollToNode(hasTestTag("routine-smoke-full-start"))
         compose.onNodeWithTag("routine-smoke-full-start").assertTextEquals("Start")
         compose.onNodeWithTag("routine-smoke-upper-start").assertDoesNotExist()
         compose.runOnIdle { assertSame("Switching folders must preserve the active workout", firstWorkout, state.value.active) }
         tab("history").performClick()
         tab("routines").performClick()
-        compose.onNodeWithTag("selected-routine-folder", useUnmergedTree = true).assertTextEquals("FULLBODY")
+        compose.onNodeWithTag("train-folder-full").assertIsSelected()
         chooseFolder("upper")
         compose.onNodeWithTag("routines-list").performScrollToNode(hasTestTag("routine-smoke-upper-start"))
-        compose.onNodeWithTag("routine-smoke-upper-start").assertTextEquals("Resume active")
+        compose.onNodeWithTag("routine-smoke-upper-start").assertTextEquals("Resume workout")
         repeat(2) { cycle ->
             if (cycle > 0) compose.runOnIdle {
                 state.value = state.value.copy(active = firstWorkout.copy(id = "synthetic-discard-two"))
@@ -225,9 +225,9 @@ class UiFeatureSmokeTest {
         compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
     private fun chooseFolder(id: String) {
-        compose.onNodeWithTag("routines-list").performScrollToNode(hasTestTag("routine-folder-selector"))
-        compose.onNodeWithTag("routine-folder-selector").performClick()
-        compose.onNodeWithTag("folder-choice-$id").performClick()
+        // The new Train tab (plan 4B): the folders are chips at the top of the list.
+        compose.onNodeWithTag("routines-list").performScrollToIndex(0)
+        compose.onNodeWithTag("train-folder-$id").performClick()
     }
     private fun assertTrain() {
         tab("routines").assertIsSelected()

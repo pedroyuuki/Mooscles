@@ -239,7 +239,10 @@ class LibraryNavigationHostTest {
             assertTrue(frames.last().newScreen)
             assertEquals(shown.summary, frames.last().loadingOverlay)
         }
-        assertFalse(ShownRoute(ShellTabs.TRAIN).newScreen)
+        // Train and the editor are new screens too (plan 4B, Task 15); the history is still an old one.
+        assertTrue(ShownRoute(ShellTabs.TRAIN).newScreen)
+        assertTrue(ShownRoute(ROUTINE_ROUTE).newScreen)
+        assertFalse(ShownRoute(ShellTabs.HISTORY).newScreen)
     }
 
     private fun reload() {

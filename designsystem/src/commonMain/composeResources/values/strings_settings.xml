@@ -28,6 +28,7 @@
     <string name="settings_export">Export data</string>
     <string name="settings_import">Import data</string>
     <string name="settings_import_blocked">Finish or discard the active workout to import</string>
+    <string name="settings_data_export_photos_note">Photos of custom exercises are not included in the file.</string>
     <string name="settings_data_dismiss">Dismiss</string>
     <string name="settings_data_footer">Backups contain your full workout history without encryption. Keep the file somewhere private.</string>
     <string name="settings_import_title">Import backup?</string>

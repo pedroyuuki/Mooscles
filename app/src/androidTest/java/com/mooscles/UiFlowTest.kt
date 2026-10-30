@@ -35,62 +35,47 @@ class UiFlowTest {
         val app = ApplicationProvider.getApplicationContext<MoosclesApplication>()
         val name = "Flow test ${System.currentTimeMillis()}"
         compose.waitUntil(30_000) { compose.onAllNodesWithTag("routines-list").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("routines-list").performScrollToNode(hasText("New routine"))
-        compose.onNodeWithText("New routine").performClick()
-        compose.onNodeWithText("Routine name").performTextInput(name)
-        compose.onNodeWithText("Save").performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("routines-list").performScrollToNode(hasText(name))
-        compose.onNodeWithText(name).performClick()
-        compose.onAllNodesWithText("Add exercise").onFirst().performClick()
-        compose.onNodeWithText("Find a movement").performTextInput("Barbell bench press")
-        compose.onNode(hasText("Barbell bench press", substring = false) and !hasSetTextAction()).performClick()
-        var entryId: String? = null
-        var firstSetId: String? = null
-        compose.waitUntil(10_000) {
-            compose.onAllNodesWithText("Barbell bench press").fetchSemanticsNodes()
-            val data = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
-            val routineId = data.routines.singleOrNull { it.name == name }?.id
-            val entry = routineId?.let { data.routineItems(it).singleOrNull() }
-            val rows = entry?.let { data.plannedSets(it.id) }.orEmpty()
-            entryId = entry?.id
-            firstSetId = rows.firstOrNull()?.id
-            rows.size == 2
-        }
-        val repsTag = "routine-set-$firstSetId-reps"
-        // Room can finish before the saved routine reaches Compose. Wait for the
-        // actual lazy-list item, scrolling on each attempt so this also works on small screens.
+        // The new Train tab and routine editor (plan 4B): the name sheet creates the routine and the editor opens on its echo.
+        // The list shows placeholders until the state loads; the button is there once it has.
         compose.waitUntil(30_000) {
             try {
-                compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(repsTag))
-                compose.onNodeWithTag(repsTag).assertExists()
-                true
+                compose.onNodeWithTag("routines-list").performScrollToNode(hasText("New routine"))
+                compose.onAllNodesWithText("New routine").fetchSemanticsNodes().isNotEmpty()
             } catch (_: AssertionError) {
                 false
             }
         }
-        compose.onNodeWithTag(repsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
-        compose.onNodeWithTag(repsTag).performTextReplacement("8")
-        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag("routine-$entryId-menu"))
-        compose.onNodeWithTag("routine-$entryId-menu").performClick()
-        compose.onNodeWithText("Edit Rest Timer").performClick()
-        compose.onNodeWithTag("routine-$entryId-rest").performTextReplacement("2:00")
-        compose.onNodeWithText("Done").performClick()
-        compose.onNodeWithText("Save targets").assertDoesNotExist()
-        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasText("Start this routine"))
-        compose.onNodeWithText("Start this routine").performClick()
+        compose.onAllNodesWithText("New routine").onFirst().performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement(name)
+        compose.onNodeWithText("Create").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("routine-editor-list").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag("routine-editor-add"))
+        compose.onNodeWithTag("routine-editor-add").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("Barbell bench press")
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("exercise-picker-all-catalog_barbell_bench_flat").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("exercise-picker-all-catalog_barbell_bench_flat").performClick()
+        compose.onNodeWithTag("exercise-picker-add").performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("routine-editor-list").fetchSemanticsNodes()
+            val data = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
+            val routineId = data.routines.singleOrNull { it.name == name }?.id
+            val entry = routineId?.let { data.routineItems(it).singleOrNull() }
+            entry != null && data.plannedSets(entry.id).size == 2
+        }
+        // Planned targets and the routine's rest are edited in the editor's own tests (plan 4B, Tasks 13 and 14).
+        compose.onNodeWithTag("routine-editor-start").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("tab-bar").assertDoesNotExist()
         val started = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
         val planned = started.routineItems(started.routines.single { it.name == name }.id).single()
         val workoutExercise = started.workoutItems(started.activeWorkout!!.id).single()
-        assertEquals(8, planned.targetReps)
+        assertEquals(0, planned.targetReps)
         assertEquals(120, planned.restSeconds)
         assertEquals(120, workoutExercise.restSeconds)
         assertEquals(planned.routineId, started.activeWorkout!!.sourceRoutineId)
-        assertEquals(listOf(8, 0), started.plannedSets(planned.id).map { it.targetReps })
+        assertEquals(listOf(0, 0), started.plannedSets(planned.id).map { it.targetReps })
         val sets = started.exerciseSets(workoutExercise.id)
-        assertEquals(listOf(8, 0), sets.map { it.reps })
+        assertEquals(listOf(0, 0), sets.map { it.reps })
         assertTrue(sets.none { it.completed })
         // This workout's next rests, from the exercise's rest sheet: 2:00 - 0:15.
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("exercise-rest-${workoutExercise.id}"))
@@ -104,7 +89,7 @@ class UiFlowTest {
             runBlocking(Dispatchers.IO) { app.repository.snapshot() }.workoutExercises.single { it.id == workoutExercise.id }.restSeconds == 105
         }
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("workout-set-${sets[0].id}"))
-        field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("8")))
+        field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
         field(sets[0].id, SetRowLoadTag).performTextReplacement("20")
         field(sets[0].id, SetRowRepsTag).performTextReplacement("10")
         compose.onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(hasTestTag("workout-set-${sets[0].id}"))).performClick()
