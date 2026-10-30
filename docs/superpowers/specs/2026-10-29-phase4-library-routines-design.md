@@ -238,6 +238,7 @@ As telas ficam no `:screens`, em `com.mooscles.screens.library` e `com.mooscles.
 De cima para baixo:
 
 - **Topo:** voltar; o nome (`title.md`, até 2 linhas); menu com "Editar exercício" (só personalizado) e "Ver histórico completo".
+  - *Nota (2026-10-30, Task 17, correção 1):* o nome saiu da barra fixa e virou a primeira linha do conteúdo que rola (`title.md`, cabeçalho, inteiro em qualquer tamanho). A barra fica só com voltar e o menu (o `TopBar` do design system aceita título nulo). *Por quê:* um nome personalizado de 120 caracteres a 200% numa tela de 320 dp ocupava cerca de 600 dp de uma janela de 640 dp na barra fixa e deixava as ações fora de alcance; cortar em 2 linhas com reticências esconderia parte do nome. A intenção do "até 2 linhas" (a barra não cresce) continua.
 - **Mídia:** moldura 1:1 com a largura útil, até 360 dp, centrada: a figura alternando (D5), a foto (personalizado, 4B) ou o placeholder do equipamento.
 - **Metadados:** chips de leitura com o equipamento, o grupo muscular e a convenção de registro, e a legenda de uma linha da convenção quando não for "Carga total" (o mesmo texto do card do treino da fase 3).
 - **Músculos:** o mapa corporal (D6) e o texto equivalente.
