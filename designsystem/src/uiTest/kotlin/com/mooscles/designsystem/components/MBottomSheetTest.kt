@@ -7,6 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.click
@@ -69,5 +72,22 @@ class MBottomSheetTest {
         waitForIdle()
         onNodeWithTag(SheetScrimTag).assertContentDescriptionEquals("Dismiss")
         assertEquals(1f, onNodeWithTag(SheetScrimTag).fetchSemanticsNode().config[SemanticsProperties.TraversalIndex])
+    }
+
+    /**
+     * The sheet is a window of its own; its content takes the host's density and font scale (on
+     * Android the window would take the configuration's, and a 2x test would run at 1x). A density
+     * of 2 differs from the emulator's and from the simulator's 1, so a window's own cannot pass.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun contentTakesTheHostDensityAndFontScale() = runComposeUiTest {
+        withTheme(fontScale = 2f, density = 2f) { MBottomSheet(onDismiss = {}) { MText("Sheet", MTheme.type.bodyLg) } }
+        waitForIdle()
+        val results = mutableListOf<TextLayoutResult>()
+        val action = onNodeWithText("Sheet", useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action
+        assertTrue(action != null && action(results), "no text layout result")
+        val density = results.first().layoutInput.density
+        assertEquals(2f to 2f, density.density to density.fontScale)
     }
 }

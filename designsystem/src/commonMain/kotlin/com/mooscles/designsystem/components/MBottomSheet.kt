@@ -39,8 +39,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.mooscles.designsystem.theme.MTheme
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -126,14 +124,7 @@ fun MBottomSheet(
             }
         }
     }
-    Dialog(
-        onDismissRequest = { close() },
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false,
-        ),
-    ) {
+    OverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         BoxWithConstraints(
