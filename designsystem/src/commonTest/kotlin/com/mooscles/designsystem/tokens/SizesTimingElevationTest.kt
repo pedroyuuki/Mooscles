@@ -52,6 +52,18 @@ class SizesTimingElevationTest {
         assertEquals(300L, MoosclesTiming().cardAdvance)
     }
 
+    /**
+     * Phase 4A (spec "Aba Biblioteca" and "Detalhe do exercício"): the list media is 56 dp, the
+     * detail media frame at most 360 dp; the read-only metadata chip draws 32 dp tall (plan decision 12).
+     */
+    @Test
+    fun libraryMediaSizes() {
+        val s = MoosclesSizes()
+        assertEquals(56.dp, s.mediaList)
+        assertEquals(360.dp, s.mediaDetailMax)
+        assertEquals(32.dp, s.infoChipHeight)
+    }
+
     @Test
     fun timerAnnounceHoldIsOneAndAHalfSeconds() {
         assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)

@@ -101,4 +101,6 @@
     <string name="ds_body_map_secondary">Secondary</string>
     <!-- The licenses entry of the own media, under CC0 1.0. -->
     <string name="ds_licenses_mooscles_media">Mooscles illustrations, exercise tips and names</string>
+    <!-- The clear button of the search field. -->
+    <string name="ds_search_clear">Clear search</string>
 </resources>

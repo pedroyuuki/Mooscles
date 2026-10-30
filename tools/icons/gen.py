@@ -26,6 +26,8 @@ LUCIDE_LIST = [
  ("History","rotate-ccw-clock"),  # Lucide 1.x renamed history to rotate-ccw-clock
  ("LayoutGrid","layout-grid"),("Search","search"),("Keyboard","keyboard"),("Share2","share-2"),
  ("Pencil","pencil"),("ArrowUp","arrow-up"),("ArrowDown","arrow-down"),("ArrowLeftRight","arrow-left-right"),
+ # Phase 4A: the library.
+ ("Settings","settings"),("SearchX","search-x"),
 ]
 
 # Own equipment icons: SVG fragments on the same 24 grid, stroke 2, round caps and joins.
