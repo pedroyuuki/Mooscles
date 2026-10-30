@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fase 4B, tarefa 13: o editor de rotina (pt-BR). Toda chave existe também em values com os mesmos argumentos. -->
+<resources>
+    <string name="editor_more">Opções da rotina</string>
+    <string name="editor_delete">Excluir rotina</string>
+    <string name="editor_add_exercises">Adicionar exercícios</string>
+    <string name="editor_start">Começar treino</string>
+    <string name="editor_rest_chip">Descanso %1$s</string>
+    <string name="editor_empty">Rotina sem exercícios</string>
+    <string name="editor_empty_body">Adicione os exercícios que você quer fazer nesta rotina.</string>
+    <string name="editor_replace">Trocar exercício</string>
+    <string name="editor_about">Sobre o exercício</string>
+    <string name="editor_remove_exercise">Remover da rotina</string>
+    <string name="editor_remove_title">Remover %1$s da rotina?</string>
+    <plurals name="editor_remove_body">
+        <item quantity="one">A série planejada sai.</item>
+        <item quantity="other">As %1$d séries planejadas saem.</item>
+    </plurals>
+    <string name="editor_remove_confirm">Remover</string>
+    <string name="editor_replace_title">Trocar o exercício?</string>
+    <string name="editor_replace_body">Os alvos manuais dele voltam a seguir o recorde.</string>
+    <string name="editor_replace_confirm">Trocar</string>
+    <string name="editor_exercise_more">Opções de %1$s</string>
+    <!-- O rótulo de uma série planejada de aquecimento na lista de séries (as de trabalho são numeradas). -->
+    <string name="editor_set_warmup">A</string>
+</resources>

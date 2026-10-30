@@ -140,13 +140,39 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
  * [onDismiss], which is also the close without a choice (the scrim, Back, a drag down). Nothing
  * else here touches the rest timer: the rest running now keeps its own time.
  *
- * Put it on the screen through [RestSheetHost], which closes it when the exercise leaves the workout.
+ * Put it on the screen through [RestSheetHost], which closes it when the exercise leaves the workout. With
+ * [showStartNow] false the button is not there (the form for any other exercise with a rest is the overload below).
+ */
+@Composable
+internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDismiss: () -> Unit, showStartNow: Boolean = true) {
+    RestSheet(
+        exerciseName = exerciseName(entry.exercise),
+        restSeconds = entry.restSeconds,
+        key = entry.id,
+        onSave = { actions.updateWorkoutExerciseRest(entry.id, it) },
+        onStartNow = if (showStartNow) ({ seconds -> actions.startTimer(entry.exercise.name, seconds, entry.id) }) else null,
+        onDismiss = onDismiss,
+    )
+}
+
+/**
+ * The sheet itself (plan decision 15), for any exercise with a rest: [exerciseName] under the title, the [restSeconds]
+ * the database has now, [key] to tell its draft from another entry's, [onSave] for every write and [onStartNow] for
+ * "Start rest now", which is left out of the sheet when null (the routine editor's, where nothing is running). The
+ * routine editor writes `updateRoutineExerciseRest` through [onSave].
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDismiss: () -> Unit) {
-    val draft = rememberSaveable(entry.id, saver = RestDraft.Saver) { RestDraft(entry.restSeconds, entry.restSeconds) }
-    LaunchedEffect(draft, entry.restSeconds) { draft.echo(entry.restSeconds) }
+internal fun RestSheet(
+    exerciseName: String,
+    restSeconds: Int,
+    key: Any,
+    onSave: (seconds: Int) -> Unit,
+    onStartNow: ((seconds: Int) -> Unit)?,
+    onDismiss: () -> Unit,
+) {
+    val draft = rememberSaveable(key, saver = RestDraft.Saver) { RestDraft(restSeconds, restSeconds) }
+    LaunchedEffect(draft, restSeconds) { draft.echo(restSeconds) }
     val seconds = draft.value
     val rest = stringResource(Res.string.workout_field_rest)
     val step = pluralCount(DsRes.plurals.ds_seconds, REST_STEP_SECONDS)
@@ -162,7 +188,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
         ) {
             Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() }) {
                 MText(stringResource(Res.string.workout_rest_title), MTheme.type.titleMd)
-                MText(exerciseName(entry.exercise), MTheme.type.bodyMd, color = MTheme.colors.textSecondary)
+                MText(exerciseName, MTheme.type.bodyMd, color = MTheme.colors.textSecondary)
             }
             Stepper(
                 value = seconds.toDouble(),
@@ -173,7 +199,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
                 decreaseLabel = stringResource(DsRes.string.ds_stepper_decrease, rest, step),
                 increaseLabel = stringResource(DsRes.string.ds_stepper_increase, rest, step),
                 display = RestDuration.format(seconds),
-                onValueChangeFinished = { draft.commit { actions.updateWorkoutExerciseRest(entry.id, it) } },
+                onValueChangeFinished = { draft.commit(onSave) },
             )
             FlowRow(
                 Modifier.fillMaxWidth().selectableGroup(),
@@ -187,7 +213,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
                         selected = seconds == shortcut,
                         onClick = {
                             draft.show(shortcut)
-                            draft.commit { actions.updateWorkoutExerciseRest(entry.id, it) }
+                            draft.commit(onSave)
                         },
                         modifier = Modifier.testTag(restShortcutTag(shortcut)),
                         kind = MChipKind.SetType,
@@ -200,17 +226,19 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
                 color = MTheme.colors.textSecondary,
                 modifier = Modifier.fillMaxWidth(),
             )
-            MButton(
-                stringResource(Res.string.workout_rest_start_now),
-                onClick = {
-                    actions.startTimer(entry.exercise.name, draft.value, entry.id)
-                    onDismiss()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                variant = MButtonVariant.Tonal,
-                size = MButtonSize.L,
-                enabled = seconds > 0,
-            )
+            if (onStartNow != null) {
+                MButton(
+                    stringResource(Res.string.workout_rest_start_now),
+                    onClick = {
+                        onStartNow(draft.value)
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    variant = MButtonVariant.Tonal,
+                    size = MButtonSize.L,
+                    enabled = seconds > 0,
+                )
+            }
         }
     }
 }

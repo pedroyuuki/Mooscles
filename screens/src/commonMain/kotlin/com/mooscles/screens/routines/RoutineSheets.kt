@@ -165,7 +165,7 @@ internal fun ActiveWorkoutDialog(activeName: String, onResume: () -> Unit, onDis
 }
 
 @Composable
-private fun SheetTitle(text: String) {
+internal fun SheetTitle(text: String) {
     MText(
         text,
         MTheme.type.titleMd,

@@ -329,6 +329,22 @@ class RestSheetTest {
         )
     }
 
+    @Test
+    fun withoutStartNowTheSheetHasNoButtonAndStillSaves() = runComposeUiTest {
+        val exercises = mutableStateOf(listOf(entry(rest = 120)))
+        val actions = Actions(exercises)
+        withScreen(locale = "pt-BR") {
+            RestSheet(exercises.value.single(), actions, onDismiss = {}, showStartNow = false)
+        }
+        waitForIdle()
+        // The routine editor's form: the stepper and the shortcuts, no "Start rest now", and the timer is never touched.
+        value().assertTextEquals("2:00")
+        onNodeWithText("Iniciar descanso agora").assertDoesNotExist()
+        tap(StepperIncreaseTag)
+        value().assertTextEquals("2:15")
+        assertEquals(listOf("updateWorkoutExerciseRest:e1,135"), actions.calls)
+    }
+
     private companion object {
         fun setRest(exercises: MutableState<List<WorkoutExerciseUi>>, entryId: String, seconds: Int) {
             exercises.value = exercises.value.map { if (it.id == entryId) it.copy(restSeconds = seconds) else it }

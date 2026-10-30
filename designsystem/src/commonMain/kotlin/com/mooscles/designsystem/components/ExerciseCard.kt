@@ -154,7 +154,9 @@ fun ExerciseCard(
  *
  * Phase 4B: [handle] (a [com.mooscles.designsystem.interaction.ReorderHandle]) comes before the
  * thumbnail, outside the toggle, so holding it never opens or closes the card; [subline] is a styled
- * line under [meta], open or collapsed (the routine target, "Target 3×8 · 80 kg").
+ * line under [meta], open or collapsed (the routine target, "Target 3×8 · 80 kg"). A null [onToggle] makes the
+ * header no button (the routine editor's cards do not collapse by hand); [menuTag] and [menuLabel] name the menu
+ * button of a list that has one per card ("Options for Bench press").
  */
 @Composable
 fun ExerciseCardHeader(
@@ -164,7 +166,7 @@ fun ExerciseCardHeader(
     equipmentIcon: ImageVector,
     onMenu: () -> Unit,
     collapsed: Boolean,
-    onToggle: () -> Unit,
+    onToggle: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     progress: String? = null,
     done: Boolean = false,
@@ -173,7 +175,12 @@ fun ExerciseCardHeader(
     columns: (@Composable () -> Unit)? = null,
     handle: (@Composable () -> Unit)? = null,
     subline: AnnotatedString? = null,
-) = CardHeader(name, meta, media, equipmentIcon, onMenu, collapsed, onToggle, modifier, progress, done, caption, support, columns, handle, subline)
+    menuTag: String = ExerciseMenuTag,
+    menuLabel: String? = null,
+) = CardHeader(
+    name, meta, media, equipmentIcon, onMenu, collapsed, onToggle, modifier, progress, done, caption, support, columns, handle, subline,
+    menuTag, menuLabel,
+)
 
 /** The middle of a segmented exercise card, one set row for a lazy list: the card's sides, no corners. */
 @Composable
@@ -231,6 +238,8 @@ private fun CardHeader(
     columns: (@Composable () -> Unit)?,
     handle: (@Composable () -> Unit)?,
     subline: AnnotatedString?,
+    menuTag: String = ExerciseMenuTag,
+    menuLabel: String? = null,
 ) {
     val colors = MTheme.colors
     val space = MTheme.space
@@ -298,7 +307,7 @@ private fun CardHeader(
                     }
                 }
             }
-            MIconButton(MIcons.EllipsisVertical, stringResource(Res.string.ds_exercise_menu), onMenu, Modifier.testTag(ExerciseMenuTag))
+            MIconButton(MIcons.EllipsisVertical, menuLabel ?: stringResource(Res.string.ds_exercise_menu), onMenu, Modifier.testTag(menuTag))
         }
         if (handle == null) {
             Row(toggle, horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically, content = main)
