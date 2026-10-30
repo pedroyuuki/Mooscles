@@ -121,8 +121,13 @@ class ExerciseAnatomyTest {
             assertEquals(equipment, Equipment.fromLabelOrName(equipment.label))
             assertEquals(equipment, Equipment.fromLabelOrName(equipment.name))
         }
+        for (convention in LoadConvention.entries) {
+            assertEquals(convention, LoadConvention.fromLabelOrName(convention.label))
+            assertEquals(convention, LoadConvention.fromLabelOrName(convention.name))
+        }
         assertNull(MuscleGroup.fromLabelOrName("chest"))
         assertNull(Equipment.fromLabelOrName(""))
+        assertNull(LoadConvention.fromLabelOrName("total load"))
     }
 
     @Test

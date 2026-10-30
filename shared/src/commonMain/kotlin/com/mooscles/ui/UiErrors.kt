@@ -41,5 +41,8 @@ object UiErrors {
             ?: timer?.let { text -> UiProblem(text, timerCode?.let { code -> from(code) } ?: UiError.GENERIC) }
 }
 
-/** [UiState.error]'s text and its [UiState.errorCode], set and cleared together. */
-internal data class UiProblem(val text: String, val code: UiError)
+/**
+ * [UiState.error]'s text, its [UiState.errorCode] and its [UiState.errorSubject], set and cleared together. Only a
+ * failed command has a [subject].
+ */
+internal data class UiProblem(val text: String, val code: UiError, val subject: String? = null)

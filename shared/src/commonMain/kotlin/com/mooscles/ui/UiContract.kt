@@ -8,8 +8,13 @@ data class ExerciseUi(
     val id: String, val name: String, val muscle: String, val equipment: String,
     val convention: String = "External load as entered", val custom: Boolean = false,
 )
+/**
+ * One planned set. [inherited] means it follows the exercise's record; a warm-up ([warmup]) never does, even when a
+ * backup marked it so, so the two are never both true.
+ */
 data class RoutineSetUi(
     val id: String, val reps: Int = 0, val weightKg: Double? = null, val inherited: Boolean = true,
+    val warmup: Boolean = false,
 )
 
 data class PlannedExerciseUi(
@@ -18,8 +23,16 @@ data class PlannedExerciseUi(
     val setTargets: List<RoutineSetUi> = emptyList(),
 )
 data class RoutineFolderUi(val id: String, val name: String)
+/**
+ * [folderId] is always an existing folder: a routine whose folder is gone is shown in the default one, as the
+ * repository orders it. [lastFinishedAt] is the latest `endedAt` of the finished workouts started from it.
+ */
 data class RoutineUi(val id: String, val name: String, val exercises: List<PlannedExerciseUi> = emptyList(),
-    val folderId: String = "default")
+    val folderId: String = "default", val lastFinishedAt: Long? = null)
+/** One planned working set of a target line, in exact kg; 0 reps and a null load are blank. */
+data class TargetSetUi(val reps: Int, val weightKg: Double?)
+/** What the source routine plans for one workout entry: its [working] sets in order and how many [warmups]. */
+data class RoutineTargetUi(val working: List<TargetSetUi>, val warmups: Int)
 data class SetUi(
     val id: String, val reps: Int = 0, val weightKg: Double = 0.0,
     val completed: Boolean = false, val warmup: Boolean = false, val assistance: Boolean = false,
@@ -42,6 +55,12 @@ data class WorkoutExerciseUi(
     val previousSets: List<PreviousSetUi> = emptyList(),
     /** That session's `startedAt`; null without an earlier session. */
     val previousDate: Long? = null,
+    /**
+     * The active workout's source routine's plan for this entry, as the routine is now; null in history, without
+     * a source routine, or when the entry has no match there. The n-th entry of an exercise matches the n-th
+     * entry of that exercise in the routine, by position.
+     */
+    val target: RoutineTargetUi? = null,
 )
 enum class RecordKind { WEIGHT, REPS }
 data class RecordUi(
@@ -92,6 +111,19 @@ data class UiState(
     val backup: BackupUi = BackupUi(),
     /** Why [error] is set, for screens that show their own localized copy instead of [error]'s text. */
     val errorCode: UiError? = null,
+    /**
+     * The id the failed command was about (plan decision 7): the new exercise, routine, copy, folder or set, or
+     * the routine or workout something was added to. Null for other commands and for failures that are not a
+     * command's. Cleared with [error].
+     */
+    val errorSubject: String? = null,
+    /**
+     * How many commands about each subject have failed while this screen state lives. A screen waiting for the
+     * echo of a command about an id releases its wait when the id's count grows past the one it saw when it sent
+     * the command: a later failure about another id replaces [errorSubject], never this count, and clearing the
+     * error keeps it (preflight F10).
+     */
+    val subjectFailures: Map<String, Int> = emptyMap(),
 )
 
 /** What went wrong, as the new screens word it. [UiErrors] translates failures into it. */
@@ -122,8 +154,18 @@ interface DataActions {
 interface MoosclesActions : UpdateActions, DataActions {
     fun clearError()
     fun createRoutine(name: String)
+    /** Creates a routine under [id], chosen by the screen, in [folderId]; an id already in use is refused. */
+    fun createRoutine(name: String, folderId: String, id: String)
     fun renameRoutine(id: String, name: String)
     fun duplicateRoutine(id: String)
+    /** Copies routine [id] as [copyName] (in the screen's language) under [newId], chosen by the screen. */
+    fun duplicateRoutine(id: String, copyName: String, newId: String)
+    /** Reorders [folderId]'s routines; [ids] is exactly that folder's routines. The other routines keep their places. */
+    fun reorderRoutines(folderId: String, ids: List<String>)
+    /** [ids] is every folder, the default one included, in its new order. */
+    fun reorderRoutineFolders(ids: List<String>)
+    /** Deletes a folder (never the default one); its routines move to the end of the default folder. */
+    fun deleteRoutineFolder(id: String)
     fun deleteRoutine(id: String)
     fun moveRoutine(id: String, direction: Int)
     fun createRoutineFolder(name: String)
@@ -131,6 +173,10 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun selectRoutineFolder(id: String)
     fun moveRoutineToFolder(routineId: String, folderId: String)
     fun addRoutineExercise(routineId: String, exerciseId: String)
+    /** Adds every exercise in the order given, all or none. */
+    fun addRoutineExercises(routineId: String, exerciseIds: List<String>)
+    /** [ids] is exactly the routine's entries, in their new order. */
+    fun reorderRoutineExercises(routineId: String, ids: List<String>)
     fun replaceRoutineExercise(entryId: String, exerciseId: String)
     fun removeRoutineExercise(entryId: String)
     fun moveRoutineExercise(entryId: String, direction: Int)
@@ -139,6 +185,10 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun removeRoutineSet(setId: String)
     fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?)
     fun inheritRoutineSet(setId: String)
+    /** A warm-up is always a manual set; turning one into a working set keeps it manual. */
+    fun setRoutineSetWarmup(setId: String, warmup: Boolean)
+    /** Undoes [removeRoutineSet]: puts [set] back in [entryId] at [position], with its id, values, warm-up and mode. */
+    fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi)
     fun updateRoutineExerciseRest(entryId: String, seconds: Int)
     /** Creates a custom exercise under [id], chosen by the screen; an id already in use is refused, never overwritten. */
     fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String)

@@ -18,6 +18,12 @@ internal class WorkoutPresentation {
     private var recordsUi = emptyList<RecordUi>()
     private var routineSource: AppData? = null
     private var routinesUi = emptyList<RoutineUi>()
+    /** Each routine's latest finished session ([RoutineUi.lastFinishedAt]), rebuilt with the history. */
+    private var lastFinished = emptyMap<String, Long>()
+    private var routinesFinished = emptyMap<String, Long>()
+    /** Each existing routine's entries and each entry's planned rows, in position order, for the target line. */
+    private var routineEntries = emptyMap<String, List<RoutineExercise>>()
+    private var plannedRows = emptyMap<String, List<RoutineSet>>()
     private var catalogSource = emptyList<Exercise>()
     private var catalogUi = emptyList<ExerciseUi>()
     /** Every exercise/convention's finished history, rebuilt from one index whenever the history changes. */
@@ -68,6 +74,13 @@ internal class WorkoutPresentation {
         if (historyChanged) {
             previousPerformances = WorkoutCalculations.performanceHistories(historical)
             previousDescriptions.clear()
+            lastFinished = buildMap {
+                finished.forEach { w ->
+                    val routine = w.sourceRoutineId ?: return@forEach
+                    val ended = w.endedAt ?: w.startedAt
+                    if (ended > (get(routine) ?: Long.MIN_VALUE)) put(routine, ended)
+                }
+            }
         }
         // Discard/start cycles must not retain descriptions for abandoned sessions.
         if (previousActive?.id != data.activeWorkout?.id) previousDescriptions.clear()
@@ -77,6 +90,7 @@ internal class WorkoutPresentation {
         // session is compared on its own, so no caller can fall back to a per-workout pass by omission.
         fun workout(w: Workout, workoutEntries: List<WorkoutExercise>, prs: List<WeightPr>, repsPrs: List<RepsPr>, active: Boolean): WorkoutUi {
             val oldEntries = previousActive?.takeIf { it.id == w.id }?.exercises?.associateBy { it.id }.orEmpty()
+            val targets = if (active) targets(workoutEntries, w.sourceRoutineId) else null
             val records = prs.map { p ->
                 val e = workoutEntries.first { it.exerciseId == p.exerciseId && it.convention == p.convention }
                 RecordUi(snapshot(e), p.newWeightKg, p.reps, p.previousWeightKg, w.id, w.endedAt ?: w.startedAt)
@@ -86,7 +100,7 @@ internal class WorkoutPresentation {
                     kind = RecordKind.REPS, previousReps = p.previousReps, assistance = p.assistance)
             }
             val setRecords = setRecords(prs, repsPrs)
-            val entries = workoutEntries.map { e ->
+            val entries = workoutEntries.mapIndexed { index, e ->
                 val previous = previousDescriptions.getOrPut(PreviousKey(e.exerciseId, e.convention, w.startedAt, active)) {
                     val performance = previousPerformances[e.exerciseId to e.convention].orEmpty()
                         .firstOrNull { it.workout.id != w.id && it.workout.startedAt < w.startedAt }
@@ -118,7 +132,7 @@ internal class WorkoutPresentation {
                                     if (record.kind == RecordKind.WEIGHT) !assisted
                                     else assisted == record.assistance && set.reps == record.reps
                             }
-                    }, previous.sets, previous.date)
+                    }, previous.sets, previous.date, targets?.get(index))
                 old?.takeIf { it == entry } ?: entry
             }
             return WorkoutUi(w.id, w.name, w.startedAt, w.endedAt, entries, records, sourceRoutineId = w.sourceRoutineId)
@@ -143,16 +157,36 @@ internal class WorkoutPresentation {
             historyPounds = prefs.pounds
         }
         val routineData = AppData(exercises = data.exercises, routines = data.routines,
-            routineExercises = data.routineExercises, routineSets = data.routineSets)
-        if (routineSource != routineData) {
-            routinesUi = data.routines.sortedBy { it.position }.map { r ->
-                RoutineUi(r.id, r.name, data.routineItems(r.id).mapNotNull { e -> exercises[e.exerciseId]?.let {
-                    val targets = data.plannedSets(e.id).map { row -> RoutineSetUi(row.id, row.targetReps, row.targetWeightKg, row.inheritPr) }
-                    PlannedExerciseUi(e.id, it.toUi(), targets.size, targets.firstOrNull()?.reps ?: 0,
-                        targets.firstOrNull()?.weightKg, e.restSeconds ?: com.mooscles.domain.RestDuration.DEFAULT_SECONDS, targets)
-                } }, folderId = r.folderId)
+            routineExercises = data.routineExercises, routineSets = data.routineSets, routineFolders = data.routineFolders)
+        if (routineSource != routineData || routinesFinished != lastFinished) {
+            val routineIds = data.routines.mapTo(hashSetOf()) { it.id }
+            routineEntries = data.routineExercises.filter { it.routineId in routineIds }.groupBy { it.routineId }
+                .mapValues { (_, rows) -> rows.sortedBy { it.position } }
+            plannedRows = data.routineSets.groupBy { it.routineExerciseId }.mapValues { (_, rows) -> rows.sortedBy { it.position } }
+            val folderIds = data.routineFolders.mapTo(hashSetOf()) { it.id }
+            val catalog = catalogUi.associateBy { it.id }
+            val oldRoutines = routinesUi.associateBy { it.id }
+            val next = data.routines.sortedBy { it.position }.map { r ->
+                val old = oldRoutines[r.id]
+                val oldPlans = old?.exercises?.associateBy { it.id }.orEmpty()
+                val plans = routineEntries[r.id].orEmpty().mapNotNull { e -> catalog[e.exerciseId]?.let { exercise ->
+                    val targets = plannedRows[e.id].orEmpty().map { row ->
+                        RoutineSetUi(row.id, row.targetReps, row.targetWeightKg, row.inheritPr && !row.warmup, row.warmup)
+                    }
+                    // The summary columns follow the first working set, as the repository mirrors them.
+                    val summary = targets.firstOrNull { !it.warmup } ?: targets.firstOrNull()
+                    val plan = PlannedExerciseUi(e.id, exercise, targets.size, summary?.reps ?: 0, summary?.weightKg,
+                        e.restSeconds ?: com.mooscles.domain.RestDuration.DEFAULT_SECONDS, targets)
+                    oldPlans[e.id]?.takeIf { it == plan } ?: plan
+                } }
+                // A routine whose folder is gone shows in the default one, where the repository orders it.
+                val folderId = if (r.folderId in folderIds) r.folderId else RoutineFolder.DEFAULT_ID
+                val routine = RoutineUi(r.id, r.name, old?.exercises?.takeIf { it == plans } ?: plans, folderId, lastFinished[r.id])
+                old?.takeIf { it == routine } ?: routine
             }
+            routinesUi = routinesUi.takeIf { it == next } ?: next
             routineSource = routineData
+            routinesFinished = lastFinished
         }
         val active = data.activeWorkout?.let {
             workout(it, data.workoutItems(it.id), WorkoutCalculations.prsForWorkout(data, it.id),
@@ -163,5 +197,25 @@ internal class WorkoutPresentation {
             .ifEmpty { listOf(RoutineFolderUi(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)) }
         return UiState(false, catalogUi, routinesUi, historyUi, previousActive, recordsUi, preferences = prefs,
             routineFolders = folders)
+    }
+
+    /**
+     * The target line of each of the active workout's [entries] (plan decision 8, preflight F16): the n-th entry of
+     * an exercise matches the n-th entry of that exercise in the source routine, by position. The workout keeps no
+     * link to the routine entry it came from, so an entry replaced by an exercise the routine still has unmatched
+     * takes that one's target; one with nothing left to match, or without a source routine, has none.
+     */
+    private fun targets(entries: List<WorkoutExercise>, routineId: String?): List<RoutineTargetUi?> {
+        val plans = routineId?.let { routineEntries[it] } ?: return entries.map { null }
+        val byExercise = plans.groupBy { it.exerciseId }
+        val seen = HashMap<String, Int>()
+        return entries.map { e ->
+            val occurrence = seen[e.exerciseId] ?: 0
+            seen[e.exerciseId] = occurrence + 1
+            byExercise[e.exerciseId]?.getOrNull(occurrence)?.let { plan ->
+                val rows = plannedRows[plan.id].orEmpty()
+                RoutineTargetUi(rows.filterNot { it.warmup }.map { TargetSetUi(it.targetReps, it.targetWeightKg) }, rows.count { it.warmup })
+            }
+        }
     }
 }

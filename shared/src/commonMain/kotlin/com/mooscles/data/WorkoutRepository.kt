@@ -255,12 +255,17 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
 
     /**
      * Routine positions are global. [ids] is exactly the routines of [folderId], in their new order: they take
-     * the positions those routines already held, and every other routine keeps its own, in one transaction.
+     * the positions those routines already held, and every other routine keeps its own, in one transaction. The
+     * default folder's routines include those whose folder no longer exists, as the screens show them there;
+     * their stored folder is left as it is.
      */
     suspend fun reorderFolderRoutines(folderId: String, ids: List<String>) = db.writeTransaction {
         ensureDefaultFolder()
         dataRequireNotNull(dao.routineFolder(folderId), DataError.FOLDER_NOT_FOUND) { "Folder not found." }
-        val items = dao.routines().filter { it.folderId == folderId }
+        val folders = dao.routineFolders().mapTo(hashSetOf()) { it.id }
+        val items = dao.routines().filter {
+            it.folderId == folderId || (folderId == RoutineFolder.DEFAULT_ID && it.folderId !in folders)
+        }
         dataRequire(ids.size == items.size && ids.toSet() == items.map { it.id }.toSet(), DataError.INVALID_VALUE) { "Invalid routine order." }
         val byId = items.associateBy { it.id }
         val slots = items.map { it.position }
@@ -361,8 +366,9 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         val rows = ensurePlannedSets(existing)
         val editedTargets = existing.targetReps != item.targetReps || existing.targetWeightKg != item.targetWeightKg
         rows.drop(item.plannedSets).forEach { dao.deleteRoutineSet(it.id) }
+        // The old editor edits one target for the whole exercise: it is the working sets' target, never a warm-up's.
         rows.take(item.plannedSets).forEach { row ->
-            if (editedTargets) dao.updateRoutineSet(row.copy(targetReps = item.targetReps,
+            if (editedTargets && !row.warmup) dao.updateRoutineSet(row.copy(targetReps = item.targetReps,
                 targetWeightKg = item.targetWeightKg, inheritPr = false))
         }
         for (position in rows.size until item.plannedSets) {

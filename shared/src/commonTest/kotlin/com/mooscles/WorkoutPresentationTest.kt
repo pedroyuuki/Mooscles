@@ -8,7 +8,10 @@ import com.mooscles.ui.PreferencesUi
 import com.mooscles.ui.PreviousSetUi
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.RecordUi
+import com.mooscles.ui.RoutineSetUi
+import com.mooscles.ui.RoutineTargetUi
 import com.mooscles.ui.SetRecordUi
+import com.mooscles.ui.TargetSetUi
 import com.mooscles.ui.UiState
 import com.mooscles.ui.WorkoutUi
 import kotlin.math.nextUp
@@ -142,7 +145,11 @@ class WorkoutPresentationTest {
         assertNotSame(first.routines, next.routines)
         assertSame(first.history, next.history)
         assertSame(first.records, next.records)
-        assertSame(first.active, next.active)
+        // routine-a is the active workout's source: its target line follows the edit (phase 4B, decision 8), and
+        // the sets the workout logged stay the same objects.
+        assertNotSame(first.active, next.active)
+        first.active!!.exercises.zip(next.active!!.exercises).forEach { (before, after) -> assertSame(before.sets, after.sets) }
+        assertEquals(15, next.active!!.exercises[0].target!!.working.single().reps)
         assertEquals(listOf("routine-b", "routine-a"), next.routines.map { it.id })
         val entries = next.routines.last().exercises
         assertEquals(listOf("plan-b", "plan-pull", "plan-a"), entries.map { it.id })
@@ -454,5 +461,156 @@ class WorkoutPresentationTest {
         assertNotSame(before, after)
         assertSame(before.previousSets, after.previousSets)
         assertEquals(before.previousDate, after.previousDate)
+    }
+
+    // Phase 4B (decisions 8 and 22, F16): the target line of the active workout and the routine's last session.
+
+    private val row = Exercise(id = "row", name = "Row", muscle = MuscleGroup.BACK,
+        equipment = Equipment.CABLE, convention = LoadConvention.TOTAL_LOAD)
+
+    private fun targets(state: UiState) = state.active!!.exercises.map { it.target }
+
+    @Test fun targetComesFromTheSourceRoutineWorkingSets() {
+        val data = fixture().let { d -> d.copy(routineSets = d.routineSets.filterNot { it.routineExerciseId == "plan-a" } + listOf(
+            // An imported warm-up may still say it follows the record: it is a warm-up all the same.
+            RoutineSet("w1", "plan-a", position = 0, targetReps = 10, targetWeightKg = 40.0, inheritPr = true, warmup = true),
+            RoutineSet("t1", "plan-a", position = 1, targetReps = 6, targetWeightKg = 22.0),
+            RoutineSet("t2", "plan-a", position = 2, targetReps = 8, targetWeightKg = 20.0, inheritPr = false),
+        )) }
+        assertEquals(listOf(
+            RoutineTargetUi(listOf(TargetSetUi(6, 22.0), TargetSetUi(8, 20.0)), warmups = 1),
+            RoutineTargetUi(listOf(TargetSetUi(12, null)), warmups = 0),
+            RoutineTargetUi(listOf(TargetSetUi(10, 17.5)), warmups = 0),
+        ), targets(WorkoutPresentation().present(data, PreferencesUi())))
+    }
+
+    @Test fun sameExerciseTwiceMatchesByOccurrence() {
+        val presenter = WorkoutPresentation()
+        val data = fixture()
+        val first = presenter.present(data, PreferencesUi())
+        val planA = RoutineTargetUi(listOf(TargetSetUi(6, 22.0)), 0)
+        val planB = RoutineTargetUi(listOf(TargetSetUi(10, 17.5)), 0)
+        assertEquals(listOf(planA, RoutineTargetUi(listOf(TargetSetUi(12, null)), 0), planB), targets(first))
+        // The n-th bench of the workout takes the n-th bench of the routine, by position, whatever the entry's id.
+        val moved = presenter.present(data.copy(workoutExercises = data.workoutExercises.map {
+            when (it.id) { "active-b" -> it.copy(position = 0); "active-a" -> it.copy(position = 2); else -> it }
+        }), PreferencesUi())
+        assertEquals(listOf("active-b", "active-pull", "active-a"), moved.active!!.exercises.map { it.id })
+        assertEquals(planA, moved.active!!.exercises[0].target)
+        assertEquals(planB, moved.active!!.exercises[2].target)
+    }
+
+    @Test fun replacedOrAddedEntryHasNoTarget() {
+        val data = fixture().let { d -> d.copy(exercises = d.exercises + row) }
+        // Pull-up replaced by an exercise outside the routine, and a third bench added: no target for either.
+        val replaced = data.copy(workoutExercises = data.workoutExercises.map {
+            if (it.id == "active-pull") entry("active-pull", "active", row, 1) else it
+        } + entry("active-c", "active", bench, 3))
+        val shown = targets(WorkoutPresentation().present(replaced, PreferencesUi()))
+        assertEquals(RoutineTargetUi(listOf(TargetSetUi(6, 22.0)), 0), shown[0])
+        assertNull(shown[1])
+        assertEquals(RoutineTargetUi(listOf(TargetSetUi(10, 17.5)), 0), shown[2])
+        assertNull(shown[3])
+        // F16, accepted: the workout keeps no link to the routine entry it came from. Pull-up replaced by a bench
+        // makes it the second bench, which takes the routine's second bench; the bench after it has none left.
+        val swapped = data.copy(workoutExercises = data.workoutExercises.map {
+            if (it.id == "active-pull") entry("active-pull", "active", bench, 1) else it
+        })
+        assertEquals(listOf(RoutineTargetUi(listOf(TargetSetUi(6, 22.0)), 0), RoutineTargetUi(listOf(TargetSetUi(10, 17.5)), 0), null),
+            targets(WorkoutPresentation().present(swapped, PreferencesUi())))
+    }
+
+    @Test fun deletedRoutineDropsTheTarget() {
+        val presenter = WorkoutPresentation()
+        val data = fixture()
+        val first = presenter.present(data, PreferencesUi())
+        assertTrue(targets(first).all { it != null })
+        val deleted = data.copy(routines = data.routines.filterNot { it.id == "routine-a" },
+            routineExercises = data.routineExercises.filterNot { it.routineId == "routine-a" },
+            routineSets = emptyList())
+        val next = presenter.present(deleted, PreferencesUi())
+        assertEquals(listOf(null, null, null), targets(next))
+        // The sets the workout logged are the same objects: only the line went away.
+        first.active!!.exercises.zip(next.active!!.exercises).forEach { (before, after) -> assertSame(before.sets, after.sets) }
+    }
+
+    @Test fun noSourceRoutineNoTarget() {
+        val data = fixture().let { d -> d.copy(workouts = d.workouts.map { if (it.id == "active") it.copy(sourceRoutineId = null) else it }) }
+        assertEquals(listOf(null, null, null), targets(WorkoutPresentation().present(data, PreferencesUi())))
+    }
+
+    @Test fun finishedWorkoutsHaveNoTarget() {
+        val data = fixture().let { d -> d.copy(workouts = d.workouts.map {
+            if (it.status == WorkoutStatus.FINISHED) it.copy(sourceRoutineId = "routine-a") else it
+        }) }
+        val presenter = WorkoutPresentation()
+        val state = presenter.present(data, PreferencesUi())
+        assertEquals(listOf("latest", "older"), state.history.map { it.id })
+        assertTrue(state.history.flatMap { it.exercises }.all { it.target == null })
+        assertTrue(state.active!!.exercises.all { it.target != null })
+        // Rebuilt once the routines are known (a unit change rebuilds the history), still without a target.
+        val pounds = presenter.present(data, PreferencesUi(pounds = true))
+        assertNotSame(state.history, pounds.history)
+        assertTrue(pounds.history.flatMap { it.exercises }.all { it.target == null })
+    }
+
+    @Test fun lastFinishedAtIsTheLatestFinishedWorkoutOfTheRoutine() {
+        val data = fixture().let { d -> d.copy(workouts = d.workouts.map {
+            if (it.status == WorkoutStatus.FINISHED) it.copy(sourceRoutineId = "routine-a") else it
+        }) }
+        val routines = WorkoutPresentation().present(data, PreferencesUi()).routines.associateBy { it.id }
+        // The active workout of routine-a started later (3000): only finished sessions count, by their end.
+        assertEquals(2500L, routines.getValue("routine-a").lastFinishedAt)
+        assertNull(routines.getValue("routine-b").lastFinishedAt)
+    }
+
+    @Test fun routineIdentityKeptWhenOnlyAnotherRoutinesHistoryChanges() {
+        val presenter = WorkoutPresentation()
+        val data = fixture().let { d -> d.copy(workouts = d.workouts.map {
+            if (it.id == "latest") it.copy(sourceRoutineId = "routine-a") else it
+        }) }
+        val first = presenter.present(data, PreferencesUi())
+        assertSame(first.routines, presenter.present(data.copy(), PreferencesUi()).routines)
+        val finishedB = data.copy(workouts = data.workouts +
+            Workout("b-done", "B", startedAt = 3500, endedAt = 4000, status = WorkoutStatus.FINISHED, sourceRoutineId = "routine-b"))
+        val next = presenter.present(finishedB, PreferencesUi())
+        assertNotSame(first.routines, next.routines)
+        assertSame(first.routines[0], next.routines[0])
+        assertEquals(2500L, next.routines[0].lastFinishedAt)
+        assertEquals(4000L, next.routines[1].lastFinishedAt)
+        // A target edit in routine-a keeps routine-b, and routine-a's untouched entries.
+        val edited = presenter.present(finishedB.copy(routineSets = finishedB.routineSets.map {
+            if (it.id == "target-b") it.copy(targetReps = 9) else it
+        }), PreferencesUi())
+        assertSame(next.routines[1], edited.routines[1])
+        assertNotSame(next.routines[0], edited.routines[0])
+        assertSame(next.routines[0].exercises[0], edited.routines[0].exercises[0])
+        assertSame(next.routines[0].exercises[1], edited.routines[0].exercises[1])
+        assertEquals(9, edited.routines[0].exercises[2].setTargets.single().reps)
+    }
+
+    @Test fun warmupFlowsToRoutineSetUi() {
+        val data = fixture().let { d -> d.copy(routineSets = d.routineSets.filterNot { it.routineExerciseId == "plan-a" } + listOf(
+            RoutineSet("w1", "plan-a", position = 0, targetReps = 10, targetWeightKg = 40.0, inheritPr = true, warmup = true),
+            RoutineSet("t1", "plan-a", position = 1, targetReps = 6, targetWeightKg = 22.0),
+        )) }
+        val plan = WorkoutPresentation().present(data, PreferencesUi()).routines.single { it.id == "routine-a" }.exercises[0]
+        assertEquals(listOf(
+            RoutineSetUi("w1", 10, 40.0, inherited = false, warmup = true),
+            RoutineSetUi("t1", 6, 22.0, inherited = true, warmup = false),
+        ), plan.setTargets)
+        // The plan's summary columns follow the first working set, as the repository mirrors them.
+        assertEquals(2, plan.sets)
+        assertEquals(6, plan.reps)
+        assertEquals(22.0, plan.weightKg!!, 0.0)
+    }
+
+    @Test fun routineOfAMissingFolderIsPresentedInTheDefaultOne() {
+        val data = fixture().let { d -> d.copy(
+            routineFolders = listOf(RoutineFolder(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME, 0), RoutineFolder("upper", "Upper", 1)),
+            routines = listOf(d.routines[0].copy(folderId = "upper"), d.routines[1].copy(folderId = "gone")),
+        ) }
+        val routines = WorkoutPresentation().present(data, PreferencesUi()).routines
+        assertEquals(listOf("upper", RoutineFolder.DEFAULT_ID), routines.map { it.folderId })
     }
 }

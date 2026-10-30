@@ -480,4 +480,40 @@ class RoutineCommandsPersistenceTest {
         assertRefused(DataError.SET_LIMIT) { repo.restoreRoutineSet(entry, 1, b) }
         assertNull(repo.snapshot().routineSets.firstOrNull { it.id == b.id })
     }
+
+    // Task 2 review M3: the screens show a routine whose folder no longer exists in the default folder, so the
+    // default folder's reorder takes it as a member (it keeps its stored folderId).
+    @Test fun defaultFolderReorderTakesRoutinesOfAMissingFolder() = runBlocking {
+        val folder = repo.createRoutineFolder("Hypertrophy")
+        val d1 = repo.createRoutine("D1")
+        val a1 = repo.createRoutine("A1", folder)
+        database.dao().insertRoutine(Routine("orphan", "Orphan", position = 2, folderId = "gone"))
+        val d2 = repo.createRoutine("D2")
+
+        assertRefused(DataError.INVALID_VALUE) { repo.reorderFolderRoutines(RoutineFolder.DEFAULT_ID, listOf(d2, d1)) }
+        repo.reorderFolderRoutines(RoutineFolder.DEFAULT_ID, listOf(d2, "orphan", d1))
+
+        val saved = repo.snapshot().routines
+        assertEquals(mapOf(d2 to 0, a1 to 1, "orphan" to 2, d1 to 3), saved.associate { it.id to it.position })
+        assertEquals("gone", saved.single { it.id == "orphan" }.folderId)
+        // Another folder's reorder stays exact: the orphan is not one of its routines.
+        assertRefused(DataError.INVALID_VALUE) { repo.reorderFolderRoutines(folder, listOf(a1, "orphan")) }
+    }
+
+    // Task 2 review M4: the old editor's whole-exercise target edit writes the working sets only.
+    @Test fun legacyTargetEditLeavesWarmupsAlone() = runBlocking {
+        val (entry, original) = threeSets()
+        val (a, b, c) = original
+
+        repo.updateRoutineExercise(repo.routineExercise(entry)!!.copy(targetReps = 8, targetWeightKg = 60.0))
+
+        val after = rows(entry)
+        assertEquals(a, after[0])
+        assertEquals(listOf(b.id, c.id), after.drop(1).map { it.id })
+        after.drop(1).forEach {
+            assertEquals(8 to 60.0, it.targetReps to it.targetWeightKg)
+            assertFalse(it.inheritPr)
+            assertFalse(it.warmup)
+        }
+    }
 }

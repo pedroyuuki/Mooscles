@@ -58,7 +58,7 @@ fun muscleLabel(label: String): String =
 fun equipmentLabel(label: String): String =
     Equipment.fromLabelOrName(label)?.let { stringResource(it.text()) } ?: label
 
-/** The localized name of the load convention whose English label is [label]. */
+/** The localized name of the load convention whose English label (or enum name) is [label]. */
 @Composable
 fun conventionLabel(label: String): String =
     convention(label)?.let { stringResource(it.text()) } ?: label
@@ -76,7 +76,7 @@ fun conventionCaption(label: String): String? =
 fun conventionExplanation(label: String): String =
     convention(label)?.let { stringResource(it.explanation()) } ?: label
 
-private fun convention(label: String): LoadConvention? = LoadConvention.entries.firstOrNull { it.label == label }
+private fun convention(label: String): LoadConvention? = LoadConvention.fromLabelOrName(label)
 
 private fun MuscleGroup.text(): StringResource = when (this) {
     MuscleGroup.CHEST -> Res.string.catalog_muscle_chest

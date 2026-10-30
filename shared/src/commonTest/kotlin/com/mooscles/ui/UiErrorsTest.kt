@@ -59,4 +59,12 @@ class UiErrorsTest {
         // A code without text is not a problem: the text decides, as UiState.error always did.
         assertNull(UiErrors.current(null, null, null, RestTimerError.STORAGE_UNAVAILABLE))
     }
+
+    @Test fun subjectTravelsWithTheProblem() {
+        val action = UiProblem("Routine already exists.", UiError.INVALID_VALUE, subject = "routine-1")
+        assertEquals("routine-1", UiErrors.current(action, "Preferences", "Timer", null)?.subject)
+        // Only a command has a subject: unreadable preferences and the timer are about nothing the screen sent.
+        assertNull(UiErrors.current(null, "Preferences", "Timer", null)!!.subject)
+        assertNull(UiErrors.current(null, null, "Timer", RestTimerError.STORAGE_UNAVAILABLE)!!.subject)
+    }
 }
