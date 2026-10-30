@@ -482,7 +482,8 @@ jobs:
           # Phase 4A task 20: LibraryFlowTest 2 (uiTest). 407 + 2 = 409.
           # Phase 4A task 21: TapBudgetTest +2, LibraryAccessibilitySweepTest 16 (uiTest). 407 + 18 = 425.
           # Merged Tasks 20 + 21: 407 + 2 + 18 = 427.
-          MIN_SCREENS_IOS_TESTS: 427
+          # Phase 4A task 23: ExerciseInfoScreenTest +1 (uiTest). 427 + 1 = 428.
+          MIN_SCREENS_IOS_TESTS: 428
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

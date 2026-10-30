@@ -203,6 +203,20 @@ class ExerciseInfoScreenTest {
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
     }
 
+    /** The section titles start where the name, the chips and the cards start (16 dp), not indented a second time. */
+    @Test
+    fun sectionTitlesLineUpWithTheContent() = runComposeUiTest {
+        preload()
+        show()
+        waitForCues()
+        val start = onNodeWithTag(ExerciseInfoTags.TITLE).getUnclippedBoundsInRoot().left
+        for (title in listOf("Músculos", "Como fazer", "Seu histórico")) {
+            val node = onNodeWithText(title).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            val left = node.getUnclippedBoundsInRoot().left
+            assertTrue((left - start).value in -0.5f..0.5f, "$title starts at $left, the content at $start")
+        }
+    }
+
     @Test
     fun pilotExerciseShowsTheAlternatingFigure() = runComposeUiTest {
         // Stopped before the figure first composes: with the clock running, the test policy stops it for good.

@@ -56,7 +56,6 @@ import com.mooscles.designsystem.components.MToastHostState
 import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.designsystem.components.MToastResult
 import com.mooscles.designsystem.components.PrBadge
-import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.Skeleton
 import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.MoosclesNumbers
@@ -462,13 +461,29 @@ private fun InfoMeta(exercise: ExerciseUi) {
     }
 }
 
+/**
+ * A section's title ("Muscles", "How to do it", "Your history"): the design system's section header
+ * (`title.sm`, `text.secondary`, a heading, `space.4` above and `space.2` below) without its own
+ * 16 dp sides, since the detail's content column already has them; the title starts where the
+ * name, the chips and the cards start.
+ */
+@Composable
+private fun InfoSectionTitle(text: String) {
+    MText(
+        text,
+        MTheme.type.titleSm,
+        color = MTheme.colors.textSecondary,
+        modifier = Modifier.fillMaxWidth().padding(top = MTheme.space.s4, bottom = MTheme.space.s2).semantics { heading() },
+    )
+}
+
 /** "Muscles": the body map (an image the screen reader skips), its legend and the text equivalent under it. */
 @Composable
 private fun InfoMuscles(anatomy: Anatomy?) {
     val primary = remember(anatomy) { anatomy?.primary.orEmpty().mapTo(LinkedHashSet()) { it.toBodyRegion() } }
     val secondary = remember(anatomy) { anatomy?.secondary.orEmpty().mapTo(LinkedHashSet()) { it.toBodyRegion() } }
     Column(Modifier.fillMaxWidth().testTag(ExerciseInfoTags.MUSCLES), verticalArrangement = Arrangement.spacedBy(MTheme.space.s3)) {
-        SectionHeader(stringResource(Res.string.exercise_muscles))
+        InfoSectionTitle(stringResource(Res.string.exercise_muscles))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             BodyMap(primary, secondary, Modifier.widthIn(max = MTheme.sizes.mediaDetailMax).fillMaxWidth())
         }
@@ -487,7 +502,7 @@ private fun InfoMuscles(anatomy: Anatomy?) {
 private fun InfoCues(cues: List<String>) {
     val locale = currentNumberLocale()
     Column(Modifier.fillMaxWidth().testTag(ExerciseInfoTags.CUES), verticalArrangement = Arrangement.spacedBy(MTheme.space.s3)) {
-        SectionHeader(stringResource(Res.string.exercise_how_to))
+        InfoSectionTitle(stringResource(Res.string.exercise_how_to))
         cues.forEachIndexed { index, cue ->
             Row(
                 Modifier.fillMaxWidth().testTag(ExerciseInfoTags.cue(index)).semantics(mergeDescendants = true) {},
@@ -511,7 +526,7 @@ private fun InfoHistory(summary: HistorySummary, pounds: Boolean, onOpenHistory:
     val colors = MTheme.colors
     val shape = RoundedCornerShape(MTheme.radius.lg)
     Column(Modifier.fillMaxWidth().testTag(ExerciseInfoTags.HISTORY), verticalArrangement = Arrangement.spacedBy(space.s3)) {
-        SectionHeader(stringResource(Res.string.exercise_history))
+        InfoSectionTitle(stringResource(Res.string.exercise_history))
         Column(
             Modifier
                 .fillMaxWidth()
