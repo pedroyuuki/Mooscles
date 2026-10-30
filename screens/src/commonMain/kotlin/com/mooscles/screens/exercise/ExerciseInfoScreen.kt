@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -59,6 +58,7 @@ import com.mooscles.designsystem.components.MToastResult
 import com.mooscles.designsystem.components.PrBadge
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.Skeleton
+import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.MoosclesNumbers
 import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.format.pluralCount
@@ -68,7 +68,6 @@ import com.mooscles.designsystem.illustration.AnimatedExerciseFigure
 import com.mooscles.designsystem.illustration.BodyMap
 import com.mooscles.designsystem.illustration.BodyMapLegend
 import com.mooscles.designsystem.theme.MTheme
-import com.mooscles.domain.WeightUnits
 import com.mooscles.screens.exercise.figures.ExerciseFigures
 import com.mooscles.screens.exercise.figures.FigureHighlights
 import com.mooscles.screens.format.anatomySentence
@@ -79,7 +78,6 @@ import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.muscleLabel
 import com.mooscles.screens.format.shortDate
 import com.mooscles.screens.resources.Res
-import com.mooscles.screens.resources.best_set_bodyweight
 import com.mooscles.screens.resources.exercise_add_routine
 import com.mooscles.screens.resources.exercise_add_workout
 import com.mooscles.screens.resources.exercise_added_to
@@ -103,20 +101,18 @@ import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.screens.workout.MenuItem
 import com.mooscles.screens.workout.RecompositionProbe
 import com.mooscles.screens.workout.ScreenErrorToast
+import com.mooscles.screens.workout.bestSetText
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.UiState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import com.mooscles.designsystem.resources.Res as DsRes
-import com.mooscles.designsystem.resources.ds_back
 
 /** The tag of the exercise detail route's root. */
 const val ExerciseInfoScreenTag = "exercise-info-screen"
 
 /** The test tags of [ExerciseInfoRoute]. */
 internal object ExerciseInfoTags {
-    const val BACK = "exercise-info-back"
     const val TITLE = "exercise-info-title"
     const val MENU = "exercise-info-menu"
     const val BODY = "exercise-info-body"
@@ -163,8 +159,10 @@ internal data class PendingAdd(val targetId: String, val before: Int) {
 }
 
 /**
- * The exercise detail (spec "Detalhe do exercício", route `exerciseInfo/{id}`), from the top: back,
- * the name and the menu ("Edit exercise" for a custom exercise, "View full history"); the media,
+ * The exercise detail (spec "Detalhe do exercício", route `exerciseInfo/{id}`), from the top: back
+ * and the menu ("Edit exercise" for a custom exercise, "View full history") in the fixed bar; then,
+ * scrolling, the name (`title.md`, a heading, whole at any length: in the fixed bar a long custom
+ * name at a large text size would push the rest off the screen); the media,
  * a 1:1 frame as wide as the content up to `sizes.mediaDetailMax`, centered, with the alternating
  * figure (spec D5; it stops while not [foreground], with reduced motion and off screen) or the
  * equipment's icon; the equipment, the muscle group and the logging convention as read-only chips,
@@ -248,11 +246,18 @@ fun ExerciseInfoRoute(
 
     Box(modifier.fillMaxSize().testTag(ExerciseInfoScreenTag).background(MTheme.colors.bgBase)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-            InfoTopBar(
-                title = exercise?.let { exerciseName(it) },
-                onBack = onBack,
-                onMenu = if (exercise != null) ({ menuOpen = true }) else null,
-            )
+            // The name is the scrolling column's first line, not the bar's title: a long custom name
+            // at a large text size would otherwise grow the fixed bar past the screen.
+            TopBar(title = null, onBack = onBack) {
+                if (exercise != null) {
+                    MIconButton(
+                        MIcons.EllipsisVertical,
+                        stringResource(Res.string.exercise_more),
+                        onClick = { menuOpen = true },
+                        modifier = Modifier.testTag(ExerciseInfoTags.MENU),
+                    )
+                }
+            }
             when {
                 exercise != null -> InfoBody(
                     exercise = exercise,
@@ -283,7 +288,18 @@ fun ExerciseInfoRoute(
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
 
-    if (exercise == null) return
+    if (exercise == null) {
+        // The sheets and the form belong to an exercise that is gone: they do not come back with it.
+        // Only once the state is loaded, so a restore after process death keeps an open edit form.
+        if (!state.loading) {
+            LaunchedEffect(Unit) {
+                menuOpen = false
+                routineSheet = false
+                editing = false
+            }
+        }
+        return
+    }
     if (menuOpen) {
         InfoMenuSheet(
             exercise = exercise,
@@ -323,39 +339,6 @@ fun ExerciseInfoRoute(
     }
 }
 
-/** Back, the exercise's name (`title.md`, a heading that wraps) and the menu, when there is one. */
-@Composable
-private fun InfoTopBar(title: String?, onBack: () -> Unit, onMenu: (() -> Unit)?) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .sizeIn(minHeight = MTheme.sizes.rowMin)
-            .padding(horizontal = MTheme.space.s2),
-        horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MIconButton(MIcons.ArrowLeft, stringResource(DsRes.string.ds_back), onClick = onBack, modifier = Modifier.testTag(ExerciseInfoTags.BACK))
-        Box(Modifier.weight(1f)) {
-            if (title != null) {
-                MText(
-                    title,
-                    MTheme.type.titleMd,
-                    color = MTheme.colors.textPrimary,
-                    modifier = Modifier.testTag(ExerciseInfoTags.TITLE).semantics { heading() },
-                )
-            }
-        }
-        if (onMenu != null) {
-            MIconButton(
-                MIcons.EllipsisVertical,
-                stringResource(Res.string.exercise_more),
-                onClick = onMenu,
-                modifier = Modifier.testTag(ExerciseInfoTags.MENU),
-            )
-        }
-    }
-}
-
 /** The detail's scrolling part, from the media to the actions. */
 @Composable
 private fun InfoBody(
@@ -388,6 +371,13 @@ private fun InfoBody(
             Modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxWidth().padding(horizontal = space.s4),
             verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
+            // The name heads the content (`title.md`, a heading): whole at any length, since it scrolls.
+            MText(
+                name,
+                MTheme.type.titleMd,
+                color = MTheme.colors.textPrimary,
+                modifier = Modifier.fillMaxWidth().testTag(ExerciseInfoTags.TITLE).semantics { heading() },
+            )
             InfoMedia(exercise, name, anatomy?.primary.orEmpty(), foreground)
             InfoMeta(exercise)
             InfoMuscles(anatomy)
@@ -557,12 +547,15 @@ private fun InfoHistory(summary: HistorySummary, pounds: Boolean, onOpenHistory:
                 modifier = Modifier.testTag(ExerciseInfoTags.HISTORY_SESSIONS),
             )
         }
-        MButton(
-            stringResource(Res.string.exercise_history_full),
-            onClick = onOpenHistory,
-            modifier = Modifier.testTag(ExerciseInfoTags.HISTORY_FULL),
-            variant = MButtonVariant.Text,
-        )
+        // Without a session there is nothing more to see there (the menu keeps the entry).
+        if (summary.sessions > 0) {
+            MButton(
+                stringResource(Res.string.exercise_history_full),
+                onClick = onOpenHistory,
+                modifier = Modifier.testTag(ExerciseInfoTags.HISTORY_FULL),
+                variant = MButtonVariant.Text,
+            )
+        }
     }
 }
 
@@ -583,14 +576,10 @@ private fun HistoryLine(label: String, value: String, tag: String, record: Boole
     }
 }
 
-/** "80 kg × 8", "Bodyweight × 12" for no load; null without a set. */
+/** "80 kg × 8", "Peso corporal × 12" for no load ([bestSetText], as the summary); null without a set. */
 @Composable
-private fun setText(weightKg: Double?, reps: Int?, pounds: Boolean): String? {
-    if (weightKg == null || reps == null) return null
-    if (weightKg == 0.0) return stringResource(Res.string.best_set_bodyweight, reps)
-    val unit = if (pounds) "lb" else "kg"
-    return MoosclesNumbers.setText(MoosclesNumbers.plain(WeightUnits.fromKg(weightKg, pounds)), unit, reps, currentNumberLocale())
-}
+private fun setText(weightKg: Double?, reps: Int?, pounds: Boolean): String? =
+    if (weightKg == null || reps == null) null else bestSetText(weightKg, reps, pounds)
 
 /** While the state loads: the media frame and two lines, as skeletons. */
 @Composable

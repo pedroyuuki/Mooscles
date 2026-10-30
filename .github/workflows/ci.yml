@@ -411,7 +411,8 @@ jobs:
           # Phase 4A task 8 fix round 1: FigureHighlightDrawingTest 2 (commonTest). 323 + 2 = 325.
           # Phase 4A task 9: FigureHighlightDrawingTest +2 (commonTest). 325 + 2 = 327.
           # Merged Tasks 8–9 (+4 over 323): 332 + 4 = 336.
-          MIN_DS_IOS_TESTS: 336
+          # Phase 4A task 17 fix round 1: RowsTest +1 (TopBar without a title, uiTest). 336 + 1 = 337.
+          MIN_DS_IOS_TESTS: 337
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -469,7 +470,8 @@ jobs:
           # Merged Tasks 8–9 (+11 over 307): 361 + 11 = 372.
           # Phase 4A task 17: ExerciseHistorySummariesTest 6, BodyRegionBridgeTest 1 (commonTest);
           # ExerciseInfoScreenTest 20, AddToRoutineSheetTest 3 (uiTest). 372 + 30 = 402.
-          MIN_SCREENS_IOS_TESTS: 402
+          # Task 17 fix round 1: ExerciseInfoScreenTest +1 (uiTest). 402 + 1 = 403.
+          MIN_SCREENS_IOS_TESTS: 403
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

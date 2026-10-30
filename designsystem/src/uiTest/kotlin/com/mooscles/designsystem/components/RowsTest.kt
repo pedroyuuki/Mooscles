@@ -18,19 +18,24 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
+import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_back
 import com.mooscles.designsystem.tokens.MoosclesSizes
+import com.mooscles.designsystem.tokens.MoosclesSpace
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.jetbrains.compose.resources.getString
 
 class RowsTest {
@@ -120,5 +125,24 @@ class RowsTest {
         back.performClick()
         waitForIdle()
         assertEquals(1, backs)
+    }
+
+    /** Without a title: back at the start, the actions at the end, and no empty heading. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun topBarWithoutTitleKeepsBackAndActions() = runComposeUiTest {
+        withTheme {
+            TopBar(null, modifier = Modifier.testTag("top"), onBack = {}) {
+                MIconButton(MIcons.EllipsisVertical, "More", onClick = {}, modifier = Modifier.testTag("more"))
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("top").assertHeightIsAtLeast(MoosclesSizes().rowMin)
+        onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)).assertCountEquals(0)
+        val back = onNodeWithContentDescription(getString(Res.string.ds_back)).getUnclippedBoundsInRoot()
+        val more = onNodeWithTag("more").getUnclippedBoundsInRoot()
+        val bar = onNodeWithTag("top").getUnclippedBoundsInRoot()
+        assertTrue(back.left < more.left, "back $back, more $more")
+        assertTrue(bar.right - more.right <= MoosclesSpace().s2 + 0.5.dp, "the action is not at the end: bar $bar, more $more")
     }
 }

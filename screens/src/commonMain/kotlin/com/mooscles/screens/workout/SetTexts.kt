@@ -3,13 +3,16 @@ package com.mooscles.screens.workout
 import androidx.compose.runtime.Composable
 import com.mooscles.designsystem.components.spokenLoadByReps
 import com.mooscles.designsystem.format.MoosclesNumbers
+import com.mooscles.designsystem.format.NumberLocale
 import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_unit_kg_spoken
 import com.mooscles.designsystem.resources.ds_unit_lb_spoken
 import com.mooscles.domain.WeightUnits
+import com.mooscles.screens.resources.best_set_bodyweight
 import com.mooscles.ui.PreviousSetUi
 import org.jetbrains.compose.resources.stringResource
+import com.mooscles.screens.resources.Res as ScreensRes
 
 // The texts of a set: loads in the chosen unit, with the language's decimal separator. The value
 // stays in exact kg everywhere else; these only show it.
@@ -22,6 +25,18 @@ internal fun blankReps(reps: Int): Boolean = reps == 0
 
 /** The unit symbol, the same in every language. */
 internal fun unitSymbol(pounds: Boolean): String = if (pounds) "lb" else "kg"
+
+/**
+ * A best set as the workout summary and the exercise detail show it: "87,5 kg × 6" in the unit of
+ * [pounds], or "Peso corporal × 12" for a set without a load.
+ */
+@Composable
+internal fun bestSetText(weightKg: Double, reps: Int, pounds: Boolean, locale: NumberLocale = currentNumberLocale()): String =
+    if (weightKg == 0.0) {
+        stringResource(ScreensRes.string.best_set_bodyweight, reps)
+    } else {
+        MoosclesNumbers.setText(MoosclesNumbers.plain(WeightUnits.fromKg(weightKg, pounds)), unitSymbol(pounds), reps, locale)
+    }
 
 /** [weightKg] as shown in a field, in the unit of [pounds], without the unit: "82,5", "80". */
 @Composable

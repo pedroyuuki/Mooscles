@@ -18,6 +18,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import com.mooscles.data.ExerciseCatalog
+import com.mooscles.data.NameRule
 import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
 import com.mooscles.designsystem.components.PrBadgeTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
@@ -373,6 +375,8 @@ class ExerciseInfoScreenTest {
         onNodeWithTag(ExerciseInfoTags.HISTORY_LAST).assertDoesNotExist()
         onNodeWithTag(ExerciseInfoTags.HISTORY_BEST).assertDoesNotExist()
         onNodeWithTag(ExerciseInfoTags.HISTORY_SESSIONS).assertDoesNotExist()
+        // Nothing more to see there; the menu keeps the entry.
+        onNodeWithTag(ExerciseInfoTags.HISTORY_FULL).assertDoesNotExist()
     }
 
     @Test
@@ -467,7 +471,7 @@ class ExerciseInfoScreenTest {
     fun exerciseThatDisappearsShowsNotFound() = runComposeUiTest {
         // While the state loads, the exercise is not "missing" yet.
         val state = mutableStateOf(UiState())
-        show(state = state)
+        val requests = show(state = state)
         onNodeWithTag(ExerciseInfoTags.LOADING).assertExists()
         onNodeWithTag(ExerciseInfoTags.NOT_FOUND).assertDoesNotExist()
         state.value = stateOf().value
@@ -480,6 +484,8 @@ class ExerciseInfoScreenTest {
         onNodeWithTag(ExerciseInfoTags.MEDIA).assertDoesNotExist()
         onNodeWithTag(ExerciseInfoTags.MENU).assertDoesNotExist()
         onNodeWithTag(ExerciseInfoTags.TITLE).assertDoesNotExist()
+        // The detail stays open: going back is the person's choice.
+        assertEquals(0, requests.back)
         // And back, when it returns (an import that brings it again).
         state.value = state.value.copy(exercises = exercises)
         waitForIdle()
@@ -493,7 +499,7 @@ class ExerciseInfoScreenTest {
         onNodeWithText("Voltar à biblioteca").performClick()
         waitForIdle()
         assertEquals(1, requests.back)
-        onNodeWithTag(ExerciseInfoTags.BACK).assertContentDescriptionEquals("Voltar").performClick()
+        onNodeWithContentDescription("Voltar").performClick()
         waitForIdle()
         assertEquals(2, requests.back)
     }
@@ -530,7 +536,7 @@ class ExerciseInfoScreenTest {
         tap(ExerciseInfoTags.ADD_ROUTINE)
         onNodeWithTag(AddToRoutineSheetTags.routine("r1")).performClick()
         waitForIdle()
-        state.value = state.value.copy(routines = emptyList(), error = "raw", errorCode = UiError.SAVE_FAILED)
+        state.value = state.value.copy(routines = emptyList(), error = "raw", errorCode = UiError.GENERIC)
         waitForIdle()
         toastWith("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.").assertIsDisplayed()
         assertTrue("clearError:" in fake.calls, "${fake.calls}")
@@ -543,6 +549,34 @@ class ExerciseInfoScreenTest {
         state.value = state.value.copy(routines = listOf(routine.copy(exercises = listOf(PlannedExerciseUi("p9", bench)))))
         waitForIdle()
         toastWith("Adicionado a Treino A").assertDoesNotExist()
+    }
+
+    /** Fix round 1 (I1): the longest name a custom exercise can have, at 2x on a small phone. */
+    @Test
+    fun longNameAtTwoXLeavesTheActionsInReach() {
+        val name = "Supino inclinado articulado unilateral com pegada neutra, pausa isométrica no meio e descida lenta controlada até o fim."
+        assertEquals(NameRule.MAX_LENGTH, name.length)
+        val long = mine.copy(name = name)
+        for (scale in listOf(2f, LINEAR_TWO_X_FONT_SCALE)) {
+            runComposeUiTest {
+                val state = mutableStateOf(UiState(loading = false, exercises = listOf(long)))
+                show(long, state = state, fontScale = scale, size = DpSize(320.dp, 640.dp))
+                // The fixed bar holds only back and the menu, one row whatever the name: the scrolling
+                // content, the name first, starts right under it.
+                val menu = onNodeWithTag(ExerciseInfoTags.MENU).getUnclippedBoundsInRoot()
+                val start = onNodeWithTag(ExerciseInfoTags.TITLE).getUnclippedBoundsInRoot()
+                assertTrue(start.top >= menu.bottom - 0.5.dp && start.top - menu.top <= 64.dp, "at $scale the menu is $menu, the name starts at ${start.top}")
+                // The name is whole, as the scrolling content's heading.
+                val title = onNodeWithTag(ExerciseInfoTags.TITLE).assertTextEquals(name)
+                    .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+                val results = mutableListOf<TextLayoutResult>()
+                title.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action!!(results)
+                assertTextNotCut(results.first(), "the name at $scale")
+                // And the actions scroll into view.
+                onNodeWithTag(ExerciseInfoTags.ADD_ROUTINE).performScrollTo().assertIsDisplayed()
+            }
+            LocalAppLocale.restore()
+        }
     }
 
     @Test
