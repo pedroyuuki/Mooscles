@@ -86,10 +86,10 @@ object LibraryTags {
     const val ALL_HEADER = "library-header-all"
 
     /** A row's name text (unmerged tree). */
-    const val ROW_NAME = "library-row-name"
+    const val ROW_NAME = "library-name"
 
     /** A custom row's "Custom" tag (unmerged tree). */
-    const val ROW_CUSTOM = "library-row-custom"
+    const val ROW_CUSTOM = "library-custom-tag"
 
     /** The row of [exerciseId] in "All" or in the results. */
     fun row(exerciseId: String) = "library-row-$exerciseId"
@@ -129,7 +129,9 @@ internal class LibrarySeams(
  * list is "Recently used" (up to 8, [LibraryModel.recents]) and then "All"; with either, only the
  * results, in alphabetical order of the shown name. Until the model is built ([rememberLibraryModel])
  * the list shows skeleton rows, while the search and the filters already take input, which applies
- * when the model arrives. Nothing found shows an empty state with "Create “…”" from the search and
+ * when the model arrives. While [UiState.loading], and while the only model is one of an empty list
+ * that the state has since filled, the list is not built yet either: an empty catalog is never shown
+ * for a list that is still on its way. Nothing found shows an empty state with "Create “…”" from the search and
  * "Clear filters".
  *
  * A row opens [onOpenExercise] with its id, only while the exercise is still in [UiState.exercises]
@@ -164,7 +166,9 @@ internal fun LibraryRoute(
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
     var focusReturns by remember { mutableIntStateOf(0) }
-    val model = rememberLibraryModel(state.exercises, catalogInPortuguese(), seams.cache, seams.build)
+    val built = rememberLibraryModel(state.exercises, catalogInPortuguese(), seams.cache, seams.build)
+    // The loading state's empty list builds a model too; it stands for nothing, so the skeleton stays.
+    val model = built?.takeIf { !state.loading && !(it.exercises.isEmpty() && state.exercises.isNotEmpty()) }
     val currentExercises by rememberUpdatedState(state.exercises)
     val openExercise by rememberUpdatedState(onOpenExercise)
     val open: (String) -> Unit = remember {

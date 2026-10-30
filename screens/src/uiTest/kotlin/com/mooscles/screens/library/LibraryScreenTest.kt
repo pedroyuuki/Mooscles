@@ -197,9 +197,7 @@ class LibraryScreenTest {
             .map { it.config[SemanticsProperties.TestTag].removePrefix("library-row-") }
 
     private val rowTag = SemanticsMatcher("is a library row") { node ->
-        node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("library-row-") == true &&
-            node.config.getOrNull(SemanticsProperties.TestTag) != LibraryTags.ROW_NAME &&
-            node.config.getOrNull(SemanticsProperties.TestTag) != LibraryTags.ROW_CUSTOM
+        node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("library-row-") == true
     }
 
     @Test
@@ -365,6 +363,30 @@ class LibraryScreenTest {
     }
 
     @Test
+    fun loadingStateShowsSkeletonNeverTheEmptyCatalog() = runComposeUiTest {
+        // The app starts the route while the view model is still loading: an empty list, loading.
+        val state = mutableStateOf(UiState())
+        val builds = Builds()
+        show(state = state, builds = builds)
+        onAllNodesWithTag(LibraryTags.SKELETON_ROW).assertCountEquals(6)
+        onNodeWithTag(LibraryTags.EMPTY).assertDoesNotExist()
+        onNodeWithTag(LibraryTags.COUNT).assertDoesNotExist()
+        // Loading ends; the list's model is still being built, and the empty one stands for nothing.
+        builds.hold = CompletableDeferred()
+        runOnIdle { state.value = UiState(loading = false, exercises = exercises) }
+        waitForIdle()
+        onAllNodesWithTag(LibraryTags.SKELETON_ROW).assertCountEquals(6)
+        onNodeWithTag(LibraryTags.EMPTY).assertDoesNotExist()
+        onNodeWithText("Nenhum exercício ainda").assertDoesNotExist()
+        builds.hold?.complete(Unit)
+        waitForIdle()
+        onAllNodesWithTag(LibraryTags.SKELETON_ROW).assertCountEquals(0)
+        onNodeWithTag(LibraryTags.EMPTY).assertDoesNotExist()
+        assertEquals("7 exercícios", countText())
+        row(bench).assertIsDisplayed()
+    }
+
+    @Test
     fun loadingShowsSkeletonRows() = runComposeUiTest {
         val builds = Builds().apply { hold = CompletableDeferred() }
         show(builds = builds)
@@ -406,6 +428,15 @@ class LibraryScreenTest {
         waitForIdle()
         onNodeWithTag(LibraryTags.muscleChip("Chest")).assertIsOn()
         assertEquals(count, countText())
+
+        // A new query starts the list from the top again, so the count (a live region) is on screen when it changes.
+        onNodeWithTag(LibraryTags.LIST).performScrollToIndex(8)
+        waitForIdle()
+        onNodeWithTag(LibraryTags.COUNT).assertDoesNotExist()
+        search("supino inclinado")
+        onNodeWithTag(LibraryTags.COUNT).assertIsDisplayed()
+        onNodeWithTag(LibraryTags.MINE_CHIP).assertIsDisplayed()
+        assertTrue(countText() != count, "the count follows the new query")
     }
 
     /** The tag of the highest row the list shows (partly or whole). */
