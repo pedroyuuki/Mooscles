@@ -1,5 +1,33 @@
 package com.mooscles.screens.budget
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.performTextInput
+import com.mooscles.designsystem.components.tabTag
+import com.mooscles.screens.exercise.CustomExerciseFormTags
+import com.mooscles.screens.exercise.ExerciseInfoRoute
+import com.mooscles.screens.exercise.ExerciseInfoScreenTag
+import com.mooscles.screens.exercise.ExerciseInfoTags
+import com.mooscles.screens.library.LibraryFilters
+import com.mooscles.screens.library.LibraryModel
+import com.mooscles.screens.library.LibraryRoute
+import com.mooscles.screens.library.LibraryScreenTag
+import com.mooscles.screens.library.LibraryTags
+import com.mooscles.screens.shell.AppShellBottom
+import com.mooscles.screens.shell.ShellTabs
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -64,6 +92,13 @@ import kotlin.time.Duration.Companion.minutes
  *
  * Every flow starts from a bench press with two sets and a finished workout a week ago with two
  * sets of 80 kg × 8 on it, the record the routine's sets take as their target ([seed]).
+ *
+ * Plus the phase 4A library's two flows of its spec table (docs/superpowers/specs/2026-10-29-phase4-library-routines-design.md,
+ * "Orçamento de toques"), over the same stack with the whole catalog, the library and the exercise
+ * detail hosted as the app does under the tab bar ([LibraryApp]): finding an exercise by its muscle
+ * and opening it, from another tab, and creating a custom exercise with a name, a muscle and an
+ * equipment, from the library (the typed name does not count). Each is held to the spec's "Novo"
+ * ([LibraryNew]) and to today's count on the old library ([LibraryToday]).
  */
 @OptIn(ExperimentalTestApi::class)
 class TapBudgetTest {
@@ -101,6 +136,21 @@ class TapBudgetTest {
         const val SKIP = 1
         const val PLUS_FIFTEEN = 1
         const val FINISH = 2
+    }
+
+    /**
+     * Today's counts on the old library (Task 19, at `9112a7d`, before the swap):
+     * docs/superpowers/reports/2026-10-29-phase4a-verificacao/tap-baseline-4a.md
+     */
+    private object LibraryToday {
+        const val FIND_BY_MUSCLE_AND_OPEN = 4
+        const val CREATE_CUSTOM_EXERCISE = 6
+    }
+
+    /** The spec's "Novo" column (docs/superpowers/specs/2026-10-29-phase4-library-routines-design.md, "Orçamento de toques"). */
+    private object LibraryNew {
+        const val FIND_BY_MUSCLE_AND_OPEN = 3
+        const val CREATE_CUSTOM_EXERCISE = 4
     }
 
     /** The user's touches: a tap or a gesture counts 1. Each waits for the screen to settle. */
@@ -288,6 +338,52 @@ class TapBudgetTest {
         assertWithin("finish", taps, New.FINISH, Today.FINISH)
     }
 
+    /**
+     * From the Train tab: the Library tab, the "Back" chip, the first back exercise of the results;
+     * its detail opens. Scrolling to the row does not count (it is the first result).
+     */
+    @Test
+    fun findByMuscleAndOpen() = libraryBudget(ShellTabs.TRAIN) { vm ->
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(tabTag(ShellTabs.LIBRARY)))
+        await("the library's list is built") { exists(hasTestTag(LibraryTags.COUNT)) }
+        taps.tap(onNodeWithTag(LibraryTags.muscleChip("Back")))
+        val model = LibraryModel.build(vm.contentUi.value.exercises, portuguese = false)
+        val first = model.results("", LibraryFilters(muscles = setOf("Back"))).first()
+        await("the back exercises are listed") { exists(hasTestTag(LibraryTags.row(first.id))) }
+        onNodeWithTag(LibraryTags.LIST).performScrollToNode(hasTestTag(LibraryTags.row(first.id)))
+        waitForIdle()
+        taps.tap(onNodeWithTag(LibraryTags.row(first.id)))
+        await("the detail opens") { exists(hasTestTag(ExerciseInfoScreenTag)) }
+        assertEquals("Back", first.muscle)
+        assertEquals(model.shownName(first), onNodeWithTag(ExerciseInfoTags.TITLE).fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text })
+        assertWithin("findByMuscleAndOpen", taps, LibraryNew.FIND_BY_MUSCLE_AND_OPEN, LibraryToday.FIND_BY_MUSCLE_AND_OPEN)
+    }
+
+    /**
+     * From the library: "Create exercise", the name typed (not counted, nor the focus it takes),
+     * "Chest", "Dumbbell" (the convention takes its default, "Per hand") and "Save"; the new
+     * exercise is saved and its detail opens.
+     */
+    @Test
+    fun createCustomExerciseWithNameMuscleAndEquipment() = libraryBudget(ShellTabs.LIBRARY) { vm ->
+        await("the library's list is built") { exists(hasTestTag(LibraryTags.COUNT)) }
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(LibraryTags.CREATE))
+        await("the form opens") { exists(hasTestTag(CustomExerciseFormTags.ROOT)) }
+        onNodeWithTag(CustomExerciseFormTags.NAME).performTextInput("Machine row")
+        waitForIdle()
+        taps.tap(onNodeWithTag(CustomExerciseFormTags.muscle("Chest")))
+        taps.tap(onNodeWithTag(CustomExerciseFormTags.equipment("Dumbbell")))
+        taps.tap(onNodeWithTag(CustomExerciseFormTags.SAVE))
+        await("the exercise is saved") { vm.contentUi.value.exercises.any { it.custom && it.name == "Machine row" } }
+        val saved = vm.contentUi.value.exercises.single { it.custom && it.name == "Machine row" }
+        assertEquals(listOf("Chest", "Dumbbell", "Per hand"), listOf(saved.muscle, saved.equipment, saved.convention))
+        await("its detail opens") { exists(hasTestTag(ExerciseInfoScreenTag)) && !exists(hasTestTag(CustomExerciseFormTags.ROOT)) }
+        assertEquals("Machine row", onNodeWithTag(ExerciseInfoTags.TITLE).fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text })
+        assertWithin("createCustomExerciseWithNameMuscleAndEquipment", taps, LibraryNew.CREATE_CUSTOM_EXERCISE, LibraryToday.CREATE_CUSTOM_EXERCISE)
+    }
+
     // --- The stack ------------------------------------------------------------------------------
 
     /**
@@ -313,6 +409,70 @@ class TapBudgetTest {
             flow(vm, ids)
         } finally {
             runOnUiThread { harness.close() }
+        }
+    }
+
+    /**
+     * Seeds the catalog, opens the library as the app hosts it ([LibraryApp]) in English at 1.0 on
+     * [tab], waits for the state, and runs [flow] with the view model.
+     */
+    private fun libraryBudget(tab: String, flow: suspend ComposeUiTest.(vm: FlowViewModel) -> Unit) = runComposeUiTest(testTimeout = 2.minutes) {
+        val harness = FlowHarness()
+        try {
+            harness.repository.initialize()
+            val vm = harness.createViewModel()
+            withScreen(locale = "en") { LibraryApp(vm, tab) }
+            waitForIdle()
+            await("the state loads") { !vm.contentUi.value.loading && vm.contentUi.value.exercises.isNotEmpty() }
+            waitForIdle()
+            flow(vm)
+        } finally {
+            runOnUiThread { harness.close() }
+        }
+    }
+
+    /**
+     * The library and the exercise detail as `:app` hosts them (`MoosclesApp`), without its NavHost:
+     * the tab's content over the shell's bottom (the tab bar), starting on [startTab]; the Library
+     * tab shows [LibraryRoute], a row opens [ExerciseInfoRoute] in its place, and choosing a tab
+     * leaves the detail. Clear of the system bars and the keyboard, as the app's window is.
+     */
+    @Composable
+    private fun LibraryApp(viewModel: FlowViewModel, startTab: String) {
+        val state by viewModel.contentUi.collectAsState()
+        val timer = viewModel.timerUi.collectAsState()
+        var tab by rememberSaveable { mutableStateOf(startTab) }
+        var detail by rememberSaveable { mutableStateOf<String?>(null) }
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val open = detail
+                when {
+                    open != null -> ExerciseInfoRoute(
+                        exerciseId = open,
+                        state = state,
+                        actions = viewModel,
+                        onBack = { detail = null },
+                        onOpenHistory = {},
+                        onOpenRoutine = {},
+                        onOpenWorkout = {},
+                    )
+                    tab == ShellTabs.LIBRARY -> LibraryRoute(state, viewModel, onOpenExercise = { detail = it }, onOpenSettings = {})
+                    else -> Box(Modifier.fillMaxSize())
+                }
+            }
+            AppShellBottom(
+                state = state,
+                timer = timer,
+                selectedTab = tab,
+                onSelectTab = {
+                    tab = it
+                    detail = null
+                },
+                onReselectTab = { detail = null },
+                onOpenWorkout = {},
+                actions = viewModel,
+                imeInsets = WindowInsets(0, 0, 0, 0),
+            )
         }
     }
 
