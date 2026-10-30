@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the custom exercise form. English is the base; every key also exists in values-pt-rBR. -->
+<resources>
+    <string name="exercise_form_new">New exercise</string>
+    <string name="exercise_form_edit">Edit exercise</string>
+    <string name="exercise_form_name">Name</string>
+    <string name="exercise_form_muscle">Muscle group</string>
+    <string name="exercise_form_equipment">Equipment</string>
+    <string name="exercise_form_convention">Logging convention</string>
+    <string name="exercise_form_save">Save</string>
+    <string name="exercise_form_cancel">Cancel</string>
+    <string name="exercise_form_duplicate">“%1$s” already exists. You can save anyway.</string>
+    <string name="exercise_form_convention_change">Sets already logged keep the convention they were logged with.</string>
+    <string name="exercise_form_name_required">Enter a name.</string>
+    <string name="exercise_form_name_long">Use 120 characters or fewer.</string>
+    <string name="exercise_form_muscle_required">Choose a muscle group.</string>
+    <string name="exercise_form_equipment_required">Choose the equipment.</string>
+</resources>

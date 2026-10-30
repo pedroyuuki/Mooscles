@@ -34,6 +34,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -55,6 +56,7 @@ import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.assertShownWhole
 import com.mooscles.screens.assertTextNotCut
+import com.mooscles.screens.exercise.CustomExerciseFormTags
 import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
@@ -126,7 +128,6 @@ class LibraryScreenTest {
     private class Requests {
         val opened = mutableListOf<String>()
         var settings = 0
-        val created = mutableListOf<String>()
     }
 
     /** A build that waits for [hold] while one is set. */
@@ -156,7 +157,7 @@ class LibraryScreenTest {
     ): Requests {
         val requests = Requests()
         // A cache of the test's own (pre-flight F19), so no other test's model is reused.
-        val seams = LibrarySeams(cache = LibraryModelCache(), build = builds.build, media = media, onCreate = { requests.created += it })
+        val seams = LibrarySeams(cache = LibraryModelCache(), build = builds.build, media = media)
         withScreen(locale = locale, fontScale = fontScale, size = size, restoration = restoration) {
             TopAnchored(if (tall) TALL else null) {
                 LibraryRoute(
@@ -183,6 +184,28 @@ class LibraryScreenTest {
     private fun ComposeUiTest.search(query: String) {
         onNode(hasSetTextAction()).performTextReplacement(query)
         waitForIdle()
+    }
+
+    private fun ComposeUiTest.formName(): String =
+        onNodeWithTag(CustomExerciseFormTags.NAME).fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+
+    private fun ComposeUiTest.cancelForm() {
+        onNodeWithTag(CustomExerciseFormTags.CANCEL).performClick()
+        waitForIdle()
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
+    }
+
+    /** Fills the open form with a new exercise and saves it; the id the screen gave it. */
+    private fun ComposeUiTest.createInTheForm(fake: Fake, name: String): String {
+        onNodeWithTag(CustomExerciseFormTags.NAME).performTextReplacement(name)
+        onNodeWithTag(CustomExerciseFormTags.muscle("Back")).performScrollTo().performClick()
+        onNodeWithTag(CustomExerciseFormTags.equipment("Plate-loaded machine")).performScrollTo().performClick()
+        waitForIdle()
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        val call = fake.calls.last { it.startsWith("createCustomExercise:") }
+        assertTrue(call.endsWith(",$name,Back,Plate-loaded machine,Total load"), call)
+        return call.removePrefix("createCustomExercise:").substringBefore(",")
     }
 
     private fun ComposeUiTest.countText(): String =
@@ -216,9 +239,12 @@ class LibraryScreenTest {
         // The search field sits under the top bar, with its placeholder as its name.
         onNodeWithText("Buscar por nome, músculo ou equipamento", useUnmergedTree = true).assertIsDisplayed()
         assertTrue(top(onNodeWithTag(LibraryTags.SEARCH)) >= onNodeWithTag(LibraryTags.CREATE).getUnclippedBoundsInRoot().bottom - 0.5.dp)
+        // "Create exercise" opens the form, with no name yet.
         onNodeWithTag(LibraryTags.CREATE).performClick()
         waitForIdle()
-        assertEquals(listOf(""), requests.created)
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
+        assertEquals("", formName())
+        cancelForm()
         assertEquals(0, requests.settings)
     }
 
@@ -339,7 +365,10 @@ class LibraryScreenTest {
         onNode(hasText("Limpar filtros") and hasAnyAncestor(hasTestTag(LibraryTags.EMPTY))).assertDoesNotExist()
         onNode(hasText("Criar “remada articulada”") and hasAnyAncestor(hasTestTag(LibraryTags.EMPTY))).performClick()
         waitForIdle()
-        assertEquals(listOf("remada articulada"), requests.created)
+        // The form opens with the search as the name; cancelling it comes back to the same search.
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
+        assertEquals("remada articulada", formName())
+        cancelForm()
         // With a filter, "Clear filters" too; it keeps the search.
         onNodeWithTag(LibraryTags.MINE_CHIP).performClick()
         waitForIdle()
@@ -359,7 +388,7 @@ class LibraryScreenTest {
         waitForIdle()
         onNodeWithTag(LibraryTags.EMPTY).assertDoesNotExist()
         assertEquals("7 exercícios", countText())
-        assertEquals(listOf("remada articulada"), requests.created)
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
     }
 
     @Test
@@ -569,6 +598,75 @@ class LibraryScreenTest {
         onNodeWithText("raw message", substring = true).assertDoesNotExist()
         assertEquals(listOf("clearError:"), fake.calls)
         assertNull(state.value.errorCode)
+    }
+
+    @Test
+    fun creatingOpensTheNewExerciseWhenItArrives() = runComposeUiTest {
+        // No forced language (the restoration tester loses the saved state under the override); by tag.
+        val state = stateOf()
+        val fake = Fake(state)
+        val restoration = screenRestoration()
+        val requests = show(state = state, locale = null, restoration = restoration, fake = fake)
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        val id = createInTheForm(fake, "Remada articulada")
+        // The form closes at once; the state has not brought the exercise yet, so nothing opens.
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
+        assertEquals(emptyList(), requests.opened)
+        // Unrelated changes while waiting open nothing either.
+        runOnIdle { state.value = state.value.copy(history = history) }
+        waitForIdle()
+        assertEquals(emptyList(), requests.opened)
+
+        // The wait survives a recreation.
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        assertEquals(emptyList(), requests.opened)
+
+        val created = ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true)
+        runOnIdle { state.value = state.value.copy(exercises = exercises + created) }
+        waitForIdle()
+        assertEquals(listOf(id), requests.opened)
+        // Once: later states do not open it again.
+        runOnIdle { state.value = state.value.copy(exercises = exercises + created.copy(name = "Remada articulada II")) }
+        waitForIdle()
+        assertEquals(listOf(id), requests.opened)
+        assertEquals(1, fake.calls.count { it.startsWith("createCustomExercise:") })
+    }
+
+    @Test
+    fun creationErrorDropsThePendingOpen() = runComposeUiTest {
+        val state = stateOf()
+        val fake = Fake(state)
+        val requests = show(state = state, fake = fake)
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        val failed = createInTheForm(fake, "Remada articulada")
+        // The save fails before the exercise arrives: the error shows, and the wait is dropped.
+        runOnIdle { state.value = state.value.copy(error = "raw", errorCode = UiError.SAVE_FAILED) }
+        waitForIdle()
+        onNode(
+            hasText("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.") and hasAnyAncestor(hasTestTag(TOAST)),
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
+        assertNull(state.value.errorCode)
+        runOnIdle { state.value = state.value.copy(exercises = exercises + ExerciseUi(failed, "Remada articulada", "Back", "Plate-loaded machine", custom = true)) }
+        waitForIdle()
+        assertEquals(emptyList(), requests.opened)
+
+        // An error that comes with the exercise already in the list (a repeated creation of the
+        // same id is refused) is no failure of this one: it opens.
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        val second = createInTheForm(fake, "Remada cavalinho do Zé")
+        runOnIdle {
+            state.value = state.value.copy(
+                exercises = state.value.exercises + ExerciseUi(second, "Remada cavalinho do Zé", "Back", "Plate-loaded machine", custom = true),
+                error = "raw", errorCode = UiError.INVALID_VALUE,
+            )
+        }
+        waitForIdle()
+        assertEquals(listOf(second), requests.opened)
     }
 
     private companion object {

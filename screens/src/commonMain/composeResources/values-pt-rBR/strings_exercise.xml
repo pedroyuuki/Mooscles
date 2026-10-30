@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the custom exercise form in Brazilian Portuguese; the same keys as values/strings_exercise.xml. -->
+<resources>
+    <string name="exercise_form_new">Novo exercício</string>
+    <string name="exercise_form_edit">Editar exercício</string>
+    <string name="exercise_form_name">Nome</string>
+    <string name="exercise_form_muscle">Grupo muscular</string>
+    <string name="exercise_form_equipment">Equipamento</string>
+    <string name="exercise_form_convention">Convenção de registro</string>
+    <string name="exercise_form_save">Salvar</string>
+    <string name="exercise_form_cancel">Cancelar</string>
+    <string name="exercise_form_duplicate">Já existe “%1$s”. Você pode salvar mesmo assim.</string>
+    <string name="exercise_form_convention_change">As séries já registradas continuam com a convenção de quando foram feitas.</string>
+    <string name="exercise_form_name_required">Digite um nome.</string>
+    <string name="exercise_form_name_long">Use até 120 caracteres.</string>
+    <string name="exercise_form_muscle_required">Escolha um grupo muscular.</string>
+    <string name="exercise_form_equipment_required">Escolha o equipamento.</string>
+</resources>

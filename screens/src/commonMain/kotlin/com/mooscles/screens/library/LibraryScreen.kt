@@ -44,6 +44,7 @@ import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.screens.exercise.CustomExerciseForm
 import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.library_all
@@ -106,14 +107,12 @@ object LibraryTags {
 
 /**
  * The seams of [LibraryRoute] for tests (pre-flight F19): the model [cache] and [build], which a
- * test holds to set "before the index is ready"; the row [media]; and [onCreate], which gets the
- * name to start from ("" from the top bar, the search from "Create “…”").
+ * test holds to set "before the index is ready"; and the row [media].
  */
 internal class LibrarySeams(
     val cache: LibraryModelCache = LibraryModelCache.process,
     val build: suspend (List<ExerciseUi>, Boolean) -> LibraryModel = ::buildOffTheMainThread,
     val media: (ExerciseUi) -> ExerciseMedia = { ExerciseMedia.None },
-    val onCreate: (prefill: String) -> Unit = {},
 ) {
     companion object {
         // The media is Task 8's `exerciseMedia` (frame B, still) once the poses are merged.
@@ -138,8 +137,14 @@ internal class LibrarySeams(
  * (for the moment a new list is being built, the rows can be the previous list's). The search, the
  * filters, the open equipment sheet and the scroll are kept with `rememberSaveable`, so they
  * survive going to the detail and back, and recreation. Errors show in the app's language over the
- * screen ([ScreenErrorToast], plan decision 14), never [UiState.error]. Task 16 adds the custom
- * exercise form to "Create exercise".
+ * screen ([ScreenErrorToast], plan decision 14), never [UiState.error].
+ *
+ * "Create exercise", and "Create “…”" with the search as the name, open [CustomExerciseForm] over
+ * the library. Its save closes it and leaves the new exercise's id waiting (plan decision 13): the
+ * detail opens ([onOpenExercise]) once the state brings that exercise, and an error that arrives
+ * first drops the wait (the toast says what failed), unless the exercise is already in the list (a
+ * repeated creation of the same id is refused, but the exercise is there). The open form, its
+ * draft and the wait are kept with `rememberSaveable` too.
  */
 @Composable
 fun LibraryRoute(
@@ -163,6 +168,10 @@ internal fun LibraryRoute(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
     var filters by rememberSaveable(stateSaver = LibraryFilters.Saver) { mutableStateOf(LibraryFilters()) }
     var equipmentOpen by rememberSaveable { mutableStateOf(false) }
+    // The name the open form started with; null while it is closed.
+    var form by rememberSaveable { mutableStateOf<String?>(null) }
+    // The id of the exercise the form saved, until the state brings it or an error comes first.
+    var pending by rememberSaveable { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
     var focusReturns by remember { mutableIntStateOf(0) }
@@ -173,6 +182,23 @@ internal fun LibraryRoute(
     val openExercise by rememberUpdatedState(onOpenExercise)
     val open: (String) -> Unit = remember {
         { id -> if (currentExercises.any { it.id == id }) openExercise(id) }
+    }
+    val create: (String) -> Unit = remember { { prefill -> form = prefill } }
+
+    LaunchedEffect(pending, state.exercises) {
+        val id = pending ?: return@LaunchedEffect
+        if (state.exercises.any { it.id == id }) {
+            pending = null
+            openExercise(id)
+        }
+    }
+    // Keyed on the code alone: an error already there when the wait began is not this save's (the
+    // form clears errors before saving), and the toast clears each one as it shows it.
+    LaunchedEffect(state.errorCode) {
+        if (state.errorCode == null) return@LaunchedEffect
+        val id = pending ?: return@LaunchedEffect
+        pending = null
+        if (currentExercises.any { it.id == id }) openExercise(id)
     }
 
     // A new search or filter starts the list from the top; a recreation keeps the scroll it had.
@@ -202,7 +228,7 @@ internal fun LibraryRoute(
                     MIconButton(
                         MIcons.Plus,
                         contentDescription = stringResource(Res.string.library_create),
-                        onClick = { seams.onCreate("") },
+                        onClick = { create("") },
                         modifier = Modifier.testTag(LibraryTags.CREATE),
                     )
                 },
@@ -227,7 +253,7 @@ internal fun LibraryRoute(
                 onOpenEquipment = { equipmentOpen = true },
                 equipmentFocus = equipmentFocus,
                 onOpen = open,
-                onCreate = seams.onCreate,
+                onCreate = create,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -235,6 +261,19 @@ internal fun LibraryRoute(
             state.errorCode,
             actions,
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+        )
+    }
+    form?.let { prefill ->
+        CustomExerciseForm(
+            initial = null,
+            prefillName = prefill,
+            state = state,
+            actions = actions,
+            onSaved = { id ->
+                pending = id
+                form = null
+            },
+            onCancel = { form = null },
         )
     }
     if (equipmentOpen) {

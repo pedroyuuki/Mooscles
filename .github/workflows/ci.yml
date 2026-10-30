@@ -206,7 +206,9 @@ jobs:
           # LibraryModelTimingTest 1. 882 + 11 = 893.
           # Phase 4A task 7 (:designsystem commonTest): SizesTimingElevationTest +1 (IconsTest updated, not added). 881 + 1 = 882.
           # Merged Task 7: 893 + 1 = 894.
-          MIN_HOST_TESTS: 894
+          # Phase 4A task 16 (:shared commonTest): EditRulesTest +1; (:screens commonTest)
+          # CustomExerciseRulesTest 4. 894 + 5 = 899.
+          MIN_HOST_TESTS: 899
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -334,7 +336,8 @@ jobs:
           # Phase 4A task 2: ExerciseAnatomyTest 15. 224 + 15 = 239.
           # Phase 4A task 3: ExerciseNamesTest 8, ExerciseSearchIndexTest 9. 239 + 17 = 256.
           # Task 3 fix round 1: +0 (the new exhaustive test is JVM-only). 256.
-          MIN_IOS_TESTS: 256
+          # Phase 4A task 16: EditRulesTest +1. 256 + 1 = 257.
+          MIN_IOS_TESTS: 257
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -448,8 +451,10 @@ jobs:
           # ActiveWorkoutScreenTest +1, WorkoutSummaryScreenTest +1 (uiTest). 297 + 10 = 307.
           # Phase 4A task 14: LibraryModelTest 10 (commonTest). 307 + 10 = 317.
           # Phase 4A task 15 (uiTest): LibraryScreenTest 17, LibraryFiltersUiTest 6. 317 + 23 = 340.
+          # Phase 4A task 16: CustomExerciseRulesTest 4 (commonTest); CustomExerciseFormTest 13,
+          # LibraryScreenTest +2 (uiTest). 340 + 19 = 359.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 340
+          MIN_SCREENS_IOS_TESTS: 359
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
