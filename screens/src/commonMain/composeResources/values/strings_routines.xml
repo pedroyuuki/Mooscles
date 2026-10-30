@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The routine target line (English), "Target 3×8 · 80 kg". Every key also exists in values-pt-rBR with the same arguments. -->
+<resources>
+    <string name="routines_target_prefix">Target</string>
+    <plurals name="routines_target_sets">
+        <item quantity="one">%1$d set</item>
+        <item quantity="other">%1$d sets</item>
+    </plurals>
+    <string name="routines_target_reps">%1$s reps</string>
+    <plurals name="routines_target_warmups">
+        <item quantity="one">+ %1$d warm-up</item>
+        <item quantity="other">+ %1$d warm-up</item>
+    </plurals>
+</resources>

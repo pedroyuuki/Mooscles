@@ -228,7 +228,8 @@ jobs:
           # (:shared commonTest) WorkoutPresentationTest +10, UiErrorsTest +1. 975 + 24 = 999.
           # Phase 4B task 7 (:app, sdk [26, 35] runs each method twice): ExercisePhotoStoreHostTest 13 x 2 = 26,
           # PhotoManifestHostTest 3, AppViewModelPhotosHostTest 4. 999 + 33 = 1032.
-          MIN_HOST_TESTS: 1032
+          # Phase 4B task 8 (:screens commonTest): RoutineTargetFormatTest 14. 1032 + 14 = 1046.
+          MIN_HOST_TESTS: 1046
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -504,7 +505,8 @@ jobs:
           # Phase 4A task 23: ExerciseInfoScreenTest +1, CustomExerciseFormTest +1, ExercisePickerSheetTest +1 (uiTest). 427 + 3 = 430.
           # Phase 4A final review fixes: ActiveWorkoutScreenTest +1 (uiTest), RoutineGroupsTest 2 (commonTest). 430 + 3 = 433.
           # Phase 4B task 3: ScreensHelpersTest +1 (uiTest). 433 + 1 = 434.
-          MIN_SCREENS_IOS_TESTS: 434
+          # Phase 4B task 8: RoutineTargetFormatTest 14 (commonTest), RoutineTargetLineTest 1, ActiveWorkoutScreenTest +3 (uiTest). 434 + 18 = 452.
+          MIN_SCREENS_IOS_TESTS: 452
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
