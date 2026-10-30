@@ -223,7 +223,8 @@ jobs:
           # Phase 4B task 4 (:designsystem commonTest): SizesTimingElevationTest.reorderTokens +1, MotionTokensTest.dragLiftScale +1. 935 + 2 = 937.
           # Phase 4B task 4 fix round 1 (:designsystem commonTest): ComponentColorsTest.reorderLiftShowsInBothThemes +1. 937 + 1 = 938.
           # Merged Task 4 (+3 over 935): 969 + 3 = 972.
-          MIN_HOST_TESTS: 972
+          # Phase 4B task 2 fix round 1 (:app): RoutineCommandsPersistenceTest +3. 972 + 3 = 975.
+          MIN_HOST_TESTS: 975
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

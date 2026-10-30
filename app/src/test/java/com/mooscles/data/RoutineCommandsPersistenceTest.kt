@@ -357,7 +357,22 @@ class RoutineCommandsPersistenceTest {
 
         val added = rows(entry).last()
         assertEquals(RoutineSet(warmup, entry, 4, 8, 50.0, inheritPr = false, warmup = true), added)
-        assertEquals(5, repo.routineExercise(entry)!!.plannedSets)
+
+        // After a manual working set, the new one copies its values and stays manual.
+        repo.setRoutineSetWarmup(warmup, false)
+        val manual = repo.addRoutineSet(entry)
+        assertEquals(RoutineSet(manual, entry, 5, 8, 50.0, inheritPr = false, warmup = false), rows(entry).last())
+        assertEquals(6, repo.routineExercise(entry)!!.plannedSets)
+    }
+
+    @Test fun addRoutineSetAfterAnImportedInheritedWarmupMakesAManualWarmup() = runBlocking {
+        val (entry, original) = threeSets()
+        // A backup can bring a warm-up that also says it follows the record; the copy must not spread that.
+        database.dao().updateRoutineSet(original.last().copy(targetReps = 12, targetWeightKg = 30.0, inheritPr = true, warmup = true))
+
+        val added = repo.addRoutineSet(entry)
+
+        assertEquals(RoutineSet(added, entry, 3, 12, 30.0, inheritPr = false, warmup = true), rows(entry).last())
     }
 
     @Test fun replaceRoutineExerciseKeepsWarmups() = runBlocking {
@@ -405,6 +420,36 @@ class RoutineCommandsPersistenceTest {
         repo.removeRoutineSet(b.id)
         repo.restoreRoutineSet(entry, 9, b)
         assertEquals(listOf(a, c.copy(position = 1), b.copy(position = 2)), rows(entry))
+    }
+
+    @Test fun restoringAnInheritedSetFollowsTheCurrentRecord() = runBlocking {
+        val (entry, original) = threeSets()
+        val exerciseId = repo.routineExercise(entry)!!.exerciseId
+        record(exerciseId, 90.0, 4)
+        val c = rows(entry)[2]
+        assertEquals(RoutineSet(original[2].id, entry, 2, 4, 90.0, inheritPr = true, warmup = false), c)
+        repo.removeRoutineSet(c.id)
+        record(exerciseId, 100.0, 5)
+
+        // The undo holds the old snapshot (4 × 90); an inherited set comes back inherited, with today's record.
+        repo.restoreRoutineSet(entry, 2, c)
+
+        assertEquals(RoutineSet(c.id, entry, 2, 5, 100.0, inheritPr = true, warmup = false), rows(entry)[2])
+        assertEquals(listOf(original[0].id, original[1].id, c.id), rows(entry).map { it.id })
+    }
+
+    @Test fun restoreRefusesInvalidValues() = runBlocking {
+        val (entry, original) = threeSets()
+        val b = original[1]
+        repo.removeRoutineSet(b.id)
+        // The value rules are the ones updateRoutineSet applies.
+        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSet(entry, 1, b.copy(targetReps = 10_000)) }
+        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSet(entry, 1, b.copy(targetReps = -1)) }
+        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSet(entry, 1, b.copy(targetWeightKg = -2.5)) }
+        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSet(entry, 1, b.copy(targetWeightKg = Double.NaN)) }
+        assertNull(repo.snapshot().routineSets.firstOrNull { it.id == b.id })
+        repo.restoreRoutineSet(entry, 1, b)
+        assertEquals(original, rows(entry))
     }
 
     @Test fun restoreRoutineSetTwiceRefusesTheSecond() = runBlocking {

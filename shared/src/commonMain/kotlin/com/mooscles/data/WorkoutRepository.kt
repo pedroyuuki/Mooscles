@@ -385,7 +385,8 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         EditRules.routineSetCount(rows.size + 1)
         val last = rows.lastOrNull()
         val row = if (last == null || (last.inheritPr && !last.warmup)) inheritedSet(plan, rows.size)
-            else last.copy(id = newId(), position = rows.size)
+            // A warm-up never follows the record, even one a backup marked as inherited.
+            else last.copy(id = newId(), position = rows.size, inheritPr = last.inheritPr && !last.warmup)
         dao.insertRoutineSet(row)
         mirrorPlan(entryId)
         row.id
