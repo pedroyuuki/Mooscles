@@ -26,12 +26,18 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.mooscles.designsystem.restoreTouchMode
 import com.mooscles.designsystem.withTheme
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class MChipTest {
+    // A test here asks for keyboard mode, which outlives it on Android: give the next tests touch mode.
+    @AfterTest
+    fun backToTouchMode() = restoreTouchMode()
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun selectedShowsACheckIconNotOnlyColor() {

@@ -39,9 +39,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.assertShownWhole
+import com.mooscles.designsystem.restoreTouchMode
 import com.mooscles.designsystem.tokens.MoosclesSpace
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -49,6 +51,10 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class MSearchFieldTest {
+    // A test here asks for keyboard mode, which outlives it on Android: give the next tests touch mode.
+    @AfterTest
+    fun backToTouchMode() = restoreTouchMode()
+
     private val placeholder = "Search by name, muscle or equipment"
     private val clear = hasContentDescription("Clear search")
 
