@@ -85,10 +85,13 @@ fun MoosclesApp(
         val timer = timerState ?: fallbackTimer
 
         // The root of the stack in view: set by a tab, and by reaching a tab's route any other way
-        // (shown at once, in the same frame; kept for the routes above it).
+        // (shown at once, in the same frame; kept for the routes above it). Only a real entry counts:
+        // the first frame after a recreation has none yet, and its stand-in Train must not replace
+        // the restored tab of the screen above a root (a change of language, theme or text size).
         var savedTab by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
-        val selectedTab = if (route in ShellTabs.keys) route else savedTab
-        SideEffect { if (route in ShellTabs.keys) savedTab = route }
+        val reached = entry?.destination?.route?.takeIf { it in ShellTabs.keys }
+        val selectedTab = reached ?: savedTab
+        SideEffect { if (reached != null) savedTab = reached }
         fun selectTab(tab: String) {
             // A saved tab stack never keeps the workout: restored after the workout ended, it
             // would show "No workout in progress". Leaving drops what was opened from it.

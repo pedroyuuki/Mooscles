@@ -121,6 +121,35 @@ class ShellNavigationHostTest {
         assertLibraryRoot()
     }
 
+    /**
+     * A recreation (a change of language, theme or text size) on a screen above a tab's root keeps
+     * that tab selected: the back stack is not there yet in the first frame after it, and that frame
+     * must not count as having reached Train.
+     */
+    @Test fun aRecreationAboveATabsRootKeepsThatTabSelected() {
+        state = mutableStateOf(UiState(loading = false, history = listOf(past)))
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MoosclesApp(state.value, actions) }
+        tab("library").performClick()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithTag("settings-content").assertExists()
+        tab("library").assertIsSelected()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithTag("settings-content").assertExists()
+        tab("library").assertIsSelected()
+        tab("routines").assertIsNotSelected()
+        // The same from the history's workout detail, a screen of another tab.
+        tab("history").performClick()
+        compose.onNodeWithText("Last week").performClick()
+        compose.onNodeWithTag("workout-details").assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithTag("workout-details").assertIsDisplayed()
+        tab("history").assertIsSelected()
+        // Reselecting it still goes back to its own root.
+        tab("history").performClick()
+        compose.onNodeWithTag("history-list").assertIsDisplayed()
+    }
+
     @Test fun startNavigatesAtOnceAndShowsOneSkeletonPerRoutineExercise() {
         show(UiState(loading = false, routines = listOf(push, pull), exercises = listOf(bench, row, squat)))
         compose.onNodeWithTag("routines-list").performScrollToNode(hasTestTag("routine-push-start"))
