@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -96,6 +97,9 @@ private class Harness {
     /** The menus' moves ([reorderMover]) of each composed item, as of the last composition. */
     val movers = mutableMapOf<String, (Int) -> Boolean>()
 
+    /** Each order the list was composed with, once per change: one swap per layout shows as one transposition each. */
+    val shown = mutableListOf<List<String>>()
+
     fun heightFor(key: String): Dp = if (collapsed) 40.dp else heightOf(key)
 }
 
@@ -120,6 +124,7 @@ private fun ReorderList(h: Harness, height: Dp = LIST_HEIGHT, width: Dp? = null)
         },
     )
     h.state = state
+    SideEffect { if (h.shown.lastOrNull() != state.order) h.shown += state.order }
     Box(Modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())) {
         LazyColumn(Modifier.fillMaxSize().testTag(LIST), state = list) {
             items(state.order, key = { it }) { key ->
@@ -562,15 +567,109 @@ class ReorderTest {
         assertEquals(5, h.list.firstVisibleItemIndex, "$dragged is the first item shown (offset ${h.list.firstVisibleItemScrollOffset})")
         lift(dragged)
         assertTrue(h.collapsed)
-        assertEquals(0, h.list.firstVisibleItemIndex + h.list.firstVisibleItemScrollOffset, "the collapsed list is back at its top")
+        assertEquals(0, h.list.firstVisibleItemIndex, "the collapsed list is back at its top")
+        assertEquals(0, h.list.firstVisibleItemScrollOffset, "the collapsed list is back at its top")
+        // Decision 14: the resize alone reorders nothing.
+        assertEquals(tall, h.state.order)
         val listTop = onNodeWithTag(LIST).getBoundsInRoot().top
         val first = onNodeWithTag(tall[0]).getBoundsInRoot()
         val lifted = onNodeWithTag(dragged).getBoundsInRoot()
         assertTrue(lifted.top < first.bottom, "$dragged is drawn over ${tall[0]}: ${lifted.top - listTop} / ${first.top - listTop}..${first.bottom - listTop}")
+        // 40 dp: past the rejoin's two touch slops on both platforms while the slop is at most 20 dp.
         drag((-40).dp, steps = 20)
         assertEquals(dragged, h.state.order.first(), "dragged up over the first item: ${h.state.order}")
+        assertEquals(emptyList(), h.drops, "nothing is written while dragging")
         release()
         assertEquals(listOf(listOf(dragged) + (tall - dragged)), h.drops)
+    }
+
+    /**
+     * Review I1: in the same geometry, a finger held still but trembling (2 px back and forth, many times: a long
+     * path, almost no net move) does not bring the slot to the finger. Nothing reorders, and the release writes nothing.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aTremblingFingerDoesNotPullAFarSlotToIt() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        val tall = List(8) { "item-${3 * it + 2}" }
+        val dragged = tall[5]
+        val h = Harness().apply {
+            keys = tall
+            collapseOnLift = true
+        }
+        withTheme { ReorderList(h) }
+        waitForIdle()
+        onNodeWithTag(LIST).performScrollToNode(hasTestTag(handle(dragged)))
+        waitForIdle()
+        lift(dragged)
+        assertTrue(h.collapsed)
+        fun move(px: Float) {
+            onNodeWithTag(LIST).performTouchInput { moveBy(Offset(0f, px)) }
+            waitForIdle()
+        }
+        // 120 px of path, at most 2 px away from where the finger went down.
+        repeat(30) {
+            move(-2f)
+            move(2f)
+        }
+        assertEquals(tall, h.state.order, "a tremble reordered")
+        release()
+        assertEquals(emptyList(), h.drops)
+    }
+
+    /**
+     * Review I2 (ruled correct): at the list's top, lifting a middle item collapses the ones above it, so its slot
+     * moves up and no scroll can bring it back; the item stays drawn under the finger, below where its slot went.
+     * Once the finger has moved on two touch slops (here up), the slot goes to where the item is drawn, which is
+     * down the list, one swap per layout, with the dragged item never jumping. Up from there, it goes back up the
+     * same way, and dropped above the first item it goes first.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aSlotLeftAboveTheFingerGoesToWhereTheItemIsDrawnOneSwapAtATime() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        val h = Harness().apply { collapseOnLift = true }
+        val haptics = RecordingHaptics()
+        withTheme(haptics = haptics) { ReorderList(h) }
+        waitForIdle()
+        var slop = 0f
+        onNodeWithTag(LIST).performTouchInput { slop = viewConfiguration.touchSlop }
+        lift("item-3")
+        assertTrue(h.collapsed)
+        assertEquals(INITIAL, h.state.order, "the resize alone reorders nothing")
+        val shownAtLift = h.shown.size
+        fun topPx() = with(density) { onNodeWithTag("item-3").getBoundsInRoot().top.toPx() }
+        fun move(px: Float) {
+            val before = topPx()
+            onNodeWithTag(LIST).performTouchInput { moveBy(Offset(0f, px)) }
+            waitForIdle()
+            val now = topPx()
+            assertTrue(abs(now - before - px) < 1.5f, "the dragged item jumped: $before -> $now, step $px")
+        }
+        // Three slops up, in half slops: past two slops (the fifth move) the slot rejoins the item.
+        repeat(6) { move(-slop / 2f) }
+        val down = h.state.order.indexOf("item-3")
+        assertTrue(down > 3, "the slot went down to where item-3 is drawn: ${h.state.order}")
+        // Where it is drawn: its slot is within half a collapsed item (and the hysteresis) of it.
+        val drawn = onNodeWithTag("item-3").getBoundsInRoot().top
+        val slotTop = onNodeWithTag(h.state.order[down - 1]).getBoundsInRoot().bottom
+        assertTrue(abs((drawn - slotTop).value) < 20f + with(density) { slop.toDp().value } / 2f, "drawn at $drawn, slot at $slotTop")
+        assertEquals(down - 3, haptics.events.count { it == HapticEvent.StepperStep }, "one step per place crossed")
+        // Up in 2 dp moves until it is drawn 4 dp or less below the list's top: above the first item's middle, and not
+        // yet clipped by the list (its bounds would stop following the finger).
+        val climb = with(density) { 2.dp.toPx() }
+        val stop = with(density) { onNodeWithTag(LIST).getBoundsInRoot().top.toPx() + 4.dp.toPx() }
+        while (topPx() > stop) move(-climb)
+        assertEquals("item-3", h.state.order.first(), "${h.state.order}")
+        assertEquals(emptyList(), h.drops, "nothing is written while dragging")
+        // Every order shown since the lift is one swap of two neighbors away from the one before: no jump of several places.
+        val orders = listOf(INITIAL) + h.shown.drop(shownAtLift)
+        for ((a, b) in orders.zipWithNext()) {
+            val changed = a.indices.filter { a[it] != b[it] }
+            assertTrue(changed.size == 2 && changed[1] == changed[0] + 1, "more than one swap in a layout: $a -> $b")
+        }
+        release()
+        assertEquals(listOf(moved(3)), h.drops)
     }
 
     @OptIn(ExperimentalTestApi::class)

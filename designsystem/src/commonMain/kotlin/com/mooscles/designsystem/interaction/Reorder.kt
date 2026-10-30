@@ -133,8 +133,8 @@ internal fun <K> reconcile(local: List<K>, keys: List<K>): List<K> {
  * the dragged key leaving ends the drag without a write. When the items change height during the
  * drag (plan decision 14: the editor collapses its cards on lift) the dragged item stays under the
  * finger: the list is scrolled to keep its slot there, and what scrolling cannot absorb is taken
- * out of the gesture, so a resize alone never reorders anything; once the finger moves on (two
- * touch slops), the slot follows the item drawn under it again.
+ * out of the gesture, so a resize alone never reorders anything; once the finger has moved on (two
+ * touch slops, net), the slot follows the item drawn under it again.
  */
 @Stable
 class ReorderState<K : Any> internal constructor(
@@ -191,11 +191,11 @@ class ReorderState<K : Any> internal constructor(
     private var slop = 0f
 
     /**
-     * True while the slot is away from the drawn item by what a scroll could not absorb ([followSlot]); [travel] is
-     * how far the finger has moved since.
+     * True while the slot is away from the drawn item by what a scroll could not absorb ([followSlot]); [adriftAt] is
+     * the finger's move (`fingerDelta`) when it went adrift.
      */
     private var adrift = false
-    private var travel = 0f
+    private var adriftAt = 0f
     private var dragJob: Job? = null
     private var pin: PinnableContainer.PinnedHandle? = null
 
@@ -266,7 +266,7 @@ class ReorderState<K : Any> internal constructor(
         seen = info
         slop = touchSlop
         adrift = false
-        travel = 0f
+        adriftAt = 0f
         armedStart = liftFinger >= info.viewportStartOffset + config.edgeZonePx
         armedEnd = liftFinger <= info.viewportEndOffset - config.edgeZonePx
         pin = pinnable?.pin()
@@ -283,7 +283,6 @@ class ReorderState<K : Any> internal constructor(
         if (!isActive(id)) return
         fingerDelta += dy
         val info = listState.layoutInfo
-        if (adrift) rejoin(info, dy)
         val y = finger
         if (!armedEnd && (y < info.viewportEndOffset - config.edgeZonePx || y - liftFinger > slop)) armedEnd = true
         if (!armedStart && (y > info.viewportStartOffset + config.edgeZonePx || liftFinger - y > slop)) armedStart = true
@@ -385,7 +384,7 @@ class ReorderState<K : Any> internal constructor(
             logicalBase += rest
             if (!adrift && abs(rest) > SAME_PX) {
                 adrift = true
-                travel = 0f
+                adriftAt = fingerDelta
             }
             item.offset - consumed
         } else {
@@ -394,17 +393,21 @@ class ReorderState<K : Any> internal constructor(
     }
 
     /**
-     * What [followSlot] took out of the gesture keeps the slot away from the item drawn under the finger:
-     * at a list's end that can be more than the finger can still travel (the 2x editor, its cards collapsed:
-     * the slot hundreds of dp below a finger at the top edge), and the places between could never be reached.
-     * Once the finger has moved [REJOIN_SLOPS] touch slops since, a drag and not the resize, the logical
-     * position goes back under the finger, and the swaps that follow, one per layout, bring the slot to where
-     * the item is drawn.
+     * What [followSlot] took out of the gesture keeps the slot away from the item drawn under the finger, wherever a
+     * resize (or a key that came or went) moved the slot and no scroll could bring it back:
+     * - at a list's end, it can be more than the finger can still travel (the 2x editor, its cards collapsed: the
+     *   slot hundreds of dp below a finger at the top edge), and the places between could never be reached;
+     * - at a list's top, lifting a middle item collapses the ones above it: the slot moves up, the item stays drawn
+     *   under the finger, below it.
+     * Once the finger is [REJOIN_SLOPS] touch slops away from where it was when the slot went adrift (its net move,
+     * as the arming of the auto-scroll counts it: a trembling finger never gets there), a drag and not the resize, the
+     * logical position goes back under the finger. The swaps that follow, one per layout, each with its glide and its
+     * haptic, bring the slot to where the item is drawn, in whichever direction that is (down the list in the second
+     * case, even with the finger moving up): the drop is where the person sees the item. The dragged item itself does
+     * not move ([drawnTop] does not depend on the logical position).
      */
-    private fun rejoin(info: LazyListLayoutInfo, dy: Float) {
-        travel += abs(dy)
-        if (travel <= REJOIN_SLOPS * slop) return
-        val item = itemInfo(dragging ?: return, info) ?: return
+    private fun rejoin(item: LazyListItemInfo) {
+        if (abs(fingerDelta - adriftAt) <= REJOIN_SLOPS * slop) return
         logicalBase = drawnTop(item.size) - fingerDelta
         adrift = false
     }
@@ -417,6 +420,8 @@ class ReorderState<K : Any> internal constructor(
             return
         }
         followSlot(info, item)
+        // After followSlot, so a shift of this very layout is taken out before the rejoin, not after it.
+        if (adrift) rejoin(item)
         if (swappedOn === info) return
         val current = order
         val index = current.indexOf(key)
@@ -505,7 +510,7 @@ class ReorderState<K : Any> internal constructor(
         /** Less than this many px between where the slot is and where it should be is the same place. */
         const val SAME_PX = 0.5f
 
-        /** How many touch slops the finger moves before a slot left away from it comes back under it ([rejoin]). */
+        /** How many touch slops away (net) the finger goes before a slot left away from it comes back under it ([rejoin]). */
         const val REJOIN_SLOPS = 2f
     }
 }

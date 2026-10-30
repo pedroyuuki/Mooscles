@@ -464,7 +464,8 @@ jobs:
           # Phase 4B tasks 16-17 carries: MBottomSheetTest +1 (initialFocusIsRequestedOnceAndNeverAgain); ReorderTest +2
           # (reorderMoverHoldsTheOrderAndAnnouncesThroughTheLiveRegion, reorderMoverRefusesWhileDragging). 367 + 3 = 370.
           # Phase 4B reorder 2x investigation: ReorderTest +1 (aSlotTheScrollCannotBringBackFollowsTheFingerOnceItMoves). 370 + 1 = 371.
-          MIN_DS_IOS_TESTS: 371
+          # Reorder fix round 1: ReorderTest +2 (aTremblingFingerDoesNotPullAFarSlotToIt, aSlotLeftAboveTheFingerGoesToWhereTheItemIsDrawnOneSwapAtATime). 371 + 2 = 373.
+          MIN_DS_IOS_TESTS: 373
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
