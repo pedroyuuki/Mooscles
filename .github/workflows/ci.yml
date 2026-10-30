@@ -476,7 +476,8 @@ jobs:
           # ActiveWorkoutScreenTest +1, ExerciseListTest +1 (uiTest). 402 + 6 - 2 = 406.
           # Task 17 fix round 1: ExerciseInfoScreenTest +1 (uiTest). 402 + 1 = 403.
           # Merged Task 17 fix round: 406 + 1 = 407.
-          MIN_SCREENS_IOS_TESTS: 407
+          # Phase 4A task 20: LibraryFlowTest 2 (uiTest). 407 + 2 = 409.
+          MIN_SCREENS_IOS_TESTS: 409
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

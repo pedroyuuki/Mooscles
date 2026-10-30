@@ -6,13 +6,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -311,25 +309,6 @@ class ActiveWorkoutFlowTest {
         if (workout) assertWorkoutTargets(state)
         assertNumbersWhole()
         capture("$name-$state")
-    }
-
-    /**
-     * Takes a capture of each root (the screen, and a dialog or sheet over it) and hands it to the
-     * platform ([saveFlowCapture]: a PNG on iOS). Where `captureToImage` is not supported, says so once and goes on.
-     */
-    private fun ComposeUiTest.capture(state: String) {
-        val roots = onAllNodes(isRoot())
-        val count = roots.fetchSemanticsNodes().size
-        for (i in 0 until count) {
-            // Only the capture may be unsupported; a failure to encode or write the PNG fails the flow.
-            val image = try {
-                roots[i].captureToImage()
-            } catch (failure: Throwable) {
-                println("FLOW capture unsupported ($state): ${failure.message}")
-                return
-            }
-            saveFlowCapture(if (i == 0) state else "$state-$i", image)
-        }
     }
 
     private companion object {

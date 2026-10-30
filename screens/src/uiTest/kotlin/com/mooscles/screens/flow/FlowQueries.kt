@@ -4,12 +4,15 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.unit.IntSize
 import com.mooscles.designsystem.components.ExerciseHeaderToggleTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.screens.workout.ActiveWorkoutTags
@@ -19,8 +22,9 @@ import com.mooscles.screens.workout.workoutSetRowTag
 import com.mooscles.ui.SetUi
 import com.mooscles.ui.WorkoutExerciseUi
 import com.mooscles.ui.WorkoutUi
+import kotlin.test.assertTrue
 
-// What the flows over the real stack (ActiveWorkoutFlowTest, TapBudgetTest) read and find: the view
+// What the flows over the real stack (ActiveWorkoutFlowTest, LibraryFlowTest, TapBudgetTest) read and find: the view
 // model's state, which comes from Room, and the nodes of the workout screen.
 
 /** How long a flow waits, in real time, for the view model and Room. */
@@ -76,3 +80,42 @@ internal fun ComposeUiTest.openCard(entryId: String) {
     await("the card opens") { exists(hasTestTag(exerciseColumnsTag(entryId)), unmerged = true) }
     waitForIdle()
 }
+
+// --- Captures and the window -----------------------------------------------------------------
+
+/**
+ * Takes a capture of each root (the screen, and a dialog or sheet over it) and hands it to the
+ * platform ([saveFlowCapture]: a PNG on iOS). Where `captureToImage` is not supported, says so once and goes on.
+ */
+@OptIn(ExperimentalTestApi::class)
+internal fun ComposeUiTest.capture(state: String) {
+    val roots = onAllNodes(isRoot())
+    val count = roots.fetchSemanticsNodes().size
+    for (i in 0 until count) {
+        // Only the capture may be unsupported; a failure to encode or write the PNG fails the flow.
+        val image = try {
+            roots[i].captureToImage()
+        } catch (failure: Throwable) {
+            println("FLOW capture unsupported ($state): ${failure.message}")
+            return
+        }
+        saveFlowCapture(if (i == 0) state else "$state-$i", image)
+    }
+}
+
+/**
+ * [node] lies inside the window, [window] px (`LocalWindowInfo.containerSize`, read by the host):
+ * what the person sees. The iOS simulator's window is smaller than the emulator's, so a toast drawn
+ * at the bottom of a frame taller than the window would pass `assertIsDisplayed` and be out of sight.
+ */
+internal fun assertInsideWindow(node: SemanticsNodeInteraction, window: IntSize, what: String) {
+    val bounds = node.fetchSemanticsNode().boundsInWindow
+    assertTrue(window.width > 0 && window.height > 0, "$what: the window has no size ($window)")
+    assertTrue(
+        bounds.left >= -WINDOW_SLACK_PX && bounds.top >= -WINDOW_SLACK_PX &&
+            bounds.right <= window.width + WINDOW_SLACK_PX && bounds.bottom <= window.height + WINDOW_SLACK_PX,
+        "$what: $bounds is not inside the window $window",
+    )
+}
+
+private const val WINDOW_SLACK_PX = 1f
