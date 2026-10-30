@@ -58,6 +58,7 @@ import com.mooscles.screens.resources.folders_rename
 import com.mooscles.screens.resources.folders_routine_count
 import com.mooscles.screens.resources.folders_title
 import com.mooscles.screens.resources.routines_cancel
+import com.mooscles.screens.resources.routines_create
 import com.mooscles.screens.workout.MenuItem
 import com.mooscles.screens.workout.RenameSheet
 import com.mooscles.ui.MoosclesActions
@@ -151,6 +152,7 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
             onRename = { actions.createRoutineFolder(it) },
             onDismiss = { creating = false },
             title = stringResource(Res.string.folders_new),
+            confirmLabel = stringResource(Res.string.routines_create),
             fieldLabel = stringResource(Res.string.folders_name_field),
             selectAll = true,
             submitUnchanged = true,

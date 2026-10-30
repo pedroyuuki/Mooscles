@@ -356,7 +356,7 @@ class FolderManagerSheetTest {
         pick(FolderTags.NEW)
         assertEquals("Nova pasta", fieldText())
         onNodeWithTag(RenameSheetTags.FIELD).performTextReplacement("Braços")
-        onNodeWithText("Salvar").performClick()
+        onNodeWithText("Criar").performClick()
         waitForIdle()
         assertEquals(listOf("createRoutineFolder:Braços"), fake.calls)
         assertEquals(listOf("default", "hyper", "empty", "new3"), rowIds())
@@ -372,7 +372,7 @@ class FolderManagerSheetTest {
             androidx.compose.ui.text.TextRange(0, "Nova pasta".length),
             onNodeWithTag(RenameSheetTags.FIELD).fetchSemanticsNode().config[SemanticsProperties.TextSelectionRange],
         )
-        onNodeWithText("Salvar").performClick()
+        onNodeWithText("Criar").performClick()
         waitForIdle()
         assertEquals(listOf("createRoutineFolder:Nova pasta"), fake.calls)
     }
