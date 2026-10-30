@@ -40,4 +40,6 @@
     <string name="catalog_convention_explanation_one_side">Registre a carga externa usada em um lado e as repetições desse lado. O volume é por lado; nunca é dobrado.</string>
     <string name="catalog_convention_explanation_added_weight">Deixe a carga em 0 para só o peso do corpo, ou registre o peso externo adicional. O peso do corpo não entra no peso movido.</string>
     <string name="catalog_convention_explanation_assistance">Registre a assistência à parte. Assistência não gera recorde de carga externa nem entra no peso movido.</string>
+
+    <string name="catalog_names_language">pt-BR</string>
 </resources>
