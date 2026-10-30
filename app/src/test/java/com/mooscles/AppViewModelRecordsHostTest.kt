@@ -275,7 +275,8 @@ class AppViewModelRecordsHostTest {
         model.startWorkout(null)
         model.renameRoutine(seeded.second, "Renamed source")
         awaitUi(model) { it.routines.single { routine -> routine.id == seeded.second }.name == "Renamed source" }
-        runBlocking(Dispatchers.IO) { app.repository.moveRoutine(seeded.second, -1) }
+        runBlocking(Dispatchers.IO) { app.repository.reorderRoutines(
+            app.repository.snapshot().routines.map { it.id }.let { ids -> listOf(seeded.second) + (ids - seeded.second) })  }
         awaitUi(model) { it.routines.firstOrNull()?.id == seeded.second }
         val after = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
         assertEquals(before.workouts, after.workouts)

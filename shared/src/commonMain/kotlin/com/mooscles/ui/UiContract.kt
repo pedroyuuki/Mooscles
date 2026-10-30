@@ -167,7 +167,6 @@ interface MoosclesActions : UpdateActions, DataActions {
     /** Deletes a folder (never the default one); its routines move to the end of the default folder. */
     fun deleteRoutineFolder(id: String)
     fun deleteRoutine(id: String)
-    fun moveRoutine(id: String, direction: Int)
     fun createRoutineFolder(name: String)
     fun renameRoutineFolder(id: String, name: String)
     fun selectRoutineFolder(id: String)
@@ -179,8 +178,6 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun reorderRoutineExercises(routineId: String, ids: List<String>)
     fun replaceRoutineExercise(entryId: String, exerciseId: String)
     fun removeRoutineExercise(entryId: String)
-    fun moveRoutineExercise(entryId: String, direction: Int)
-    fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int)
     fun addRoutineSet(entryId: String)
     fun removeRoutineSet(setId: String)
     fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?)

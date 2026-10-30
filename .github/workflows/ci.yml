@@ -243,7 +243,10 @@ jobs:
           # Phase 4B task 15 fix round 1 (:app): RoutinesNavigationHostTest +2 (copyOpenReplacesTheEditor,
           # restoringTheEditorWhileLoadingNeitherNavigatesNorLeaves); AndroidPhotoCaptureHostTest +3 (aMissingCameraApp...,
           # aMissingPicker..., stagingNeverDeletes...; the double-launch test was replaced one for one). 1078 + 5 = 1083.
-          MIN_HOST_TESTS: 1083
+          # Post-15 cleanup (:app): RoutineFolderPersistenceTest.routineMoveUsesNeighborsInItsFolderWithoutChangingOtherFoldersOrActiveWorkout
+          # retired (-1, sdk 35 only): MoosclesActions.moveRoutine and WorkoutRepository.moveRoutine were removed, no caller since the old routine
+          # screens went; reorder goes through reorderRoutines. 1083 - 1 = 1082. No :shared test changed, so MIN_IOS_TESTS stays 275.
+          MIN_HOST_TESTS: 1082
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
