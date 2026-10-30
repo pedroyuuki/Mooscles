@@ -18,8 +18,9 @@ class ExerciseSearchIndex private constructor(
     private val ids: List<String>,
     private val candidates: List<List<String>>,
 ) {
-    private val byId: Map<String, List<String>> = buildMap {
-        ids.forEachIndexed { index, id -> put(id, getOrElse(id) { emptyList() } + candidates[index]) }
+    // Only [matches] reads it (the screens use [matching]): built on its first use, not with the index.
+    private val byId: Map<String, List<String>> by lazy {
+        buildMap { ids.forEachIndexed { index, id -> put(id, getOrElse(id) { emptyList() } + candidates[index]) } }
     }
 
     /** The ids that match [query], in the order of the entries; a blank query matches them all. */
