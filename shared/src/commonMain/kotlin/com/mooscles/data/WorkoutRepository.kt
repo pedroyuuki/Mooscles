@@ -148,8 +148,9 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
             val record = records[plan.exerciseId to exercise.convention]
             val reps = record?.reps ?: 0
             val weightKg = record?.weightKg
+            // A warm-up never follows the record, even when a backup marks it as inherited (D14).
             val changed = dao.plannedSets(plan.id).filter {
-                it.inheritPr && (it.targetReps != reps || it.targetWeightKg != weightKg)
+                it.inheritPr && !it.warmup && (it.targetReps != reps || it.targetWeightKg != weightKg)
             }
             changed.forEach { row ->
                 dao.updateRoutineSet(row.copy(targetWeightKg = weightKg, targetReps = reps))
@@ -165,6 +166,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         }
     }
 
+    /** A working set ([RoutineSet.warmup] false) that follows the exercise's current record. */
     private suspend fun inheritedSet(plan: RoutineExercise, position: Int, id: String = newId()): RoutineSet {
         val exercise = dataRequireNotNull(dao.exercise(plan.exerciseId), DataError.EXERCISE_NOT_FOUND) { "Exercise not found." }
         val record = RoutineTargetRecords.latest(snapshot()).firstOrNull {
@@ -186,17 +188,26 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         return rows
     }
 
-    /** Retain the old columns for compatibility; independent rows remain the source of truth. */
+    /**
+     * Retain the old columns for compatibility; independent rows remain the source of truth. They mirror the
+     * first working set, since a plan usually opens with warm-ups, or the first row when every set is one.
+     */
     private suspend fun mirrorPlan(id: String) {
         val plan = dataRequireNotNull(dao.routineExercise(id), DataError.ROUTINE_NOT_FOUND) { "Routine exercise not found." }
         val rows = dao.plannedSets(id)
-        val first = rows.firstOrNull()
+        val first = rows.firstOrNull { !it.warmup } ?: rows.firstOrNull()
         dao.updateRoutineExercise(plan.copy(plannedSets = rows.size,
             targetReps = first?.targetReps ?: 0, targetWeightKg = first?.targetWeightKg))
     }
 
     private suspend fun ensureDefaultFolder() {
         dao.seedRoutineFolder(RoutineFolder(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME))
+    }
+
+    /** A routine id the screen chose ahead of time must be new: an existing one is refused, never updated. */
+    private suspend fun requireNewRoutineId(id: String) {
+        dataRequire(id.isNotBlank(), DataError.INVALID_VALUE) { "Invalid routine id." }
+        dataRequire(dao.routine(id) == null, DataError.INVALID_VALUE) { "Routine already exists." }
     }
 
     suspend fun createRoutineFolder(name: String): String = db.writeTransaction {
@@ -211,6 +222,54 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.updateRoutineFolder(folder.copy(name = EditRules.name(name)))
     }
 
+    /**
+     * Deletes a folder without deleting any routine: its routines move to the default folder, after every other
+     * routine in their relative order, so they show at the end of it. Routine ids, plans and the active workout's
+     * source stay as they are. The default folder is refused, and the remaining folders are renumbered.
+     */
+    suspend fun deleteRoutineFolder(id: String) = db.writeTransaction {
+        dataRequire(id != RoutineFolder.DEFAULT_ID, DataError.INVALID_VALUE) { "The default folder cannot be deleted." }
+        dataRequireNotNull(dao.routineFolder(id), DataError.FOLDER_NOT_FOUND) { "Folder not found." }
+        ensureDefaultFolder()
+        val (moved, kept) = dao.routines().partition { it.folderId == id }
+        (kept + moved).forEachIndexed { index, routine ->
+            val next = routine.copy(position = index, folderId = if (routine.folderId == id) RoutineFolder.DEFAULT_ID else routine.folderId)
+            if (next != routine) dao.updateRoutine(next)
+        }
+        dao.deleteRoutineFolder(id)
+        dao.routineFolders().forEachIndexed { index, folder ->
+            if (folder.position != index) dao.updateRoutineFolder(folder.copy(position = index))
+        }
+    }
+
+    /** [ids] is every folder, the default one included, in its new order. */
+    suspend fun reorderRoutineFolders(ids: List<String>) = db.writeTransaction {
+        val folders = dao.routineFolders()
+        dataRequire(ids.size == folders.size && ids.toSet() == folders.map { it.id }.toSet(), DataError.INVALID_VALUE) { "Invalid folder order." }
+        val byId = folders.associateBy { it.id }
+        ids.forEachIndexed { index, id ->
+            val folder = byId.getValue(id)
+            if (folder.position != index) dao.updateRoutineFolder(folder.copy(position = index))
+        }
+    }
+
+    /**
+     * Routine positions are global. [ids] is exactly the routines of [folderId], in their new order: they take
+     * the positions those routines already held, and every other routine keeps its own, in one transaction.
+     */
+    suspend fun reorderFolderRoutines(folderId: String, ids: List<String>) = db.writeTransaction {
+        ensureDefaultFolder()
+        dataRequireNotNull(dao.routineFolder(folderId), DataError.FOLDER_NOT_FOUND) { "Folder not found." }
+        val items = dao.routines().filter { it.folderId == folderId }
+        dataRequire(ids.size == items.size && ids.toSet() == items.map { it.id }.toSet(), DataError.INVALID_VALUE) { "Invalid routine order." }
+        val byId = items.associateBy { it.id }
+        val slots = items.map { it.position }
+        ids.forEachIndexed { index, id ->
+            val routine = byId.getValue(id)
+            if (routine.position != slots[index]) dao.updateRoutine(routine.copy(position = slots[index]))
+        }
+    }
+
     /** Moving only changes membership; routine identity and active/finished snapshots stay intact. */
     suspend fun moveRoutineToFolder(routineId: String, folderId: String) = db.writeTransaction {
         ensureDefaultFolder()
@@ -219,10 +278,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.updateRoutine(routine.copy(folderId = folderId))
     }
 
-    suspend fun createRoutine(name: String, folderId: String = RoutineFolder.DEFAULT_ID): String = db.writeTransaction {
+    /** Creates a routine under [id], which the screen may choose ahead of time; a blank or existing id is refused. */
+    suspend fun createRoutine(name: String, folderId: String = RoutineFolder.DEFAULT_ID, id: String = newId()): String = db.writeTransaction {
         ensureDefaultFolder()
         dataRequireNotNull(dao.routineFolder(folderId), DataError.FOLDER_NOT_FOUND) { "Folder not found." }
-        val item = Routine(name = EditRules.name(name), position = dao.routines().size, folderId = folderId)
+        requireNewRoutineId(id)
+        val item = Routine(id = id, name = EditRules.name(name), position = dao.routines().size, folderId = folderId)
         dao.insertRoutine(item)
         item.id
     }
@@ -232,15 +293,22 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         dao.updateRoutine(item.copy(name = EditRules.name(name)))
     }
 
-    suspend fun duplicateRoutine(id: String): String = db.writeTransaction {
+    /**
+     * Copies a routine, every planned row included (warm-ups and modes too), into the same folder, last. [name] is
+     * the copy's name in the screen's language; without it, today's English " (copy)" suffix is added. [newId] is
+     * the copy's id, which the screen may choose ahead of time; a blank or existing one is refused.
+     */
+    suspend fun duplicateRoutine(id: String, name: String? = null, newId: String = newId()): String = db.writeTransaction {
         val original = dataRequireNotNull(dao.routine(id), DataError.ROUTINE_NOT_FOUND) { "Routine not found." }
-        val copy = original.copy(id = newId(), name = (original.name.take(113) + " (copy)"), position = dao.routines().size)
+        val copyName = if (name == null) original.name.take(113) + " (copy)" else EditRules.name(name)
+        requireNewRoutineId(newId)
+        val copy = original.copy(id = newId, name = copyName, position = dao.routines().size)
         dao.insertRoutine(copy)
         dao.routineItems(id).forEach { originalPlan ->
-            val plan = originalPlan.copy(id = newId(), routineId = copy.id)
+            val plan = originalPlan.copy(id = freshId(), routineId = copy.id)
             dao.insertRoutineExercise(plan)
             ensurePlannedSets(originalPlan).forEach { row ->
-                dao.insertRoutineSet(row.copy(id = newId(), routineExerciseId = plan.id))
+                dao.insertRoutineSet(row.copy(id = freshId(), routineExerciseId = plan.id))
             }
         }
         copy.id
@@ -276,6 +344,12 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         item.id
     }
 
+    /** Adds each exercise in the given order, as [addRoutineExercise] does, all or nothing. */
+    suspend fun addRoutineExercises(routineId: String, exerciseIds: List<String>): List<String> = db.writeTransaction {
+        dataRequireNotNull(dao.routine(routineId), DataError.ROUTINE_NOT_FOUND) { "Routine not found." }
+        exerciseIds.map { addRoutineExercise(routineId, it) }
+    }
+
     suspend fun updateRoutineExercise(item: RoutineExercise) = db.writeTransaction {
         val existing = dataRequireNotNull(dao.routineExercise(item.id), DataError.ROUTINE_NOT_FOUND) { "Routine exercise not found." }
         dataRequire(existing.routineId == item.routineId, DataError.INVALID_VALUE) { "Cannot move an exercise to another routine." }
@@ -300,11 +374,18 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         mirrorPlan(item.id)
     }
 
+    /**
+     * The new set copies the last one (values, warm-up and mode). When that one follows the record, or there is
+     * none, the new set follows the current record: an inherited row can be stale until the next synchronization
+     * (deleting a workout does not run one).
+     */
     suspend fun addRoutineSet(entryId: String): String = db.writeTransaction {
         val plan = dataRequireNotNull(dao.routineExercise(entryId), DataError.ROUTINE_NOT_FOUND) { "Routine exercise not found." }
         val rows = ensurePlannedSets(plan)
         EditRules.routineSetCount(rows.size + 1)
-        val row = inheritedSet(plan, rows.size)
+        val last = rows.lastOrNull()
+        val row = if (last == null || (last.inheritPr && !last.warmup)) inheritedSet(plan, rows.size)
+            else last.copy(id = newId(), position = rows.size)
         dao.insertRoutineSet(row)
         mirrorPlan(entryId)
         row.id
@@ -328,6 +409,50 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         mirrorPlan(row.routineExerciseId)
     }
 
+    /**
+     * Plans a set as a warm-up or a working set (D14). A warm-up never follows the record, so marking one makes
+     * it manual with the same values; turning it back into a working set keeps it manual. Asking for what the set
+     * already is changes nothing.
+     */
+    suspend fun setRoutineSetWarmup(setId: String, warmup: Boolean) = db.writeTransaction {
+        val row = dataRequireNotNull(dao.routineSet(setId), DataError.ROUTINE_NOT_FOUND) { "Routine set not found." }
+        val next = when {
+            warmup -> row.copy(warmup = true, inheritPr = false)
+            row.warmup -> row.copy(warmup = false, inheritPr = false)
+            else -> row
+        }
+        if (next != row) {
+            dao.updateRoutineSet(next)
+            mirrorPlan(row.routineExerciseId)
+        }
+    }
+
+    /**
+     * Puts a removed planned set back: the same id, values, warm-up flag and mode, at [position] among the
+     * exercise's current sets (past the end, last), with the later sets moving down one. An inherited working set
+     * takes the current record, as every inherited set does. Refused with [DataError.RESTORE_UNAVAILABLE] when
+     * the exercise entry is gone or the id already exists (a second undo); the set limit ([DataError.SET_LIMIT])
+     * and the value rules are the ones [addRoutineSet] and [updateRoutineSet] apply. Every rule is checked before
+     * the first write.
+     */
+    suspend fun restoreRoutineSet(entryId: String, position: Int, item: RoutineSet) = db.writeTransaction {
+        val plan = dataRequireNotNull(dao.routineExercise(entryId), DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        dataRequire(dao.routineSet(item.id) == null, DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        val rows = dao.plannedSets(entryId)
+        EditRules.routineSetCount(rows.size + 1)
+        EditRules.target(item.targetReps, item.targetWeightKg)
+        val target = position.coerceIn(0, rows.size)
+        val restored = if (item.inheritPr && !item.warmup) inheritedSet(plan, target, item.id)
+            else item.copy(routineExerciseId = entryId, position = target, inheritPr = false)
+        rows.forEachIndexed { index, row ->
+            val moved = if (index >= target) index + 1 else index
+            if (row.position != moved) dao.updateRoutineSet(row.copy(position = moved))
+        }
+        dao.insertRoutineSet(restored)
+        mirrorPlan(entryId)
+    }
+
+    /** The set follows the record again, as a working set: a warm-up never inherits. */
     suspend fun inheritRoutineSet(setId: String) = db.writeTransaction {
         val row = dataRequireNotNull(dao.routineSet(setId), DataError.ROUTINE_NOT_FOUND) { "Routine set not found." }
         val plan = dataRequireNotNull(dao.routineExercise(row.routineExerciseId), DataError.ROUTINE_NOT_FOUND) { "Routine exercise not found." }
@@ -347,8 +472,10 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         if (item.exerciseId == exerciseId) return@writeTransaction
         val replacement = item.copy(exerciseId = exerciseId, targetWeightKg = null, targetReps = 0)
         dao.updateRoutineExercise(replacement)
+        // A warm-up stays a warm-up, emptied and manual; working sets follow the new exercise's record.
         ensurePlannedSets(item).forEach { row ->
-            dao.updateRoutineSet(inheritedSet(replacement, row.position, row.id))
+            dao.updateRoutineSet(if (row.warmup) row.copy(targetReps = 0, targetWeightKg = null, inheritPr = false)
+                else inheritedSet(replacement, row.position, row.id))
         }
         mirrorPlan(id)
     }
@@ -427,6 +554,7 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
                 sets.add(WorkoutSet(workoutExerciseId = entry.id, position = row.position,
                     reps = row.targetReps,
                     weightKg = row.targetWeightKg ?: 0.0,
+                    warmup = row.warmup,
                     assistance = exercise.convention == LoadConvention.ASSISTANCE))
             }
         }
@@ -581,5 +709,8 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
 
     private companion object {
         const val RESTORE_UNAVAILABLE = "This set can no longer be restored."
+
+        /** [newId] for bodies where a parameter of that name hides it. */
+        fun freshId(): String = newId()
     }
 }

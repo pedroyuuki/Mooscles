@@ -219,7 +219,8 @@ jobs:
           # Phase 4A final review fixes: AppViewModelRestoreHostTest +1, LibraryNavigationHostTest +2 (:app); RoutineGroupsTest 2 (:screens commonTest); ExerciseAnatomyTest +2 (:shared commonTest). 928 + 7 = 935.
           # Phase 4B task 1 (:app): RoutineWarmupMigrationTest 3, SchemaV5FixtureTest 1, MigrationEquivalenceTest +1;
           # (:shared commonTest) BackupCodecTest +3, ImportPlannerTest +1; (:shared androidHostTest) BackupSampleFileTest +1. 935 + 10 = 945.
-          MIN_HOST_TESTS: 945
+          # Phase 4B task 2 (:app): RoutineCommandsPersistenceTest 24. 945 + 24 = 969.
+          MIN_HOST_TESTS: 969
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
