@@ -6,7 +6,7 @@ Branch `feat/phase4a-library` in the fork, not in a published release. It adds t
 
 Verified:
 
-- Host tests: 926 on CI (run 41014962533, `5ed5fa7`, the last green run), 0 failures; on iOS simulator `:shared` 257, `:designsystem` 337 and `:screens` 407, all passing. The commits after `5ed5fa7` (the end-to-end library flow test, the touch budget, the tab-recreation fix and the critique fixes) raised the CI minimums to 928, 257, 340 and 430 from local counts and are not yet proven by CI; the checkpoint push proves them.
+- Host tests: 935 on CI (run 41046481599, `2784ed1`, the merged phase 4A head), 0 failures; on iOS simulator `:shared` 259, `:designsystem` 340 and `:screens` 433, all passing on the first attempt, including the end-to-end library flow test with its screenshots.
 - Android 15 emulator, full suites once: `:designsystem` 339 (one order-dependent test failure, fixed in test code and rerun), `:screens` 430 of 430 (1 opt-in capture skipped) and `:app` 25 with 0 failures (2 opt-in fixtures skipped); the classes touched afterwards were rerun.
 - Touch budget: finding an exercise by muscle and opening it takes 3 taps (4 on the old screen); creating a custom exercise takes 4 taps plus typing (6 plus typing before).
 - Upgrade in place on the emulator from the fork's main (`739a800`), with network off: database still version 5, byte-identical preferences file (same MD5), the running rest kept its deadline, and the export after matched the export before.

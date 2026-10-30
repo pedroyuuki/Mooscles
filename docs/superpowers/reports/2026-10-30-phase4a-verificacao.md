@@ -27,16 +27,16 @@
 
 | Conjunto | Onde | Resultado |
 | --- | --- | --- |
-| Host dos quatro módulos | CI, run [41014962533](https://github.com/pedroyuuki/Mooscles/actions/runs/41014962533), `5ed5fa7` (checkpoint 2, o último run verde) | 926 testes, 0 falhas (mínimo 926) |
-| `:shared`, `:designsystem` e `:screens` no simulador iOS | o mesmo run | 257 em 26 classes, 337 em 63 e 407 em 47, 0 falhas |
+| Host dos quatro módulos | CI, run [41046481599](https://github.com/pedroyuuki/Mooscles/actions/runs/41046481599), `2784ed1` (checkpoint 3, HEAD da branch) | 935 testes em 160 classes, 0 falhas (mínimo 935) |
+| `:shared`, `:designsystem` e `:screens` no simulador iOS | o mesmo run, na primeira tentativa | 259 em 26 classes, 340 em 63 e 433 em 50, 0 falhas |
 | `release-script` | o mesmo run | verde |
-| Contadores do CI neste HEAD | `ci.yml` | `MIN_HOST_TESTS` 928, `MIN_IOS_TESTS` 257, `MIN_DS_IOS_TESTS` 340, `MIN_SCREENS_IOS_TESTS` 430 |
+| Contadores do CI neste HEAD | `ci.yml` | `MIN_HOST_TESTS` 935, `MIN_IOS_TESTS` 259, `MIN_DS_IOS_TESTS` 340, `MIN_SCREENS_IOS_TESTS` 433 (iguais às contagens reais do run) |
 | `:designsystem:connectedAndroidDeviceTest` | emulador, `fa996b4` | 339 testes, 1 falha de dependência de ordem entre testes (`FocusRingTest`, modo de toque), corrigida em `fd5a4cc` (só código de teste) e provada com as três classes juntas: 9 de 9 |
 | `:screens:connectedAndroidDeviceTest` | emulador, `fa996b4` | 430 testes, 0 falhas, 1 pulado (a captura opt-in da folha do piloto) |
 | `:app:connectedDebugAndroidTest` | emulador, `fa996b4` | 25 testes, 0 falhas, 2 pulados (as fixtures de desempenho opt-in) |
 | Rodadas por classe depois das correções da crítica (Task 23) | emulador | `ExerciseInfoScreenTest`, `CustomExerciseFormTest`, `LibraryAccessibilitySweepTest` e `LibraryFlowTest` 56/56; `ExercisePickerSheetTest`, `ActiveWorkoutFlowTest`, `ActiveWorkoutScreenTest`, `LibraryAccessibilitySweepTest` 64/64 e `TapBudgetTest` 13/13; cinco testes novos que falharam antes das correções |
 
-**Os commits depois de `5ed5fa7` ainda não passaram pelo CI.** Os contadores de 928, 340 e 430 são os mínimos que o `ci.yml` exige agora, vindos da contagem local; quem os prova é o push do checkpoint 3 (esta task), que o controlador acompanha. Até lá, o último run verde é o de `5ed5fa7`.
+**Adendo (2026-10-30): CI do checkpoint 3.** O run [41046481599](https://github.com/pedroyuuki/Mooscles/actions/runs/41046481599) sobre `2784ed1`, que inclui as correções da revisão final, ficou todo verde na primeira tentativa: host 935, iOS `:shared` 259, `:designsystem` 340 e `:screens` 433, e o `release-script` nas quatro combinações. As contagens batem exatamente com os mínimos do `ci.yml`.
 
 Os testes que cobrem as exigências da spec:
 
@@ -49,7 +49,7 @@ Os testes que cobrem as exigências da spec:
 
 O `LibraryFlowTest` (`screens/src/uiTest/.../flow`) percorre a biblioteca sobre o `MoosclesViewModel`, o Room e o DataStore reais: busca do supino inclinado com halter, abrir o detalhe (figura ou ícone, frase dos músculos, dicas e o histórico semeado), "Adicionar à rotina" com o toast só depois do eco gravado, voltar, o chip "Costas", abrir um resultado, uma busca sem resultado ("supino articulado" com "Costas" ligado) que oferece "Criar", o formulário preenchido e salvo e o detalhe do exercício novo. Cada passo é conferido no estado do ViewModel, que vem do banco. Nas duas execuções (claro a 1× em pt-BR e escuro a 2× em inglês) passou no emulador, com `assertInsideWindow` (F24: toasts e quadros dentro da janela). O 2× real das folhas e do formulário só existe desde a Task 21 (as janelas de diálogo tinham a densidade própria do sistema).
 
-**No simulador iOS** o `LibraryFlowTest` entrou em `545c933`, depois do último push; ele **ainda não rodou no CI**. As capturas dele (`captureToImage`) saem pelo artefato `ios-flow-captures`, e o resultado, com o registro de que `captureToImage` funcionou ou não, vai para esta seção quando o run do checkpoint 3 terminar. Até lá, nada do fluxo da biblioteca foi provado no iOS, só a compilação e os testes de `commonTest` e `uiTest` anteriores a ele (o run de `5ed5fa7`, que inclui a correção do `LibraryScreenTest.nameWrapsToThreeLinesAtTwoX` no simulador).
+**No simulador iOS** o `LibraryFlowTest` passou no run [41046481599](https://github.com/pedroyuuki/Mooscles/actions/runs/41046481599) junto com o resto do `:screens` (433 de 433), e o `captureToImage` funcionou: o artefato `ios-flow-captures` tem 3,99 MB de PNGs dos estados do fluxo (o artefato expira em 14 dias e não foi copiado para o repositório).
 
 ### Orçamento de toques
 
