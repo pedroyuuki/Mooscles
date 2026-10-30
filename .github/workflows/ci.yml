@@ -215,8 +215,8 @@ jobs:
           # Phase 4A task 17 (:screens commonTest): ExerciseHistorySummariesTest 6, BodyRegionBridgeTest 1. 913 + 7 = 920.
           # Phase 4A task 18 (:screens commonTest): ExercisePickerTest -2 (ported to LibraryModelTest). 920 - 2 = 918.
           # Phase 4A task 19 (:app): LibraryNavigationHostTest 8 (the temporary LibraryTapBaselineHostTest came and went in the task). 918 + 8 = 926.
-          # Phase 4A task 23 (:app): ShellNavigationHostTest +1. 926 + 1 = 927.
-          MIN_HOST_TESTS: 927
+          # Phase 4A task 23 (:app): ShellNavigationHostTest +1; (:designsystem commonTest) LicenseTextTest +1. 926 + 2 = 928.
+          MIN_HOST_TESTS: 928
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -416,7 +416,8 @@ jobs:
           # Merged Tasks 8–9 (+4 over 323): 332 + 4 = 336.
           # Phase 4A task 17 fix round 1: RowsTest +1 (TopBar without a title, uiTest). 336 + 1 = 337.
           # Phase 4A task 21: MBottomSheetTest +1, MDialogTest +1 (the host's density in the window, uiTest). 337 + 2 = 339.
-          MIN_DS_IOS_TESTS: 339
+          # Phase 4A task 23: LicenseTextTest +1 (commonTest). 339 + 1 = 340.
+          MIN_DS_IOS_TESTS: 340
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

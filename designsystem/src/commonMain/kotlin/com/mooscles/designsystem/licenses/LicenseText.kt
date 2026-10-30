@@ -14,12 +14,15 @@ private val ruleLine = Regex("""[-=_*]{3,}""")
 /** A short all-capitals title on a line of its own, such as "PERMISSION & CONDITIONS". */
 private val headingLine = Regex("""[A-Z][A-Z &]{2,39}""")
 
+/** A line that starts a list item, such as CC0's "iv. rights protecting…" or "b. Affirmer offers…". */
+private val listItemLine = Regex("""(?:[ivx]{1,4}|[a-z])\. .*""")
+
 /**
  * Splits a license file into blocks for a narrow screen. The files are hard-wrapped near 72
  * columns, which a phone wraps again into ragged lines, so the lines of a paragraph are joined
  * into flowing text. Blank lines still separate paragraphs (several count as one), a rule line
- * becomes [LicenseBlock.Rule] instead of wrapping onto a second line, and a heading line keeps
- * its own line. The words are not changed.
+ * becomes [LicenseBlock.Rule] instead of wrapping onto a second line, and a heading line and each
+ * item of a list ("i." to "vii.", "a." to "d.") keep their own line. The words are not changed.
  */
 fun licenseBlocks(text: String): List<LicenseBlock> {
     val blocks = mutableListOf<LicenseBlock>()
@@ -28,7 +31,10 @@ fun licenseBlocks(text: String): List<LicenseBlock> {
         if (lines.isEmpty()) return
         val paragraph = StringBuilder()
         lines.forEachIndexed { index, line ->
-            if (index > 0) paragraph.append(if (headingLine.matches(lines[index - 1])) "\n" else " ")
+            if (index > 0) {
+                val ownLine = headingLine.matches(lines[index - 1]) || listItemLine.matches(line)
+                paragraph.append(if (ownLine) "\n" else " ")
+            }
             paragraph.append(line)
         }
         blocks += LicenseBlock.Paragraph(paragraph.toString())

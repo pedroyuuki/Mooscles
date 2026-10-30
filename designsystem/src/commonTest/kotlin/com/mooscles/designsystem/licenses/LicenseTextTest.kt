@@ -65,6 +65,27 @@ class LicenseTextTest {
         )
     }
 
+    /** CC0's lists ("i." to "vii.", "a." to "d.") keep one item per line instead of one wall of text. */
+    @Test
+    fun listItemsStartTheirOwnLines() {
+        val text = "  i. the right to reproduce, adapt,\n     communicate a Work;\n" +
+            " ii. moral rights retained;\n" +
+            "vii. other similar rights.\n\n" +
+            "4. Limitations and Disclaimers.\n\n" +
+            " a. No trademark rights are waived,\n    abandoned.\n" +
+            " b. Affirmer offers the Work as-is.\n\n" +
+            "The goals of the license, i.e. a public\ndomain, and a. b. c. inside a line stay in it."
+        assertEquals(
+            listOf(
+                Paragraph("i. the right to reproduce, adapt, communicate a Work;\nii. moral rights retained;\nvii. other similar rights."),
+                Paragraph("4. Limitations and Disclaimers."),
+                Paragraph("a. No trademark rights are waived, abandoned.\nb. Affirmer offers the Work as-is."),
+                Paragraph("The goals of the license, i.e. a public domain, and a. b. c. inside a line stay in it."),
+            ),
+            licenseBlocks(text),
+        )
+    }
+
     @Test
     fun noWordIsAddedOrLost() {
         val text = "Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)\n\n" +
