@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,11 +23,10 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.mooscles.designsystem.components.MBottomSheet
 import com.mooscles.designsystem.components.MText
-import com.mooscles.designsystem.components.MTextField
+import com.mooscles.designsystem.components.MSearchField
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.exercise.exerciseMedia
@@ -60,7 +58,8 @@ internal fun exercisePickerRowTag(exerciseId: String, recent: Boolean) =
 
 /**
  * The exercise picker (spec "Seletor de exercício"): an `MBottomSheet` at 90% of the screen with
- * a search field ("Search exercises"), then, scrolling with the list, the library's filters (the
+ * the library's search field ("Search exercises" as its placeholder and name, with "Clear search" once
+ * typed), then, scrolling with the list, the library's filters (the
  * muscle chips and the "Equipment" chip, which opens [EquipmentFilterSheet] over the picker; no
  * "My exercises"), "Recent" (up to 8 exercises of the latest workouts in [history], each shown as
  * [exercises] has it now; an exercise no longer there is left out) and "All". The search, the
@@ -120,13 +119,13 @@ internal fun ExercisePickerSheet(
     }
 
     MBottomSheet(onDismiss = onDismiss) {
-        MTextField(
+        // The library's search field (spec: "a mesma busca"), with its icon and its clear button.
+        MSearchField(
             value = query,
             onValueChange = { query = it },
-            label = stringResource(Res.string.workout_picker_search),
+            placeholder = stringResource(Res.string.workout_picker_search),
+            onClear = { query = TextFieldValue() },
             modifier = Modifier.fillMaxWidth().padding(horizontal = MTheme.space.s4).padding(bottom = MTheme.space.s2),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            singleLine = true,
         )
         // Weighted, so the sheet keeps its full height while the matches change.
         LazyColumn(

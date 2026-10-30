@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -32,6 +33,8 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mooscles.designsystem.components.SearchFieldBoxTag
+import com.mooscles.designsystem.components.SearchFieldPlaceholderTag
 import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
 import com.mooscles.designsystem.components.ExerciseMediaFigureTag
@@ -143,13 +146,13 @@ class ExercisePickerSheetTest {
     @Test
     fun pickReportsTheExerciseAndCloses() = runComposeUiTest {
         val picks = showPicker()
-        onNodeWithText("Buscar exercício").assertIsDisplayed()
+        onNodeWithText("Buscar exercício", useUnmergedTree = true).assertIsDisplayed()
         pickerRow(fly).performClick()
         waitForIdle()
         // The caller turns the pick into addWorkoutExercise or replaceWorkoutExercise (Task 19).
         assertEquals(listOf(fly), picks.picked)
         assertEquals(1, picks.dismissed)
-        onNodeWithText("Buscar exercício").assertDoesNotExist()
+        onNodeWithText("Buscar exercício", useUnmergedTree = true).assertDoesNotExist()
         onNodeWithTag(ExercisePickerListTag).assertDoesNotExist()
     }
 
@@ -232,6 +235,21 @@ class ExercisePickerSheetTest {
         search("")
         onNodeWithText("Recentes").assertIsDisplayed()
         pickerRow(curl, recent = true).assertIsDisplayed()
+    }
+
+    /** The library's search field (spec: "a mesma busca"): the placeholder as its name, the icon, and "Limpar busca" once typed. */
+    @Test
+    fun searchIsTheLibrarysFieldWithClear() = runComposeUiTest {
+        showPicker()
+        onNodeWithTag(SearchFieldBoxTag).assertIsDisplayed()
+        onNodeWithTag(SearchFieldPlaceholderTag, useUnmergedTree = true).assertTextEquals("Buscar exercício")
+        onNodeWithContentDescription("Limpar busca").assertDoesNotExist()
+        search("supino")
+        pickerRow(bench).assertIsDisplayed()
+        onNodeWithContentDescription("Limpar busca").assertIsDisplayed().performClick()
+        waitForIdle()
+        assertEquals("", onNode(hasSetTextAction()).fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+        onNodeWithText("Recentes").assertIsDisplayed()
     }
 
     @Test
