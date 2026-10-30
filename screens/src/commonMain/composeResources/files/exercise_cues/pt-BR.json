@@ -680,7 +680,7 @@
   "kettlebell_snatch": [
     "Leve o kettlebell para trás entre as pernas e estenda o quadril com força.",
     "Puxe o kettlebell perto do corpo, guiando pelo cotovelo.",
-    "Ao passar da cabeça, enfie a mão na alça e estenda o braço, para o peso não bater no antebraço.",
+    "Perto da cabeça, passe a mão por dentro da alça e estenda o braço, para o peso não bater no antebraço.",
     "Trave o braço acima da cabeça, bíceps perto da orelha, e deixe descer para a próxima repetição."
   ],
   "kettlebell_clean_press": [
@@ -705,7 +705,7 @@
     "Deite de lado, pegue o kettlebell com as duas mãos e role até ficar de costas.",
     "Joelhos flexionados, braço a uns 45° do corpo e punho neutro.",
     "Empurre até travar o braço sobre o ombro.",
-    "Desça até o braço encostar no chão, pare um instante e empurre de novo."
+    "Desça até a parte de trás do braço encostar no chão, pare um instante e empurre de novo."
   ],
   "kettlebell_row": [
     "Apoie uma mão no banco e incline o tronco até as costas ficarem retas e quase paralelas ao chão.",
@@ -734,7 +734,7 @@
   "kettlebell_turkish_get_up": [
     "Deitado, com o kettlebell no braço estendido, mantenha os olhos nele o tempo todo.",
     "Braço com o peso sempre na vertical e travado, do início ao fim.",
-    "Uma fase por vez: cotovelo, mão, eleve o quadril, passe a perna por baixo e levante.",
+    "Uma fase por vez: cotovelo, mão, quadril para cima, passe a perna por baixo até ajoelhar e levante.",
     "Desça repetindo as fases ao contrário; comece leve até cada uma ficar firme."
   ],
   "kettlebell_windmill": [
@@ -794,7 +794,7 @@
   "cable_chest_press": [
     "Polias na altura do peito; fique com um pé à frente do outro.",
     "Comece com os pegadores ao lado do peito, cotovelos a uns 45° do corpo.",
-    "Empurre para a frente até estender os braços, sem jogar o tronco.",
+    "Empurre para a frente até estender os braços, sem jogar o tronco à frente.",
     "Trave o abdômen para os cabos não puxarem você para trás."
   ],
   "cable_shoulder_press": [
@@ -847,7 +847,7 @@
   ],
   "cable_lat_pulldown_one_arm": [
     "Use um pegador na polia alta, sentado ou ajoelhado.",
-    "Comece com o braço estendido, deixando o ombro subir.",
+    "Comece com o braço estendido, sentindo o alongamento na lateral das costas.",
     "Puxe o cotovelo para baixo em direção ao quadril, sem mexer o tronco.",
     "Volte devagar e faça todas as repetições desse lado."
   ],
@@ -870,7 +870,7 @@
     "Termine com as mãos ao lado das orelhas e volte devagar."
   ],
   "cable_reverse_fly": [
-    "Polias na altura dos ombros; segure os cabos cruzados, cada mão com o do lado oposto.",
+    "Polias na altura dos ombros; segure os cabos cruzados, cada mão segurando o cabo do lado oposto.",
     "Cotovelos levemente flexionados, sem mudar o ângulo.",
     "Abra os braços até ficarem alinhados com os ombros.",
     "Sem encolher os ombros nem arquear as costas; volte devagar até cruzar os cabos."
@@ -939,19 +939,19 @@
     "Corda na polia alta; segure as pontas com as palmas voltadas uma para a outra.",
     "Cotovelos junto ao corpo e tronco levemente inclinado à frente.",
     "Empurre até estender os braços, abrindo as pontas da corda no final.",
-    "Suba até os antebraços ficarem perto da paralela com o chão, sem mexer os cotovelos."
+    "Deixe os antebraços subirem até perto da paralela com o chão, sem mexer os cotovelos."
   ],
   "cable_triceps_pushdown_bar": [
     "Segure a barra reta com pegada pronada, na largura dos ombros.",
     "Cotovelos junto ao corpo, parados durante toda a série.",
     "Empurre a barra até estender totalmente os braços.",
-    "Não jogue o peso do corpo sobre a barra; suba devagar."
+    "Não jogue o peso do corpo sobre a barra; deixe-a subir devagar."
   ],
   "cable_triceps_pushdown_reverse": [
     "Segure a barra com pegada supinada, mãos na largura dos ombros.",
     "Cotovelos junto ao corpo e punhos firmes.",
     "Empurre até estender totalmente os braços.",
-    "Use menos carga que na pegada pronada e suba devagar."
+    "Use menos carga que na pegada pronada e deixe a barra subir devagar."
   ],
   "cable_triceps_overhead_rope": [
     "De costas para a polia, corda atrás da cabeça e um pé à frente.",
@@ -1272,7 +1272,7 @@
     "Desça devagar e pare o balanço antes da próxima repetição."
   ],
   "bodyweight_captains_chair_knee_raise": [
-    "Apoie os antebraços nos apoios laterais e encoste as costas no encosto.",
+    "Antebraços nos apoios laterais e costas firmes no encosto.",
     "Deixe as pernas soltas e os ombros baixos.",
     "Suba os joelhos em direção ao peito e enrole o quadril no topo.",
     "Desça devagar, sem balançar as pernas."
