@@ -33,8 +33,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.mooscles.designsystem.interaction.MotionChoice
 import com.mooscles.designsystem.interaction.MotionPolicy
 import com.mooscles.designsystem.theme.MTheme
@@ -94,14 +92,7 @@ fun MDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = { close { currentDismiss() } },
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false,
-        ),
-    ) {
+    MOverlayWindow(onDismissRequest = { close { currentDismiss() } }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         Box(

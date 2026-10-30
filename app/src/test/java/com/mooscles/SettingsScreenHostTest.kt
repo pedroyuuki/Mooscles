@@ -278,17 +278,21 @@ class SettingsScreenHostTest {
 
         // The import dialogs: "Cancelar" and "Importar", then "Fechar" alone.
         compose.runOnIdle { state.value = state.value.copy(backup = BackupUi(pendingImport = ImportSummary(180, 28, 4, 0, 3, true, nothingToAdd = false))) }
-        reachable("dialog-dismiss", button = true, screenWidth, inDialog = true)
-        reachable("dialog-confirm", button = true, screenWidth, inDialog = true)
+        reachable("dialog-dismiss", button = true, screenWidth)
+        reachable("dialog-confirm", button = true, screenWidth)
         compose.runOnIdle { state.value = state.value.copy(backup = BackupUi()) }
         compose.runOnIdle { state.value = state.value.copy(backup = BackupUi(pendingImport = ImportSummary(0, 5, 0, 2, 0, false, nothingToAdd = true))) }
-        reachable("dialog-confirm", button = true, screenWidth, inDialog = true)
+        reachable("dialog-confirm", button = true, screenWidth)
         compose.onNodeWithTag("dialog-dismiss").assertDoesNotExist()
     }
 
-    /** [inDialog]: the node is in a dialog window, shown without scrolling. */
-    private fun reachable(tag: String, button: Boolean, screenWidth: Float, inDialog: Boolean = false) {
-        val node = compose.onNodeWithTag(tag).let { if (inDialog) it else it.performScrollTo() }.assertIsDisplayed()
+    /**
+     * [tag] is reachable: scrolled into view (on the screen, or inside a dialog's window, whose card
+     * scrolls when its text at 200 % is taller than the screen), displayed, a 48 dp target, within
+     * the 320 dp width, and its texts whole.
+     */
+    private fun reachable(tag: String, button: Boolean, screenWidth: Float) {
+        val node = compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
             .assertTouchTargetIsAtLeast48dp()
         val bounds = node.fetchSemanticsNode().boundsInRoot
         assertTrue("$tag $bounds passes the 320 dp screen", bounds.left >= -0.5f && bounds.right <= screenWidth + 0.5f)

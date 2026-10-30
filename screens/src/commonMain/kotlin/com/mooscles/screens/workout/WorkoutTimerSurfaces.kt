@@ -48,8 +48,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.mooscles.designsystem.components.MOverlayWindow
 import com.mooscles.designsystem.components.RestTimerCompact
 import com.mooscles.designsystem.components.RestTimerDock
 import com.mooscles.designsystem.components.RestTimerExpanded
@@ -289,10 +288,8 @@ private fun ExpandedRest(
     LaunchedEffect(Unit) {
         shown.animateTo(1f, if (reduced) tween(motion.fast) else tween(motion.slow, easing = motion.easeDrawer))
     }
-    Dialog(
-        onDismissRequest = { close() },
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
-    ) {
+    // The design system's overlay window: the host's density and font scale reach the timer.
+    MOverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         Box(

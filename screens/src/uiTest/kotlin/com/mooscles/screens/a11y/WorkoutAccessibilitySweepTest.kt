@@ -120,8 +120,10 @@ import kotlin.time.Duration.Companion.minutes
  * Plus the screen reader's order over the workout ([readingOrderIsHeaderToastCardsDock]) and the
  * dock and the workout bar as traversal groups ([dockAndWorkoutBarAreTraversalGroups]).
  *
- * The expanded timer is a dialog, a window of its own: on Android it takes the theme but not the
- * frame's font scale or width, so its content is also swept in the frame ([restExpandedContent]).
+ * The expanded timer is a dialog, a window of its own: it takes the theme and the frame's density
+ * and font scale (it passes the host's in, as the design system's overlays do), so [restExpanded]
+ * checks it at each scale, but not the frame's width (the window is the whole screen's), so its
+ * content is also swept in the frame ([restExpandedContent]).
  */
 @OptIn(ExperimentalTestApi::class)
 class WorkoutAccessibilitySweepTest {
@@ -398,10 +400,11 @@ class WorkoutAccessibilitySweepTest {
         sweep("dock", passes = listPasses(), reach = { assertTrue(exists(TimerDockTag)) }) { WorkoutRoute(fake, resting) }
     }
 
+    /** The real dialog over the list, its title drawn at each combination's scale ([assertDrawnAt]). */
     @Test
     fun restExpanded() = runComposeUiTest(testTimeout = 5.minutes) {
         val fake = Fake(stateOf(workout))
-        sweep("expanded", passes = listPasses(), reach = {
+        sweep("expanded", scaled = TimerTitleTag, passes = listPasses(), reach = {
             onNodeWithTag(TimerOpenTag).performClick()
             waitUntil("the expanded timer opens", timeoutMillis = WAIT_MS) { exists(TimerExpandedTag) }
             waitForIdle()
@@ -410,10 +413,9 @@ class WorkoutAccessibilitySweepTest {
 
     /**
      * The expanded timer's content at every combination. [restExpanded] sweeps the real dialog,
-     * but on Android a dialog is a window of its own, laid out at the device's density, not the
-     * frame's: there it gets the themes only (in the app, the system's font scale reaches it too).
-     * So the content the dialog shows ([RestTimerExpanded], with the screen's own title and "Up
-     * next" for this rest) is swept here in the frame, at the phone's width less the dialog's sides.
+     * at the frame's scales but at the screen's width (a dialog is a window of its own, as wide as
+     * the screen). So the content the dialog shows ([RestTimerExpanded], with the screen's own title
+     * and "Up next" for this rest) is swept here in the frame, at the phone's width less the dialog's sides.
      */
     @Test
     fun restExpandedContent() = runComposeUiTest(testTimeout = 5.minutes) {

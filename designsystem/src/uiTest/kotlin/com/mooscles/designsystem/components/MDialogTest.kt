@@ -145,4 +145,18 @@ class MDialogTest {
         onNodeWithTag(DialogScrimTag).assertContentDescriptionEquals("Dismiss")
         assertEquals(1f, onNodeWithTag(DialogScrimTag).fetchSemanticsNode().config[SemanticsProperties.TraversalIndex])
     }
+
+    /**
+     * The dialog is a window of its own; its content takes the host's density and font scale (on
+     * Android the window would take the configuration's, and a 2x test would run at 1x). A density
+     * of 2 differs from the emulator's and from the simulator's 1, so a window's own cannot pass.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun contentTakesTheHostDensityAndFontScale() = runComposeUiTest {
+        withTheme(fontScale = 2f, density = 2f) { MDialog("Finish?", "Saved.", "Finish", onConfirm = {}, onDismiss = {}) }
+        waitForIdle()
+        val density = labelLayout("Finish?").layoutInput.density
+        assertEquals(2f to 2f, density.density to density.fontScale)
+    }
 }
