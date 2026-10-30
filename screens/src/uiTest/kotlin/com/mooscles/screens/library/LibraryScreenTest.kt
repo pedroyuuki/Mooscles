@@ -569,7 +569,10 @@ class LibraryScreenTest {
                 val rowBottom = rowNode.getUnclippedBoundsInRoot().bottom
                 val metaBottom = onNode(hasText("Peito · Máquina de anilhas") and inRow, useUnmergedTree = true).getUnclippedBoundsInRoot().bottom
                 assertTrue(metaBottom <= rowBottom, "at $scale the meta ends at $metaBottom, the row at $rowBottom")
-                // A short name stays on one line.
+                // A short name stays on one line. At the iOS linear 2x the long row can push the bench
+                // row out of what the list composes in the simulator's window, so scroll to it first
+                // (with the clock running).
+                row(bench)
                 val short = layoutOf(onNode(hasTestTag(LibraryTags.ROW_NAME) and hasAnyAncestor(hasTestTag(LibraryTags.row(bench.id))), useUnmergedTree = true))
                 assertTrue(short.lineCount <= lines)
             }
