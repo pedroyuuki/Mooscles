@@ -23,7 +23,7 @@ internal object CableFigures {
             }
             end {
                 hip(40f, 69f); trunk(-12f, 0f)
-                arms(190f, 20f)
+                arms(205f, 50f)
                 legs(90f, 180f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 bench(28f, 74f, 22f)

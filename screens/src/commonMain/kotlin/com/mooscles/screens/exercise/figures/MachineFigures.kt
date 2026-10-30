@@ -27,7 +27,7 @@ internal object MachineFigures {
             start {
                 hip(40f, 60f); trunk(0f)
                 arms(180f, 150f)
-                legs(90f, 180f, 150f)
+                legs(90f, 180f, 100f)
                 seat(30f, 65f, 24f)
                 bench(35f, 65f, 24f, 0f)
                 pad(ANKLE_NEAR, 70f, 5.5f, 3f)
@@ -45,14 +45,14 @@ internal object MachineFigures {
             // Face down on the bench, the pad above the heels: legs straight, then curled.
             start {
                 hip(46f, 60f); trunk(90f)
-                arms(150f, 180f)
+                arms(100f, 150f)
                 legs(-90f, -90f, 180f)
                 bench(32f, 65f, 44f)
                 pad(ANKLE_NEAR, 20f, 5.5f, 3f)
             }
             end {
                 hip(46f, 60f); trunk(90f)
-                arms(150f, 180f)
+                arms(100f, 150f)
                 legs(-90f, 20f, -60f)
                 bench(32f, 65f, 44f)
                 pad(ANKLE_NEAR, 130f, 5.5f, 3f)

@@ -7,10 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,13 +38,16 @@ import org.jetbrains.compose.resources.stringResource
 /** The gallery's key of the figures page. */
 const val FIGURES_GALLERY_KEY = "figures"
 
+/** Test tag of the page's list. */
+const val FIGURES_GALLERY_LIST_TAG = "figures-gallery-list"
+
 /** Test tag of one frame on the figures page: `figure-<stableId>-start` or `-end`. */
 fun figureFrameTag(stableId: String, start: Boolean): String = "figure-$stableId-${if (start) "start" else "end"}"
 
 /**
  * The design gallery's "Figures" page (plan decision 5), for reviewing the poses: every exercise
  * with a figure, by its shown name, with the list thumbnail (the end frame at `sizes.media`) and the
- * start and end frames side by side at half the width. It follows the gallery's theme, text size
+ * start and end frames side by side at half the width, in a lazy list. It follows the gallery's theme, text size
  * and language controls.
  */
 fun figuresGalleryPage(): GalleryExtraPage = GalleryExtraPage(
@@ -55,34 +59,46 @@ fun figuresGalleryPage(): GalleryExtraPage = GalleryExtraPage(
 @Composable
 private fun FiguresPage() {
     val portuguese = catalogInPortuguese()
-    val exercises = ExerciseCatalog.exercises.associateBy { it.id }
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MTheme.space.s4),
-        verticalArrangement = Arrangement.spacedBy(MTheme.space.s6),
-    ) {
-        for (stableId in ExerciseFigures.stableIds) {
-            val frames = ExerciseFigures.forExercise("catalog_$stableId") ?: continue
-            val exercise = exercises.getValue("catalog_$stableId").let {
+    // Built once: the lots grow this page to the whole catalog, so it is lazy too.
+    val entries = remember {
+        val catalog = ExerciseCatalog.exercises.associateBy { it.id }
+        ExerciseFigures.stableIds.mapNotNull { stableId ->
+            val frames = ExerciseFigures.forExercise("catalog_$stableId") ?: return@mapNotNull null
+            val exercise = catalog.getValue("catalog_$stableId").let {
                 ExerciseUi(it.id, it.name, it.muscle.label, it.equipment.label, it.convention.label)
             }
-            val media = exerciseMedia(exercise)
-            val highlights = (media as? ExerciseMedia.Figure)?.highlights.orEmpty()
+            FigureEntry(stableId, exercise, frames, exerciseMedia(exercise))
+        }
+    }
+    LazyColumn(
+        Modifier.fillMaxSize().testTag(FIGURES_GALLERY_LIST_TAG),
+        contentPadding = PaddingValues(MTheme.space.s4),
+        verticalArrangement = Arrangement.spacedBy(MTheme.space.s6),
+    ) {
+        items(entries, key = { it.stableId }) { entry ->
+            val highlights = (entry.media as? ExerciseMedia.Figure)?.highlights.orEmpty()
             Column(verticalArrangement = Arrangement.spacedBy(MTheme.space.s2)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ExerciseThumbnail(media, EquipmentIcons.forEquipment(exercise.equipment), MTheme.sizes.media)
-                    MText(ExerciseNames.display(exercise.id, exercise.name, custom = false, portuguese), MTheme.type.titleSm)
+                    ExerciseThumbnail(entry.media, EquipmentIcons.forEquipment(entry.exercise.equipment), MTheme.sizes.media)
+                    MText(
+                        ExerciseNames.display(entry.exercise.id, entry.exercise.name, custom = false, portuguese),
+                        MTheme.type.titleSm,
+                    )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3)) {
-                    Frame(frames.start, highlights, figureFrameTag(stableId, start = true), Modifier.weight(1f))
-                    Frame(frames.end, highlights, figureFrameTag(stableId, start = false), Modifier.weight(1f))
+                    Frame(entry.frames.start, highlights, figureFrameTag(entry.stableId, start = true), Modifier.weight(1f))
+                    Frame(entry.frames.end, highlights, figureFrameTag(entry.stableId, start = false), Modifier.weight(1f))
                 }
             }
         }
     }
 }
+
+/** One exercise of the page, resolved once. */
+private class FigureEntry(val stableId: String, val exercise: ExerciseUi, val frames: FigureFrames, val media: ExerciseMedia)
 
 @Composable
 private fun Frame(pose: FigurePose, highlights: Set<FigureSegment>, tag: String, modifier: Modifier) {

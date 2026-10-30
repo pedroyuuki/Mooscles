@@ -85,9 +85,18 @@ internal class PoseBuilder {
     private var shinFar = 0f
     private var footFar = 0f
     private var floorY: Float? = null
-    private val props = ArrayList<Any>()
+    private var frontView = false
+    private val props = ArrayList<PropSpec>()
     var onFloor: Set<FigureJoint> = emptySet()
         private set
+
+    /**
+     * Draws the figure from the front (only for a movement in the frontal plane, such as a lateral
+     * raise): near is then the figure's left side, on the right of the image.
+     */
+    fun front() {
+        frontView = true
+    }
 
     /** Puts the hip at ([x], [y]). */
     fun hip(x: Float, y: Float) {
@@ -150,37 +159,37 @@ internal class PoseBuilder {
     fun floor(y: Float, vararg joints: FigureJoint) {
         floorY = y
         onFloor = joints.toSet()
-        props += FigureProp.Floor(y + CONTACT_GAP)
+        props += Fixed(FigureProp.Floor(y + CONTACT_GAP))
     }
 
     /** A floor line at [y] that nothing in the pose stands on (it grounds a machine). */
     fun groundLine(y: Float) {
-        props += FigureProp.Floor(y)
+        props += Fixed(FigureProp.Floor(y))
     }
 
     fun barbell(at: FigureJoint) {
-        props += FigureProp.Barbell(at)
+        props += Fixed(FigureProp.Barbell(at))
     }
 
     fun dumbbell(at: FigureJoint) {
-        props += FigureProp.Dumbbell(at)
+        props += Fixed(FigureProp.Dumbbell(at))
     }
 
     fun kettlebell(at: FigureJoint) {
-        props += FigureProp.Kettlebell(at)
+        props += Fixed(FigureProp.Kettlebell(at))
     }
 
     /** A bench pad whose line runs from ([x], [y]) for [length] at [angle] (90 is flat). */
     fun bench(x: Float, y: Float, length: Float, angle: Float = FLAT) {
-        props += FigureProp.Bench(x, y, length, angle)
+        props += Fixed(FigureProp.Bench(x, y, length, angle))
     }
 
     fun cable(anchorX: Float, anchorY: Float, to: FigureJoint) {
-        props += FigureProp.Cable(anchorX, anchorY, to)
+        props += Fixed(FigureProp.Cable(anchorX, anchorY, to))
     }
 
     fun seat(x: Float, y: Float, length: Float, angle: Float = FLAT) {
-        props += FigureProp.Seat(x, y, length, angle)
+        props += Fixed(FigureProp.Seat(x, y, length, angle))
     }
 
     /** A round pad [distance] from [joint] in the direction [angle], so it follows the limb between frames. */
@@ -189,21 +198,21 @@ internal class PoseBuilder {
     }
 
     fun bar(x: Float, y: Float, length: Float) {
-        props += FigureProp.Bar(x, y, length)
+        props += Fixed(FigureProp.Bar(x, y, length))
     }
 
     fun box(x: Float, y: Float, width: Float, height: Float) {
-        props += FigureProp.Box(x, y, width, height)
+        props += Fixed(FigureProp.Box(x, y, width, height))
     }
 
     fun platform(at: FigureJoint, length: Float, angle: Float) {
-        props += FigureProp.Platform(at, length, angle)
+        props += Fixed(FigureProp.Platform(at, length, angle))
     }
 
     fun pose(): FigurePose {
         var pose = FigurePose(
             hipX, hipY, trunk, head, upperArmNear, forearmNear, upperArmFar, forearmFar,
-            thighNear, shinNear, footNear, thighFar, shinFar, footFar, floorY,
+            thighNear, shinNear, footNear, thighFar, shinFar, footFar, floorY, frontView = frontView,
         )
         val joint = placed
         if (joint != null) {
@@ -218,13 +227,18 @@ internal class PoseBuilder {
                         val center = joints.getValue(prop.joint) + direction(prop.angle) * prop.distance
                         FigureProp.Pad(center.x, center.y, prop.radius)
                     }
-                    else -> prop as FigureProp
+                    is Fixed -> prop.prop
                 }
             },
         )
     }
 
-    private class PadAt(val joint: FigureJoint, val angle: Float, val distance: Float, val radius: Float)
+    /** A prop as written: given outright, or a pad placed from a joint once the pose is solved. */
+    private sealed interface PropSpec
+
+    private class Fixed(val prop: FigureProp) : PropSpec
+
+    private class PadAt(val joint: FigureJoint, val angle: Float, val distance: Float, val radius: Float) : PropSpec
 
     private companion object {
         const val FLAT = 90f
@@ -233,7 +247,9 @@ internal class PoseBuilder {
 
 /**
  * How far below a joint's centerline a surface it rests on is drawn: half a limb stroke plus half
- * an equipment stroke, in box units, so the two strokes just touch.
+ * an equipment stroke, in box units, so the two strokes just touch. It reads the default
+ * [MoosclesIllustration], not the theme's: both themes use the same strokes, and a pose is data
+ * built outside any composition.
  */
 internal val CONTACT_GAP: Float = MoosclesIllustration().let { (it.figureStroke + it.figureHeadStroke) / 2f * BOX }
 

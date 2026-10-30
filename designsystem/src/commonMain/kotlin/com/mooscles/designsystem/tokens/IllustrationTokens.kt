@@ -1,6 +1,7 @@
 package com.mooscles.designsystem.tokens
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -21,3 +22,19 @@ data class MoosclesIllustration(
     val figureMargin: Float = 0.05f,
     val bodyMapStroke: Dp = 1.dp,
 )
+
+/**
+ * Phase 4A: the theme colors of an exercise figure beyond the semantic tokens. [farLimb] is the
+ * far arm and leg (spec "Esqueleto": the far side "num token mais apagado, escolhido no S1"): a
+ * body tone, fainter than the near limbs (`text.secondary`) and apart from the equipment
+ * (`text.tertiary`), so a far leg on a bench does not read as part of the bench. Iron 57 in both
+ * themes: lighter than the equipment in the light theme, darker in the dark one, and 3:1 on the
+ * tile and the pages in both (`ComponentColorsTest`).
+ */
+@Immutable
+data class MoosclesFigureColors(val farLimb: Color) {
+    companion object {
+        val Light = MoosclesFigureColors(farLimb = Primitives.ferro57)
+        val Dark = MoosclesFigureColors(farLimb = Primitives.ferro57)
+    }
+}

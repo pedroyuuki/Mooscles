@@ -31,6 +31,10 @@ enum class FigureSegment {
  * straight down (plan decision 6). The bones keep the lengths of [FigureSkeleton], so the figure
  * never changes size between frames. A non-null [floorY] says the feet rest on a floor at that
  * height (checked by the pose tests; draw the line itself with [FigureProp.Floor]).
+ *
+ * [frontView] draws the figure seen from the front, for a movement in the frontal plane that a side
+ * view cannot show (a lateral raise): "near" is then the figure's left side, on the right of the
+ * image, and "far" its right side; both are drawn as body and both take the limb highlights.
  */
 @Immutable
 data class FigurePose(
@@ -50,6 +54,7 @@ data class FigurePose(
     val footFar: Float,
     val floorY: Float? = null,
     val props: List<FigureProp> = emptyList(),
+    val frontView: Boolean = false,
 )
 
 /**

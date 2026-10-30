@@ -21,6 +21,9 @@ class IllustrationTokensTest {
         assertEquals(0.05f, i.figureMargin)
         // The body map's outline: the 1 dp hairline the spike used (sizes.border).
         assertEquals(1.dp, i.bodyMapStroke)
+        // The far limbs' tone (Task 8 fix round 1): iron 57 in both themes.
+        assertEquals(Primitives.ferro57, MoosclesFigureColors.Light.farLimb)
+        assertEquals(Primitives.ferro57, MoosclesFigureColors.Dark.farLimb)
         // A pose that keeps its joints `figureMargin` inside the box keeps its whole stroke inside too.
         assertTrue(i.figureMargin >= i.figureStroke / 2, "the margin holds half a limb stroke")
         // The bones of the 100-unit box, final after the pilot poses (Task 8). The spec's example

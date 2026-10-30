@@ -22,7 +22,7 @@ internal object BarbellFigures {
             }
             end {
                 hip(46f, 69f); trunk(-90f)
-                arms(155f, -5f)
+                arms(125f, -20f)
                 legs(95f, 204f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 bench(14f, 74f, 38f)
@@ -84,14 +84,14 @@ internal object BarbellFigures {
             // Hinged with a flat back, arms hanging; then the bar pulled to the upper stomach.
             start {
                 place(ANKLE_NEAR, 52f, 85f); trunk(62f, 70f)
-                arms(180f, 180f)
+                arms(195f, 195f)
                 legs(150f, 185f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)
             }
             end {
                 place(ANKLE_NEAR, 52f, 85f); trunk(62f, 70f)
-                arms(270f, 180f)
+                arms(285f, 164f)
                 legs(150f, 185f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)
@@ -107,9 +107,9 @@ internal object BarbellFigures {
                 barbell(HAND_NEAR)
             }
             end {
-                place(ANKLE_NEAR, 44f, 85f); trunk(70f, 75f)
-                arms(190f, 190f)
-                legs(135f, 190f, 90f)
+                place(ANKLE_NEAR, 44f, 85f); trunk(65f, 70f)
+                arms(199f, 199f)
+                legs(160f, 182f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)
             }

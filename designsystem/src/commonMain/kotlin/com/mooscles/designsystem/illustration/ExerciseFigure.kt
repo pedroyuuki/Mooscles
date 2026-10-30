@@ -45,6 +45,7 @@ import com.mooscles.designsystem.resources.ds_figure_show_end
 import com.mooscles.designsystem.resources.ds_figure_show_start
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesFigureColors
 import com.mooscles.designsystem.tokens.MoosclesIllustration
 import kotlin.math.min
 import org.jetbrains.compose.resources.stringResource
@@ -90,7 +91,7 @@ fun ExerciseFigure(
     contentDescription: String?,
     modifier: Modifier = Modifier,
 ) {
-    val palette = figurePalette(MTheme.colors)
+    val palette = figurePalette(MTheme.colors, if (MTheme.isDark) MoosclesFigureColors.Dark else MoosclesFigureColors.Light)
     val illustration = MTheme.illustration
     val solved = remember(pose) {
         val joints = FigureKinematics.solve(pose).joints
@@ -98,7 +99,7 @@ fun ExerciseFigure(
     }
     val draw = remember(solved, highlights, palette, illustration) {
         Modifier.drawWithCache {
-            val operations = figureOperations(solved.first, solved.second, highlights, palette, illustration, size)
+            val operations = figureOperations(solved.first, solved.second, highlights, palette, illustration, size, pose.frontView)
             onDrawBehind { for (operation in operations) operation.draw(this) }
         }
     }
@@ -244,16 +245,20 @@ private fun FrameLayer(
 @Immutable
 internal data class FigurePalette(val body: Color, val far: Color, val equipment: Color, val highlight: Color)
 
-/** Spec D3: the figure in `text.secondary`, the far limbs and the equipment in `text.tertiary`, the highlight in `accent.solid`. */
-internal fun figurePalette(colors: MoosclesColors) = FigurePalette(
+/**
+ * Spec D3: the figure in `text.secondary`, the equipment in `text.tertiary`, the highlight in
+ * `accent.solid`; the far limbs in [MoosclesFigureColors.farLimb], the fainter tone S1 chose
+ * (Task 8 fix round 1), apart from both the body and the equipment.
+ */
+internal fun figurePalette(colors: MoosclesColors, figure: MoosclesFigureColors) = FigurePalette(
     body = colors.textSecondary,
-    far = colors.textTertiary,
+    far = figure.farLimb,
     equipment = colors.textTertiary,
     highlight = colors.accentSolid,
 )
 
 /** One drawing step, already in pixels. */
-private sealed interface FigureOperation {
+internal sealed interface FigureOperation {
     fun draw(scope: DrawScope)
 
     class Line(val start: Offset, val end: Offset, val color: Color, val width: Float) : FigureOperation {
@@ -274,20 +279,22 @@ private sealed interface FigureOperation {
 }
 
 /** Which side of a segment a highlight covers: all of it, or the half toward the front or the back. */
-private enum class Side { ALL, FRONT, BACK }
+internal enum class Side { ALL, FRONT, BACK }
 
 /**
  * The drawing steps of a solved pose in a [size] canvas: the 100-unit box is the largest centered
- * square. Back to front: far leg and arm, equipment, trunk, neck and head, near leg, near arm; each
- * segment's highlights right after it, so a limb in front covers the trunk's highlight.
+ * square. Back to front: equipment, far leg and arm, trunk, neck and head, near leg, near arm; each
+ * segment's highlights right after it, so a limb in front covers the trunk's highlight. Limb
+ * highlights go on the near limbs, and on the far ones too in a [frontView].
  */
-private fun figureOperations(
+internal fun figureOperations(
     joints: Map<FigureJoint, Offset>,
     equipment: List<PropShape>,
     highlights: Set<FigureSegment>,
     palette: FigurePalette,
     illustration: MoosclesIllustration,
     size: Size,
+    frontView: Boolean = false,
 ): List<FigureOperation> {
     val side = min(size.width, size.height)
     val scale = side / BOX
@@ -328,13 +335,28 @@ private fun figureOperations(
         operations += FigureOperation.Line(start + shift, end + shift, palette.highlight, stroke / 2f)
     }
 
-    // Far side, behind everything.
-    bone(FigureJoint.HIP, FigureJoint.KNEE_FAR, palette.far)
-    bone(FigureJoint.KNEE_FAR, FigureJoint.ANKLE_FAR, palette.far)
-    bone(FigureJoint.ANKLE_FAR, FigureJoint.TOE_FAR, palette.far)
-    bone(FigureJoint.SHOULDER, FigureJoint.ELBOW_FAR, palette.far)
-    bone(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, palette.far)
+    fun leg(hip: FigureJoint, knee: FigureJoint, ankle: FigureJoint, toe: FigureJoint, color: Color, lit: Boolean) {
+        bone(hip, knee, color)
+        if (lit && FigureSegment.THIGH_FRONT in highlights) highlight(hip, knee, 0f, 1f, Side.FRONT, limb = true)
+        if (lit && FigureSegment.THIGH_BACK in highlights) highlight(hip, knee, GLUTE_END, 1f, Side.BACK, limb = true)
+        if (lit && FigureSegment.HIP in highlights) highlight(hip, knee, 0f, GLUTE_END, Side.ALL, limb = true)
+        bone(knee, ankle, color)
+        if (lit && FigureSegment.SHIN_BACK in highlights) highlight(knee, ankle, 0f, CALF_END, Side.BACK, limb = true)
+        bone(ankle, toe, color)
+    }
 
+    fun arm(elbow: FigureJoint, hand: FigureJoint, color: Color, lit: Boolean) {
+        val shoulder = FigureJoint.SHOULDER
+        bone(shoulder, elbow, color)
+        if (lit && FigureSegment.UPPER_ARM_FRONT in highlights) highlight(shoulder, elbow, 0f, 1f, Side.FRONT, limb = true)
+        if (lit && FigureSegment.UPPER_ARM_BACK in highlights) highlight(shoulder, elbow, 0f, 1f, Side.BACK, limb = true)
+        if (lit && FigureSegment.SHOULDER in highlights) highlight(shoulder, elbow, 0f, DELTOID_END, Side.ALL, limb = true)
+        bone(elbow, hand, color)
+        if (lit && FigureSegment.FOREARM in highlights) highlight(elbow, hand, 0f, 1f, Side.ALL, limb = true)
+    }
+
+    // The equipment first: a far leg resting on a bench, or a far arm holding a weight, is drawn
+    // over it, so it reads as body and not as part of the machine.
     for (shape in equipment) {
         operations += when (shape) {
             is PropShape.Line -> FigureOperation.Line(px(shape.start), px(shape.end), palette.equipment, thin)
@@ -346,26 +368,20 @@ private fun figureOperations(
         }
     }
 
+    // The far side, behind the body. Seen from the front both sides face the viewer: the far limbs
+    // take the body's color and their highlights too.
+    val farColor = if (frontView) palette.body else palette.far
+    leg(FigureJoint.HIP, FigureJoint.KNEE_FAR, FigureJoint.ANKLE_FAR, FigureJoint.TOE_FAR, farColor, lit = frontView)
+    arm(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, farColor, lit = frontView)
+
     bone(FigureJoint.HIP, FigureJoint.SHOULDER, palette.body)
     if (FigureSegment.TORSO_FRONT in highlights) highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.FRONT, limb = false)
     if (FigureSegment.TORSO_BACK in highlights) highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.BACK, limb = false)
     bone(FigureJoint.SHOULDER, FigureJoint.NECK, palette.body)
     operations += FigureOperation.Ring(at(FigureJoint.HEAD), FigureSkeleton.HEAD_RADIUS * scale, palette.body, thin)
 
-    bone(FigureJoint.HIP, FigureJoint.KNEE_NEAR, palette.body)
-    if (FigureSegment.THIGH_FRONT in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, 0f, 1f, Side.FRONT, limb = true)
-    if (FigureSegment.THIGH_BACK in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, GLUTE_END, 1f, Side.BACK, limb = true)
-    if (FigureSegment.HIP in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, 0f, GLUTE_END, Side.ALL, limb = true)
-    bone(FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, palette.body)
-    if (FigureSegment.SHIN_BACK in highlights) highlight(FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, 0f, CALF_END, Side.BACK, limb = true)
-    bone(FigureJoint.ANKLE_NEAR, FigureJoint.TOE_NEAR, palette.body)
-
-    bone(FigureJoint.SHOULDER, FigureJoint.ELBOW_NEAR, palette.body)
-    if (FigureSegment.UPPER_ARM_FRONT in highlights) highlight(FigureJoint.SHOULDER, FigureJoint.ELBOW_NEAR, 0f, 1f, Side.FRONT, limb = true)
-    if (FigureSegment.UPPER_ARM_BACK in highlights) highlight(FigureJoint.SHOULDER, FigureJoint.ELBOW_NEAR, 0f, 1f, Side.BACK, limb = true)
-    if (FigureSegment.SHOULDER in highlights) highlight(FigureJoint.SHOULDER, FigureJoint.ELBOW_NEAR, 0f, DELTOID_END, Side.ALL, limb = true)
-    bone(FigureJoint.ELBOW_NEAR, FigureJoint.HAND_NEAR, palette.body)
-    if (FigureSegment.FOREARM in highlights) highlight(FigureJoint.ELBOW_NEAR, FigureJoint.HAND_NEAR, 0f, 1f, Side.ALL, limb = true)
+    leg(FigureJoint.HIP, FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, FigureJoint.TOE_NEAR, palette.body, lit = true)
+    arm(FigureJoint.ELBOW_NEAR, FigureJoint.HAND_NEAR, palette.body, lit = true)
     return operations
 }
 

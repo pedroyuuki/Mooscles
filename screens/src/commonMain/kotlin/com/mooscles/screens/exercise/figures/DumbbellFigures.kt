@@ -22,7 +22,7 @@ internal object DumbbellFigures {
             }
             end {
                 hip(46f, 69f); trunk(-90f)
-                arms(160f, 0f)
+                arms(125f, -20f)
                 legs(95f, 204f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 bench(14f, 74f, 38f)
@@ -51,19 +51,20 @@ internal object DumbbellFigures {
             }
         }
         figure("dumbbell_raise_lateral") {
-            // Seen from the front, the only figure that is: the arms rise out to the sides.
+            // Seen from the front, the only figure that is (a side view cannot show arms rising sideways):
+            // both arms and both deltoids, feet as short stubs toward the viewer, toes on the floor.
             start {
-                place(ANKLE_NEAR, 53f, 85f); trunk(0f)
+                front(); place(TOE_NEAR, 53f, 85f); trunk(0f)
                 nearArm(165f, 170f); farArm(195f, 190f)
-                nearLeg(174f, 180f, 90f); farLeg(186f, 180f, -90f)
-                floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
+                nearLeg(172f, 177f, 160f); farLeg(188f, 183f, 200f)
+                floor(85f, TOE_NEAR, TOE_FAR)
                 dumbbell(HAND_NEAR); dumbbell(HAND_FAR)
             }
             end {
-                place(ANKLE_NEAR, 53f, 85f); trunk(0f)
+                front(); place(TOE_NEAR, 53f, 85f); trunk(0f)
                 nearArm(85f, 95f); farArm(-85f, -95f)
-                nearLeg(174f, 180f, 90f); farLeg(186f, 180f, -90f)
-                floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
+                nearLeg(172f, 177f, 160f); farLeg(188f, 183f, 200f)
+                floor(85f, TOE_NEAR, TOE_FAR)
                 dumbbell(HAND_NEAR); dumbbell(HAND_FAR)
             }
         }

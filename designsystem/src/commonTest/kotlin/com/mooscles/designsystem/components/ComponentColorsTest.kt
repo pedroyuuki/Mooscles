@@ -4,6 +4,7 @@ import com.mooscles.designsystem.illustration.bodyMapPalette
 import com.mooscles.designsystem.illustration.figurePalette
 import com.mooscles.designsystem.tokens.Contrast
 import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesFigureColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -51,11 +52,17 @@ class ComponentColorsTest {
         }
     }
 
-    /** Phase 4A: every color of an exercise figure is a 3:1 graphic on the thumbnail tile and on the pages it sits on. */
+    /**
+     * Phase 4A: every color of an exercise figure is a 3:1 graphic on the thumbnail tile and on the
+     * pages it sits on. The far limbs (Task 8 fix round 1) are a tone of their own, neither the
+     * body's nor the equipment's, so a far leg never merges with a bench.
+     */
     @Test
     fun figureColorsStandOutOnTheirBackgrounds() {
         for ((name, colors) in themes) {
-            val palette = figurePalette(colors)
+            val palette = figurePalette(colors, if (name == "dark") MoosclesFigureColors.Dark else MoosclesFigureColors.Light)
+            assertNotEquals(palette.body, palette.far, "$name far limbs are not the near body")
+            assertNotEquals(palette.equipment, palette.far, "$name far limbs are not the equipment")
             for ((surface, bg) in listOf("inset" to colors.bgInset, "surface" to colors.bgSurface, "base" to colors.bgBase)) {
                 atLeast(3.0, palette.body, bg, "$name figure on $surface")
                 atLeast(3.0, palette.far, bg, "$name far limbs on $surface")
