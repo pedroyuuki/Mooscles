@@ -18,9 +18,10 @@
     </plurals>
     <string name="editor_remove_confirm">Remover</string>
     <string name="editor_replace_title">Trocar o exercício?</string>
-    <string name="editor_replace_body">Os alvos manuais dele voltam a seguir o recorde.</string>
+    <string name="editor_replace_body">Os alvos manuais dele voltam a seguir o recorde e os aquecimentos ficam vazios.</string>
     <string name="editor_replace_confirm">Trocar</string>
     <string name="editor_exercise_more">Opções de %1$s</string>
     <!-- O rótulo de uma série planejada de aquecimento na lista de séries (as de trabalho são numeradas). -->
-    <string name="editor_set_warmup">A</string>
+    <string name="editor_set_warmup_short">A</string>
+    <string name="editor_rest_note">Vale para os treinos que você começar com esta rotina.</string>
 </resources>

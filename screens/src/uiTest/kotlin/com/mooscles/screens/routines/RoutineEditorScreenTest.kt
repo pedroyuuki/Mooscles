@@ -73,6 +73,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/** The `zIndex` modifier of the node's layout, read from its modifier info (the layout info has no accessor for it). */
+private fun androidx.compose.ui.semantics.SemanticsNode.zIndexOf(): Float =
+    layoutInfo.getModifierInfo().firstNotNullOfOrNull { Regex("zIndex=(-?[0-9.]+)").find(it.modifier.toString())?.groupValues?.get(1)?.toFloat() } ?: 0f
+
 private fun androidx.compose.ui.semantics.SemanticsNode.tag(): String? = config.getOrNull(SemanticsProperties.TestTag)
 
 /** The routine editor (spec "Editor de rotina"): name, menus, cards, rest chip, target, drag, adding, replacing, starting. */
@@ -103,7 +107,7 @@ class RoutineEditorScreenTest {
         ),
     )
 
-    /** Only the warm-up is manual, and a warm-up is never a manual target. */
+    /** Its working sets follow the record, but the warm-up has values, which a replacement empties. */
     private val e2 = PlannedExerciseUi(
         "e2", row, sets = 3, reps = 10, weightKg = 60.0, restSeconds = 120,
         setTargets = listOf(set("e2w", 10, 30.0, warmup = true), set("e2a", 10, 60.0), set("e2b", 10, 60.0)),
@@ -221,6 +225,7 @@ class RoutineEditorScreenTest {
         var gone = 0
         var workout = 0
         val info = mutableListOf<String>()
+        val opened = mutableListOf<String>()
     }
 
     /** [content] from the window's top down, [height] tall and [width] wide when given. */
@@ -249,6 +254,7 @@ class RoutineEditorScreenTest {
         width: Dp? = null,
         tall: Boolean = true,
         height: Dp? = null,
+        canOpenRoutines: Boolean = false,
     ): Requests {
         val requests = Requests()
         withScreen(locale = locale, fontScale = fontScale) {
@@ -261,6 +267,7 @@ class RoutineEditorScreenTest {
                     onGone = { requests.gone++ },
                     onOpenWorkout = { requests.workout++ },
                     onExerciseInfo = { requests.info += it },
+                    onOpenRoutine = if (canOpenRoutines) ({ requests.opened += it }) else null,
                 )
             }
         }
@@ -329,6 +336,9 @@ class RoutineEditorScreenTest {
         pick(RenameSheetTags.SAVE)
         assertEquals(listOf("renameRoutine:r,Costas e bíceps"), fake.calls)
         onNodeWithTag(RoutineEditorTags.NAME).assertTextEquals("Costas e bíceps")
+        // At the default size too, the name is a 48 dp target and the whole screen's clickables are labelled and sized.
+        onNodeWithTag(RoutineEditorTags.NAME).assertHeightIsAtLeast(48.dp)
+        assertClickablesLabeledAndSized("Routine editor at 1x")
     }
 
     @Test
@@ -470,6 +480,9 @@ class RoutineEditorScreenTest {
         // The sheet of the phase 3 minus "Start rest now", which has nothing to start here.
         onNodeWithTag(StepperValueTag).assertTextEquals("2:15")
         onNodeWithText("Iniciar descanso agora").assertDoesNotExist()
+        // The note is the routine's, not the workout's.
+        onNodeWithText("Vale para os treinos que você começar com esta rotina.").assertIsDisplayed()
+        onNodeWithText("Vale para os próximos descansos deste exercício", substring = true).assertDoesNotExist()
         pick(StepperIncreaseTag)
         onNodeWithTag(StepperValueTag).assertTextEquals("2:30")
         pick(restShortcutTag(180))
@@ -558,6 +571,23 @@ class RoutineEditorScreenTest {
     }
 
     @Test
+    fun liftedCardIsRaisedAmongTheListsItems() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        val fake = Fake(stateOf())
+        show(state = fake.state, fake = fake)
+        lift("e1")
+        dragBy(headerPitch() * 0.5f)
+        // Dragged down over the next card: the header is a direct item of the list (a sibling of the other headers, not
+        // inside a wrapper) and drawn above them, so it is not hidden under the next one.
+        val lifted = onNodeWithTag(RoutineEditorTags.header("e1")).fetchSemanticsNode()
+        val next = onNodeWithTag(RoutineEditorTags.header("e2")).fetchSemanticsNode()
+        assertTrue(lifted.zIndexOf() > next.zIndexOf(), "z ${lifted.zIndexOf()} vs ${next.zIndexOf()}")
+        assertTrue(lifted.layoutInfo.parentInfo === next.layoutInfo.parentInfo)
+        assertTrue(lifted.boundsInRoot.bottom > next.boundsInRoot.top, "the lifted card overlaps the next one")
+        release()
+    }
+
+    @Test
     fun exerciseRemovedElsewhereDuringADragDropsWithoutAnError() {
         if (!INJECTS_DRAG) return
         // Another exercise leaves while one is dragged: the drop carries exactly the ones that are left.
@@ -621,6 +651,20 @@ class RoutineEditorScreenTest {
         onNodeWithTag(ReorderAnnouncerTag).assertContentDescriptionEquals("Remada curvada agora na posição 3 de 3")
     }
 
+    @Test
+    fun duplicatedToastOpensTheCopyWhenTheHostCanOpenIt() = runComposeUiTest {
+        val fake = Fake(stateOf())
+        val requests = show(state = fake.state, fake = fake, tall = false, canOpenRoutines = true)
+        openTopMenu()
+        pick(RoutineEditorTags.MENU_DUPLICATE)
+        val copyId = fake.calls.last().substringAfterLast(",")
+        toastWith("Rotina duplicada").assertIsDisplayed()
+        onNode(hasText("Abrir") and hasAnyAncestor(hasTestTag("toast-action")), useUnmergedTree = true).assertIsDisplayed()
+        onNodeWithTag("toast-action", useUnmergedTree = true).performClick()
+        waitForIdle()
+        assertEquals(listOf(copyId), requests.opened)
+    }
+
     // --- Adding, replacing, removing -----------------------------------------------------------
 
     @Test
@@ -644,9 +688,11 @@ class RoutineEditorScreenTest {
         onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.ADD))
         pick(RoutineEditorTags.ADD)
         onAllNodesWithTag(ExercisePickerAddTag).assertCountEquals(0)
+        // The addition lands in the same emission as a removal elsewhere: the new ids are the echo, not the count.
+        fake.edit { r -> r.copy(exercises = r.exercises.filter { it.id != "e3" }) }
         fake.deliver()
         waitForIdle()
-        assertEquals(listOf("e1", "e2", "e3", "new-curl", "new-squat"), headerIds())
+        assertEquals(listOf("e1", "e2", "new-curl", "new-squat"), headerIds())
         onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.ADD))
         pick(RoutineEditorTags.ADD)
         onNodeWithTag(ExercisePickerAddTag).assertExists()
@@ -699,30 +745,41 @@ class RoutineEditorScreenTest {
     fun replaceAsksOnlyWithManualTargets() = runComposeUiTest {
         val fake = Fake(stateOf())
         show(state = fake.state, fake = fake, tall = false)
-        // The row has only inherited working sets (and a warm-up, which is never a manual target): no question.
-        openExerciseMenu("e2")
+        // The fly follows the record in its only set and has no warm-up: nothing to lose, no question.
+        openExerciseMenu("e3")
         pick(RoutineEditorTags.EXERCISE_REPLACE)
         onNodeWithText("Trocar o exercício?").assertDoesNotExist()
         pickerRow("curl").performClick()
         waitForIdle()
-        assertEquals("replaceRoutineExercise:e2,curl", fake.calls.last())
-        // The bench has manual targets: the question names what happens; "Cancelar" does nothing.
-        openExerciseMenu("e1")
+        assertEquals("replaceRoutineExercise:e3,curl", fake.calls.last())
+        // A warm-up with no values has nothing to lose either.
+        fake.edit { r -> r.copy(exercises = r.exercises.map { if (it.id == "e3") it.copy(setTargets = it.setTargets + set("e3w", 0, null, warmup = true)) else it }) }
+        waitForIdle()
+        openExerciseMenu("e3")
+        pick(RoutineEditorTags.EXERCISE_REPLACE)
+        onNodeWithText("Trocar o exercício?").assertDoesNotExist()
+        pickerRow("squat").performClick()
+        waitForIdle()
+        assertEquals("replaceRoutineExercise:e3,squat", fake.calls.last())
+        // The row's working sets follow the record, but its warm-up (10 x 30 kg) would be emptied: the question says so.
+        openExerciseMenu("e2")
         pick(RoutineEditorTags.EXERCISE_REPLACE)
         inDialog("Trocar o exercício?").assertIsDisplayed()
-        inDialog("Os alvos manuais dele voltam a seguir o recorde.").assertIsDisplayed()
+        inDialog("Os alvos manuais dele voltam a seguir o recorde e os aquecimentos ficam vazios.").assertIsDisplayed()
         inDialog("Cancelar").performClick()
         waitForIdle()
         onAllNodesWithTag(ExercisePickerAddTag).assertCountEquals(0)
-        assertEquals(1, fake.calls.size)
+        assertEquals(2, fake.calls.size)
+        // The bench has manual working sets: it asks too, and "Trocar" goes on to the picker.
         openExerciseMenu("e1")
         pick(RoutineEditorTags.EXERCISE_REPLACE)
+        inDialog("Trocar o exercício?").assertIsDisplayed()
         inDialog("Trocar").performClick()
         waitForIdle()
         pickerRow("squat").performClick()
         waitForIdle()
         assertEquals("replaceRoutineExercise:e1,squat", fake.calls.last())
-        assertEquals(2, fake.calls.size)
+        assertEquals(3, fake.calls.size)
     }
 
     @Test

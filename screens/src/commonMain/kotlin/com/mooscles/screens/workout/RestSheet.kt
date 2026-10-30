@@ -170,6 +170,7 @@ internal fun RestSheet(
     onSave: (seconds: Int) -> Unit,
     onStartNow: ((seconds: Int) -> Unit)?,
     onDismiss: () -> Unit,
+    note: String = stringResource(Res.string.workout_rest_note),
 ) {
     val draft = rememberSaveable(key, saver = RestDraft.Saver) { RestDraft(restSeconds, restSeconds) }
     LaunchedEffect(draft, restSeconds) { draft.echo(restSeconds) }
@@ -221,7 +222,7 @@ internal fun RestSheet(
                 }
             }
             MText(
-                stringResource(Res.string.workout_rest_note),
+                note,
                 MTheme.type.bodyMd,
                 color = MTheme.colors.textSecondary,
                 modifier = Modifier.fillMaxWidth(),

@@ -1,6 +1,5 @@
 package com.mooscles.screens.routines
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -38,7 +38,7 @@ import com.mooscles.screens.format.targetLine
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.editor_exercise_more
 import com.mooscles.screens.resources.editor_rest_chip
-import com.mooscles.screens.resources.editor_set_warmup
+import com.mooscles.screens.resources.editor_set_warmup_short
 import com.mooscles.screens.resources.workout_card_meta_short
 import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.screens.workout.unitSymbol
@@ -131,24 +131,24 @@ private fun RoutineExerciseHeader(
     val name = exerciseName(entry.exercise)
     val meta = stringResource(Res.string.workout_card_meta_short, muscleLabel(entry.exercise.muscle), equipmentLabel(entry.exercise.equipment))
     val media = rememberExerciseMedia(entry.exercise, thumbnail = true)
-    // The gap under a collapsed card is outside the lifted surface: [reorderItem] is on the header, not on this box.
-    Box(if (collapsed) Modifier.padding(bottom = MTheme.space.s3) else Modifier) {
-        ExerciseCardHeader(
-            name = name,
-            meta = meta,
-            media = media,
-            equipmentIcon = EquipmentIcons.forEquipment(entry.exercise.equipment),
-            onMenu = { callbacks.onMenu(entry) },
-            collapsed = collapsed,
-            onToggle = null,
-            modifier = Modifier.reorderItem(reorder, entry.id).testTag(RoutineEditorTags.header(entry.id)),
-            support = { RestChip(entry, callbacks) },
-            handle = { ReorderHandle(reorder, entry.id, name, Modifier.testTag(RoutineEditorTags.handle(entry.id))) },
-            subline = targetLine(plannedTarget(entry), pounds),
-            menuTag = RoutineEditorTags.menu(entry.id),
-            menuLabel = stringResource(Res.string.editor_exercise_more, name),
-        )
-    }
+    // [reorderItem] is on the header, the lazy item's root, so the lifted card is raised above its siblings (zIndex);
+    // the gap under a collapsed card comes from the list's spacing.
+    val target = remember(entry.setTargets) { plannedTarget(entry) }
+    ExerciseCardHeader(
+        name = name,
+        meta = meta,
+        media = media,
+        equipmentIcon = EquipmentIcons.forEquipment(entry.exercise.equipment),
+        onMenu = { callbacks.onMenu(entry) },
+        collapsed = collapsed,
+        onToggle = null,
+        modifier = Modifier.reorderItem(reorder, entry.id).testTag(RoutineEditorTags.header(entry.id)),
+        support = { RestChip(entry, callbacks) },
+        handle = { ReorderHandle(reorder, entry.id, name, Modifier.testTag(RoutineEditorTags.handle(entry.id))) },
+        subline = targetLine(target, pounds),
+        menuTag = RoutineEditorTags.menu(entry.id),
+        menuLabel = stringResource(Res.string.editor_exercise_more, name),
+    )
 }
 
 /** The "Rest 2:00" chip: a small secondary button that opens the entry's rest sheet. */
@@ -171,7 +171,7 @@ private fun RowScope.RestChip(entry: PlannedExerciseUi, callbacks: RoutineExerci
 @Composable
 private fun PlannedSetLine(set: RoutineSetUi, number: Int, pounds: Boolean) {
     val colors = MTheme.colors
-    val label = if (set.warmup) stringResource(Res.string.editor_set_warmup) else number.toString()
+    val label = if (set.warmup) stringResource(Res.string.editor_set_warmup_short) else number.toString()
     val load = set.weightKg?.takeIf { it != 0.0 }?.let {
         MoosclesNumbers.weight(MoosclesNumbers.plain(WeightUnits.fromKg(it, pounds)), unitSymbol(pounds), currentNumberLocale())
     } ?: BLANK

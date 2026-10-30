@@ -18,9 +18,10 @@
     </plurals>
     <string name="editor_remove_confirm">Remove</string>
     <string name="editor_replace_title">Replace the exercise?</string>
-    <string name="editor_replace_body">Its manual targets go back to following your record.</string>
+    <string name="editor_replace_body">Its manual targets go back to following your record and its warm-ups are emptied.</string>
     <string name="editor_replace_confirm">Replace</string>
     <string name="editor_exercise_more">Options for %1$s</string>
     <!-- The label of a planned warm-up set in the set list (the working sets are numbered). -->
-    <string name="editor_set_warmup">W</string>
+    <string name="editor_set_warmup_short">W</string>
+    <string name="editor_rest_note">Applies to workouts you start from this routine.</string>
 </resources>

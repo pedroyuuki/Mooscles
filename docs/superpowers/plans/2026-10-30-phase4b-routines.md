@@ -438,6 +438,8 @@ Regra: um teste cujo alvo continua no código fica; um cujo alvo sai é portado 
 - [ ] **Step 4:** O comando do Step 2 verde; `StringsParityTest`; `check-design-tokens` limpo.
 - [ ] **Step 5:** Subir `MIN_SCREENS_IOS_TESTS`. Commit `screens: routine editor with drag-and-drop and multi-select add`.
 
+**Notas datadas (2026-10-30, Task 13):** a linha de alvo fica na `subline` do cabeçalho, como no card do treino (D16); a mídia do cabeçalho mantém o tamanho do `ExerciseCardHeader` compartilhado, igual ao card do treino, e não os 56 dp da linha 296 da spec; os textos moram em `strings_editor.xml`, e as chaves do rótulo curto da série de aquecimento são `editor_set_warmup_short` ("W"/"A"), deixando `editor_set_warmup` para a Task 14; o toast da cópia tem "Abrir" por `onOpenRoutine: ((String) -> Unit)? = null` no `RoutineEditorRoute`, que a Task 15 liga; trocar pergunta também com aquecimento preenchido; a `RestSheet` ganhou o parâmetro `note`. `ExerciseCardHeader` ganhou `onToggle` nulo e `menuTag`/`menuLabel`.
+
 ### Task 14: Editor de rotina: séries planejadas
 
 **Revisão:** Opus completa (edição, desfazer, rascunhos).

@@ -446,7 +446,8 @@ jobs:
           # Merged Task 5 (+1 over 340): 362 + 1 = 363.
           # Phase 4B task 10: SizesTimingElevationTest +1 (commonTest). 363 + 1 = 364.
           # Phase 4B task 11: SizesTimingElevationTest +1 (commonTest, mediaStripIsFiftySix). 364 + 1 = 365.
-          MIN_DS_IOS_TESTS: 365
+          # Phase 4B task 13 fix round 1: ExerciseCardTest +1 (headerWithoutToggleIsNotAButtonAndNamesItsMenu). 365 + 1 = 366.
+          MIN_DS_IOS_TESTS: 366
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -529,7 +530,9 @@ jobs:
           # Phase 4B task 13: RoutineEditorScreenTest 22 (uiTest: the 18 of the brief, loadingDoesNotCallOnGone,
           # startOfTheSourceRoutineResumes, menusScrollAtTwoXInAShortWindow, addWaitReleasesOnItsOwnFailureAndAtTheCap);
           # RestSheetTest 1 (withoutStartNowTheSheetHasNoButtonAndStillSaves). 538 + 23 = 561.
-          MIN_SCREENS_IOS_TESTS: 561
+          # Phase 4B task 13 fix round 1: RoutineEditorScreenTest +2 (liftedCardIsRaisedAmongTheListsItems,
+          # duplicatedToastOpensTheCopyWhenTheHostCanOpenIt). 561 + 2 = 563.
+          MIN_SCREENS_IOS_TESTS: 563
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

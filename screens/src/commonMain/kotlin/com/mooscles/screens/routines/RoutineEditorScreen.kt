@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -31,7 +33,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.mooscles.data.newId
 import com.mooscles.designsystem.components.EmptyState
 import com.mooscles.designsystem.components.MBottomSheet
@@ -44,6 +49,7 @@ import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.MToastHost
 import com.mooscles.designsystem.components.MToastHostState
 import com.mooscles.designsystem.components.MToastKind
+import com.mooscles.designsystem.components.MToastResult
 import com.mooscles.designsystem.components.Skeleton
 import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.pluralCount
@@ -66,6 +72,7 @@ import com.mooscles.screens.resources.editor_remove_body
 import com.mooscles.screens.resources.editor_remove_confirm
 import com.mooscles.screens.resources.editor_remove_exercise
 import com.mooscles.screens.resources.editor_remove_title
+import com.mooscles.screens.resources.editor_rest_note
 import com.mooscles.screens.resources.editor_replace
 import com.mooscles.screens.resources.editor_replace_body
 import com.mooscles.screens.resources.editor_replace_confirm
@@ -77,6 +84,7 @@ import com.mooscles.screens.resources.routines_duplicate
 import com.mooscles.screens.resources.routines_duplicated
 import com.mooscles.screens.resources.routines_move_to_folder
 import com.mooscles.screens.resources.routines_name_field
+import com.mooscles.screens.resources.routines_open
 import com.mooscles.screens.resources.routines_rename
 import com.mooscles.screens.resources.routines_resume
 import com.mooscles.screens.workout.ExercisePickerSheet
@@ -149,10 +157,16 @@ private enum class WaitKind { COPY, ADD }
 
 /**
  * A command whose echo the screen waits for: [subject] is the id its failures are counted under, [failures] the count
- * at the send, and [expected] what the state must hold to show the echo (a copy: the routine's id; an addition: this
- * many exercises in the routine).
+ * at the send, and what the state must hold to show the echo: a copy, the routine with id [subject]; an addition,
+ * [expected] entries whose ids are not in [before], the entry ids at the send.
  */
-private class EditorWait(val kind: WaitKind, val subject: String, val failures: Int, val expected: Int = 0)
+private class EditorWait(
+    val kind: WaitKind,
+    val subject: String,
+    val failures: Int,
+    val expected: Int = 0,
+    val before: Set<String> = emptySet(),
+)
 
 /**
  * The routine editor (spec "Editor de rotina"): the bar holds "Back" and the routine's options (Rename, Duplicate,
@@ -189,6 +203,7 @@ fun RoutineEditorRoute(
     onOpenWorkout: () -> Unit,
     onExerciseInfo: (exerciseId: String) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenRoutine: ((routineId: String) -> Unit)? = null,
 ) {
     val routine = remember(state.routines, routineId) { state.routines.firstOrNull { it.id == routineId } }
     val entries = routine?.exercises.orEmpty()
@@ -223,6 +238,9 @@ fun RoutineEditorRoute(
     val host = remember { MToastHostState() }
     val toastScope = rememberCoroutineScope()
     val duplicatedText = stringResource(Res.string.routines_duplicated)
+    val openText = stringResource(Res.string.routines_open)
+    val openRoutine by rememberUpdatedState(onOpenRoutine)
+    val currentActions by rememberUpdatedState(actions)
     val failedText = uiErrorText(UiError.SAVE_FAILED)
     val echoWaitMs = MTheme.timing.saveEchoWait
 
@@ -234,11 +252,20 @@ fun RoutineEditorRoute(
         val pending = wait ?: return@LaunchedEffect
         val echoed = when (pending.kind) {
             WaitKind.COPY -> state.routines.any { it.id == pending.subject }
-            WaitKind.ADD -> entries.size >= pending.expected
+            WaitKind.ADD -> entries.count { it.id !in pending.before } >= pending.expected
         }
         if (routine == null || echoed) {
             wait = null
-            if (echoed && pending.kind == WaitKind.COPY) toastScope.launch { host.show(duplicatedText, MToastKind.Info) }
+            if (echoed && pending.kind == WaitKind.COPY) {
+                toastScope.launch {
+                    val open = openRoutine
+                    if (open == null) {
+                        host.show(duplicatedText, MToastKind.Info)
+                    } else if (host.show(duplicatedText, MToastKind.Info, openText) == MToastResult.ActionPerformed) {
+                        open(pending.subject)
+                    }
+                }
+            }
         } else if ((state.subjectFailures[pending.subject] ?: 0) > pending.failures) {
             wait = null
         }
@@ -253,6 +280,13 @@ fun RoutineEditorRoute(
         }
     }
 
+    val callbacks = remember {
+        RoutineExerciseCallbacks(
+            onMenu = { menuFor = it.id },
+            onRest = { restFor = it.id },
+            onAddSet = { currentActions.addRoutineSet(it.id) },
+        )
+    }
     val space = MTheme.space
     Box(modifier.fillMaxSize().background(MTheme.colors.bgBase)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -275,6 +309,9 @@ fun RoutineEditorRoute(
                 Modifier.weight(1f).fillMaxWidth().testTag(RoutineEditorTag),
                 state = listState,
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s2, bottom = space.s4),
+                // While one is dragged the cards are headers alone and the list spaces them (the lifted header is the
+                // lazy item's root, so nothing wraps it); open, the segments of a card touch.
+                verticalArrangement = if (reorder.dragging != null) Arrangement.spacedBy(space.s3) else Arrangement.Top,
             ) {
                 if (routine == null) {
                     item(key = KEY_SKELETON) { EditorSkeleton() }
@@ -297,11 +334,7 @@ fun RoutineEditorRoute(
                         // One item per exercise while one is dragged (decision 14), so the reorderable items touch.
                         collapsed = reorder.dragging != null,
                         pounds = pounds,
-                        callbacks = RoutineExerciseCallbacks(
-                            onMenu = { menuFor = it.id },
-                            onRest = { restFor = it.id },
-                            onAddSet = { actions.addRoutineSet(it.id) },
-                        ),
+                        callbacks = callbacks,
                     )
                 }
                 item(key = KEY_ADD) {
@@ -312,7 +345,7 @@ fun RoutineEditorRoute(
                         variant = MButtonVariant.Secondary,
                         size = MButtonSize.L,
                         icon = MIcons.Plus,
-                        loading = wait?.kind == WaitKind.ADD,
+                        loading = wait != null,
                     )
                 }
             }
@@ -414,7 +447,7 @@ fun RoutineEditorRoute(
                     if (picked.isNotEmpty() && wait == null) {
                         wait = EditorWait(
                             WaitKind.ADD, routine.id, state.subjectFailures[routine.id] ?: 0,
-                            expected = entries.size + picked.size,
+                            expected = picked.size, before = entries.mapTo(HashSet()) { it.id },
                         )
                         actions.addRoutineExercises(routine.id, picked.map { it.id })
                     }
@@ -479,7 +512,7 @@ private fun ExerciseOverlays(
     menuFor?.let { id ->
         val entry = entries[id]
         if (entry == null) {
-            LaunchedEffect(id) { onMenuFor(null) }
+            if (!state.loading) LaunchedEffect(id) { onMenuFor(null) }
         } else {
             val order = reorder.order
             val moveTo = reorderMover(reorder, id, exerciseName(entry.exercise))
@@ -489,9 +522,13 @@ private fun ExerciseOverlays(
                 count = order.size,
                 onReplace = {
                     onMenuFor(null)
-                    // Manual targets (a working set that no longer follows the record) are lost by a replacement;
-                    // warm-ups stay warm-ups, so there is nothing else to ask about.
-                    if (entry.setTargets.any { !it.warmup && !it.inherited }) onConfirmReplace(id) else onReplacing(id)
+                    // A replacement sends manual working sets back to following the record and empties every warm-up
+                    // (they stay warm-ups, but without values): ask when either would lose something.
+                    if (entry.setTargets.any { if (it.warmup) it.reps > 0 || it.weightKg != null else !it.inherited }) {
+                        onConfirmReplace(id)
+                    } else {
+                        onReplacing(id)
+                    }
                 },
                 onAbout = {
                     onMenuFor(null)
@@ -512,7 +549,7 @@ private fun ExerciseOverlays(
     restFor?.let { id ->
         val entry = entries[id]
         if (entry == null) {
-            LaunchedEffect(id) { onRestFor(null) }
+            if (!state.loading) LaunchedEffect(id) { onRestFor(null) }
         } else {
             RestSheet(
                 exerciseName = exerciseName(entry.exercise),
@@ -520,6 +557,7 @@ private fun ExerciseOverlays(
                 key = entry.id,
                 onSave = { actions.updateRoutineExerciseRest(entry.id, it) },
                 onStartNow = null,
+                note = stringResource(Res.string.editor_rest_note),
                 onDismiss = { onRestFor(null) },
             )
         }
@@ -527,7 +565,7 @@ private fun ExerciseOverlays(
     removing?.let { id ->
         val entry = entries[id]
         if (entry == null) {
-            LaunchedEffect(id) { onRemoving(null) }
+            if (!state.loading) LaunchedEffect(id) { onRemoving(null) }
         } else {
             MDialog(
                 title = stringResource(Res.string.editor_remove_title, exerciseName(entry.exercise)),
@@ -546,7 +584,7 @@ private fun ExerciseOverlays(
     confirmReplace?.let { id ->
         val entry = entries[id]
         if (entry == null) {
-            LaunchedEffect(id) { onConfirmReplace(null) }
+            if (!state.loading) LaunchedEffect(id) { onConfirmReplace(null) }
         } else {
             MDialog(
                 title = stringResource(Res.string.editor_replace_title),
@@ -565,7 +603,7 @@ private fun ExerciseOverlays(
     replacing?.let { id ->
         val entry = entries[id]
         if (entry == null) {
-            LaunchedEffect(id) { onReplacing(null) }
+            if (!state.loading) LaunchedEffect(id) { onReplacing(null) }
         } else {
             ExercisePickerSheet(
                 exercises = state.exercises,
@@ -591,6 +629,7 @@ private fun RoutineName(name: String, onRename: () -> Unit) {
             .fillMaxWidth()
             .padding(bottom = MTheme.space.s3)
             .mFocusRing(shape, source)
+            .semantics { heading() }
             .clickable(
                 interactionSource = source,
                 indication = null,
@@ -598,7 +637,8 @@ private fun RoutineName(name: String, onRename: () -> Unit) {
                 onClickLabel = stringResource(Res.string.routines_rename),
                 onClick = onRename,
             )
-            .padding(vertical = MTheme.space.s2),
+            .heightIn(min = MTheme.targets.min)
+            .wrapContentHeight(Alignment.CenterVertically),
     )
 }
 

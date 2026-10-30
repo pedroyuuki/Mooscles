@@ -27,6 +27,8 @@ import kotlin.test.assertIs
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -69,6 +71,25 @@ class ExerciseCardTest {
         onNodeWithTag(ExerciseEquipmentIconTag, useUnmergedTree = true).assertExists()
         onNodeWithTag(ExerciseOfflineIconTag, useUnmergedTree = true).assertDoesNotExist()
         onNodeWithTag(ExerciseOfflineTextTag, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun headerWithoutToggleIsNotAButtonAndNamesItsMenu() = runComposeUiTest {
+        withTheme {
+            ProvideAppLocale("en") {
+                ExerciseCardHeader(
+                    "Bench press", "Chest · Barbell", ExerciseMedia.None, MIcons.Barbell, onMenu = {}, collapsed = false,
+                    onToggle = null, menuTag = "custom-menu", menuLabel = "Options for Bench press",
+                )
+            }
+        }
+        waitForIdle()
+        // No toggle: no "Collapse" action for a screen reader and no toggle node, only the menu button.
+        onNodeWithTag(ExerciseHeaderToggleTag).assertDoesNotExist()
+        onNodeWithTag("custom-menu").assertContentDescriptionEquals("Options for Bench press")
+        onNodeWithTag(ExerciseMenuTag).assertDoesNotExist()
+        onAllNodes(hasClickAction()).assertCountEquals(1)
     }
 
     @OptIn(ExperimentalTestApi::class)
