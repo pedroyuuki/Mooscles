@@ -20,5 +20,6 @@ O run de `739a800` estava verde, então a alternativa do F22 (`4f41792`, run `40
 | Task | Commit medido | APK debug local (`:app:clean :app:assembleDebug`, Mac) | Crescimento sobre a base do CI | Parte da task |
 | --- | --- | ---: | ---: | ---: |
 | 6 (mapa corporal e licenças) | `lane/phase4a-t6` sobre `d4c77c7` | 23.821.426 bytes | 169.083 (limite 629.146, `check-apk-budget.ps1` ok) | +86.995 bytes sobre `d4c77c7` medido do mesmo jeito (23.734.431) |
+| 22 (verificação final) | `feat/phase4a-library` em `f4032f9` | 24.102.511 bytes | 450.168 (limite 629.146, `check-apk-budget.ps1` ok) | a 4A inteira; ver [apk.md](apk.md) |
 
 Indicativo: assinatura local, não a do CI (ver acima).
