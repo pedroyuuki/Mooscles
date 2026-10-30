@@ -28,6 +28,9 @@ class AndroidExercisePhotoStore(
 ) : ExercisePhotoStore {
     private val root get() = File(context.filesDir, DIRECTORY)
     private val gate = Mutex()
+    /** Renames [from] over [to]; a test replaces it to fail one rename. */
+    @androidx.annotation.VisibleForTesting
+    internal var moveFile: (File, File) -> Unit = ::atomicMove
     private val revisions = MutableStateFlow(0L)
     override val revision: StateFlow<Long> = revisions.asStateFlow()
 
@@ -42,22 +45,28 @@ class AndroidExercisePhotoStore(
         val processed = PhotoProcessing.process({ context.contentResolver.openInputStream(uri) ?: throw IOException("No stream") }, Build.VERSION.SDK_INT)
             ?: return@withContext false
         gate.withLock {
+            val dir = drafts()
+            var tmpFull: File? = null
+            var tmpThumb: File? = null
             try {
-                val dir = drafts()
-                val tmpFull = tmp(dir).also { it.writeBytes(processed.full) }
-                val tmpThumb = tmp(File(dir, THUMBS)).also { it.writeBytes(processed.thumb) }
-                move(tmpThumb, thumb(dir, draftKey))
-                move(tmpFull, full(dir, draftKey))
+                tmpFull = tmp(dir).also { it.writeBytes(processed.full) }
+                tmpThumb = tmp(File(dir, THUMBS)).also { it.writeBytes(processed.thumb) }
+                // The photo first, the thumbnail (derived from it) second.
+                moveFile(tmpFull, full(dir, draftKey))
+                moveFile(tmpThumb, thumb(dir, draftKey))
                 bump()
                 true
             } catch (_: IOException) {
                 false
+            } finally {
+                tmpFull?.delete()
+                tmpThumb?.delete()
             }
         }
     }
 
     override suspend fun draft(draftKey: String, thumbnail: Boolean): PhotoFile? = withContext(io) {
-        if (!safe(draftKey)) null else load(if (thumbnail) thumb(drafts(), draftKey) else full(drafts(), draftKey))
+        if (!safe(draftKey)) null else loadPhoto(drafts(), draftKey, thumbnail)
     }
 
     override suspend fun commit(draftKey: String, exerciseId: String): Boolean = withContext(io) {
@@ -70,11 +79,33 @@ class AndroidExercisePhotoStore(
             val targetThumb = thumb(root, exerciseId)
             val oldFull = targetFull.takeIf { it.isFile }?.lastModified()
             val oldThumb = targetThumb.takeIf { it.isFile }?.lastModified()
+            // The old photo is copied aside, so a failed second rename can put the old pair back whole.
+            var backup: File? = null
+            var movedFull = false
             try {
-                move(draftThumb, targetThumb)
-                move(draftFull, targetFull)
+                if (targetFull.isFile) {
+                    backup = tmp(root).also { Files.copy(targetFull.toPath(), it.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES) }
+                }
+                // The photo first, the thumbnail (derived from it) second: a reader between the two renames sees
+                // the new photo with the old thumbnail at worst, never a thumbnail for a photo that is not there.
+                moveFile(draftFull, targetFull)
+                movedFull = true
+                moveFile(draftThumb, targetThumb)
             } catch (_: IOException) {
+                var restored = !movedFull
+                if (movedFull) {
+                    restored = try {
+                        // Back to the draft (kept whole for a retry), then the old photo over the new one.
+                        moveFile(targetFull, draftFull)
+                        backup?.let { moveFile(it, targetFull) }
+                        true
+                    } catch (_: IOException) { false }
+                }
+                // Revision tells the truth: it moves if the rollback itself did not complete.
+                if (!restored) bump()
                 return@withLock false
+            } finally {
+                backup?.delete()
             }
             // The version is the modified time; make sure a replacement never reuses the older value.
             newer(targetFull, oldFull)
@@ -95,7 +126,7 @@ class AndroidExercisePhotoStore(
     }
 
     override suspend fun read(exerciseId: String, thumbnail: Boolean): PhotoFile? = withContext(io) {
-        if (!safe(exerciseId)) null else load(if (thumbnail) thumb(root, exerciseId) else full(root, exerciseId))
+        if (!safe(exerciseId)) null else loadPhoto(root, exerciseId, thumbnail)
     }
 
     override suspend fun remove(exerciseId: String) {
@@ -117,6 +148,9 @@ class AndroidExercisePhotoStore(
                     if (file.name.removeSuffix(SUFFIX) !in customExerciseIds && file.delete()) changed = true
                 }
             }
+            // A thumbnail whose photo is gone (an interrupted commit) is not shown and is not kept.
+            File(root, THUMBS).listFiles { file -> file.isFile && file.name.endsWith(SUFFIX) && !File(root, file.name).isFile }
+                ?.forEach { if (it.delete()) changed = true }
             for (dir in listOf(drafts(), File(drafts(), THUMBS))) {
                 dir.listFiles { file -> file.isFile && file.name.endsWith(SUFFIX) && file.lastModified() < cutoff }
                     ?.forEach { if (it.delete()) changed = true }
@@ -130,8 +164,14 @@ class AndroidExercisePhotoStore(
         }
     }
 
+    /** A thumbnail only counts while its photo exists: the photo is the truth, the thumbnail derives from it. */
+    private fun loadPhoto(dir: File, key: String, thumbnail: Boolean): PhotoFile? =
+        if (!full(dir, key).isFile) null else load(if (thumbnail) thumb(dir, key) else full(dir, key))
+
     private fun load(file: File): PhotoFile? = try {
-        if (file.isFile) PhotoFile(file.readBytes(), file.lastModified()) else null
+        // Version first: a commit between the two reads yields new bytes under an old version, which the next read fixes.
+        val version = file.lastModified()
+        if (file.isFile) PhotoFile(file.readBytes(), version) else null
     } catch (_: IOException) {
         null
     }
@@ -141,14 +181,10 @@ class AndroidExercisePhotoStore(
         return File.createTempFile("photo", TEMP, dir)
     }
 
-    private fun move(from: File, to: File) {
+    /** Keeps [from] on failure: a draft must survive a failed commit. */
+    private fun atomicMove(from: File, to: File) {
         to.parentFile?.mkdirs()
-        try {
-            Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } catch (e: IOException) {
-            from.delete()
-            throw e
-        }
+        Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
 
     /** Makes [file]'s modified time later than [previous], so two commits in one clock tick still differ. */

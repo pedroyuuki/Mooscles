@@ -228,7 +228,9 @@ jobs:
           # (:shared commonTest) WorkoutPresentationTest +10, UiErrorsTest +1. 975 + 24 = 999.
           # Phase 4B task 7 (:app, sdk [26, 35] runs each method twice): ExercisePhotoStoreHostTest 13 x 2 = 26,
           # PhotoManifestHostTest 3, AppViewModelPhotosHostTest 4. 999 + 33 = 1032.
-          MIN_HOST_TESTS: 1032
+          # Phase 4B task 7 fix round 1 (:app, x2 for sdk 26 and 35): ExercisePhotoStoreHostTest +5 methods
+          # (every EXIF orientation, transparent PNG, throwing EXIF block, failed second rename, thumbnail without photo). 1032 + 10 = 1042.
+          MIN_HOST_TESTS: 1042
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

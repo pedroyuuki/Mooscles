@@ -51,9 +51,8 @@ internal object PhotoProcessing {
             ?: if (sdk >= Build.VERSION_CODES.Q && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) decodeWithImageDecoder(input) else null
     } catch (_: IOException) {
         null
-    } catch (_: SecurityException) {
-        null
-    } catch (_: IllegalArgumentException) {
+    } catch (_: RuntimeException) {
+        // Malformed input can make the platform decoders throw unchecked exceptions; it is a photo that cannot be read.
         null
     } catch (_: OutOfMemoryError) {
         null
@@ -84,6 +83,9 @@ internal object PhotoProcessing {
         // From the stream, not a file descriptor: the descriptor reads nothing more on API 28.
         input().use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
     } catch (_: IOException) {
+        ExifInterface.ORIENTATION_NORMAL
+    } catch (_: RuntimeException) {
+        // A malformed EXIF block makes the framework class throw unchecked exceptions on API 26-28: show it as is.
         ExifInterface.ORIENTATION_NORMAL
     }
 

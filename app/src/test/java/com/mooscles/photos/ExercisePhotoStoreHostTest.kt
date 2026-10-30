@@ -181,4 +181,76 @@ class ExercisePhotoStoreHostTest {
         assertFalse(store.commit("d1", "../../escape"))
         assertNull(store.read("a/b", false))
     }
+
+    @Test fun everyExifOrientationComesOutUpright() = runBlocking {
+        for (orientation in 1..8) {
+            assertTrue(store.stage("o$orientation", source("o$orientation.jpg", 1200, 900, orientation)))
+            val photo = store.draft("o$orientation", false)!!.bytes
+            assertTrue("orientation $orientation", PhotoTestImages.upright(photo))
+            assertEquals("orientation $orientation", if (orientation >= 5) 810 to 1080 else 1080 to 810, size(photo))
+        }
+    }
+
+    @Test fun transparentPngComesOutWithAWhiteBackground() = runBlocking {
+        val png = Uri.fromFile(PhotoTestImages.write(File(sources, "alpha.png"), 1200, 900, 1, png = true)).toString()
+        assertTrue(store.stage("png", png))
+        val center = PhotoTestImages.center(store.draft("png", false)!!.bytes)
+        // JPEG is lossy: near white, not exactly white.
+        for (channel in listOf(android.graphics.Color.red(center), android.graphics.Color.green(center), android.graphics.Color.blue(center))) {
+            assertTrue("centre $center", channel >= 245)
+        }
+    }
+
+    @Test fun anExifBlockThatThrowsIsShownAsIs() {
+        val file = File(sources, "e.jpg").also { PhotoTestImages.write(it, 1200, 900, 6) }
+        var opens = 0
+        // Pass 1 is the bounds, pass 2 the EXIF: the second one throws an unchecked exception when read.
+        val processed = PhotoProcessing.process({
+            if (++opens == 2) object : java.io.InputStream() { override fun read(): Int = throw IllegalStateException("malformed") }
+            else file.inputStream()
+        }, android.os.Build.VERSION.SDK_INT)
+        // Chosen behaviour: the orientation falls back to 1 and the photo is still saved (here left sideways).
+        assertNotNull(processed)
+        assertEquals(1080 to 810, size(processed!!.full))
+    }
+
+    @Test fun failedSecondRenameKeepsTheOldPairAndTheDraft() = runBlocking {
+        assertTrue(store.stage("a", source("a.jpg", orientation = 1)))
+        assertTrue(store.commit("a", "ex"))
+        val oldFull = store.read("ex", false)!!
+        val oldThumb = store.read("ex", true)!!
+        assertTrue(store.stage("b", source("b.jpg", orientation = 3)))
+        val draftBytes = store.draft("b", false)!!.bytes
+        val revision = store.revision.value
+        store.moveFile = { from, to ->
+            if (to.parentFile!!.name == "thumbs" && to.parentFile!!.parentFile == root) throw java.io.IOException("disk full")
+            to.parentFile?.mkdirs()
+            java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+        assertFalse(store.commit("b", "ex"))
+        // The reader sees the old pair, whole; the draft is still there for a retry; nothing changed, so no bump.
+        assertArrayEquals(oldFull.bytes, store.read("ex", false)!!.bytes)
+        assertArrayEquals(oldThumb.bytes, store.read("ex", true)!!.bytes)
+        assertEquals(oldFull.version, store.read("ex", false)!!.version)
+        assertArrayEquals(draftBytes, store.draft("b", false)!!.bytes)
+        assertNotNull(store.draft("b", true))
+        assertEquals(revision, store.revision.value)
+        assertEquals(emptyList<File>(), root.walkTopDown().filter { it.isFile && it.name.endsWith(".tmp") }.toList())
+        // A retry once the disk has room.
+        store.moveFile = { from, to ->
+            to.parentFile?.mkdirs()
+            java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+        assertTrue(store.commit("b", "ex"))
+        assertArrayEquals(draftBytes, store.read("ex", false)!!.bytes)
+    }
+
+    @Test fun aThumbnailWithoutItsPhotoIsHiddenAndSwept() = runBlocking {
+        assertTrue(store.stage("a", source("a.jpg")))
+        assertTrue(store.commit("a", "ex"))
+        File(root, "ex.jpg").delete()
+        assertNull(store.read("ex", true))
+        store.removeOrphans(setOf("ex"))
+        assertFalse(File(root, "thumbs/ex.jpg").exists())
+    }
 }
