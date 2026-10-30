@@ -42,7 +42,8 @@ object ExerciseSearch {
         "catalog_plate_hip_thrust" to listOf("Glute drive machine", "Plate-loaded glute drive")
     )
 
-    private val catalogNames by lazy { ExerciseCatalog.exercises.associate { it.id to it.name } }
+    // Catalog id -> English name; also read by ExerciseNames and ExerciseSearchIndex.
+    internal val catalogNames: Map<String, String> by lazy { ExerciseCatalog.exercises.associate { it.id to it.name } }
     private val equivalents = listOf(
         Regex("\\bdb\\b") to "dumbbell",
         Regex("\\bbb\\b") to "barbell",

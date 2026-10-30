@@ -45,10 +45,6 @@ class ExerciseSearchIndex private constructor(
     companion object {
         private const val CATALOG_PREFIX = "catalog_"
 
-        private val catalogNames: Map<String, String> by lazy {
-            ExerciseCatalog.exercises.associate { it.id to it.name }
-        }
-
         fun build(entries: List<SearchEntry>): ExerciseSearchIndex =
             ExerciseSearchIndex(entries.map(SearchEntry::id), entries.map(::candidatesOf))
 
@@ -58,7 +54,7 @@ class ExerciseSearchIndex private constructor(
             } else {
                 null
             }
-            val names = listOfNotNull(entry.name, catalogNames[entry.id], portugueseName) +
+            val names = listOfNotNull(entry.name, ExerciseSearch.catalogNames[entry.id], portugueseName) +
                 ExerciseSearch.aliases[entry.id].orEmpty() +
                 ExerciseAliases.portuguese[entry.id].orEmpty()
             val metadata = (listOf(entry.muscle, entry.equipment) + portugueseMetadata(entry)).joinToString(" ")

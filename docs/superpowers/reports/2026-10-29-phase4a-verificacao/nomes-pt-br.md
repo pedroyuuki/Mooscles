@@ -30,15 +30,15 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 24 | `barbell_overhead_squat` | Barbell overhead squat | Agachamento overhead com barra |  |
 | 25 | `barbell_landmine_squat` | Landmine squat | Agachamento no landmine |  |
 | 26 | `barbell_split_squat` | Barbell split squat | Afundo com barra | Afundo estático com barra |
-| 27 | `barbell_squat_bulgarian` | Barbell Bulgarian split squat | Agachamento búlgaro com barra |  |
+| 27 | `barbell_squat_bulgarian` | Barbell Bulgarian split squat | Agachamento búlgaro com barra | Afundo búlgaro com barra |
 | 28 | `barbell_reverse_lunge` | Barbell reverse lunge | Afundo reverso com barra |  |
 | 29 | `barbell_walking_lunge` | Barbell walking lunge | Passada com barra | Afundo caminhando com barra |
 | 30 | `barbell_deadlift_conventional` | Conventional barbell deadlift | Levantamento terra convencional | Terra; Terra convencional |
 | 31 | `barbell_deadlift_sumo` | Sumo barbell deadlift | Levantamento terra sumô com barra | Terra sumô |
-| 32 | `barbell_deadlift_romanian` | Barbell Romanian deadlift | Levantamento terra romeno com barra | RDL; Terra romeno |
+| 32 | `barbell_deadlift_romanian` | Barbell Romanian deadlift | Levantamento terra romeno com barra | RDL; Terra romeno; Stiff |
 | 33 | `barbell_deadlift_stiff_leg` | Stiff-leg barbell deadlift | Stiff com barra | Stiff; Levantamento terra com pernas estendidas |
 | 34 | `barbell_good_morning` | Barbell good morning | Good morning com barra | Bom dia |
-| 35 | `barbell_hip_thrust` | Barbell hip thrust | Elevação pélvica com barra | Elevação pélvica |
+| 35 | `barbell_hip_thrust` | Barbell hip thrust | Elevação pélvica com barra | Elevação pélvica; Elevação de quadril com barra |
 | 36 | `barbell_glute_bridge` | Barbell glute bridge | Ponte glútea com barra |  |
 | 37 | `barbell_calf_raise_standing` | Standing barbell calf raise | Panturrilha em pé com barra | Gêmeos em pé com barra |
 | 38 | `barbell_curl` | Standing barbell curl | Rosca direta com barra | Rosca direta; Rosca bíceps com barra |
@@ -73,12 +73,12 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 67 | `dumbbell_raise_lateral` | Dumbbell lateral raise | Elevação lateral com halteres | Elevação lateral |
 | 68 | `dumbbell_raise_lateral_seated` | Seated dumbbell lateral raise | Elevação lateral sentado com halteres |  |
 | 69 | `dumbbell_raise_front` | Dumbbell front raise | Elevação frontal com halteres | Elevação frontal |
-| 70 | `dumbbell_fly_reverse` | Bent-over dumbbell reverse fly | Crucifixo inverso curvado com halteres | Crucifixo invertido com halteres |
-| 71 | `dumbbell_fly_reverse_incline` | Incline-bench dumbbell reverse fly | Crucifixo inverso no banco inclinado |  |
+| 70 | `dumbbell_fly_reverse` | Bent-over dumbbell reverse fly | Crucifixo inverso curvado com halteres | Crucifixo invertido com halteres; Deltoide posterior com halteres; Posterior de ombro com halteres |
+| 71 | `dumbbell_fly_reverse_incline` | Incline-bench dumbbell reverse fly | Crucifixo inverso no banco inclinado | Deltoide posterior no banco inclinado; Posterior de ombro no banco inclinado |
 | 72 | `dumbbell_upright_row` | Dumbbell upright row | Remada alta com halteres |  |
 | 73 | `dumbbell_squat_goblet` | Dumbbell goblet squat | Agachamento goblet com halter |  |
 | 74 | `dumbbell_squat_front` | Double-dumbbell front squat | Agachamento frontal com halteres |  |
-| 75 | `dumbbell_squat_bulgarian` | Dumbbell Bulgarian split squat | Agachamento búlgaro com halteres | Búlgaro; Búlgaro com halteres |
+| 75 | `dumbbell_squat_bulgarian` | Dumbbell Bulgarian split squat | Agachamento búlgaro com halteres | Búlgaro; Búlgaro com halteres; Afundo búlgaro com halteres |
 | 76 | `dumbbell_split_squat` | Dumbbell split squat | Afundo com halteres | Afundo estático com halteres |
 | 77 | `dumbbell_lunge_reverse` | Dumbbell reverse lunge | Afundo reverso com halteres |  |
 | 78 | `dumbbell_lunge_forward` | Dumbbell forward lunge | Avanço com halteres |  |
@@ -87,12 +87,12 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 81 | `dumbbell_step_up` | Dumbbell step-up | Subida no banco com halteres | Step-up com halteres |
 | 82 | `dumbbell_deadlift_romanian` | Dumbbell Romanian deadlift | Levantamento terra romeno com halteres | Stiff com halteres; RDL com halteres |
 | 83 | `dumbbell_deadlift_romanian_one_leg` | Single-leg dumbbell Romanian deadlift | Terra romeno unilateral com halter | Stiff unilateral |
-| 84 | `dumbbell_deadlift_sumo` | Single-dumbbell sumo deadlift | Terra sumô com halter |  |
-| 85 | `dumbbell_hip_thrust` | Dumbbell hip thrust | Elevação pélvica com halter |  |
+| 84 | `dumbbell_deadlift_sumo` | Single-dumbbell sumo deadlift | Terra sumô com halter | Agachamento sumô; Agachamento sumô com halter |
+| 85 | `dumbbell_hip_thrust` | Dumbbell hip thrust | Elevação pélvica com halter | Elevação de quadril com halter |
 | 86 | `dumbbell_calf_raise_standing` | Standing dumbbell calf raise | Panturrilha em pé com halteres |  |
 | 87 | `dumbbell_calf_raise_one_leg` | Single-leg dumbbell calf raise | Panturrilha unilateral com halter |  |
 | 88 | `dumbbell_calf_raise_seated` | Seated dumbbell calf raise | Panturrilha sentado com halteres |  |
-| 89 | `dumbbell_curl_standing` | Standing dumbbell curl | Rosca direta com halteres | Rosca alternada |
+| 89 | `dumbbell_curl_standing` | Standing dumbbell curl | Rosca direta com halteres | Rosca alternada; Rosca simultânea |
 | 90 | `dumbbell_curl_hammer` | Dumbbell hammer curl | Rosca martelo com halteres | Rosca martelo |
 | 91 | `dumbbell_curl_incline` | Incline dumbbell curl | Rosca inclinada com halteres |  |
 | 92 | `dumbbell_curl_concentration` | Dumbbell concentration curl | Rosca concentrada com halter |  |
@@ -106,7 +106,7 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 100 | `dumbbell_triceps_kickback` | Dumbbell triceps kickback | Tríceps coice com halter | Kickback; Tríceps kickback |
 | 101 | `dumbbell_wrist_curl` | Dumbbell wrist curl | Rosca punho com halter |  |
 | 102 | `dumbbell_wrist_curl_reverse` | Reverse dumbbell wrist curl | Rosca punho inversa com halter |  |
-| 103 | `dumbbell_side_bend` | Dumbbell side bend | Flexão lateral de tronco com halter |  |
+| 103 | `dumbbell_side_bend` | Dumbbell side bend | Flexão lateral de tronco com halter | Oblíquo com halter |
 | 104 | `dumbbell_crunch` | Dumbbell weighted crunch | Abdominal com halter |  |
 | 105 | `kettlebell_squat_goblet` | Kettlebell goblet squat | Agachamento goblet com kettlebell |  |
 | 106 | `kettlebell_squat_front_double` | Double-kettlebell front squat | Agachamento frontal com dois kettlebells |  |
@@ -142,14 +142,14 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 136 | `cable_row_wide_overhand` | Wide overhand seated cable row | Remada baixa pegada aberta |  |
 | 137 | `cable_row_underhand` | Underhand seated cable row | Remada baixa supinada |  |
 | 138 | `cable_row_one_arm` | One-arm seated cable row | Remada baixa unilateral |  |
-| 139 | `cable_lat_pulldown_wide` | Wide-grip lat pulldown | Puxada aberta na polia | Puxada frontal; Pulley frente; Pulley |
-| 140 | `cable_lat_pulldown_underhand` | Underhand lat pulldown | Puxada supinada na polia | Pulley supinado |
-| 141 | `cable_lat_pulldown_neutral` | Close neutral-grip lat pulldown | Puxada no triângulo | Pulley triângulo; Puxada pegada neutra |
+| 139 | `cable_lat_pulldown_wide` | Wide-grip lat pulldown | Puxada aberta na polia | Puxada frontal; Puxada frente; Puxada alta; Puxador; Puxador frente; Pulley frente; Pulley |
+| 140 | `cable_lat_pulldown_underhand` | Underhand lat pulldown | Puxada supinada na polia | Pulley supinado; Puxador supinado |
+| 141 | `cable_lat_pulldown_neutral` | Close neutral-grip lat pulldown | Puxada no triângulo | Pulley triângulo; Puxador triângulo; Puxada pegada neutra |
 | 142 | `cable_lat_pulldown_one_arm` | One-arm cable lat pulldown | Puxada unilateral na polia |  |
 | 143 | `cable_straight_arm_pulldown_bar` | Straight-bar straight-arm pulldown | Pulldown com barra reta | Pullover na polia |
 | 144 | `cable_straight_arm_pulldown_rope` | Rope straight-arm pulldown | Pulldown com corda |  |
 | 145 | `cable_face_pull` | Rope face pull | Face pull com corda |  |
-| 146 | `cable_reverse_fly` | Cable reverse fly | Crucifixo inverso na polia |  |
+| 146 | `cable_reverse_fly` | Cable reverse fly | Crucifixo inverso na polia | Deltoide posterior na polia; Posterior de ombro na polia |
 | 147 | `cable_lateral_raise` | One-arm cable lateral raise | Elevação lateral unilateral na polia |  |
 | 148 | `cable_front_raise` | One-arm cable front raise | Elevação frontal unilateral na polia |  |
 | 149 | `cable_upright_row` | Straight-bar cable upright row | Remada alta na polia |  |
@@ -173,8 +173,8 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 167 | `cable_leg_curl` | Standing cable leg curl | Flexora em pé na polia |  |
 | 168 | `cable_crunch_kneeling` | Kneeling cable crunch | Abdominal ajoelhado na polia |  |
 | 169 | `cable_crunch_standing` | Standing cable crunch | Abdominal em pé na polia |  |
-| 170 | `cable_woodchop_high_low` | High-to-low cable woodchop | Lenhador de cima para baixo |  |
-| 171 | `cable_woodchop_low_high` | Low-to-high cable woodchop | Lenhador de baixo para cima |  |
+| 170 | `cable_woodchop_high_low` | High-to-low cable woodchop | Lenhador de cima para baixo | Oblíquo na polia de cima para baixo |
+| 171 | `cable_woodchop_low_high` | Low-to-high cable woodchop | Lenhador de baixo para cima | Oblíquo na polia de baixo para cima |
 | 172 | `cable_pallof_press` | Cable Pallof press | Pallof press na polia |  |
 | 173 | `bodyweight_push_up` | Push-up | Flexão de braço | Flexão; Apoio |
 | 174 | `bodyweight_push_up_incline` | Incline push-up | Flexão de braço inclinada |  |
@@ -191,11 +191,11 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 185 | `bodyweight_pull_up_wide` | Wide-grip pull-up | Barra fixa aberta |  |
 | 186 | `bodyweight_pull_up_neutral` | Neutral-grip pull-up | Barra fixa pegada neutra |  |
 | 187 | `bodyweight_chin_up` | Chin-up | Barra fixa supinada | Barra fixa pegada supinada |
-| 188 | `bodyweight_row_inverted` | Overhand inverted row | Remada invertida pronada |  |
+| 188 | `bodyweight_row_inverted` | Overhand inverted row | Remada invertida pronada | Remada australiana |
 | 189 | `bodyweight_row_inverted_underhand` | Underhand inverted row | Remada invertida supinada |  |
 | 190 | `bodyweight_squat` | Bodyweight squat | Agachamento com peso do corpo |  |
 | 191 | `bodyweight_split_squat` | Bodyweight split squat | Afundo com peso do corpo |  |
-| 192 | `bodyweight_bulgarian_split_squat` | Bodyweight Bulgarian split squat | Agachamento búlgaro com peso do corpo |  |
+| 192 | `bodyweight_bulgarian_split_squat` | Bodyweight Bulgarian split squat | Agachamento búlgaro com peso do corpo | Afundo búlgaro com peso do corpo |
 | 193 | `bodyweight_lunge_reverse` | Bodyweight reverse lunge | Afundo reverso com peso do corpo |  |
 | 194 | `bodyweight_lunge_forward` | Bodyweight forward lunge | Avanço com peso do corpo |  |
 | 195 | `bodyweight_lunge_lateral` | Bodyweight lateral lunge | Afundo lateral com peso do corpo |  |
@@ -205,7 +205,7 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 199 | `bodyweight_reverse_nordic` | Reverse Nordic curl | Nórdico reverso |  |
 | 200 | `bodyweight_glute_bridge` | Bodyweight glute bridge | Ponte glútea |  |
 | 201 | `bodyweight_glute_bridge_one_leg` | Single-leg glute bridge | Ponte glútea unilateral |  |
-| 202 | `bodyweight_hip_thrust` | Bodyweight hip thrust | Elevação pélvica com peso do corpo |  |
+| 202 | `bodyweight_hip_thrust` | Bodyweight hip thrust | Elevação pélvica com peso do corpo | Elevação de quadril com peso do corpo |
 | 203 | `bodyweight_nordic_curl` | Nordic hamstring curl | Flexão nórdica | Nórdico |
 | 204 | `bodyweight_hamstring_walkout` | Hamstring walkout | Walkout de posteriores |  |
 | 205 | `bodyweight_calf_raise` | Bodyweight calf raise | Panturrilha em pé com peso do corpo |  |
@@ -216,7 +216,7 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 210 | `bodyweight_bicycle_crunch` | Bicycle crunch | Abdominal bicicleta |  |
 | 211 | `bodyweight_hanging_knee_raise` | Hanging knee raise | Elevação de joelhos na barra |  |
 | 212 | `bodyweight_hanging_leg_raise` | Hanging leg raise | Elevação de pernas na barra |  |
-| 213 | `bodyweight_captains_chair_knee_raise` | Captain's chair knee raise | Elevação de joelhos na cadeira romana |  |
+| 213 | `bodyweight_captains_chair_knee_raise` | Captain's chair knee raise | Elevação de joelhos na cadeira romana | Elevação de joelhos na paralela |
 | 214 | `bodyweight_lying_leg_raise` | Lying leg raise | Elevação de pernas deitado |  |
 | 215 | `bodyweight_dead_bug` | Dead bug | Dead bug | Inseto morto |
 | 216 | `bodyweight_bird_dog` | Bird dog | Bird dog | Perdigueiro |
@@ -235,27 +235,27 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 229 | `smith_split_squat` | Smith machine split squat | Afundo no Smith |  |
 | 230 | `smith_lunge_reverse` | Smith machine reverse lunge | Afundo reverso no Smith |  |
 | 231 | `smith_deadlift_romanian` | Smith machine Romanian deadlift | Levantamento terra romeno no Smith |  |
-| 232 | `smith_hip_thrust` | Smith machine hip thrust | Elevação pélvica no Smith |  |
+| 232 | `smith_hip_thrust` | Smith machine hip thrust | Elevação pélvica no Smith | Elevação de quadril no Smith |
 | 233 | `smith_calf_raise` | Smith machine standing calf raise | Panturrilha em pé no Smith |  |
 | 234 | `selectorized_chest_press` | Selectorized chest press | Supino reto na máquina | Chest press; Supino máquina |
 | 235 | `selectorized_chest_press_incline` | Selectorized incline chest press | Supino inclinado na máquina |  |
 | 236 | `selectorized_pec_fly` | Pec deck fly | Voador | Voador peitoral; Peck deck; Pec deck; Crucifixo na máquina; Fly na máquina |
 | 237 | `selectorized_shoulder_press` | Seated Overhead Press (Machine) | Desenvolvimento na máquina |  |
 | 238 | `selectorized_lateral_raise` | Selectorized lateral raise | Elevação lateral na máquina |  |
-| 239 | `selectorized_reverse_fly` | Reverse pec deck fly | Voador invertido | Peck deck invertido; Crucifixo inverso na máquina |
-| 240 | `selectorized_lat_pulldown` | Selectorized lever lat pulldown | Puxada na máquina | Puxada frontal na máquina |
+| 239 | `selectorized_reverse_fly` | Reverse pec deck fly | Voador invertido | Peck deck invertido; Crucifixo inverso na máquina; Voador inverso; Deltoide posterior na máquina; Posterior de ombro na máquina |
+| 240 | `selectorized_lat_pulldown` | Selectorized lever lat pulldown | Puxada na máquina | Puxada frontal na máquina; Puxador na máquina |
 | 241 | `selectorized_seated_row` | Selectorized seated row | Remada sentada na máquina | Remada baixa na máquina |
-| 242 | `selectorized_high_row` | Selectorized high row | Remada high row na máquina |  |
+| 242 | `selectorized_high_row` | Selectorized high row | High row na máquina |  |
 | 243 | `selectorized_pullover` | Selectorized pullover | Pullover na máquina |  |
 | 244 | `selectorized_assisted_pull_up` | Assisted pull-up machine | Barra fixa assistida na máquina | Graviton; Barra fixa no graviton |
 | 245 | `selectorized_assisted_dip` | Assisted dip machine | Paralelas assistidas na máquina | Graviton para paralelas; Paralelas no graviton |
 | 246 | `selectorized_biceps_curl` | Selectorized biceps curl | Rosca bíceps na máquina |  |
 | 247 | `selectorized_triceps_extension` | Selectorized triceps extension | Extensão de tríceps na máquina |  |
 | 248 | `selectorized_triceps_press` | Selectorized seated dip press | Tríceps mergulho na máquina |  |
-| 249 | `selectorized_leg_press` | Selectorized seated leg press | Leg press sentado na máquina |  |
+| 249 | `selectorized_leg_press` | Selectorized seated leg press | Leg press horizontal na máquina |  |
 | 250 | `selectorized_leg_extension` | Selectorized leg extension | Cadeira extensora | Extensora; Cadeira extensora |
-| 251 | `selectorized_leg_curl_seated` | Selectorized seated leg curl | Cadeira flexora | Flexora sentado; Cadeira flexora |
-| 252 | `selectorized_leg_curl_lying` | Selectorized lying leg curl | Mesa flexora | Flexora deitado; Mesa flexora |
+| 251 | `selectorized_leg_curl_seated` | Selectorized seated leg curl | Cadeira flexora | Flexora sentado; Flexora sentada; Cadeira flexora |
+| 252 | `selectorized_leg_curl_lying` | Selectorized lying leg curl | Mesa flexora | Flexora deitado; Flexora deitada; Mesa flexora |
 | 253 | `selectorized_leg_curl_standing` | Selectorized single-leg standing curl | Flexora em pé na máquina |  |
 | 254 | `selectorized_hip_abduction` | Selectorized hip abduction | Cadeira abdutora | Abdutora; Abdução de quadril na máquina |
 | 255 | `selectorized_hip_adduction` | Selectorized hip adduction | Cadeira adutora | Adutora; Adução de quadril na máquina |
@@ -271,7 +271,7 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 265 | `plate_chest_press_one_arm` | One-arm plate-loaded chest press | Supino unilateral articulado |  |
 | 266 | `plate_shoulder_press` | Plate-loaded shoulder press | Desenvolvimento articulado |  |
 | 267 | `plate_row_chest_supported` | Plate-loaded chest-supported row | Remada apoiada articulada |  |
-| 268 | `plate_row_high` | Plate-loaded high row | Remada high row articulada |  |
+| 268 | `plate_row_high` | Plate-loaded high row | High row articulado |  |
 | 269 | `plate_row_low` | Plate-loaded low row | Remada baixa articulada |  |
 | 270 | `plate_row_one_arm` | One-arm plate-loaded row | Remada unilateral articulada |  |
 | 271 | `plate_lat_pulldown` | Plate-loaded lat pulldown | Puxada articulada |  |
@@ -285,12 +285,12 @@ Gerado de `ExerciseCatalog.kt`, `ExerciseNames.kt` e `ExerciseAliases.kt` no com
 | 279 | `plate_leg_press_one_leg` | Single-leg plate-loaded leg press | Leg press unilateral |  |
 | 280 | `plate_leg_extension` | Plate-loaded leg extension | Extensora articulada | Cadeira extensora articulada |
 | 281 | `plate_leg_curl` | Plate-loaded leg curl | Flexora articulada |  |
-| 282 | `plate_hip_thrust` | Plate-loaded hip thrust machine | Elevação pélvica na máquina | Glute drive |
+| 282 | `plate_hip_thrust` | Plate-loaded hip thrust machine | Elevação pélvica na máquina | Glute drive; Elevação de quadril na máquina |
 | 283 | `plate_calf_raise_seated` | Plate-loaded seated calf raise | Panturrilha sentado articulada | Sóleo articulado |
 | 284 | `plate_calf_raise_standing` | Plate-loaded standing calf raise | Panturrilha em pé articulada |  |
 | 285 | `plate_biceps_curl` | Plate-loaded preacher curl | Rosca Scott articulada |  |
 | 286 | `plate_triceps_dip` | Plate-loaded seated dip press | Tríceps mergulho articulado |  |
 | 287 | `trap_bar_deadlift` | Trap-bar deadlift | Levantamento terra com barra hexagonal | Terra com trap bar; Terra hexagonal |
 
-Total: 287 exercícios, 287 nomes em pt-BR, 146 apelidos em 98 exercícios.
+Total: 287 exercícios, 287 nomes em pt-BR, 181 apelidos em 111 exercícios.
 Mais de 40 caracteres: `kettlebell_press` (41).

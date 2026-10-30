@@ -188,7 +188,9 @@ jobs:
           # Phase 4A task 2 (:shared commonTest): ExerciseAnatomyTest 15. 815 + 15 = 830.
           # Phase 4A task 3 (:shared commonTest): ExerciseNamesTest 8, ExerciseSearchIndexTest 9;
           # (:screens androidHostTest) SearchTermsDriftTest 2. 830 + 19 = 849.
-          MIN_HOST_TESTS: 849
+          # Task 3 fix round 1 (:shared androidHostTest): ExerciseSearchIndexJvmTest 1 (the exhaustive
+          # legacy check moved off iOS; the commonTest one now samples). 849 + 1 = 850.
+          MIN_HOST_TESTS: 850
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -315,6 +317,7 @@ jobs:
           # +1: in-process rest completion retry test
           # Phase 4A task 2: ExerciseAnatomyTest 15. 224 + 15 = 239.
           # Phase 4A task 3: ExerciseNamesTest 8, ExerciseSearchIndexTest 9. 239 + 17 = 256.
+          # Task 3 fix round 1: +0 (the new exhaustive test is JVM-only). 256.
           MIN_IOS_TESTS: 256
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)

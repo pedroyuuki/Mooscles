@@ -26,6 +26,21 @@ class ExerciseSearchIndexTest {
             Triple("rdl", "barbell_deadlift_romanian", null),
             Triple("voador", "selectorized_pec_fly", null),
             Triple("peito halter", "dumbbell_bench_flat", null),
+            Triple("puxador", "cable_lat_pulldown_wide", null),
+            Triple("puxador frente", "cable_lat_pulldown_wide", null),
+            Triple("puxada alta", "cable_lat_pulldown_wide", "barbell_upright_row"),
+            Triple("puxada frente", "cable_lat_pulldown_wide", null),
+            Triple("pulldown", "cable_lat_pulldown_wide", null),
+            Triple("puxador supinado", "cable_lat_pulldown_underhand", "cable_lat_pulldown_wide"),
+            Triple("elevação de quadril", "barbell_hip_thrust", null),
+            Triple("elevacao de quadril", "plate_hip_thrust", null),
+            Triple("afundo búlgaro", "dumbbell_squat_bulgarian", null),
+            Triple("agachamento sumô", "dumbbell_deadlift_sumo", null),
+            Triple("flexora deitada", "selectorized_leg_curl_lying", "selectorized_leg_curl_seated"),
+            Triple("flexora sentada", "selectorized_leg_curl_seated", "selectorized_leg_curl_lying"),
+            Triple("remada australiana", "bodyweight_row_inverted", null),
+            Triple("deltoide posterior", "selectorized_reverse_fly", "selectorized_leg_curl_lying"),
+            Triple("deltoide posterior", "dumbbell_fly_reverse", null),
         )
         table.forEach { (query, expected, excluded) ->
             val result = found(query)
@@ -50,11 +65,24 @@ class ExerciseSearchIndexTest {
 
     @Test
     fun everyLegacyMatchStillMatches() {
-        val phrases = catalog.map(Exercise::name)
-        val words = phrases.flatMap { it.split(' ', '-', '(', ')', '/') }.filter(String::isNotBlank)
-        // Both searches read a query only through ExerciseSearch.normalize, so one query per
-        // normalized form loses nothing and keeps the run short on the iOS simulator.
-        val queries = (phrases + words).distinctBy(ExerciseSearch::normalize)
+        // A fixed sample that keeps the iOS simulator run short; ExerciseSearchIndexJvmTest
+        // (androidHostTest) checks every name, alias, label and word.
+        val names = catalog.map(Exercise::name)
+        val aliases = ExerciseSearch.aliases.values.flatten()
+        val words = (names + aliases).flatMap { it.split(' ', '-', '(', ')', '/') }.filter(String::isNotBlank)
+            .distinctBy(ExerciseSearch::normalize)
+        val sampled = names.filterIndexed { i, _ -> i % 4 == 0 } + aliases.filterIndexed { i, _ -> i % 3 == 0 } +
+            words.filterIndexed { i, _ -> i % 4 == 0 }
+        val variants = sampled.filterIndexed { i, _ -> i % 5 == 0 }.flatMap { listOf(accented(it), it.uppercase()) }
+        val partial = words.filterIndexed { i, _ -> i % 7 == 0 }.filter { it.length > 4 }.map { it.take(4) }
+        val fixed = listOf(
+            "DB curl", "pull-ups", "skullcrushers", "pecdeck flyes", "single arm row", "wide lat pull down",
+            "Chest", "Selectorized machine",
+        )
+        // Both searches read a query only through ExerciseSearch.normalize: one query per form.
+        val queries = (sampled + variants + partial + fixed).distinctBy(ExerciseSearch::normalize)
+        assertTrue(queries.size in 150..400, "${queries.size} sampled queries")
+        println("${catalog.size} exercises x ${queries.size} sampled queries")
         var legacyMatches = 0
         val lost = mutableListOf<String>()
         for (exercise in catalog) for (query in queries) {
@@ -66,6 +94,13 @@ class ExerciseSearchIndexTest {
         assertTrue(legacyMatches > catalog.size, "only $legacyMatches legacy matches")
         assertTrue(lost.isEmpty(), "Found before, missed by the index: ${lost.take(20)}")
     }
+
+    private fun accented(text: String): String = text.map {
+        when (it) {
+            'a' -> 'á'; 'e' -> 'é'; 'o' -> 'õ'; 'c' -> 'ç'; 'u' -> 'ü'
+            else -> it
+        }
+    }.joinToString("")
 
     @Test
     fun customNamedLikeACatalogEntryIsFoundAlongsideIt() {

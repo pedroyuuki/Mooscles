@@ -11,19 +11,16 @@ object ExerciseNames {
     /** Keyed by catalog stable id, without the `catalog_` prefix. */
     val portuguese: Map<String, String> = portugueseNameEntries.toMap()
 
-    private val english: Map<String, String> by lazy {
-        ExerciseCatalog.exercises.associate { it.id.removePrefix(CATALOG_PREFIX) to it.name }
-    }
-
     /**
      * The name to show. A catalog exercise (not custom, a `catalog_` id the catalog still has)
      * shows the catalog's name in the screen language, even when an older build stored another
      * name; a custom exercise or an id the catalog no longer has shows [storedName].
+     * The parameter [portuguese] (the screen language) shadows the map; `this.portuguese` is the map.
      */
     fun display(id: String, storedName: String, custom: Boolean, portuguese: Boolean): String {
         if (custom || !id.startsWith(CATALOG_PREFIX)) return storedName
         val stableId = id.removePrefix(CATALOG_PREFIX)
-        val englishName = english[stableId] ?: return storedName
+        val englishName = ExerciseSearch.catalogNames[id] ?: return storedName
         return if (portuguese) this.portuguese[stableId] ?: englishName else englishName
     }
 }
@@ -283,14 +280,14 @@ internal val portugueseNameEntries: List<Pair<String, String>> = listOf(
     "selectorized_reverse_fly" to "Voador invertido",
     "selectorized_lat_pulldown" to "Puxada na máquina",
     "selectorized_seated_row" to "Remada sentada na máquina",
-    "selectorized_high_row" to "Remada high row na máquina",
+    "selectorized_high_row" to "High row na máquina",
     "selectorized_pullover" to "Pullover na máquina",
     "selectorized_assisted_pull_up" to "Barra fixa assistida na máquina",
     "selectorized_assisted_dip" to "Paralelas assistidas na máquina",
     "selectorized_biceps_curl" to "Rosca bíceps na máquina",
     "selectorized_triceps_extension" to "Extensão de tríceps na máquina",
     "selectorized_triceps_press" to "Tríceps mergulho na máquina",
-    "selectorized_leg_press" to "Leg press sentado na máquina",
+    "selectorized_leg_press" to "Leg press horizontal na máquina",
     "selectorized_leg_extension" to "Cadeira extensora",
     "selectorized_leg_curl_seated" to "Cadeira flexora",
     "selectorized_leg_curl_lying" to "Mesa flexora",
@@ -310,7 +307,7 @@ internal val portugueseNameEntries: List<Pair<String, String>> = listOf(
     "plate_chest_press_one_arm" to "Supino unilateral articulado",
     "plate_shoulder_press" to "Desenvolvimento articulado",
     "plate_row_chest_supported" to "Remada apoiada articulada",
-    "plate_row_high" to "Remada high row articulada",
+    "plate_row_high" to "High row articulado",
     "plate_row_low" to "Remada baixa articulada",
     "plate_row_one_arm" to "Remada unilateral articulada",
     "plate_lat_pulldown" to "Puxada articulada",
