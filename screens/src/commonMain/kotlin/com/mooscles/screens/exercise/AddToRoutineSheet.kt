@@ -111,11 +111,16 @@ internal fun AddToRoutineSheet(
     }
 }
 
-/** The folders that hold routines, in their order, each with its routines in theirs. */
+/**
+ * The folders that hold routines, in their order, each with its routines in theirs. A routine whose
+ * folder is not in [folders] goes with the default folder; without any folder (none known yet),
+ * every routine goes under the default folder, so none disappears (final review, item 3).
+ */
 internal fun routineGroups(folders: List<RoutineFolderUi>, routines: List<RoutineUi>): List<Pair<RoutineFolderUi, List<RoutineUi>>> {
-    val known = folders.mapTo(HashSet()) { it.id }
-    val home = folders.firstOrNull { it.id == RoutineFolder.DEFAULT_ID } ?: folders.firstOrNull()
-    return folders.mapNotNull { folder ->
+    val shown = folders.ifEmpty { listOf(RoutineFolderUi(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)) }
+    val known = shown.mapTo(HashSet()) { it.id }
+    val home = shown.firstOrNull { it.id == RoutineFolder.DEFAULT_ID } ?: shown.first()
+    return shown.mapNotNull { folder ->
         val inside = routines.filter { it.folderId == folder.id || (folder == home && it.folderId !in known) }
         if (inside.isEmpty()) null else folder to inside
     }
