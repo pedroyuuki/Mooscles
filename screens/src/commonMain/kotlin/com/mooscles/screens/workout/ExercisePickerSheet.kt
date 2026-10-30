@@ -150,13 +150,13 @@ internal fun ExercisePickerSheet(
             if (!searching && recents.isNotEmpty()) {
                 item(key = "header-recent") { SectionHeader(stringResource(Res.string.workout_picker_recent)) }
                 items(recents, key = { "recent-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), exerciseMedia(exercise), exercisePickerRowTag(exercise.id, recent = true), { pick(exercise) })
+                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = true), { pick(exercise) })
                 }
             }
             if (results.isNotEmpty()) {
                 item(key = "header-all") { SectionHeader(stringResource(Res.string.workout_picker_all)) }
                 items(results, key = { "all-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), exerciseMedia(exercise), exercisePickerRowTag(exercise.id, recent = false), { pick(exercise) })
+                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = false), { pick(exercise) })
                 }
             } else {
                 item(key = "none") {

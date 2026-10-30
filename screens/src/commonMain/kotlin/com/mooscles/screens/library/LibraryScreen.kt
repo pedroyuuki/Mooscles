@@ -363,17 +363,17 @@ private fun LibraryList(
                 if (recents.isNotEmpty()) {
                     item(key = "recent-header") { SectionHeader(recentTitle, Modifier.testTag(LibraryTags.RECENT_HEADER)) }
                     items(recents, key = { "recent-${it.id}" }) { exercise ->
-                        LibraryRow(exercise, model.shownName(exercise), media(exercise), LibraryTags.recentRow(exercise.id), { onOpen(exercise.id) })
+                        LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.recentRow(exercise.id), { onOpen(exercise.id) })
                     }
                 }
                 item(key = "all-header") { SectionHeader(allTitle, Modifier.testTag(LibraryTags.ALL_HEADER)) }
                 items(model.exercises, key = { "row-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), media(exercise), LibraryTags.row(exercise.id), { onOpen(exercise.id) })
+                    LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.row(exercise.id), { onOpen(exercise.id) })
                 }
             }
             results.isEmpty() -> item(key = "empty") { NoResults(query, filters, onFilters, onCreate) }
             else -> items(results, key = { "row-${it.id}" }) { exercise ->
-                LibraryRow(exercise, model.shownName(exercise), media(exercise), LibraryTags.row(exercise.id), { onOpen(exercise.id) })
+                LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.row(exercise.id), { onOpen(exercise.id) })
             }
         }
     }
