@@ -428,7 +428,9 @@ jobs:
           # Phase 4A task 23: LicenseTextTest +1 (commonTest). 339 + 1 = 340.
           # Phase 4B task 4: SizesTimingElevationTest +1, MotionTokensTest +1 (commonTest); ReorderTest 15, ExerciseCardTest +1, GallerySmokeTest +1 (uiTest). 340 + 19 = 359.
           # Phase 4B task 4 fix round 1: ComponentColorsTest +1 (commonTest); ReorderTest +2 (uiTest). 359 + 3 = 362.
-          MIN_DS_IOS_TESTS: 362
+          # Phase 4B task 5: ExerciseFigureTest.holdRequestsNoFrames (uiTest). 340 + 1 = 341.
+          # Merged Task 5 (+1 over 340): 362 + 1 = 363.
+          MIN_DS_IOS_TESTS: 363
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

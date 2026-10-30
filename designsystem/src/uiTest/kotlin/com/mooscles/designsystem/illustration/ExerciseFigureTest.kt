@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -47,6 +50,7 @@ import com.mooscles.designsystem.withTheme
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.jetbrains.compose.resources.getString
 
@@ -224,6 +228,50 @@ class ExerciseFigureTest {
         mainClock.autoAdvance = true
     }
 
+    /**
+     * Battery (4B Task 5): while a frame holds, the figure asks for no frames at all; only the fade
+     * does. Read on the composition's frame clock (the recomposer's [BroadcastFrameClock], the one
+     * every `withFrameNanos` of the composition waits on): after each frame the test advances, is
+     * anything still waiting for the next one? On the device a waiting awaiter is a
+     * `Choreographer#doFrame` 60 times a second, with nothing to draw.
+     */
+    @Test
+    fun holdRequestsNoFrames() = runComposeUiTest {
+        var clock: BroadcastFrameClock? = null
+        mainClock.autoAdvance = false
+        withTheme {
+            val scope = rememberCoroutineScope()
+            SideEffect { clock = scope.coroutineContext[MonotonicFrameClock] as? BroadcastFrameClock }
+            AnimatedExerciseFigure(start, end, highlights, "Curl", Modifier.size(160.dp))
+        }
+        mainClock.advanceTimeByFrame()
+        val frames = assertNotNull(clock, "the composition waits on the recomposer's frame clock")
+
+        // The frames advanced over [span] after which something in the composition waited for another.
+        fun requested(span: Long): Int {
+            var count = 0
+            val until = mainClock.currentTime + span
+            while (mainClock.currentTime < until) {
+                mainClock.advanceTimeByFrame()
+                if (frames.hasAwaiters) count++
+            }
+            return count
+        }
+
+        assertEquals(0, requested(hold - fade), "the end frame holds without asking for frames")
+        assertEquals("end", frame())
+        assertEquals(1f, shownAlpha())
+        mainClock.advanceTimeBy(fade)
+        // Positive control: the fade asks for a frame on (nearly) every frame.
+        val fading = requested(fade)
+        assertTrue(fading >= fade / FRAME_MILLIS / 2, "the fade asked for frames on $fading frames")
+        mainClock.advanceTimeBy(fade)
+        assertEquals(0, requested(hold - 2 * fade), "the start frame holds without asking for frames")
+        assertEquals("start", frame())
+        assertEquals(1f, shownAlpha())
+        mainClock.autoAdvance = true
+    }
+
     @Test
     fun onlyTheFigureRecomposesOnEachFrame() = runComposeUiTest {
         var sibling = 0
@@ -290,3 +338,6 @@ class ExerciseFigureTest {
         onNodeWithTag("thumbnail").assertWidthIsEqualTo(56.dp)
     }
 }
+
+/** The test clock's frame time. */
+private const val FRAME_MILLIS = 16L

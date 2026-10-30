@@ -242,6 +242,8 @@ Regra: um teste cujo alvo continua no código fica; um cujo alvo sai é portado 
 - [ ] **Step 4:** A classe inteira verde no emulador. Medir: detalhe de um exercício do piloto aberto por 10 s, `adb shell dumpsys gfxinfo com.mooscles framestats` antes e depois da mudança; anotar os quadros por segundo durante a pausa em `…-phase4b-verificacao/figure-hold.md`.
 - [ ] **Step 5:** Commit `designsystem: exercise figure requests no frames while it holds`.
 
+> **Nota (2026-10-30, Task 5):** o Step 3 ficou com a espera e o fade dentro da `InfiniteAnimationPolicy` (`onInfiniteOperation` em volta do `delay` e do `Animatable.animateTo`), não num laço de `delay` solto (F5 do preflight): assim o relógio de teste continua parando a alternância com `autoAdvance` ligado. O Step 1 conta quadros pedidos (`BroadcastFrameClock.hasAwaiters` do recomposer), não desenhos: na transição infinita a opacidade não muda na pausa, então um contador de desenho não falharia antes da mudança. O Step 4 mediu com `atrace` (`Choreographer#doFrame`) numa atividade de teste do design system, não com `gfxinfo` no app: o `gfxinfo` só conta quadros desenhados. Detalhes em [figure-hold.md](../reports/2026-10-30-phase4b-verificacao/figure-hold.md).
+
 ### Task 6: Spike S4, foto no Android
 
 **Revisão:** controlador (relatório).
