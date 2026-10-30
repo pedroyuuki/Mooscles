@@ -79,7 +79,8 @@ class RecordingActions : MoosclesActions {
     override fun setTheme(theme: String) = record("setTheme", theme)
     override fun setAutoRest(enabled: Boolean) = record("setAutoRest", enabled)
     override fun setDefaultRest(seconds: Int) = record("setDefaultRest", seconds)
-    override fun startTimer(exerciseName: String, seconds: Int) = record("startTimer", exerciseName, seconds)
+    override fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String?) =
+        record("startTimer", exerciseName, seconds, workoutExerciseId)
     override fun pauseTimer() = record("pauseTimer")
     override fun resumeTimer() = record("resumeTimer")
     override fun resetTimer() = record("resetTimer")

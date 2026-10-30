@@ -250,7 +250,7 @@ abstract class MoosclesViewModel(
     override fun setTheme(theme: String) = act { services.preferences.theme(theme.lowercase()) }
     override fun setAutoRest(enabled: Boolean) = act { services.preferences.autoRest(enabled) }
     override fun setDefaultRest(seconds: Int) = act { services.preferences.defaultRest(seconds) }
-    override fun startTimer(exerciseName: String, seconds: Int) = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.start(exerciseName, seconds) } }
+    override fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String?) = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.start(exerciseName, seconds, workoutExerciseId) } }
     override fun pauseTimer() = act { services.timer.pause() }
     override fun resumeTimer() = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.resume() } }
     override fun resetTimer() = act { services.trainingGate.withLock { services.updates.assertTrainingMayStart(); services.timer.reset() } }

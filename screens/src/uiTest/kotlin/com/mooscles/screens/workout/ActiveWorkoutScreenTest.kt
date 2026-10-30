@@ -53,6 +53,7 @@ import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.assertShownWhole
+import com.mooscles.screens.ScreenFrame
 import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
@@ -840,8 +841,9 @@ class ActiveWorkoutScreenTest {
 
     /**
      * Plan decision 11, pre-flight F1: a catalog exercise shows its pt-BR name on the card, in its
-     * menu and confirmation, in the rest sheet (and the rest it starts) and in the dock, even while
-     * the timer carries the English name the view model stored on an automatic rest.
+     * menu and confirmation, in the rest sheet and in the dock, even while the timer carries the
+     * English name the view model stored on an automatic rest. The rest the sheet starts carries
+     * the entry and its snapshot name, as the automatic rest does (final review, item 1).
      */
     @Test
     fun catalogNamesFollowPortuguese() = runComposeUiTest {
@@ -871,13 +873,13 @@ class ActiveWorkoutScreenTest {
         dialogButton("Continuar treinando").performClick()
         waitForIdle()
 
-        // The rest sheet, and the rest it starts carries the name shown.
+        // The rest sheet, and the rest it starts carries the entry and its snapshot name.
         onNodeWithTag(exerciseRestTag("e1")).performClick()
         waitForIdle()
         assertEquals(shown + 1, onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size, "rest sheet")
         onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
         waitForIdle()
-        assertTrue(fake.calls.last().startsWith("startTimer:$name,"), fake.calls.last())
+        assertEquals("startTimer:Barbell bench press,${workout.exercises.single().restSeconds},e1", fake.calls.last())
         onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
 
         // The expanded timer's title, by the same entry.
@@ -885,6 +887,59 @@ class ActiveWorkoutScreenTest {
         waitForIdle()
         tag(TimerTitleTag).assertTextEquals("Descanso · $name · série 1 de 3")
         onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    /**
+     * Final review, item 1: a rest started from the rest sheet is started as the automatic rest is,
+     * with the entry and its snapshot name (what the timer stores), so after a change of language
+     * the dock names the exercise in the new language, not in the one the rest started in.
+     */
+    @Test
+    fun aManualRestFollowsALanguageChange() = runComposeUiTest {
+        val bench = ExerciseUi("catalog_barbell_bench_flat", "Barbell bench press", "Chest", "Barbell", convention = "Total load")
+        val workout = WorkoutUi(
+            id = "w1", name = "Treino A", startedAt = START,
+            exercises = listOf(WorkoutExerciseUi("e1", bench, (1..3).map { n -> SetUi("e1s$n", reps = 8, weightKg = 60.0) })),
+        )
+        val timer = mutableStateOf(TimerUi())
+        // The view model and the timer: the rest carries what startTimer was given.
+        val fake = object : MoosclesActions by RecordingActions() {
+            val calls = mutableListOf<String>()
+            override fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String?) {
+                calls += "startTimer:$exerciseName,$seconds,$workoutExerciseId"
+                timer.value = TimerUi(exerciseName, remainingSeconds = seconds, durationSeconds = seconds, running = true,
+                    workoutExerciseId = workoutExerciseId)
+            }
+        }
+        val locale = mutableStateOf("pt-BR")
+        setContent {
+            ScreenFrame(locale = locale.value, size = DpSize(412.dp, 800.dp)) {
+                ActiveWorkoutRoute(
+                    state = UiState(loading = false, active = workout, exercises = listOf(bench)),
+                    timer = timer,
+                    actions = fake,
+                    onMinimize = {}, onOpenSummary = {}, onExerciseHistory = {}, onChooseRoutine = {}, onExerciseInfo = {},
+                    nowMillis = { START + ELAPSED_MS },
+                )
+            }
+        }
+        waitForIdle()
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
+        waitForIdle()
+        // What the timer stores is the snapshot name, whatever the screen's language.
+        assertEquals(listOf("startTimer:Barbell bench press,${workout.exercises.single().restSeconds},e1"), fake.calls)
+        onNode(hasText("Descanso · Supino reto com barra") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+
+        locale.value = "en"
+        waitForIdle()
+        onNode(hasText("Rest · Barbell bench press") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Supino reto com barra", substring = true, useUnmergedTree = true).assertCountEquals(0)
+        // The expanded timer names it by the entry too; with no set done yet, without "set 0 of 3".
+        onNodeWithTag(TimerOpenTag).performClick()
+        waitForIdle()
+        tag(TimerTitleTag).assertTextEquals("Rest · Barbell bench press")
     }
 
     private companion object {

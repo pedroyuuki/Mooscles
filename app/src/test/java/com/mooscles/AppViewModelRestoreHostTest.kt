@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.mooscles.data.RoutineFolder
 import com.mooscles.data.WorkoutSet
+import com.mooscles.timer.RestTimerPersistence
 import com.mooscles.ui.SetUi
 import com.mooscles.ui.UiError
 import com.mooscles.ui.UiState
@@ -133,6 +134,27 @@ class AppViewModelRestoreHostTest {
         model.updateSet(set.id, 8, 60.0, completed = true, warmup = false, assistance = false)
         awaitCondition("The 1:30 rest did not start") { model.timerUi.value.running }
         assertEquals(90_000L, app.timer.state.value.durationMillis)
+    }
+
+    /**
+     * Final review, item 1: a rest started from the rest sheet is stored as the automatic rest is,
+     * with the entry's id and its snapshot name, so the dock names it by the entry.
+     */
+    @Test fun aManualRestStoresTheEntryAndItsSnapshotName() {
+        seedRestAndAutoRest(restSeconds = 90)
+        val model = newModel()
+        awaitUi(model) { !it.loading && it.active?.exercises?.size == 1 }
+        val entry = model.contentUi.value.active!!.exercises.single()
+
+        model.startTimer(entry.exercise.name, 75, entry.id)
+        awaitCondition("The manual rest did not start") { model.timerUi.value.let { it.running && it.durationSeconds == 75 } }
+
+        val stored = runBlocking(Dispatchers.IO) { RestTimerPersistence(app.moosclesStore).snapshot() }
+        val snapshotName = runBlocking(Dispatchers.IO) { app.repository.workoutExercise(entry.id) }!!.name
+        assertEquals(snapshotName, stored.exerciseName)
+        assertEquals(entry.id, stored.workoutExerciseId)
+        assertEquals(75_000L, stored.durationMillis)
+        assertEquals(entry.id, model.timerUi.value.workoutExerciseId)
     }
 
     /** An active workout with one exercise of three sets, the middle one completed and then removed. */

@@ -162,7 +162,12 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun setTheme(theme: String)
     fun setAutoRest(enabled: Boolean)
     fun setDefaultRest(seconds: Int)
-    fun startTimer(exerciseName: String, seconds: Int)
+    /**
+     * Starts a rest of [seconds] named [exerciseName]. A rest of a workout's exercise passes that
+     * entry's id as [workoutExerciseId] and the entry's snapshot name, as the automatic rest does,
+     * so the timer shows the exercise by its entry in the screen's language.
+     */
+    fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String? = null)
     fun pauseTimer()
     fun resumeTimer()
     fun resetTimer()

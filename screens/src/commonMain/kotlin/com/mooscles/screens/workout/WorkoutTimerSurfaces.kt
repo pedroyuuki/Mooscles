@@ -86,7 +86,10 @@ private const val COMPACT_FONT_SCALE = 1.5f
 /** What −15 s and +15 s move the rest by. */
 private const val ADJUST_SECONDS = 15
 
-/** The exercise of [workout] whose rest [timer] counts; none for a rest started from the rest sheet or of another workout. */
+/**
+ * The exercise of [workout] whose rest [timer] counts; none for a rest of another workout, or one
+ * without an entry (a rest the rest sheet started before it passed its entry, final review item 1).
+ */
 private fun timerEntryOf(workout: WorkoutUi, timer: TimerUi): WorkoutExerciseUi? =
     timer.workoutExerciseId?.let { id -> workout.exercises.firstOrNull { it.id == id } }
 
@@ -272,8 +275,12 @@ private fun ExpandedRest(
     onClose: () -> Unit,
 ) {
     val entry = remember(workout, timer.workoutExerciseId) { timerEntryOf(workout, timer) }
-    val title = if (entry != null) {
-        stringResource(Res.string.workout_timer_title, exerciseName(entry.exercise), entry.sets.count { it.completed }, entry.sets.size)
+    val done = entry?.sets?.count { it.completed } ?: 0
+    // A rest started from the rest sheet before any set is done has no "set 0 of n": the name alone.
+    val title = if (entry != null && done > 0) {
+        stringResource(Res.string.workout_timer_title, exerciseName(entry.exercise), done, entry.sets.size)
+    } else if (entry != null) {
+        stringResource(Res.string.workout_timer_title_short, exerciseName(entry.exercise))
     } else {
         stringResource(Res.string.workout_timer_title_short, timer.exerciseName)
     }
