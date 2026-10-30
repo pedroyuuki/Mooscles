@@ -208,7 +208,11 @@ jobs:
           # Merged Task 7: 893 + 1 = 894.
           # Phase 4A task 16 (:shared commonTest): EditRulesTest +1; (:screens commonTest)
           # CustomExerciseRulesTest 4. 894 + 5 = 899.
-          MIN_HOST_TESTS: 899
+          # Phase 4A task 8 (:screens commonTest): ExerciseFiguresTest 8, FigureHighlightsTest 2. 882 + 10 = 892.
+          # Task 8 fix round 1 (:designsystem commonTest): FigureHighlightDrawingTest 2. 892 + 2 = 894.
+          # Phase 4A task 9 (:designsystem commonTest): FigureHighlightDrawingTest +2. 894 + 2 = 896.
+          # Merged Tasks 8–9 (+14 over 882): 899 + 14 = 913.
+          MIN_HOST_TESTS: 913
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -403,7 +407,10 @@ jobs:
           # LicensesScreenTest 1 (uiTest). 313 + 10 = 323.
           # Phase 4A task 7: SizesTimingElevationTest +1 (commonTest); MSearchFieldTest 5, MChipTest +1,
           # MInfoChipTest 2 (uiTest). 323 + 9 = 332.
-          MIN_DS_IOS_TESTS: 332
+          # Phase 4A task 8 fix round 1: FigureHighlightDrawingTest 2 (commonTest). 323 + 2 = 325.
+          # Phase 4A task 9: FigureHighlightDrawingTest +2 (commonTest). 325 + 2 = 327.
+          # Merged Tasks 8–9 (+4 over 323): 332 + 4 = 336.
+          MIN_DS_IOS_TESTS: 336
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -455,7 +462,11 @@ jobs:
           # LibraryScreenTest +2 (uiTest). 340 + 19 = 359.
           # Task 16 fix round 1: CustomExerciseFormTest +2 (uiTest). 359 + 2 = 361.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 361
+          # Phase 4A task 8: ExerciseFiguresTest 8, FigureHighlightsTest 2 (commonTest); FiguresGalleryPageTest 1
+          # (uiTest). 307 + 11 = 318.
+          # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
+          # Merged Tasks 8–9 (+11 over 307): 361 + 11 = 372.
+          MIN_SCREENS_IOS_TESTS: 372
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

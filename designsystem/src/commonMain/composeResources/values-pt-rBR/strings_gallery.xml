@@ -99,6 +99,8 @@
     <string name="gallery_finish_rest">Terminar descanso</string>
     <string name="gallery_sample_reps_error">Mín. 1</string>
     <string name="gallery_page_shell">Abas e barra do treino</string>
+    <!-- Phase 4A: the page of exercise figures, passed in by the app from :screens. -->
+    <string name="gallery_page_figures">Figuras</string>
     <string name="gallery_section_shell">Barra de abas e o treino em andamento</string>
     <string name="gallery_tab_train">Treinar</string>
     <string name="gallery_tab_library">Biblioteca</string>

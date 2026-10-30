@@ -99,6 +99,8 @@
     <string name="gallery_finish_rest">Finish rest</string>
     <string name="gallery_sample_reps_error">Min. 1</string>
     <string name="gallery_page_shell">Tab bar and workout bar</string>
+    <!-- Phase 4A: the page of exercise figures, passed in by the app from :screens. -->
+    <string name="gallery_page_figures">Figures</string>
     <string name="gallery_section_shell">Tab bar and the workout in progress</string>
     <string name="gallery_tab_train">Train</string>
     <string name="gallery_tab_library">Library</string>
