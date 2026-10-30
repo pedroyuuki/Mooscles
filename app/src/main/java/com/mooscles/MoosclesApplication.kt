@@ -6,6 +6,7 @@ import com.mooscles.backup.BackupApp
 import com.mooscles.data.WorkoutDatabase
 import com.mooscles.data.WorkoutRepository
 import com.mooscles.data.open
+import com.mooscles.photos.AndroidExercisePhotoStore
 import com.mooscles.timer.RestTimerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ class MoosclesApplication : Application() {
     val repository by lazy { WorkoutRepository(database) }
     val preferences by lazy { AppPreferences(this) }
     val timer by lazy { RestTimerController(this, appScope) }
+    val photos by lazy { AndroidExercisePhotoStore(this) }
     val trainingGate = Mutex()
     val updates by lazy { UpdateManager(this, trainingGate, trainingBusy = {
         repository.activeWorkout() != null || UpdatePolicy.restTimerBusy(
@@ -29,6 +31,6 @@ class MoosclesApplication : Application() {
     /** What the view model works with, in the order it used to create them: repository, preferences, timer, updates. */
     val services by lazy {
         MoosclesServices(repository, preferences, timer, updates, trainingGate, AndroidBackupDocuments(this),
-            BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android"))
+            BackupApp(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, "android"), photos)
     }
 }

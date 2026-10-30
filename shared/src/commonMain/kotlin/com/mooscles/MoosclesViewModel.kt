@@ -90,9 +90,11 @@ abstract class MoosclesViewModel(
             }
         }
         viewModelScope.launch {
-            try { repo.initialize() } catch (e: CancellationException) { throw e }
+            var initializedOk = false
+            try { repo.initialize(); initializedOk = true } catch (e: CancellationException) { throw e }
             catch (e: Exception) { show(UiProblem("Unable to initialize local data: ${e.message}", UiError.LOCAL_DATA_UNAVAILABLE)) }
             initialized.value = true
+            if (initializedOk) removeOrphanPhotos()
             for (command in commands) try { command.block() }
             catch (e: CancellationException) {
                 // Only a cleared ViewModel ends the loop. A timed-out wait or a cancelled child is one failed
@@ -102,6 +104,18 @@ abstract class MoosclesViewModel(
             }
             catch (e: Exception) { fail(UiProblem(e.message ?: SAVE_FAILED, UiErrors.from(e), command.subject)) }
         }
+    }
+    /**
+     * Deletes the photos of custom exercises that no longer exist. Runs only after a successful initialize, with the
+     * ids from a read of its own, and inline before the first command, so a photo being committed is never swept. It is
+     * not a database write: a failure is ignored, a cancellation is not.
+     */
+    private suspend fun removeOrphanPhotos() {
+        try {
+            val ids = repo.snapshot().exercises.filter { it.custom }.map { it.id }.toSet()
+            services.photos.removeOrphans(ids)
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { /* a failed sweep only leaves files for the next start */ }
     }
     /** Shows [problem] (or clears the one shown with null); the failure counts stay. */
     private fun show(problem: UiProblem?) = error.update { it.copy(problem = problem) }

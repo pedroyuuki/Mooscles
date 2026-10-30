@@ -57,7 +57,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository/org/robolectric
-          key: robolectric-${{ runner.os }}-${{ hashFiles('app/build.gradle.kts') }}
+          key: robolectric-${{ runner.os }}-${{ hashFiles('app/build.gradle.kts') }}-sdk26
           restore-keys: robolectric-${{ runner.os }}-
 
       # No test retry: a flaky test must fail the job so it gets looked at.
@@ -226,7 +226,9 @@ jobs:
           # Phase 4B task 2 fix round 1 (:app): RoutineCommandsPersistenceTest +3. 972 + 3 = 975.
           # Phase 4B task 3 (:app): AppViewModelRoutinesHostTest 11, RoutineCommandsPersistenceTest +2;
           # (:shared commonTest) WorkoutPresentationTest +10, UiErrorsTest +1. 975 + 24 = 999.
-          MIN_HOST_TESTS: 999
+          # Phase 4B task 7 (:app, sdk [26, 35] runs each method twice): ExercisePhotoStoreHostTest 13 x 2 = 26,
+          # PhotoManifestHostTest 3, AppViewModelPhotosHostTest 4. 999 + 33 = 1032.
+          MIN_HOST_TESTS: 1032
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
