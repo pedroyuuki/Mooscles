@@ -185,7 +185,9 @@ jobs:
           # Ring iOS fix (:designsystem commonTest): RestTimerRingMathTest +1.
           # Merged with the ring fix: 813 + 1 = 814.
           # +1: in-process rest completion retry test
-          MIN_HOST_TESTS: 815
+          # Phase 4A task 5 (:designsystem commonTest): FigureGeometryTest 5, IllustrationTokensTest 2,
+          # ComponentColorsTest +1. 815 + 8 = 823.
+          MIN_HOST_TESTS: 823
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -370,7 +372,9 @@ jobs:
           # commonTest, uiTest and iosTest at the phase 3 end (that count matched the CI at 53b13ba and 5d94a7f).
           # Ring iOS fix: RestTimerRingMathTest +1. Run 40944220889 counted 295 (294 + 1).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 295
+          # Phase 4A task 5: FigureGeometryTest 5, IllustrationTokensTest 2, ComponentColorsTest +1 (commonTest);
+          # ExerciseFigureTest 9, GallerySmokeTest +1 (uiTest). 295 + 18 = 313.
+          MIN_DS_IOS_TESTS: 313
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

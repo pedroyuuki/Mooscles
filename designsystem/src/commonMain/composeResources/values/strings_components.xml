@@ -93,4 +93,7 @@
     </plurals>
     <string name="ds_card_expand">Show sets</string>
     <string name="ds_card_collapse">Hide sets</string>
+    <string name="ds_figure_label">Illustration: start and end of %1$s</string>
+    <string name="ds_figure_show_start">Show the start of the movement</string>
+    <string name="ds_figure_show_end">Show the end of the movement</string>
 </resources>

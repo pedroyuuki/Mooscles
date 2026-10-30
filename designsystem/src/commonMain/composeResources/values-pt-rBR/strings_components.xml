@@ -92,4 +92,7 @@
     </plurals>
     <string name="ds_card_expand">Mostrar séries</string>
     <string name="ds_card_collapse">Ocultar séries</string>
+    <string name="ds_figure_label">Ilustração de início e fim: %1$s</string>
+    <string name="ds_figure_show_start">Mostrar o início do movimento</string>
+    <string name="ds_figure_show_end">Mostrar o fim do movimento</string>
 </resources>

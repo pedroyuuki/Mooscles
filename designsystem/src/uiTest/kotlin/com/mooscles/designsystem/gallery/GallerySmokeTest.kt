@@ -1,5 +1,6 @@
 package com.mooscles.designsystem.gallery
 
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.resources.Res
+import com.mooscles.designsystem.resources.ds_back
 import com.mooscles.designsystem.resources.ds_unit_kg_spoken
 import com.mooscles.designsystem.resources.gallery_controls_hide
 import com.mooscles.designsystem.resources.gallery_controls_show
@@ -270,6 +272,43 @@ class GallerySmokeTest {
             val bounds = onNodeWithTag(galleryEntryTag(page)).performScrollTo().getUnclippedBoundsInRoot()
             assertTrue(bounds.height >= rowMin - 0.5.dp, "${page.name}: ${bounds.height} tall")
             assertEquals(screenWidth, bounds.width, "${page.name} spans the screen")
+        }
+    }
+
+    /** Phase 4A (plan decision 5): a host's pages come after the design system's, open, and back closes them first. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun extraPagesAreListedAndOpen() {
+        var left = 0
+        runComposeUiTest {
+            val extra = GalleryExtraPage("figures", title = { "Figures" }, content = { BasicText("Every pose") })
+            lateinit var state: GalleryState
+            withTheme {
+                state = rememberGalleryState()
+                GalleryScreen(onBack = { left++ }, state = state, extraPages = listOf(extra))
+            }
+            waitForIdle()
+            val entry = onNodeWithTag(galleryExtraEntryTag("figures")).performScrollTo()
+            entry.assert(hasText("Figures"))
+            val lastOwn = onNodeWithTag(galleryEntryTag(GalleryPage.entries.last())).getUnclippedBoundsInRoot().top
+            assertTrue(entry.getUnclippedBoundsInRoot().top > lastOwn, "the extra page is listed last")
+            entry.performClick()
+            waitForIdle()
+            assertEquals("figures", state.openExtra)
+            assertEquals(null, state.open)
+            onNodeWithTag(galleryExtraPageTag("figures")).assertExists()
+            onNodeWithText("Every pose").assertExists()
+            // The top bar names the page.
+            onNodeWithText("Figures").assertExists()
+            val back = hasContentDescription(getString(Res.string.ds_back)) and hasClickAction()
+            onNode(back).performClick()
+            waitForIdle()
+            assertEquals(null, state.openExtra)
+            assertEquals(0, left, "back closes the extra page first")
+            onNodeWithTag(galleryExtraEntryTag("figures")).assertExists()
+            onNode(back).performClick()
+            waitForIdle()
+            assertEquals(1, left)
         }
     }
 

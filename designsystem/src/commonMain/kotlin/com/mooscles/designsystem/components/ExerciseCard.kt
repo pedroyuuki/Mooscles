@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.Dp
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.illustration.ExerciseFigure
+import com.mooscles.designsystem.illustration.FigurePose
+import com.mooscles.designsystem.illustration.FigureSegment
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.interaction.mPressScale
 import com.mooscles.designsystem.resources.Res
@@ -63,6 +66,7 @@ const val ExerciseOfflineIconTag = "exercise-offline-icon"
 const val ExerciseOfflineTextTag = "exercise-offline-text"
 const val ExerciseSetsTag = "exercise-sets"
 const val ExerciseMediaPlaceholderTag = "exercise-media-placeholder"
+const val ExerciseMediaFigureTag = "exercise-media-figure"
 const val ExerciseCardHeaderTag = "exercise-card-header"
 const val ExerciseCardSegmentTag = "exercise-card-segment"
 const val ExerciseCardFooterTag = "exercise-card-footer"
@@ -89,6 +93,9 @@ sealed interface ExerciseMedia {
 
     /** An image; until its [painter] draws (while it loads), the equipment icon shows through. */
     data class Image(val painter: Painter) : ExerciseMedia
+
+    /** Phase 4A: a still figure (the end frame of the exercise), with its muscle [highlights]. */
+    data class Figure(val pose: FigurePose, val highlights: Set<FigureSegment>) : ExerciseMedia
 }
 
 /**
@@ -238,7 +245,7 @@ private fun CardHeader(
             Modifier
         }
         Row(toggle, horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically) {
-            Thumbnail(media, equipmentIcon)
+            ExerciseThumbnail(media, equipmentIcon, MTheme.sizes.media)
             Column(Modifier.weight(1f)) {
                 MText(name, MTheme.type.titleMd, modifier = Modifier.semantics { heading() })
                 Row(horizontalArrangement = Arrangement.spacedBy(space.s1), verticalAlignment = Alignment.CenterVertically) {
@@ -290,11 +297,16 @@ private fun CardHeader(
     }
 }
 
+/**
+ * The square tile of an exercise, [size] wide, as the card header draws it: the equipment icon
+ * without media, the image over that icon, the offline icon, or the still figure (decorative: the
+ * exercise's name is beside it). Lists, the picker and the editor use it on their own.
+ */
 @Composable
-private fun Thumbnail(media: ExerciseMedia, equipmentIcon: ImageVector) {
+fun ExerciseThumbnail(media: ExerciseMedia, equipmentIcon: ImageVector, size: Dp, modifier: Modifier = Modifier) {
     val colors = MTheme.colors
     Box(
-        Modifier.size(MTheme.sizes.media).clip(RoundedCornerShape(MTheme.radius.md)).background(colors.bgInset),
+        modifier.size(size).clip(RoundedCornerShape(MTheme.radius.md)).background(colors.bgInset),
         contentAlignment = Alignment.Center,
     ) {
         when (media) {
@@ -308,10 +320,14 @@ private fun Thumbnail(media: ExerciseMedia, equipmentIcon: ImageVector) {
                 Image(
                     media.painter,
                     contentDescription = null,
-                    modifier = Modifier.size(MTheme.sizes.media),
+                    modifier = Modifier.size(size),
                     contentScale = ContentScale.Crop,
                 )
             }
+            is ExerciseMedia.Figure -> ExerciseFigure(
+                media.pose, media.highlights, contentDescription = null,
+                Modifier.testTag(ExerciseMediaFigureTag).size(size),
+            )
             ExerciseMedia.Offline -> MIcon(
                 MIcons.ImageOff, null, Modifier.testTag(ExerciseOfflineIconTag),
                 size = MTheme.sizes.icon24, tint = colors.textTertiary,
