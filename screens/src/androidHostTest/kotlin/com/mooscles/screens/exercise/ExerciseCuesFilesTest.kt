@@ -24,7 +24,7 @@ class ExerciseCuesFilesTest {
     private val stableIds = ExerciseCatalog.exercises.map { it.id.removePrefix("catalog_") }
 
     // Grows with each content batch (Tasks 12 and 13) until every catalog exercise is covered.
-    private val coveredPrefixes = listOf("barbell_", "ez_bar_", "dumbbell_")
+    private val coveredPrefixes = listOf("barbell_", "ez_bar_", "dumbbell_", "kettlebell_", "cable_", "bodyweight_")
 
     @Test
     fun sameKeysAndCountsInBothLanguages() {

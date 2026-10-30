@@ -622,5 +622,689 @@
     "Aproxime as costelas do quadril, tirando as escápulas do chão.",
     "Queixo levemente recolhido e pescoço relaxado.",
     "Desça devagar, sem deixar o peso puxar você."
+  ],
+  "kettlebell_squat_goblet": [
+    "Segure o kettlebell pelas laterais da alça, junto ao peito, cotovelos para baixo.",
+    "Pés um pouco além da largura dos ombros, pontas levemente para fora.",
+    "Agache entre os joelhos, alinhados com as pontas dos pés.",
+    "Peito aberto; suba empurrando o chão com o pé inteiro."
+  ],
+  "kettlebell_squat_front_double": [
+    "Leve os dois kettlebells à posição de rack, apoiados nos antebraços junto ao peito.",
+    "Cotovelos fechados, perto das costelas.",
+    "Agache com o peito aberto, sem deixar o peso puxar o tronco para a frente.",
+    "Trave o abdômen antes de cada repetição e suba empurrando com o pé inteiro."
+  ],
+  "kettlebell_lunge_reverse_racked": [
+    "Segure um kettlebell na posição de rack, cotovelo junto às costelas.",
+    "Dê um passo para trás e desça até o joelho de trás quase tocar o chão.",
+    "Tronco ereto, sem inclinar para o lado do peso nem para o outro.",
+    "Volte empurrando com o pé da frente; faça todas as repetições desse lado."
+  ],
+  "kettlebell_deadlift": [
+    "Coloque o kettlebell entre os pés, na linha do meio do pé.",
+    "Leve o quadril para trás e pegue a alça com as costas retas.",
+    "Abaixe os ombros e trave o abdômen antes de subir.",
+    "Suba levando o quadril à frente e contraia os glúteos no topo."
+  ],
+  "kettlebell_deadlift_romanian": [
+    "Em pé, segure o kettlebell pela alça com os braços estendidos.",
+    "Joelhos levemente flexionados; leve o quadril para trás com o kettlebell perto das pernas.",
+    "Desça até sentir bem o alongamento dos posteriores, costas retas.",
+    "Leve o quadril à frente para subir, sem jogar o tronco para trás no topo."
+  ],
+  "kettlebell_deadlift_one_leg": [
+    "Fique em uma perna, joelho levemente flexionado, kettlebell na mão oposta.",
+    "Incline o tronco enquanto a perna livre sobe para trás.",
+    "Quadril nivelado, sem abrir para o lado.",
+    "Mantenha o kettlebell perto da perna de apoio e volte levando esse quadril à frente."
+  ],
+  "kettlebell_swing_two_hand": [
+    "Comece com o kettlebell um pouco à frente e leve-o com força para trás entre as pernas.",
+    "O movimento vem do quadril, não é agachamento: quadril para trás, canelas quase na vertical.",
+    "Estenda o quadril com força e deixe o kettlebell subir até a altura do peito.",
+    "No topo, fique ereto com glúteos e abdômen contraídos, sem jogar o tronco para trás."
+  ],
+  "kettlebell_swing_one_hand": [
+    "Segure a alça com uma mão e mantenha esse ombro baixo.",
+    "Leve o kettlebell para trás entre as pernas, com o polegar apontando para trás.",
+    "Estenda o quadril com força, ombros de frente, sem girar o tronco.",
+    "Faça todas as repetições de um lado e depois troque de mão."
+  ],
+  "kettlebell_clean": [
+    "Leve o kettlebell para trás entre as pernas e estenda o quadril.",
+    "Cotovelo junto ao corpo, para o kettlebell subir perto e não num arco aberto.",
+    "Gire a mão em volta da alça para o kettlebell encostar de leve no antebraço.",
+    "Termine no rack: punho neutro, cotovelo junto às costelas, glúteos contraídos."
+  ],
+  "kettlebell_snatch": [
+    "Leve o kettlebell para trás entre as pernas e estenda o quadril com força.",
+    "Puxe o kettlebell perto do corpo, guiando pelo cotovelo.",
+    "Ao passar da cabeça, enfie a mão na alça e estenda o braço, para o peso não bater no antebraço.",
+    "Trave o braço acima da cabeça, bíceps perto da orelha, e deixe descer para a próxima repetição."
+  ],
+  "kettlebell_clean_press": [
+    "Faça o clean até o rack, punho neutro e cotovelo junto às costelas.",
+    "Pare no rack e contraia glúteos e abdômen antes de empurrar.",
+    "Empurre até travar o braço, bíceps perto da orelha.",
+    "Volte ao rack com controle antes do próximo clean."
+  ],
+  "kettlebell_press": [
+    "Comece no rack: punho neutro, cotovelo sob o kettlebell, antebraço na vertical.",
+    "Contraia glúteos e abdômen para não inclinar o tronco para trás.",
+    "Empurre para cima e levemente para fora, terminando com o bíceps perto da orelha.",
+    "Sem impulso das pernas; desça de volta ao rack com controle."
+  ],
+  "kettlebell_push_press": [
+    "Comece no rack, cotovelo junto ao corpo e abdômen travado.",
+    "Faça uma descida curta e rápida dobrando os joelhos, tronco ereto.",
+    "Estenda as pernas com força e empurre o kettlebell para cima no mesmo movimento.",
+    "Trave o braço com o bíceps perto da orelha; volte ao rack amortecendo com os joelhos."
+  ],
+  "kettlebell_floor_press": [
+    "Deite de lado, pegue o kettlebell com as duas mãos e role até ficar de costas.",
+    "Joelhos flexionados, braço a uns 45° do corpo e punho neutro.",
+    "Empurre até travar o braço sobre o ombro.",
+    "Desça até o braço encostar no chão, pare um instante e empurre de novo."
+  ],
+  "kettlebell_row": [
+    "Apoie uma mão no banco e incline o tronco até as costas ficarem retas e quase paralelas ao chão.",
+    "Deixe o kettlebell pendurado abaixo do ombro.",
+    "Puxe em direção ao quadril, cotovelo perto do corpo.",
+    "Desça até alongar bem, sem girar o tronco."
+  ],
+  "kettlebell_gorilla_row": [
+    "Pés afastados e dois kettlebells entre eles; incline o tronco com as costas retas.",
+    "Segure as duas alças; empurre um kettlebell contra o chão enquanto puxa o outro.",
+    "Puxe em direção ao quadril, sem girar o tronco.",
+    "Apoie no chão com controle antes de trocar de lado."
+  ],
+  "kettlebell_high_pull": [
+    "Com uma mão, leve o kettlebell para trás entre as pernas.",
+    "Estenda o quadril com força e deixe o kettlebell subir.",
+    "Puxe o cotovelo para cima e para trás, com a mão terminando perto da altura do peito.",
+    "Estenda o braço de volta e deixe o kettlebell descer para a próxima repetição."
+  ],
+  "kettlebell_halo": [
+    "Segure o kettlebell de cabeça para baixo pelas laterais da alça, na altura do peito.",
+    "Gire o kettlebell em volta da cabeça, perto do pescoço.",
+    "Costelas para baixo e quadril parado; só os braços se movem.",
+    "Alterne o sentido a cada repetição ou a cada série."
+  ],
+  "kettlebell_turkish_get_up": [
+    "Deitado, com o kettlebell no braço estendido, mantenha os olhos nele o tempo todo.",
+    "Braço com o peso sempre na vertical e travado, do início ao fim.",
+    "Uma fase por vez: cotovelo, mão, eleve o quadril, passe a perna por baixo e levante.",
+    "Desça repetindo as fases ao contrário; comece leve até cada uma ficar firme."
+  ],
+  "kettlebell_windmill": [
+    "Leve o kettlebell acima da cabeça e gire os pés uns 45° para o lado oposto.",
+    "Olhos no kettlebell e o braço com o peso na vertical.",
+    "Empurre o quadril para o lado do kettlebell e deslize a mão livre pela outra perna.",
+    "Desça só até onde conseguir com a coluna alongada e volte a subir."
+  ],
+  "kettlebell_curl": [
+    "Segure o kettlebell pelas laterais da alça, braços estendidos e cotovelos ao lado do corpo.",
+    "Suba até a altura do peito sem levar os cotovelos para a frente.",
+    "Tronco parado, sem dar impulso com o quadril.",
+    "Desça devagar até estender totalmente os braços."
+  ],
+  "kettlebell_triceps_overhead": [
+    "Segure o kettlebell pelas laterais da alça acima da cabeça, braços estendidos.",
+    "Dobre os cotovelos e desça o kettlebell atrás da cabeça, cotovelos para cima.",
+    "Cotovelos perto da cabeça enquanto estende os braços.",
+    "Trave o abdômen para não arquear a lombar."
+  ],
+  "cable_chest_fly_mid": [
+    "Polias na altura dos ombros; fique com um pé à frente do outro.",
+    "Cotovelos levemente flexionados, no mesmo ângulo durante toda a série.",
+    "Junte as mãos à frente do peito, num arco amplo.",
+    "Volte devagar até sentir o alongamento, sem deixar os ombros irem para a frente."
+  ],
+  "cable_chest_fly_high_low": [
+    "Polias no alto; um pé à frente do outro e o tronco levemente inclinado à frente.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Traga as mãos para baixo até se encontrarem à frente do quadril.",
+    "Volte devagar pelo mesmo arco, com o peito aberto."
+  ],
+  "cable_chest_fly_low_high": [
+    "Polias embaixo; fique no meio, com um pé levemente à frente.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Leve as mãos para cima até se encontrarem à frente da parte alta do peito.",
+    "Ombros baixos, sem encolher; desça devagar."
+  ],
+  "cable_chest_fly_one_arm": [
+    "Fique de lado para a polia na altura do ombro, com o pegador na mão mais próxima.",
+    "Cotovelo levemente flexionado, sem mudar o ângulo.",
+    "Leve a mão até a frente do meio do peito, sem girar o tronco.",
+    "Volte devagar até alongar; faça todas as repetições desse lado."
+  ],
+  "cable_chest_fly_flat_bench": [
+    "Coloque um banco reto entre duas polias baixas e deite com os pegadores sobre o peito.",
+    "Escápulas para trás e cotovelos levemente flexionados.",
+    "Abra os braços num arco amplo até as mãos ficarem perto da linha do peito.",
+    "Volte juntando os pegadores sobre o peito, contraindo o peitoral."
+  ],
+  "cable_chest_fly_incline_bench": [
+    "Banco inclinado entre 30° e 45°, entre duas polias baixas.",
+    "Comece com os pegadores sobre a parte alta do peito, cotovelos levemente flexionados.",
+    "Desça num arco amplo até sentir o alongamento no peito.",
+    "Junte as mãos de novo sem tirar os ombros do banco."
+  ],
+  "cable_chest_press": [
+    "Polias na altura do peito; fique com um pé à frente do outro.",
+    "Comece com os pegadores ao lado do peito, cotovelos a uns 45° do corpo.",
+    "Empurre para a frente até estender os braços, sem jogar o tronco.",
+    "Trave o abdômen para os cabos não puxarem você para trás."
+  ],
+  "cable_shoulder_press": [
+    "Sente num banco entre duas polias baixas, costas no encosto.",
+    "Comece com os pegadores na altura dos ombros, antebraços na vertical.",
+    "Empurre até estender os braços sobre os ombros.",
+    "Desça até a altura dos ombros com controle, sem arquear a lombar."
+  ],
+  "cable_row_close_neutral": [
+    "Sente com os pés na plataforma e os joelhos levemente flexionados.",
+    "Peito aberto e tronco parado; não balance para trás para mover o peso.",
+    "Puxe o triângulo até a parte alta do abdômen, cotovelos junto ao corpo.",
+    "Junte as escápulas no fim e estenda os braços devagar."
+  ],
+  "cable_row_wide_overhand": [
+    "Use uma barra longa, com pegada pronada e aberta.",
+    "Tronco ereto, joelhos levemente flexionados, sem balançar.",
+    "Puxe a barra até a parte baixa do peito, cotovelos abertos para os lados.",
+    "Contraia a parte alta das costas e estenda os braços com controle."
+  ],
+  "cable_row_underhand": [
+    "Use uma barra reta com pegada supinada na largura dos ombros.",
+    "Tronco ereto, joelhos levemente flexionados.",
+    "Puxe em direção ao umbigo, cotovelos junto ao corpo.",
+    "Estenda os braços devagar, sem levar o tronco para a frente."
+  ],
+  "cable_row_one_arm": [
+    "Sente de frente para a polia com um pegador; a outra mão na coxa.",
+    "Tronco ereto; estenda o braço à frente sem curvar as costas.",
+    "Puxe o pegador até a lateral do tronco, cotovelo perto do corpo.",
+    "Não gire o tronco para terminar a puxada; faça todas as repetições desse lado."
+  ],
+  "cable_lat_pulldown_wide": [
+    "Prenda as coxas sob o apoio e segure a barra mais aberta que os ombros.",
+    "Incline o tronco um pouco para trás, peito aberto.",
+    "Puxe a barra até a parte alta do peito, levando os cotovelos para baixo.",
+    "Deixe a barra subir com controle até estender os braços."
+  ],
+  "cable_lat_pulldown_underhand": [
+    "Segure a barra com pegada supinada, na largura dos ombros.",
+    "Coxas sob o apoio, peito aberto e leve inclinação para trás.",
+    "Puxe a barra até a parte alta do peito, cotovelos perto do corpo.",
+    "Controle a subida da barra até estender os braços."
+  ],
+  "cable_lat_pulldown_neutral": [
+    "Use o triângulo e sente com as coxas presas sob o apoio.",
+    "Leve o tronco um pouco para trás, peito aberto.",
+    "Puxe o triângulo até a parte alta do peito, levando os cotovelos para baixo.",
+    "Volte devagar até estender os braços."
+  ],
+  "cable_lat_pulldown_one_arm": [
+    "Use um pegador na polia alta, sentado ou ajoelhado.",
+    "Comece com o braço estendido, deixando o ombro subir.",
+    "Puxe o cotovelo para baixo em direção ao quadril, sem mexer o tronco.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_straight_arm_pulldown_bar": [
+    "De frente para a polia alta, com a barra reta, incline um pouco o tronco a partir do quadril.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Leve a barra para baixo num arco até chegar às coxas.",
+    "Volte devagar até perto da altura da cabeça, sem arquear a lombar."
+  ],
+  "cable_straight_arm_pulldown_rope": [
+    "Prenda a corda na polia alta e incline um pouco o tronco a partir do quadril.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Leve a corda para baixo num arco até as coxas, abrindo as pontas no final.",
+    "Volte devagar até os braços ficarem perto da altura da cabeça."
+  ],
+  "cable_face_pull": [
+    "Corda na altura da cabeça; segure as pontas com os polegares voltados para você.",
+    "Dê um passo para trás até sentir tensão e fique ereto.",
+    "Puxe em direção ao rosto, abrindo a corda e levando os cotovelos para cima e para trás.",
+    "Termine com as mãos ao lado das orelhas e volte devagar."
+  ],
+  "cable_reverse_fly": [
+    "Polias na altura dos ombros; segure os cabos cruzados, cada mão com o do lado oposto.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Abra os braços até ficarem alinhados com os ombros.",
+    "Sem encolher os ombros nem arquear as costas; volte devagar até cruzar os cabos."
+  ],
+  "cable_lateral_raise": [
+    "Fique de lado para a polia baixa e segure o pegador com a mão mais distante.",
+    "Segure no aparelho com a outra mão para ter equilíbrio.",
+    "Eleve o braço pela lateral até a altura do ombro, guiando pelo cotovelo.",
+    "Desça devagar, sem encolher o ombro; faça todas as repetições desse lado."
+  ],
+  "cable_front_raise": [
+    "De costas para a polia baixa, segure o pegador com uma mão ao lado do corpo.",
+    "Cotovelo levemente flexionado, sem jogar o tronco para trás.",
+    "Eleve o braço à frente até a altura do ombro.",
+    "Desça devagar e faça todas as repetições desse lado."
+  ],
+  "cable_upright_row": [
+    "Barra reta na polia baixa, pegada pronada na largura dos ombros.",
+    "Suba a barra rente ao corpo, guiando pelos cotovelos.",
+    "Pare perto da parte baixa do peito, cotovelos no máximo na altura dos ombros.",
+    "Desça com controle, sem mexer o tronco."
+  ],
+  "cable_external_rotation": [
+    "Polia na altura do cotovelo; fique de lado e segure o pegador com a mão mais distante.",
+    "Cotovelo a 90° e encostado ao corpo.",
+    "Gire o antebraço para fora, afastando-o do corpo, sem tirar o cotovelo do lugar.",
+    "Use carga leve e volte devagar; faça todas as repetições desse lado."
+  ],
+  "cable_curl_straight_bar": [
+    "Barra reta na polia baixa, pegada supinada na largura dos ombros.",
+    "Fique perto da polia, cotovelos ao lado do corpo.",
+    "Suba sem balançar o tronco nem levar os cotovelos para a frente.",
+    "Desça devagar até estender totalmente os braços."
+  ],
+  "cable_curl_rope": [
+    "Corda na polia baixa; segure as pontas com as palmas voltadas uma para a outra.",
+    "Cotovelos ao lado do corpo e punhos firmes.",
+    "Suba a corda em direção aos ombros, sem balançar o tronco.",
+    "Desça devagar até estender os braços."
+  ],
+  "cable_curl_one_arm": [
+    "Segure um pegador na polia baixa, com a palma para cima.",
+    "Cotovelo junto ao corpo e tronco ereto.",
+    "Suba até o fim e contraia o bíceps no topo.",
+    "Desça devagar e faça todas as repetições desse lado."
+  ],
+  "cable_curl_behind_body": [
+    "De costas para a polia baixa, com o pegador numa mão, dê um passo à frente.",
+    "Deixe o cabo levar o braço um pouco para trás do corpo.",
+    "Suba mantendo o cotovelo para trás, sem levá-lo à frente.",
+    "Desça devagar até alongar bem; faça todas as repetições desse lado."
+  ],
+  "cable_curl_high": [
+    "Fique entre duas polias altas, braços abertos na altura dos ombros e palmas para cima.",
+    "Só os antebraços se movem; os braços ficam parados na linha dos ombros.",
+    "Traga os pegadores em direção às orelhas e contraia.",
+    "Estenda os cotovelos devagar até voltar ao início."
+  ],
+  "cable_curl_preacher": [
+    "Posicione o banco Scott à frente da polia baixa, com uma barra curta.",
+    "Mantenha a parte de trás dos braços no apoio, com as axilas na borda.",
+    "Suba sem tirar os cotovelos do apoio.",
+    "Desça devagar até quase estender os braços."
+  ],
+  "cable_triceps_pushdown_rope": [
+    "Corda na polia alta; segure as pontas com as palmas voltadas uma para a outra.",
+    "Cotovelos junto ao corpo e tronco levemente inclinado à frente.",
+    "Empurre até estender os braços, abrindo as pontas da corda no final.",
+    "Suba até os antebraços ficarem perto da paralela com o chão, sem mexer os cotovelos."
+  ],
+  "cable_triceps_pushdown_bar": [
+    "Segure a barra reta com pegada pronada, na largura dos ombros.",
+    "Cotovelos junto ao corpo, parados durante toda a série.",
+    "Empurre a barra até estender totalmente os braços.",
+    "Não jogue o peso do corpo sobre a barra; suba devagar."
+  ],
+  "cable_triceps_pushdown_reverse": [
+    "Segure a barra com pegada supinada, mãos na largura dos ombros.",
+    "Cotovelos junto ao corpo e punhos firmes.",
+    "Empurre até estender totalmente os braços.",
+    "Use menos carga que na pegada pronada e suba devagar."
+  ],
+  "cable_triceps_overhead_rope": [
+    "De costas para a polia, corda atrás da cabeça e um pé à frente.",
+    "Incline um pouco o tronco, cotovelos apontados para a frente e perto da cabeça.",
+    "Estenda os cotovelos, abrindo as pontas da corda no final.",
+    "Volte devagar até alongar bem, sem abrir os cotovelos."
+  ],
+  "cable_triceps_pushdown_one_arm": [
+    "Segure um pegador na polia alta, cotovelo junto ao corpo.",
+    "Empurre até estender totalmente o braço.",
+    "Ombro baixo e tronco parado.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_triceps_cross_body": [
+    "Segure o pegador da polia alta com a mão mais distante, o cabo cruzando à frente do corpo.",
+    "Braço parado; só o antebraço se move.",
+    "Estenda o braço para o lado até o cotovelo ficar estendido.",
+    "Volte devagar cruzando à frente do corpo; faça todas as repetições desse lado."
+  ],
+  "cable_pull_through": [
+    "De costas para a polia baixa, com a corda passando entre as pernas.",
+    "Dê alguns passos à frente até sentir tensão, pés um pouco além da largura do quadril.",
+    "Leve o quadril para trás com as costas retas, deixando a corda passar entre as pernas.",
+    "Leve o quadril à frente para subir e contraia os glúteos; os braços só seguram."
+  ],
+  "cable_glute_kickback": [
+    "Prenda a tornozeleira na polia baixa e fique de frente para o aparelho.",
+    "Segure no aparelho, incline um pouco o tronco e flexione levemente o joelho de apoio.",
+    "Leve a perna para trás contraindo o glúteo, sem arquear a lombar.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_hip_abduction": [
+    "Fique de lado para a polia baixa, com a tornozeleira no tornozelo mais distante.",
+    "Segure no aparelho e fique ereto sobre a outra perna.",
+    "Afaste a perna para o lado, ponta do pé para a frente, sem inclinar o tronco.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_hip_adduction": [
+    "Fique de lado para a polia baixa, com a tornozeleira no tornozelo mais próximo.",
+    "Afaste-se até o cabo puxar essa perna para o lado.",
+    "Traga a perna até cruzar à frente da perna de apoio, sem mexer o tronco.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_leg_curl": [
+    "Prenda a tornozeleira em um tornozelo e fique de frente para a polia baixa.",
+    "Segure no aparelho, joelhos lado a lado, perna de apoio levemente flexionada.",
+    "Leve o calcanhar em direção ao glúteo, sem mover a coxa.",
+    "Desça devagar e faça todas as repetições desse lado."
+  ],
+  "cable_crunch_kneeling": [
+    "Ajoelhe de frente para a polia alta e segure a corda ao lado da cabeça.",
+    "Quadril parado, sem sentar nos calcanhares.",
+    "Enrole o tronco, aproximando as costelas do quadril.",
+    "Volte devagar até sentir o abdômen alongar."
+  ],
+  "cable_crunch_standing": [
+    "De costas para a polia alta, segure as pontas da corda ao lado da cabeça.",
+    "Joelhos levemente flexionados e quadril parado.",
+    "Enrole o tronco, aproximando as costelas do quadril.",
+    "Não dobre o quadril; volte devagar até ficar ereto."
+  ],
+  "cable_woodchop_high_low": [
+    "Polia no alto; fique de lado, pés mais afastados que os ombros.",
+    "Segure o pegador com as duas mãos, braços estendidos.",
+    "Puxe na diagonal até perto do joelho oposto, girando o tronco.",
+    "Deixe o pé do lado da polia girar; volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_woodchop_low_high": [
+    "Polia embaixo; fique de lado, pés mais afastados que os ombros.",
+    "Joelhos levemente flexionados, pegador nas duas mãos perto do joelho do lado da polia.",
+    "Puxe na diagonal até acima do ombro oposto, girando o tronco.",
+    "Deixe o pé do lado da polia girar; volte devagar e faça todas as repetições desse lado."
+  ],
+  "cable_pallof_press": [
+    "Fique de lado para a polia na altura do peito, com o pegador junto ao peito.",
+    "Afaste-se até sentir tensão, pés na largura do quadril e joelhos levemente flexionados.",
+    "Estenda os braços à frente e segure sem deixar o tronco girar.",
+    "Traga de volta ao peito devagar; faça todas as repetições desse lado."
+  ],
+  "bodyweight_push_up": [
+    "Mãos um pouco além da largura dos ombros, corpo alinhado da cabeça aos calcanhares.",
+    "Contraia glúteos e abdômen para o quadril não cair.",
+    "Desça o peito até perto do chão, cotovelos a uns 45° do corpo.",
+    "Empurre o chão até estender os braços."
+  ],
+  "bodyweight_push_up_incline": [
+    "Mãos num banco ou caixa, um pouco além da largura dos ombros.",
+    "Corpo alinhado da cabeça aos calcanhares.",
+    "Desça o peito até a borda, cotovelos a uns 45° do corpo.",
+    "Quanto mais alto o apoio, mais fácil; use um mais baixo conforme ganhar força."
+  ],
+  "bodyweight_push_up_decline": [
+    "Pés num banco ou caixa, mãos no chão um pouco além da largura dos ombros.",
+    "Contraia abdômen e glúteos para o quadril não cair nem subir.",
+    "Desça o peito em direção ao chão, cotovelos a uns 45° do corpo.",
+    "Pescoço alinhado com o tronco; empurre de volta para cima."
+  ],
+  "bodyweight_push_up_wide": [
+    "Mãos bem mais abertas que a largura dos ombros.",
+    "Dedos levemente para fora e corpo alinhado da cabeça aos calcanhares.",
+    "Desça o peito entre as mãos, com controle.",
+    "Suba sem deixar o quadril cair."
+  ],
+  "bodyweight_push_up_diamond": [
+    "Mãos juntas sob o peito, polegares e indicadores formando um diamante.",
+    "Cotovelos perto do corpo na descida.",
+    "Desça até o peito quase tocar as mãos.",
+    "Corpo alinhado; empurre de volta para cima."
+  ],
+  "bodyweight_push_up_archer": [
+    "Mãos bem afastadas, dedos virados para fora.",
+    "Desça em direção a uma das mãos, dobrando esse cotovelo, com o outro braço estendido.",
+    "Quadril nivelado e corpo alinhado.",
+    "Volte ao centro e alterne os lados, ou termine um lado antes do outro."
+  ],
+  "bodyweight_push_up_pike": [
+    "Comece com o quadril alto, o corpo formando um V invertido.",
+    "Mãos na largura dos ombros e cabeça entre os braços.",
+    "Dobre os cotovelos e leve o topo da cabeça em direção ao chão, um pouco à frente das mãos.",
+    "Mantenha o quadril alto e empurre de volta para cima."
+  ],
+  "bodyweight_push_up_handstand": [
+    "Suba na parada de mão apoiada na parede, mãos um pouco além da largura dos ombros.",
+    "Contraia abdômen e glúteos para não arquear as costas.",
+    "Desça devagar até a cabeça encostar de leve no chão ou num colchonete.",
+    "Empurre até travar os braços; antes, ganhe base com a flexão pike."
+  ],
+  "bodyweight_dip_chest": [
+    "Apoie-se nas paralelas com os braços estendidos.",
+    "Incline o tronco à frente e deixe os cotovelos abrirem um pouco.",
+    "Desça até os ombros ficarem um pouco abaixo dos cotovelos, ou até onde for confortável.",
+    "Suba sem encolher os ombros em direção às orelhas."
+  ],
+  "bodyweight_dip_triceps": [
+    "Apoie-se nas paralelas, braços estendidos e ombros baixos.",
+    "Tronco ereto e cotovelos perto do corpo.",
+    "Desça até os braços ficarem perto da paralela com o chão.",
+    "Empurre até estender totalmente os cotovelos."
+  ],
+  "bodyweight_bench_dip": [
+    "Mãos na borda de um banco atrás de você, dedos para a frente.",
+    "Quadril perto do banco; com os joelhos flexionados fica mais fácil.",
+    "Desça até os braços ficarem perto da paralela com o chão, sem descer além.",
+    "Empurre com as palmas até estender os braços."
+  ],
+  "bodyweight_pull_up": [
+    "Segure a barra com pegada pronada, um pouco mais aberta que os ombros.",
+    "Comece pendurado com os braços estendidos e abaixe os ombros antes de puxar.",
+    "Puxe até o queixo passar da barra, sem chutar nem balançar.",
+    "Desça até estender os braços, com controle."
+  ],
+  "bodyweight_pull_up_wide": [
+    "Pegada pronada, bem mais aberta que os ombros.",
+    "Abaixe os ombros e mantenha o peito aberto.",
+    "Leve os cotovelos para baixo e para os lados, aproximando o peito da barra.",
+    "Desça até estender os braços, com controle e sem balançar."
+  ],
+  "bodyweight_pull_up_neutral": [
+    "Use os pegadores paralelos, palmas voltadas uma para a outra.",
+    "Comece pendurado, braços estendidos e ombros baixos.",
+    "Puxe até o queixo passar dos pegadores, cotovelos perto do corpo.",
+    "Desça até estender os braços, com controle."
+  ],
+  "bodyweight_chin_up": [
+    "Pegada supinada, na largura dos ombros.",
+    "Comece pendurado com os braços estendidos e trave o abdômen.",
+    "Puxe o peito em direção à barra até o queixo passar dela.",
+    "Desça até estender os braços, sem despencar."
+  ],
+  "bodyweight_row_inverted": [
+    "Fique sob uma barra na altura da cintura, pegada pronada um pouco mais aberta que os ombros.",
+    "Corpo alinhado dos ombros aos calcanhares.",
+    "Puxe o peito até a barra, juntando as escápulas.",
+    "Desça até estender os braços; com os joelhos flexionados fica mais fácil."
+  ],
+  "bodyweight_row_inverted_underhand": [
+    "Fique sob uma barra na altura da cintura, pegada supinada na largura dos ombros.",
+    "Contraia glúteos e abdômen para o quadril ficar alinhado.",
+    "Puxe até a barra chegar à parte baixa do peito, cotovelos perto do corpo.",
+    "Desça com controle até estender os braços."
+  ],
+  "bodyweight_squat": [
+    "Pés na largura dos ombros, pontas levemente para fora.",
+    "Estenda os braços à frente para ter equilíbrio e agache entre os joelhos.",
+    "Calcanhares no chão e joelhos alinhados com as pontas dos pés.",
+    "Desça até onde conseguir com as costas retas e volte a subir."
+  ],
+  "bodyweight_split_squat": [
+    "Fique com um pé bem à frente do outro, calcanhar de trás elevado.",
+    "Desça reto até o joelho de trás quase tocar o chão.",
+    "Tronco ereto e calcanhar da frente no chão.",
+    "Suba empurrando com o pé da frente; faça todas as repetições antes de trocar."
+  ],
+  "bodyweight_bulgarian_split_squat": [
+    "Apoie o peito do pé de trás num banco.",
+    "Posicione o pé da frente longe o bastante para o calcanhar não sair do chão na descida.",
+    "Desça reto até a coxa da frente ficar perto da paralela.",
+    "Suba empurrando com o pé da frente; faça todas as repetições antes de trocar."
+  ],
+  "bodyweight_lunge_reverse": [
+    "Em pé, pés na largura do quadril.",
+    "Dê um passo para trás e desça até o joelho de trás quase tocar o chão.",
+    "Mantenha o peso no pé da frente e o tronco ereto.",
+    "Volte empurrando com o pé da frente; alterne as pernas ou termine um lado antes."
+  ],
+  "bodyweight_lunge_forward": [
+    "Dê um passo longo à frente, apoiando o pé inteiro.",
+    "Desça até o joelho de trás quase tocar o chão.",
+    "Joelho da frente alinhado com a ponta do pé e tronco ereto.",
+    "Empurre com o pé da frente para voltar ao início."
+  ],
+  "bodyweight_lunge_lateral": [
+    "Comece com os pés juntos e os braços à frente para ter equilíbrio.",
+    "Dê um passo largo para o lado e leve o quadril para trás sobre esse pé.",
+    "A outra perna estendida e os dois pés apontados para a frente.",
+    "Empurre com a perna flexionada para voltar ao início."
+  ],
+  "bodyweight_step_up": [
+    "Escolha uma caixa perto da altura do joelho; aumente só se a execução se mantiver.",
+    "Apoie o pé inteiro na caixa.",
+    "Suba empurrando com esse pé, sem impulso da perna de trás.",
+    "Desça com controle e faça todas as repetições desse lado."
+  ],
+  "bodyweight_pistol_squat": [
+    "Fique em uma perna, com a outra estendida à frente.",
+    "Estenda os braços à frente para se equilibrar na descida.",
+    "Calcanhar de apoio no chão e joelho alinhado com a ponta do pé.",
+    "Segure num apoio ou desça até uma caixa enquanto não fizer a amplitude completa."
+  ],
+  "bodyweight_squat_jump": [
+    "Agache até a metade, levando os braços para trás.",
+    "Salte com força, levando os braços para cima.",
+    "Aterrisse de leve na ponta dos pés, desça os calcanhares e dobre os joelhos.",
+    "Na aterrissagem, joelhos alinhados com as pontas dos pés."
+  ],
+  "bodyweight_reverse_nordic": [
+    "Ajoelhe num colchonete, joelhos na largura do quadril, corpo alinhado dos joelhos à cabeça.",
+    "Contraia glúteos e abdômen para manter o alinhamento.",
+    "Incline o corpo para trás devagar, sem dobrar o quadril nem sentar nos calcanhares.",
+    "Vá só até onde controlar e volte usando a força das coxas."
+  ],
+  "bodyweight_glute_bridge": [
+    "Deite de costas, joelhos flexionados, pés apoiados na largura do quadril.",
+    "Empurre pelos calcanhares e suba o quadril.",
+    "Pare quando ombros, quadril e joelhos ficarem alinhados, sem arquear a lombar.",
+    "Contraia os glúteos no topo por um segundo e desça devagar."
+  ],
+  "bodyweight_glute_bridge_one_leg": [
+    "Deite de costas, com um pé apoiado e a outra perna elevada.",
+    "Empurre pelo calcanhar do pé apoiado para subir o quadril.",
+    "Quadril nivelado, sem deixar um lado cair.",
+    "Desça devagar; faça todas as repetições antes de trocar de perna."
+  ],
+  "bodyweight_hip_thrust": [
+    "Apoie a parte alta das costas no banco, joelhos flexionados e pés no chão.",
+    "Pés na largura do quadril, canelas na vertical no topo.",
+    "Empurre pelos calcanhares até o quadril ficar alinhado com os joelhos.",
+    "Queixo baixo e costelas fechadas; contraia os glúteos no topo."
+  ],
+  "bodyweight_nordic_curl": [
+    "Ajoelhe num colchonete, com os tornozelos presos sob um apoio firme.",
+    "Corpo alinhado dos joelhos à cabeça, quadril estendido.",
+    "Desça para a frente o mais devagar possível, segurando com os posteriores.",
+    "Apoie as mãos no chão no fim e dê um leve impulso para voltar."
+  ],
+  "bodyweight_hamstring_walkout": [
+    "Comece na ponte glútea, com os calcanhares no chão.",
+    "Afaste os calcanhares em passos curtos, mantendo o quadril elevado.",
+    "Vá até as pernas ficarem quase estendidas ou até o quadril começar a cair.",
+    "Volte com os calcanhares até o início, sem baixar o quadril."
+  ],
+  "bodyweight_calf_raise": [
+    "Fique com a ponta dos pés num degrau e os calcanhares para fora.",
+    "Segure de leve num apoio para ter equilíbrio.",
+    "Desça os calcanhares até alongar e suba o máximo que conseguir.",
+    "Pare um instante no topo, sem quicar embaixo."
+  ],
+  "bodyweight_calf_raise_one_leg": [
+    "Fique com um pé no degrau e o calcanhar para fora.",
+    "Segure num apoio com uma mão para ter equilíbrio.",
+    "Desça o calcanhar até alongar e suba o máximo que conseguir.",
+    "Termine um lado antes de trocar."
+  ],
+  "bodyweight_crunch": [
+    "Deite de costas, joelhos flexionados, mãos ao lado da cabeça ou cruzadas no peito.",
+    "Aproxime as costelas do quadril, tirando as escápulas do chão.",
+    "Não puxe a cabeça; pescoço relaxado.",
+    "Desça devagar até o início."
+  ],
+  "bodyweight_reverse_crunch": [
+    "Deite de costas, mãos ao lado do corpo, joelhos flexionados e elevados.",
+    "Tire o quadril do chão, levando os joelhos em direção ao peito.",
+    "Use o abdômen, sem dar impulso com as pernas.",
+    "Desça o quadril devagar até encostar no chão."
+  ],
+  "bodyweight_sit_up": [
+    "Deite de costas, joelhos flexionados, pés apoiados ou presos.",
+    "Enrole o tronco com o queixo levemente recolhido, sem puxar a cabeça.",
+    "Suba até o tronco ficar na vertical.",
+    "Desça devagar, sem se jogar para trás."
+  ],
+  "bodyweight_bicycle_crunch": [
+    "Deite de costas, mãos ao lado da cabeça, escápulas fora do chão.",
+    "Traga um joelho em direção ao peito e gire o tronco para levar o ombro oposto até ele.",
+    "Estenda a outra perna baixa, sem encostar no chão.",
+    "Faça devagar e gire o tronco, sem puxar o pescoço."
+  ],
+  "bodyweight_hanging_knee_raise": [
+    "Fique pendurado na barra com os ombros baixos.",
+    "Suba os joelhos em direção ao peito e enrole o quadril no topo.",
+    "Evite balançar; pare um instante entre as repetições se precisar.",
+    "Desça as pernas devagar, com controle."
+  ],
+  "bodyweight_hanging_leg_raise": [
+    "Fique pendurado na barra, ombros baixos e pernas juntas.",
+    "Suba as pernas estendidas até a altura do quadril ou mais.",
+    "No topo, enrole o quadril para trabalhar o abdômen, e não só os flexores do quadril.",
+    "Desça devagar e pare o balanço antes da próxima repetição."
+  ],
+  "bodyweight_captains_chair_knee_raise": [
+    "Apoie os antebraços nos apoios laterais e encoste as costas no encosto.",
+    "Deixe as pernas soltas e os ombros baixos.",
+    "Suba os joelhos em direção ao peito e enrole o quadril no topo.",
+    "Desça devagar, sem balançar as pernas."
+  ],
+  "bodyweight_lying_leg_raise": [
+    "Deite de costas, com as mãos sob o quadril ou ao lado do corpo.",
+    "Encoste a lombar no chão antes de cada repetição.",
+    "Suba as pernas estendidas até ficarem na vertical.",
+    "Desça devagar só até onde a lombar continuar no chão."
+  ],
+  "bodyweight_dead_bug": [
+    "Deite de costas, braços para cima e joelhos a 90° sobre o quadril.",
+    "Encoste a lombar no chão e mantenha assim.",
+    "Estenda devagar um braço e a perna oposta em direção ao chão.",
+    "Solte o ar ao estender, volte e troque de lado."
+  ],
+  "bodyweight_bird_dog": [
+    "Comece em quatro apoios, mãos sob os ombros e joelhos sob o quadril.",
+    "Estenda um braço à frente e a perna oposta para trás até ficarem na linha do tronco.",
+    "Quadril nivelado, sem arquear nem girar a lombar.",
+    "Pare um instante, volte devagar e troque de lado."
+  ],
+  "bodyweight_back_extension": [
+    "Apoio no alto das coxas e tornozelos presos, para o quadril dobrar livremente.",
+    "Braços cruzados no peito ou mãos ao lado da cabeça.",
+    "Desça o tronco com as costas retas, com controle.",
+    "Suba até o tronco ficar alinhado com as pernas, sem arquear além disso."
+  ],
+  "bodyweight_glute_ham_raise": [
+    "Ajuste o aparelho para os joelhos ficarem logo atrás do apoio.",
+    "Comece com o corpo na horizontal, quadril estendido, alinhado dos joelhos à cabeça.",
+    "Empurre a ponta dos pés contra a plataforma e suba o corpo usando os posteriores.",
+    "Quadril estendido o tempo todo; desça devagar até a horizontal."
   ]
 }
