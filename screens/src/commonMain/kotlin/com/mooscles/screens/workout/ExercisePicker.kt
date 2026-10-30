@@ -29,6 +29,14 @@ object ExercisePicker {
     }
 
     /**
+     * The [recents] as they are now, for the picker and the library ("Recently used"): each id's
+     * entry in [current] (not the history's snapshot), the ids [current] no longer has left out
+     * before counting, so one that is gone makes room for the next, up to [limit].
+     */
+    fun currentRecents(history: List<WorkoutUi>, current: Map<String, ExerciseUi>, limit: Int = RECENT_LIMIT): List<ExerciseUi> =
+        recents(history, limit = Int.MAX_VALUE).mapNotNull { current[it.id] }.take(limit)
+
+    /**
      * The [exercises] that match [query] with the library's search ([ExerciseSearch]: accents,
      * case and word order do not matter; muscle, equipment and aliases count), in alphabetical
      * order of their names with case and accents folded, so "agachamento" sits beside "Abdominal"

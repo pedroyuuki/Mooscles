@@ -82,10 +82,7 @@ internal fun ExercisePickerSheet(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
     var picked by remember { mutableStateOf(false) }
     val searching = query.text.isNotBlank()
-    val recents = remember(exercises, history) {
-        val current = exercises.associateBy { it.id }
-        ExercisePicker.recents(history, limit = Int.MAX_VALUE).mapNotNull { current[it.id] }.take(ExercisePicker.RECENT_LIMIT)
-    }
+    val recents = remember(exercises, history) { ExercisePicker.currentRecents(history, exercises.associateBy { it.id }) }
     val results = remember(exercises, query.text) { ExercisePicker.filter(exercises, query.text) }
     val pick: (ExerciseUi) -> Unit = { exercise ->
         if (!picked) {
