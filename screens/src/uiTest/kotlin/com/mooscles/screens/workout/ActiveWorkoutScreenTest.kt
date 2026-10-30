@@ -28,6 +28,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
+import com.mooscles.designsystem.components.TimerDockTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
@@ -173,6 +175,7 @@ class ActiveWorkoutScreenTest {
         probe: ((String) -> Unit)? = null,
         restoration: ScreenRestoration? = null,
         now: () -> Long = { START + ELAPSED_MS },
+        timer: TimerUi = TimerUi(),
     ) {
         withScreen(
             locale = locale, reducedMotion = reducedMotion, size = size, fontScale = fontScale, density = density,
@@ -180,7 +183,7 @@ class ActiveWorkoutScreenTest {
         ) {
             ActiveWorkoutRoute(
                 state = fake.state.value,
-                timer = remember { mutableStateOf(TimerUi()) },
+                timer = remember { mutableStateOf(timer) },
                 actions = fake,
                 onMinimize = { events.list += "minimize" },
                 onOpenSummary = { events.list += "summary:$it" },
@@ -807,6 +810,49 @@ class ActiveWorkoutScreenTest {
         waitForIdle()
         assertEquals("renameWorkout:w1,Treino C", fake.calls.last())
         onNodeWithTag(RenameSheetTags.SAVE).assertDoesNotExist()
+    }
+
+    /**
+     * Plan decision 11, pre-flight F1: a catalog exercise shows its pt-BR name on the card, in its
+     * menu and confirmation, in the rest sheet (and the rest it starts) and in the dock, even while
+     * the timer carries the English name the view model stored on an automatic rest.
+     */
+    @Test
+    fun catalogNamesFollowPortuguese() = runComposeUiTest {
+        val bench = ExerciseUi("catalog_barbell_bench_flat", "Barbell bench press", "Chest", "Barbell", convention = "Total load")
+        val workout = WorkoutUi(
+            id = "w1", name = "Treino A", startedAt = START,
+            exercises = listOf(
+                WorkoutExerciseUi("e1", bench, (1..3).map { n -> SetUi("e1s$n", reps = 8, weightKg = 60.0, completed = n == 1) }),
+            ),
+        )
+        val fake = Fake(UiState(loading = false, active = workout, exercises = listOf(bench)))
+        val autoRest = TimerUi("Barbell bench press", remainingSeconds = 90, durationSeconds = 120, running = true, workoutExerciseId = "e1")
+        show(fake, timer = autoRest)
+        val name = "Supino reto com barra"
+        onNode(hasText(name) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).assertExists()
+        onNode(hasText("Descanso · $name") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+        val shown = onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size
+
+        // The menu's title.
+        onNode(hasTestTag(ExerciseMenuTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).performClick()
+        waitForIdle()
+        assertEquals(shown + 1, onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size, "menu title")
+        // The removal's confirmation.
+        onNodeWithTag(ExerciseMenuTags.REMOVE).performClick()
+        waitForIdle()
+        onNodeWithText("Remover $name? As 3 séries dele saem deste treino.", useUnmergedTree = true).assertExists()
+        dialogButton("Continuar treinando").performClick()
+        waitForIdle()
+
+        // The rest sheet, and the rest it starts carries the name shown.
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        assertEquals(shown + 1, onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size, "rest sheet")
+        onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
+        waitForIdle()
+        assertTrue(fake.calls.last().startsWith("startTimer:$name,"), fake.calls.last())
+        onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
     }
 
     private companion object {

@@ -52,6 +52,7 @@ import com.mooscles.domain.currentTimeMillis
 import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.durationText
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.summaryDateRange
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.best_set_assistance_only
@@ -322,7 +323,7 @@ private fun RecordSection(
             ) {
                 PrBadge(soft = soft)
                 MText(
-                    stringResource(Res.string.summary_record_line, record.exercise.name, recordDetail(record, pounds, locale)),
+                    stringResource(Res.string.summary_record_line, exerciseName(record.exercise), recordDetail(record, pounds, locale)),
                     MTheme.type.bodyMd,
                     Modifier.weight(1f),
                 )
@@ -363,6 +364,7 @@ private fun recordLoad(record: RecordUi, pounds: Boolean, locale: NumberLocale):
 private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: NumberLocale, stacked: Boolean) {
     val colors = MTheme.colors
     val type = MTheme.type
+    val name = exerciseName(entry.exercise)
     val best = SummaryStats.bestSet(entry)
     val bestText = when {
         best == null -> null
@@ -384,12 +386,12 @@ private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: Numb
     val rowModifier = Modifier.fillMaxWidth().testTag(summaryExerciseTag(entry.id)).semantics(mergeDescendants = true) {}
     if (stacked) {
         Column(rowModifier, verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
-            MText(entry.exercise.name, type.bodyLg)
+            MText(name, type.bodyLg)
             value(Modifier)
         }
     } else {
         Row(rowModifier, horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3), verticalAlignment = Alignment.CenterVertically) {
-            MText(entry.exercise.name, type.bodyLg, Modifier.weight(1f))
+            MText(name, type.bodyLg, Modifier.weight(1f))
             value(Modifier)
         }
     }

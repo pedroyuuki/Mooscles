@@ -60,6 +60,7 @@ import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.resources.ds_reps_count
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.RestDuration
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_timer_title
 import com.mooscles.screens.resources.workout_timer_title_short
@@ -69,6 +70,7 @@ import com.mooscles.screens.resources.workout_up_next_value
 import com.mooscles.screens.shell.rememberBarRestPhase
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.TimerUi
+import com.mooscles.ui.WorkoutExerciseUi
 import com.mooscles.ui.WorkoutUi
 import org.jetbrains.compose.resources.stringResource
 import com.mooscles.designsystem.resources.Res as DsRes
@@ -84,6 +86,10 @@ private const val COMPACT_FONT_SCALE = 1.5f
 
 /** What −15 s and +15 s move the rest by. */
 private const val ADJUST_SECONDS = 15
+
+/** The exercise of [workout] whose rest [timer] counts; none for a rest started from the rest sheet or of another workout. */
+private fun timerEntryOf(workout: WorkoutUi, timer: TimerUi): WorkoutExerciseUi? =
+    timer.workoutExerciseId?.let { id -> workout.exercises.firstOrNull { it.id == id } }
 
 /** The last rest the layer drew, kept for the exit animation, when the timer already has none. Not state. */
 private class LastRest {
@@ -136,7 +142,13 @@ internal fun WorkoutTimerLayer(
     val keyboard by remember(imeInsets, density) { derivedStateOf { imeInsets.getBottom(density) > 0 } }
     val compact = keyboard || density.fontScale >= COMPACT_FONT_SCALE
 
-    val label = stringResource(Res.string.workout_timer_title_short, current.exerciseName)
+    // By the timer's exercise of this workout (pre-flight F1): on an automatic rest the view model
+    // stores the catalog's English name (plan decision 11), so the label shows the entry's name.
+    val timerEntry = remember(workout, current.workoutExerciseId) { timerEntryOf(workout, current) }
+    val label = stringResource(
+        Res.string.workout_timer_title_short,
+        timerEntry?.let { exerciseName(it.exercise) } ?: current.exerciseName,
+    )
     val visual = phase?.let {
         RestTimerVisual(if (it == TimerPhase.Done) 0 else current.remainingSeconds.coerceAtLeast(0), current.durationSeconds, it, label)
     }
@@ -259,9 +271,9 @@ private fun ExpandedRest(
     actions: MoosclesActions,
     onClose: () -> Unit,
 ) {
-    val entry = timer.workoutExerciseId?.let { id -> workout.exercises.firstOrNull { it.id == id } }
+    val entry = remember(workout, timer.workoutExerciseId) { timerEntryOf(workout, timer) }
     val title = if (entry != null) {
-        stringResource(Res.string.workout_timer_title, entry.exercise.name, entry.sets.count { it.completed }, entry.sets.size)
+        stringResource(Res.string.workout_timer_title, exerciseName(entry.exercise), entry.sets.count { it.completed }, entry.sets.size)
     } else {
         stringResource(Res.string.workout_timer_title_short, timer.exerciseName)
     }
