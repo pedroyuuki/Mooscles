@@ -6,7 +6,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -17,14 +16,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.mooscles.designsystem.resources.Res
 import com.mooscles.designsystem.resources.ds_dismiss
 import com.mooscles.designsystem.theme.MTheme
@@ -72,21 +68,3 @@ internal fun OverlayScrim(tag: String, visible: Float, onClick: () -> Unit) {
 @Composable
 internal fun Modifier.overlayElevation(shape: Shape): Modifier =
     if (MTheme.isDark) this else shadow(MTheme.elevation.e3.shadowLight, shape)
-
-/**
- * The window of an overlay ([MDialog], [MBottomSheet]): a common `Dialog` that the platform's Back
- * dismisses through [onDismissRequest], with no outside tap (the overlay's own scrim handles it)
- * and the whole screen's width. Its [content] takes the host's density and font scale: on Android
- * the window would take its own from the configuration, so a host that scales its text (a test at
- * 2x) would not reach the content. In the app the two are the same.
- */
-@Composable
-internal fun OverlayWindow(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
-    val hostDensity = LocalDensity.current
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
-    ) {
-        CompositionLocalProvider(LocalDensity provides hostDensity, content = content)
-    }
-}

@@ -92,7 +92,7 @@ fun MDialog(
         }
     }
 
-    OverlayWindow(onDismissRequest = { close { currentDismiss() } }) {
+    MOverlayWindow(onDismissRequest = { close { currentDismiss() } }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         Box(

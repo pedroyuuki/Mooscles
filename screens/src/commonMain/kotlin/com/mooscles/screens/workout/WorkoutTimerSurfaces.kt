@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -49,8 +48,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.mooscles.designsystem.components.MOverlayWindow
 import com.mooscles.designsystem.components.RestTimerCompact
 import com.mooscles.designsystem.components.RestTimerDock
 import com.mooscles.designsystem.components.RestTimerExpanded
@@ -290,49 +288,42 @@ private fun ExpandedRest(
     LaunchedEffect(Unit) {
         shown.animateTo(1f, if (reduced) tween(motion.fast) else tween(motion.slow, easing = motion.easeDrawer))
     }
-    // The host's density and font scale inside the window too, as the overlays of the design system
-    // do: on Android the window would take its own from the configuration (in the app they are the same).
-    val hostDensity = LocalDensity.current
-    Dialog(
-        onDismissRequest = { close() },
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
-    ) {
+    // The design system's overlay window: the host's density and font scale reach the timer.
+    MOverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
-        CompositionLocalProvider(LocalDensity provides hostDensity) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .onPreviewKeyEvent { event ->
-                        val closes = event.type == KeyEventType.KeyDown && (event.key == Key.Escape || event.key == Key.Back)
-                        if (closes) close()
-                        closes
-                    }
-                    .focusRequester(focus)
-                    .focusable()
-                    .graphicsLayer {
-                        if (reduced) alpha = shown.value else translationY = (1f - shown.value) * size.height
-                    }
-                    .background(MTheme.colors.bgBase)
-                    .semantics { paneTitle = title }
-                    .padding(horizontal = MTheme.space.s4),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                RestTimerExpanded(
-                    visual = visual,
-                    upNext = upNext,
-                    onMinus15 = { actions.adjustTimer(-ADJUST_SECONDS) },
-                    onPlus15 = { actions.adjustTimer(ADJUST_SECONDS) },
-                    onSkip = { actions.skipTimer() },
-                    title = title,
-                    totalText = MoosclesNumbers.clock(timer.durationSeconds),
-                    onPauseResume = { if (visual.phase == TimerPhase.Paused) actions.resumeTimer() else actions.pauseTimer() },
-                    onRestart = { actions.resetTimer() },
-                    onClose = { close() },
-                    modifier = Modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxSize(),
-                    canAdd = canAdd,
-                )
-            }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    val closes = event.type == KeyEventType.KeyDown && (event.key == Key.Escape || event.key == Key.Back)
+                    if (closes) close()
+                    closes
+                }
+                .focusRequester(focus)
+                .focusable()
+                .graphicsLayer {
+                    if (reduced) alpha = shown.value else translationY = (1f - shown.value) * size.height
+                }
+                .background(MTheme.colors.bgBase)
+                .semantics { paneTitle = title }
+                .padding(horizontal = MTheme.space.s4),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            RestTimerExpanded(
+                visual = visual,
+                upNext = upNext,
+                onMinus15 = { actions.adjustTimer(-ADJUST_SECONDS) },
+                onPlus15 = { actions.adjustTimer(ADJUST_SECONDS) },
+                onSkip = { actions.skipTimer() },
+                title = title,
+                totalText = MoosclesNumbers.clock(timer.durationSeconds),
+                onPauseResume = { if (visual.phase == TimerPhase.Paused) actions.resumeTimer() else actions.pauseTimer() },
+                onRestart = { actions.resetTimer() },
+                onClose = { close() },
+                modifier = Modifier.widthIn(max = MTheme.sizes.contentMaxWidth).fillMaxSize(),
+                canAdd = canAdd,
+            )
         }
     }
 }

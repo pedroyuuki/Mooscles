@@ -363,7 +363,9 @@ class TapBudgetTest {
     /**
      * From the library: "Create exercise", the name typed (not counted, nor the focus it takes),
      * "Chest", "Dumbbell" (the convention takes its default, "Per hand") and "Save"; the new
-     * exercise is saved and its detail opens.
+     * exercise is saved and its detail opens. The form does not focus the name field when it opens,
+     * so a person taps it first: 5 touches, against today's 7 by the same count (the baseline's
+     * "Contador" leaves that tap out on both sides).
      */
     @Test
     fun createCustomExerciseWithNameMuscleAndEquipment() = libraryBudget(ShellTabs.LIBRARY) { vm ->

@@ -124,7 +124,7 @@ fun MBottomSheet(
             }
         }
     }
-    OverlayWindow(onDismissRequest = { close() }) {
+    MOverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         BoxWithConstraints(

@@ -223,7 +223,8 @@ class LibraryAccessibilitySweepTest {
     /** A text under [tag] (or [tag]'s own) is laid out at [fontScale]: the combination reaches its window. */
     private fun ComposeUiTest.assertDrawnAt(tag: String, fontScale: Float, where: String) {
         val text = SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult)
-        val node = onAllNodes((hasTestTag(tag) or hasAnyAncestor(hasTestTag(tag))) and text, useUnmergedTree = true).fetchSemanticsNodes().first()
+        val node = onAllNodes((hasTestTag(tag) or hasAnyAncestor(hasTestTag(tag))) and text, useUnmergedTree = true).fetchSemanticsNodes().firstOrNull()
+        assertTrue(node != null, "$where: no text under $tag")
         val results = mutableListOf<TextLayoutResult>()
         val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action
         assertTrue(action != null && action(results) && results.isNotEmpty(), "$where: $tag has no text layout")
