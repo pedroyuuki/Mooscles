@@ -87,7 +87,7 @@ Design system e telas novas (`:designsystem` e `:screens`):
 - **Contraste.** Os pares de cor ficam provados no `ContrastTokensTest` (os 50 da spec) e no `ComponentColorsTest`. Combinação nova de texto e fundo entra num deles.
 - **Testes de UI** (`runComposeUiTest` da `v2`) ficam em `designsystem/src/uiTest` e `screens/src/uiTest` e rodam só no emulador e no simulador iOS. No host, o `:app` monta os componentes e as telas por Robolectric. Nos testes do `:screens`: o `withScreen(…)` monta uma tela com tema, idioma, escala e densidade; o `ScreenRestoration` recria a tela nas duas plataformas (o `StateRestorationTester` não existe no iOS); o `RecompositionProbe` conta recomposições; o `ActiveWorkoutFlowTest` percorre o treino inteiro sobre o `MoosclesViewModel`, o Room e o DataStore reais; o `TapBudgetTest` fixa o orçamento de toques e o `WorkoutAccessibilitySweepTest` confere rótulos, alvos e números inteiros. No simulador iOS o teclado não abre (spike S3): os testes injetam `WindowInsets(bottom = 300.dp)`.
 
-O histórico (`workouts`, `workout_exercises`, `workout_sets`) é um snapshot independente das rotinas e do catálogo: apagar ou editar uma rotina nunca altera treinos concluídos.
+O histórico (`workouts`, `workout_exercises`, `workout_sets`) é um snapshot independente das rotinas e do catálogo: apagar ou editar uma rotina nunca altera treinos concluídos. (2026-10-30) Os dados guardados do histórico nunca mudam; na tela, um exercício do catálogo aparece pelo id do catálogo, no idioma da tela (spec D11), e um personalizado pelo nome guardado.
 
 ## Compatibilidade com instalações existentes
 
