@@ -1306,5 +1306,419 @@
     "Comece com o corpo na horizontal, quadril estendido, alinhado dos joelhos à cabeça.",
     "Empurre a ponta dos pés contra a plataforma e suba o corpo usando os posteriores.",
     "Quadril estendido o tempo todo; desça devagar até a horizontal."
+  ],
+  "smith_bench_flat": [
+    "Posicione o banco para a barra descer na parte baixa do peito.",
+    "Junte e abaixe as escápulas, com os pés firmes no chão.",
+    "Desça com controle, cotovelos a uns 45° do corpo, e empurre de volta.",
+    "Ajuste as travas de segurança um pouco abaixo do ponto em que a barra toca o peito."
+  ],
+  "smith_bench_incline": [
+    "Banco entre 30° e 45°, posicionado para a barra descer na parte alta do peito.",
+    "Escápulas presas para trás e quadril no banco.",
+    "Desça com controle até a parte alta do peito, cotovelos um pouco fechados.",
+    "Ajuste as travas de segurança um pouco abaixo do ponto em que a barra toca o peito."
+  ],
+  "smith_bench_decline": [
+    "Prenda as pernas sob os apoios e alinhe a barra com a parte baixa do peito.",
+    "Escápulas para trás e para baixo, apoiadas no banco.",
+    "Desça a barra com controle até a parte baixa do peito e empurre de volta.",
+    "Ajuste as travas de segurança um pouco abaixo do ponto em que a barra toca o peito."
+  ],
+  "smith_bench_close_grip": [
+    "Pegada na largura dos ombros, um pouco mais fechada que no supino normal.",
+    "Posicione o banco para a barra descer na parte baixa do peito.",
+    "Cotovelos perto do corpo na descida.",
+    "Suba a barra estendendo os cotovelos, punhos alinhados sobre eles."
+  ],
+  "smith_shoulder_press": [
+    "Banco com encosto na vertical, posicionado para a barra passar logo à frente do rosto.",
+    "Comece com a barra perto da altura do queixo, mãos logo fora dos ombros.",
+    "Costas no encosto e abdômen firme, sem arquear a lombar.",
+    "Empurre até estender os braços e desça com controle."
+  ],
+  "smith_upright_row": [
+    "Fique perto da barra e segure com pegada pronada, na largura dos ombros.",
+    "Suba a barra rente ao corpo, guiando pelos cotovelos.",
+    "Pare perto da parte baixa do peito, cotovelos no máximo na altura dos ombros.",
+    "Desça devagar até estender os braços."
+  ],
+  "smith_shrug": [
+    "Solte a barra dos ganchos com os braços estendidos, na frente das coxas.",
+    "Suba os ombros em direção às orelhas, sem girá-los.",
+    "Braços estendidos; não dobre os cotovelos para puxar.",
+    "Segure no alto um instante e desça até o fim."
+  ],
+  "smith_bent_over_row": [
+    "Fique perto da barra, pegada pronada um pouco mais aberta que os ombros.",
+    "Incline o tronco pelo quadril, costas retas, a uns 45° ou mais perto do paralelo.",
+    "Puxe a barra em direção à parte alta do abdômen, guiando pelos cotovelos.",
+    "Desça com controle, sem levantar o tronco entre as repetições."
+  ],
+  "smith_squat": [
+    "Apoie a barra no alto do trapézio, com os pés um pouco à frente da linha da barra.",
+    "Ajuste as travas de segurança um pouco abaixo do ponto mais baixo do seu agachamento.",
+    "Trave o abdômen e desça com os joelhos na direção dos pés.",
+    "Suba empurrando o chão com o pé inteiro, sem travar os joelhos com força no topo."
+  ],
+  "smith_front_squat": [
+    "Apoie a barra na frente dos ombros, perto do pescoço.",
+    "Cotovelos altos, para a barra ficar firme nos ombros.",
+    "Pés sob a barra ou um pouco à frente, tronco ereto.",
+    "Desça com controle e suba empurrando o chão com o pé inteiro."
+  ],
+  "smith_split_squat": [
+    "Barra no alto das costas; passo longo, com o pé da frente adiante da barra.",
+    "Desça o joelho de trás em direção ao chão.",
+    "Tronco ereto e calcanhar da frente firme no chão.",
+    "Suba empurrando com o pé da frente; faça todas as repetições antes de trocar."
+  ],
+  "smith_lunge_reverse": [
+    "Fique sob a barra, apoiada no alto das costas, pés na largura do quadril.",
+    "Leve um pé para trás e desça esse joelho em direção ao chão.",
+    "Peso no pé da frente e tronco ereto.",
+    "Empurre pelo calcanhar da frente para voltar e faça todas as repetições desse lado."
+  ],
+  "smith_deadlift_romanian": [
+    "Comece em pé, barra junto às coxas, joelhos levemente flexionados.",
+    "Leve o quadril para trás e desça a barra rente às pernas.",
+    "Pare quando sentir o posterior alongar, ainda com as costas retas.",
+    "Leve o quadril à frente para subir, sem inclinar o tronco para trás no topo."
+  ],
+  "smith_hip_thrust": [
+    "Apoie a parte alta das costas num banco, com a barra sobre o quadril e um protetor.",
+    "Pés no chão na largura do quadril, canelas na vertical no topo.",
+    "Empurre pelos calcanhares até ombros, quadril e joelhos ficarem alinhados.",
+    "Costelas fechadas e glúteos contraídos; não arqueie a lombar no topo."
+  ],
+  "smith_calf_raise": [
+    "Barra no alto das costas, ponta dos pés numa anilha ou degrau.",
+    "Desça os calcanhares até alongar bem.",
+    "Suba o máximo na ponta dos pés e segure um instante.",
+    "Joelhos estendidos, mas sem travar com força."
+  ],
+  "selectorized_chest_press": [
+    "Ajuste o banco para os pegadores ficarem na altura do meio do peito.",
+    "Costas e cabeça no encosto, escápulas para trás.",
+    "Empurre até estender os braços, sem travar os cotovelos com força.",
+    "Volte devagar, sem deixar as placas encostarem entre as repetições."
+  ],
+  "selectorized_chest_press_incline": [
+    "Ajuste o banco para os pegadores ficarem na altura da parte alta do peito.",
+    "Costas no encosto e ombros baixos, sem encolher.",
+    "Empurre para cima e à frente até estender os braços.",
+    "Volte devagar até alongar o peito, sem deixar as placas encostarem."
+  ],
+  "selectorized_pec_fly": [
+    "Ajuste o banco para os pegadores ficarem perto da altura dos ombros.",
+    "Cotovelos levemente flexionados, sem mudar o ângulo.",
+    "Junte os pegadores à frente do peito, contraindo o peitoral.",
+    "Abra devagar até sentir o alongamento, sem deixar os ombros irem para a frente."
+  ],
+  "selectorized_shoulder_press": [
+    "Ajuste o banco para os pegadores ficarem perto da altura dos ombros.",
+    "Costas no encosto e abdômen firme.",
+    "Empurre para cima até estender os braços, sem encolher os ombros.",
+    "Desça devagar até a altura dos ombros antes da próxima repetição."
+  ],
+  "selectorized_lateral_raise": [
+    "Ajuste o banco para os ombros ficarem alinhados com o eixo da máquina.",
+    "Encoste a parte de fora dos braços nos apoios, cotovelos flexionados.",
+    "Abra os braços para os lados até a altura dos ombros.",
+    "Desça devagar, sem encolher os ombros nem inclinar o tronco."
+  ],
+  "selectorized_reverse_fly": [
+    "Sente de frente para o encosto, com o peito apoiado nele.",
+    "Ajuste o banco para os pegadores ficarem na altura dos ombros.",
+    "Cotovelos levemente flexionados, abra os braços até ficarem alinhados com os ombros.",
+    "Sem encolher os ombros; volte devagar, sem deixar as placas encostarem."
+  ],
+  "selectorized_lat_pulldown": [
+    "Ajuste o apoio das coxas para as pernas ficarem bem presas.",
+    "Comece com os braços estendidos e o peito aberto.",
+    "Puxe levando os cotovelos em direção ao corpo, até as mãos chegarem à altura dos ombros.",
+    "Deixe os pegadores subirem com controle até estender os braços."
+  ],
+  "selectorized_seated_row": [
+    "Ajuste o banco para os pegadores ficarem perto da altura do meio do peito.",
+    "Peito no apoio durante toda a série.",
+    "Puxe os cotovelos para trás, além da linha do tronco, juntando as escápulas.",
+    "Volte devagar até estender os braços."
+  ],
+  "selectorized_high_row": [
+    "Ajuste o banco para alcançar os pegadores com os braços estendidos.",
+    "Sente ereto, com o peito aberto e os pés firmes no chão.",
+    "Puxe para baixo e para trás até as mãos chegarem perto do peito, guiando pelos cotovelos.",
+    "Junte as escápulas no final e volte devagar."
+  ],
+  "selectorized_pullover": [
+    "Ajuste o banco para os ombros ficarem alinhados com o eixo da máquina.",
+    "Encoste os cotovelos nos apoios e segure a barra sem apertar.",
+    "Leve os braços para baixo num arco até a barra chegar perto do abdômen.",
+    "Volte devagar acima da cabeça até alongar, sem arquear a lombar."
+  ],
+  "selectorized_assisted_pull_up": [
+    "Quanto mais carga no pino, mais ajuda você recebe.",
+    "Ajoelhe ou fique em pé na plataforma, pegada pronada um pouco mais aberta que os ombros.",
+    "Abaixe os ombros antes e puxe até o queixo passar da barra.",
+    "Desça até estender os braços, com controle e sem balançar."
+  ],
+  "selectorized_assisted_dip": [
+    "Quanto mais carga no pino, mais ajuda você recebe.",
+    "Ajoelhe ou fique em pé na plataforma, mãos nas paralelas e braços estendidos.",
+    "Tronco ereto; desça até os braços ficarem perto da paralela com o chão.",
+    "Empurre até estender totalmente os cotovelos, com os ombros baixos."
+  ],
+  "selectorized_biceps_curl": [
+    "Ajuste o banco para as axilas ficarem na borda do apoio.",
+    "Alinhe os cotovelos com o eixo da máquina.",
+    "Flexione os cotovelos sem tirá-los do apoio.",
+    "Desça devagar até quase estender os braços."
+  ],
+  "selectorized_triceps_extension": [
+    "Ajuste o banco para os cotovelos ficarem alinhados com o eixo da máquina.",
+    "Mantenha a parte de trás dos braços e os cotovelos no apoio.",
+    "Empurre até estender totalmente os cotovelos.",
+    "Volte devagar, sem tirar os cotovelos do apoio."
+  ],
+  "selectorized_triceps_press": [
+    "Ajuste o banco para começar com os cotovelos flexionados a uns 90°.",
+    "Sente ereto, com o peito aberto e os cotovelos perto do corpo.",
+    "Empurre os pegadores para baixo até estender totalmente os braços.",
+    "Deixe os pegadores subirem devagar, sem encolher os ombros."
+  ],
+  "selectorized_leg_press": [
+    "Ajuste o banco para os joelhos começarem a uns 90° ou um pouco mais flexionados.",
+    "Pés na largura do quadril na plataforma, costas e quadril no encosto.",
+    "Empurre com o pé inteiro e pare antes de travar os joelhos.",
+    "Volte devagar, com os joelhos alinhados com os pés."
+  ],
+  "selectorized_leg_extension": [
+    "Alinhe os joelhos com o eixo da máquina, costas no encosto.",
+    "Ajuste o rolo na frente das canelas, logo acima dos pés.",
+    "Estenda totalmente os joelhos e segure um instante no topo.",
+    "Segure nos pegadores laterais para manter o quadril no banco e desça devagar."
+  ],
+  "selectorized_leg_curl_seated": [
+    "Alinhe os joelhos com o eixo da máquina, costas no encosto.",
+    "Abaixe o apoio das coxas até ficar firme; o rolo fica logo acima dos calcanhares.",
+    "Leve os calcanhares para baixo e para trás o máximo que conseguir.",
+    "Volte devagar até os joelhos quase estenderem."
+  ],
+  "selectorized_leg_curl_lying": [
+    "Deite de bruços, com os joelhos logo depois da borda do banco, alinhados com o eixo.",
+    "Ajuste o rolo logo acima dos calcanhares.",
+    "Leve os calcanhares em direção ao glúteo, sem tirar o quadril do banco.",
+    "Desça devagar até os joelhos quase estenderem."
+  ],
+  "selectorized_leg_curl_standing": [
+    "Alinhe o joelho com o eixo da máquina, com a coxa encostada no apoio.",
+    "Ajuste o rolo logo acima do calcanhar.",
+    "Leve o calcanhar em direção ao glúteo, sem mover a coxa.",
+    "Desça devagar e faça todas as repetições desse lado."
+  ],
+  "selectorized_hip_abduction": [
+    "Sente com as costas no encosto e os apoios na parte de fora dos joelhos.",
+    "Segure nos pegadores e mantenha o quadril no banco.",
+    "Afaste os joelhos o máximo que conseguir e segure um instante.",
+    "Volte devagar, sem deixar as placas encostarem."
+  ],
+  "selectorized_hip_adduction": [
+    "Sente com as costas no encosto e os apoios na parte de dentro dos joelhos.",
+    "Ajuste a abertura inicial para um alongamento que você consiga controlar.",
+    "Feche as pernas até os apoios se encontrarem e segure um instante.",
+    "Abra devagar até o início, sem tirar o quadril do banco."
+  ],
+  "selectorized_glute_kickback": [
+    "Firme o tronco no apoio e nos pegadores, com o quadril nivelado e sem girar.",
+    "Leve a perna para trás contraindo o glúteo, sem arquear a lombar.",
+    "Pare com o quadril estendido, sem jogar a perna além disso.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "selectorized_calf_raise_standing": [
+    "Ajuste os apoios dos ombros para ficar ereto embaixo deles, com os joelhos estendidos.",
+    "Ponta dos pés na borda do degrau, calcanhares livres.",
+    "Desça os calcanhares até alongar bem e suba o máximo que conseguir.",
+    "Segure um instante no topo, sem quicar embaixo."
+  ],
+  "selectorized_calf_raise_seated": [
+    "Sente com a ponta dos pés na plataforma e os calcanhares livres.",
+    "Ajuste o banco ou o apoio das pernas para os joelhos ficarem parados; só os tornozelos se movem.",
+    "Use toda a amplitude: alongue bem e depois empurre até a ponta dos pés.",
+    "Segure um instante no fim de cada repetição, sem quicar."
+  ],
+  "selectorized_abdominal_crunch": [
+    "Ajuste o banco para os apoios ou pegadores ficarem na altura da parte alta do peito.",
+    "Segure sem puxar com os braços; o abdômen faz o trabalho.",
+    "Enrole o tronco, aproximando as costelas do quadril.",
+    "Volte devagar até sentir o abdômen alongar, sem deixar as placas encostarem."
+  ],
+  "selectorized_back_extension": [
+    "Ajuste o banco para o apoio das costas ficar na altura das escápulas.",
+    "Pés firmes no chão e cinto preso, se a máquina tiver.",
+    "Empurre para trás com controle até o tronco ficar na vertical.",
+    "Não arqueie além da vertical; volte devagar até o início."
+  ],
+  "selectorized_torso_rotation": [
+    "Ajuste a posição inicial para um lado e prenda as pernas no aparelho.",
+    "Sente ereto; gire com o abdômen, sem puxar com os braços.",
+    "Gire devagar, numa amplitude que você consiga controlar, sem trancos.",
+    "Volte devagar e faça todas as repetições desse lado antes de trocar."
+  ],
+  "plate_chest_press": [
+    "Ajuste o banco para os pegadores ficarem na altura do meio do peito.",
+    "Costas no encosto, escápulas para trás e para baixo.",
+    "Empurre até estender os braços, sem travar os cotovelos com força.",
+    "Coloque as mesmas anilhas dos dois lados e volte devagar até alongar o peito."
+  ],
+  "plate_chest_press_incline": [
+    "Ajuste o banco para os pegadores ficarem na altura da parte alta do peito.",
+    "Costas no encosto e ombros baixos.",
+    "Empurre para cima e à frente até estender os braços.",
+    "Desça devagar até alongar o peito, com os dois braços no mesmo ritmo."
+  ],
+  "plate_chest_press_decline": [
+    "Ajuste o banco para os pegadores ficarem na altura da parte baixa do peito.",
+    "Costas no encosto, escápulas para trás.",
+    "Empurre para a frente e para baixo até estender os braços.",
+    "Volte devagar, sem deixar os ombros irem para a frente."
+  ],
+  "plate_chest_press_one_arm": [
+    "Ajuste o banco para o pegador ficar na altura do meio do peito.",
+    "Segure no aparelho ou no outro pegador para manter o tronco parado.",
+    "Empurre até estender o braço, sem girar o tronco.",
+    "Volte devagar e faça todas as repetições desse lado."
+  ],
+  "plate_shoulder_press": [
+    "Ajuste o banco para os pegadores ficarem perto da altura dos ombros.",
+    "Costas no encosto e abdômen firme, sem arquear a lombar.",
+    "Empurre para cima até estender os braços, sem encolher os ombros.",
+    "Desça devagar até a altura dos ombros, com os dois braços no mesmo ritmo."
+  ],
+  "plate_row_chest_supported": [
+    "Ajuste o banco para apoiar o peito e alcançar os pegadores com os braços estendidos.",
+    "Peito no apoio durante toda a série.",
+    "Puxe os cotovelos para trás, além da linha do tronco, juntando as escápulas.",
+    "Volte devagar até estender os braços."
+  ],
+  "plate_row_high": [
+    "Prenda as coxas sob o apoio e alcance os pegadores com os braços estendidos.",
+    "Peito aberto durante toda a série.",
+    "Puxe para baixo e para trás até as mãos chegarem perto do peito, guiando pelos cotovelos.",
+    "Junte as escápulas no final e volte devagar."
+  ],
+  "plate_row_low": [
+    "Sente com o peito no apoio e os pés firmes.",
+    "Comece com os braços estendidos e o peito aberto.",
+    "Puxe os pegadores em direção à cintura, cotovelos perto do corpo.",
+    "Junte as escápulas e volte devagar."
+  ],
+  "plate_row_one_arm": [
+    "Ajuste o banco para apoiar o peito e alcançar o pegador.",
+    "Peito no apoio e tronco sem girar.",
+    "Puxe o cotovelo para trás, além da linha do tronco, levando a escápula para trás.",
+    "Volte devagar até alongar e faça todas as repetições desse lado."
+  ],
+  "plate_lat_pulldown": [
+    "Ajuste o apoio das coxas para as pernas ficarem bem presas.",
+    "Comece com os braços estendidos e o peito aberto.",
+    "Puxe levando os cotovelos em direção ao corpo, até as mãos chegarem à altura dos ombros.",
+    "Deixe os pegadores subirem devagar, com os dois braços no mesmo ritmo."
+  ],
+  "plate_t_bar_row_supported": [
+    "Pise na base dos pés e encoste o peito no apoio.",
+    "Segure os pegadores e comece com os braços estendidos e as costas retas.",
+    "Puxe os pegadores em direção ao peito, guiando pelos cotovelos.",
+    "Peito no apoio, sem dar impulso com as pernas."
+  ],
+  "plate_hack_squat": [
+    "Ombros sob os apoios, costas e quadril firmes no encosto.",
+    "Pés na largura dos ombros, no meio da plataforma.",
+    "Solte as travas e desça com controle, joelhos na direção dos pés.",
+    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+  ],
+  "plate_pendulum_squat": [
+    "Ombros sob os apoios, costas e quadril firmes no encosto.",
+    "Pés na largura do quadril, no meio da plataforma.",
+    "Solte a trava e desça até onde conseguir controlar, joelhos na direção dos pés.",
+    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+  ],
+  "plate_belt_squat": [
+    "Prenda o cinto no quadril e fique em pé na plataforma.",
+    "Pés na largura dos ombros; segure nos pegadores só para equilibrar.",
+    "Desça entre os calcanhares, com o tronco ereto.",
+    "Suba empurrando com o pé inteiro, joelhos na direção dos pés."
+  ],
+  "plate_leverage_squat": [
+    "Ombros sob os apoios, pés um pouco à frente na plataforma.",
+    "Firme o abdômen e solte a trava de segurança.",
+    "Desça com controle, joelhos na direção dos pés.",
+    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+  ],
+  "plate_leg_press_45": [
+    "Costas e quadril firmes no banco, pés na largura do quadril na plataforma.",
+    "Solte as travas e desça com controle, parando antes de o quadril sair do banco.",
+    "Empurre com o pé inteiro, joelhos alinhados com os pés.",
+    "Pare antes de travar os joelhos; acione as travas ao terminar."
+  ],
+  "plate_leg_press_horizontal": [
+    "Ajuste o banco para os joelhos começarem a uns 90° ou um pouco mais flexionados.",
+    "Costas e quadril no encosto, pés na largura do quadril na plataforma.",
+    "Empurre com o pé inteiro e pare antes de travar os joelhos.",
+    "Volte devagar, com os joelhos alinhados com os pés."
+  ],
+  "plate_leg_press_one_leg": [
+    "Use menos carga e apoie um pé no meio da plataforma.",
+    "Quadril firme no banco; apoie o outro pé na estrutura do aparelho.",
+    "Desça com controle, com o joelho alinhado com o pé.",
+    "Empurre sem travar o joelho e faça todas as repetições desse lado."
+  ],
+  "plate_leg_extension": [
+    "Alinhe os joelhos com o eixo da máquina, costas no encosto.",
+    "Ajuste o rolo na frente das canelas, logo acima dos pés.",
+    "Estenda totalmente os joelhos e segure um instante no topo.",
+    "Segure nos pegadores laterais para manter o quadril no banco e desça devagar."
+  ],
+  "plate_leg_curl": [
+    "Alinhe os joelhos com o eixo da máquina.",
+    "Ajuste o rolo logo acima dos calcanhares.",
+    "Leve os calcanhares em direção ao glúteo, sem levantar o quadril.",
+    "Desça devagar até os joelhos quase estenderem."
+  ],
+  "plate_hip_thrust": [
+    "Posicione o apoio sobre o quadril, com a parte alta das costas no encosto.",
+    "Pés no chão na largura do quadril, canelas na vertical no topo.",
+    "Empurre pelos calcanhares até ombros, quadril e joelhos ficarem alinhados.",
+    "Costelas fechadas e glúteos contraídos; não arqueie a lombar no topo."
+  ],
+  "plate_calf_raise_seated": [
+    "Ajuste o apoio bem firme sobre as coxas, logo acima dos joelhos.",
+    "Ponta dos pés na borda do degrau, calcanhares livres.",
+    "Solte a trava e desça os calcanhares até alongar bem.",
+    "Eleve os calcanhares o máximo que conseguir, segure um instante e desça devagar."
+  ],
+  "plate_calf_raise_standing": [
+    "Ombros sob os apoios, corpo ereto e joelhos estendidos.",
+    "Ponta dos pés na borda do degrau, calcanhares livres.",
+    "Desça os calcanhares até alongar bem e suba o máximo que conseguir.",
+    "Segure um instante no topo, sem quicar embaixo."
+  ],
+  "plate_biceps_curl": [
+    "Ajuste o banco para as axilas ficarem na borda do apoio.",
+    "Alinhe os cotovelos com o eixo da máquina.",
+    "Flexione os cotovelos sem tirá-los do apoio.",
+    "Desça devagar até quase estender os braços, sem soltar o peso no fim."
+  ],
+  "plate_triceps_dip": [
+    "Ajuste o banco para começar com os cotovelos flexionados a uns 90°.",
+    "Sente ereto, com o peito aberto e os cotovelos perto do corpo.",
+    "Empurre os pegadores para baixo até estender totalmente os braços.",
+    "Deixe os pegadores subirem devagar, sem encolher os ombros nem balançar o tronco."
+  ],
+  "trap_bar_deadlift": [
+    "Entre na barra e fique no centro, com os pegadores ao lado do meio dos pés.",
+    "Leve o quadril para trás e para baixo, peito aberto, e segure no meio dos pegadores.",
+    "Trave o abdômen e empurre o chão com os pés até ficar ereto.",
+    "Desça a barra pelo mesmo caminho, mantendo as costas retas."
   ]
 }

@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 /**
  * Reads the cue files of the repository (spec D8), as [com.mooscles.screens.StringsParityTest]
  * reads the string XML: the same exercises and counts in both languages, short cues, no orphan,
- * no exclamation, emoji or health promise, and every exercise of the covered families.
+ * no exclamation, emoji or health promise, and cues for every catalog exercise (spec D21).
  */
 class ExerciseCuesFilesTest {
     private val dir = File("src/commonMain/composeResources/files/exercise_cues")
@@ -22,9 +22,6 @@ class ExerciseCuesFilesTest {
     private val both get() = listOf("en" to en, "pt-BR" to pt)
 
     private val stableIds = ExerciseCatalog.exercises.map { it.id.removePrefix("catalog_") }
-
-    // Grows with each content batch (Tasks 12 and 13) until every catalog exercise is covered.
-    private val coveredPrefixes = listOf("barbell_", "ez_bar_", "dumbbell_", "kettlebell_", "cable_", "bodyweight_")
 
     @Test
     fun sameKeysAndCountsInBothLanguages() {
@@ -86,9 +83,11 @@ class ExerciseCuesFilesTest {
     }
 
     @Test
-    fun familiesAreCovered() {
-        val missing = stableIds.filter { id -> coveredPrefixes.any(id::startsWith) && id !in en }
-        assertTrue(missing.isEmpty(), "No cues for $missing")
+    fun everyCatalogExerciseHasCues() {
+        for ((language, map) in both) {
+            val missing = stableIds.filter { it !in map }
+            assertTrue(missing.isEmpty(), "$language has no cues for ${missing.size} exercises: $missing")
+        }
     }
 
     private fun hasEmoji(text: String): Boolean {

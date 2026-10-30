@@ -1306,5 +1306,419 @@
     "Start with your body level, hips extended, in one line from knees to head.",
     "Press your toes into the plate and curl your body up with your hamstrings.",
     "Keep your hips extended and lower slowly back to level."
+  ],
+  "smith_bench_flat": [
+    "Place the bench so the bar comes down on your lower chest.",
+    "Squeeze your shoulder blades together and down, feet planted.",
+    "Lower with control, elbows about 45° from your body, then press up.",
+    "Set the safety stops just below where the bar touches your chest."
+  ],
+  "smith_bench_incline": [
+    "Set the bench to 30–45°, placed so the bar comes down on your upper chest.",
+    "Keep your shoulder blades pinned back and your hips on the bench.",
+    "Lower with control to your upper chest, elbows slightly tucked.",
+    "Set the safety stops just below where the bar touches your chest."
+  ],
+  "smith_bench_decline": [
+    "Lock your legs under the pads and line the bar up with your lower chest.",
+    "Keep your shoulder blades back and down on the bench.",
+    "Lower the bar with control to your lower chest, then press up.",
+    "Set the safety stops just below where the bar touches your chest."
+  ],
+  "smith_bench_close_grip": [
+    "Grip about shoulder-width, a little narrower than your usual bench.",
+    "Place the bench so the bar comes down on your lower chest.",
+    "Keep your elbows close to your sides as you lower.",
+    "Press by straightening your elbows, wrists stacked over them."
+  ],
+  "smith_shoulder_press": [
+    "Set an upright bench so the bar passes just in front of your face.",
+    "Start with the bar at about chin height, hands just outside your shoulders.",
+    "Keep your back against the pad and your abs braced; don't arch.",
+    "Press up until your arms are extended, then lower with control."
+  ],
+  "smith_upright_row": [
+    "Stand close to the bar and grip it overhand, about shoulder-width.",
+    "Lift the bar close to your body, leading with your elbows.",
+    "Stop near lower-chest height, elbows no higher than your shoulders.",
+    "Lower slowly until your arms are extended."
+  ],
+  "smith_shrug": [
+    "Unhook the bar with your arms extended, in front of your thighs.",
+    "Lift your shoulders up toward your ears without rolling them.",
+    "Keep your arms extended; don't bend your elbows to pull.",
+    "Pause at the top, then lower all the way down."
+  ],
+  "smith_bent_over_row": [
+    "Stand close to the bar and grip overhand, a little wider than your shoulders.",
+    "Hinge at the hips with a flat back, torso at about 45° or closer to parallel.",
+    "Pull the bar to your upper stomach, leading with your elbows.",
+    "Lower under control without standing up between reps."
+  ],
+  "smith_squat": [
+    "Rest the bar on top of your traps, feet slightly in front of the bar.",
+    "Set the safety stops just below the lowest point of your squat.",
+    "Brace your abs and sit down with your knees tracking over your toes.",
+    "Drive up through your whole foot without locking your knees hard at the top."
+  ],
+  "smith_front_squat": [
+    "Rest the bar on your front shoulders, close to your throat.",
+    "Keep your elbows high so the bar stays on your shoulders.",
+    "Feet under the bar or slightly in front, torso upright.",
+    "Squat down with control and drive up through your whole foot."
+  ],
+  "smith_split_squat": [
+    "Bar on your upper back; take a long stance with your front foot ahead of the bar.",
+    "Lower your back knee toward the floor.",
+    "Keep your torso upright and your front heel planted.",
+    "Push through your front foot; finish all reps before switching."
+  ],
+  "smith_lunge_reverse": [
+    "Stand under the bar with it on your upper back, feet hip-width.",
+    "Step one foot back and lower that knee toward the floor.",
+    "Keep your weight on your front foot and your torso upright.",
+    "Push through your front heel to step back in; finish all reps on that side."
+  ],
+  "smith_deadlift_romanian": [
+    "Start standing with the bar against your thighs, knees soft.",
+    "Push your hips back and lower the bar close to your legs.",
+    "Stop when your hamstrings are stretched and your back is still flat.",
+    "Drive your hips forward to stand up; don't lean back at the top."
+  ],
+  "smith_hip_thrust": [
+    "Rest your upper back on a bench, the bar over your hips on a pad.",
+    "Feet flat and about hip-width, shins vertical at the top.",
+    "Drive through your heels until your shoulders, hips and knees line up.",
+    "Keep your ribs down and squeeze your glutes; don't arch to finish."
+  ],
+  "smith_calf_raise": [
+    "Bar on your upper back, balls of your feet on a plate or step.",
+    "Lower your heels for a full stretch.",
+    "Rise as high as you can onto your toes and pause.",
+    "Keep your knees straight but not hard-locked."
+  ],
+  "selectorized_chest_press": [
+    "Set the seat so the handles line up with your mid-chest.",
+    "Back and head against the pad, shoulder blades pulled back.",
+    "Press forward until your arms are extended, without locking your elbows hard.",
+    "Return slowly; don't let the weight stack touch down between reps."
+  ],
+  "selectorized_chest_press_incline": [
+    "Set the seat so the handles start at your upper chest.",
+    "Keep your back on the pad and your shoulders down, not shrugged.",
+    "Press up and forward until your arms are extended.",
+    "Return slowly to a stretch without the weight stack touching down."
+  ],
+  "selectorized_pec_fly": [
+    "Set the seat so the handles are at about shoulder height.",
+    "Keep a slight, fixed bend in your elbows.",
+    "Bring the handles together in front of your chest, squeezing your pecs.",
+    "Open slowly to a stretch without your shoulders rolling forward."
+  ],
+  "selectorized_shoulder_press": [
+    "Set the seat so the handles start at about shoulder height.",
+    "Keep your back against the pad and your abs braced.",
+    "Press up until your arms are extended, without shrugging.",
+    "Lower slowly to shoulder height before the next rep."
+  ],
+  "selectorized_lateral_raise": [
+    "Set the seat so your shoulders line up with the machine's pivot.",
+    "Rest the outside of your upper arms against the pads, elbows bent.",
+    "Raise your arms out to the sides until they reach shoulder height.",
+    "Lower slowly, without shrugging or leaning your torso."
+  ],
+  "selectorized_reverse_fly": [
+    "Sit facing the pad with your chest against it.",
+    "Set the seat so the handles are at shoulder height.",
+    "With elbows slightly bent, pull your arms out wide until they line up with your shoulders.",
+    "Don't shrug; return slowly without the weight stack touching down."
+  ],
+  "selectorized_lat_pulldown": [
+    "Set the thigh pad so your legs are locked in snugly.",
+    "Start with your arms extended and your chest up.",
+    "Pull down, driving your elbows toward your sides, until your hands reach shoulder height.",
+    "Let the handles rise with control until your arms are extended."
+  ],
+  "selectorized_seated_row": [
+    "Set the seat so the handles are at about mid-chest height.",
+    "Keep your chest against the pad for the whole set.",
+    "Pull your elbows back past your torso, squeezing your shoulder blades.",
+    "Return slowly until your arms are extended."
+  ],
+  "selectorized_high_row": [
+    "Set the seat so you reach the handles with your arms fully extended.",
+    "Sit tall with your chest up and your feet flat.",
+    "Pull down and back until your hands are near your chest, leading with your elbows.",
+    "Squeeze your shoulder blades at the end, then return slowly."
+  ],
+  "selectorized_pullover": [
+    "Set the seat so your shoulders line up with the machine's pivot.",
+    "Rest your elbows on the pads and keep your grip loose.",
+    "Sweep your arms down in an arc until the bar reaches your stomach.",
+    "Return slowly overhead to a stretch, without arching your lower back."
+  ],
+  "selectorized_assisted_pull_up": [
+    "The more weight you select, the more help you get.",
+    "Kneel or stand on the platform and grip overhand, a little wider than your shoulders.",
+    "Pull your shoulders down first, then pull until your chin clears the bar.",
+    "Lower all the way down with control, without swinging."
+  ],
+  "selectorized_assisted_dip": [
+    "The more weight you select, the more help you get.",
+    "Kneel or stand on the platform, hands on the bars, arms extended.",
+    "Keep your torso upright and lower until your upper arms are about parallel to the floor.",
+    "Press up until your elbows are fully extended, shoulders down."
+  ],
+  "selectorized_biceps_curl": [
+    "Set the seat so your armpits rest on the top edge of the pad.",
+    "Line your elbows up with the machine's pivot.",
+    "Curl up without lifting your elbows off the pad.",
+    "Lower slowly until your arms are almost extended."
+  ],
+  "selectorized_triceps_extension": [
+    "Set the seat so your elbows line up with the machine's pivot.",
+    "Keep the backs of your upper arms and your elbows on the pad.",
+    "Push until your elbows are fully extended.",
+    "Return slowly without lifting your elbows off the pad."
+  ],
+  "selectorized_triceps_press": [
+    "Set the seat so you start with your elbows bent at about 90°.",
+    "Sit tall, chest up, elbows close to your sides.",
+    "Push the handles down until your arms are fully extended.",
+    "Let the handles rise slowly, without shrugging."
+  ],
+  "selectorized_leg_press": [
+    "Set the seat so your knees start at about 90° or a little deeper.",
+    "Feet about hip-width on the platform, back and hips against the pad.",
+    "Push through your whole foot; stop just short of locking your knees.",
+    "Return slowly, keeping your knees in line with your feet."
+  ],
+  "selectorized_leg_extension": [
+    "Line your knees up with the machine's pivot, back against the pad.",
+    "Set the leg pad on the front of your lower shins, just above your feet.",
+    "Extend your knees fully and pause briefly at the top.",
+    "Hold the handles to keep your hips on the seat, and lower slowly."
+  ],
+  "selectorized_leg_curl_seated": [
+    "Line your knees up with the machine's pivot, back against the pad.",
+    "Lower the thigh pad until it's snug; the leg pad sits just above your heels.",
+    "Curl your heels down and back as far as you can.",
+    "Return slowly until your knees are almost extended."
+  ],
+  "selectorized_leg_curl_lying": [
+    "Lie face down with your knees just past the edge of the bench, in line with the pivot.",
+    "Set the leg pad just above your heels.",
+    "Curl your heels toward your glutes, keeping your hips on the bench.",
+    "Lower slowly until your knees are almost extended."
+  ],
+  "selectorized_leg_curl_standing": [
+    "Line your knee up with the machine's pivot, thigh against the pad.",
+    "Set the leg pad just above your heel.",
+    "Curl your heel toward your glute without moving your thigh.",
+    "Lower slowly; finish all reps on that side."
+  ],
+  "selectorized_hip_abduction": [
+    "Sit back against the pad with the leg pads on the outside of your knees.",
+    "Hold the handles and keep your hips on the seat.",
+    "Push your knees apart as far as you can and pause briefly.",
+    "Bring them back slowly; don't let the weight stack touch down."
+  ],
+  "selectorized_hip_adduction": [
+    "Sit back against the pad with the leg pads on the inside of your knees.",
+    "Set the starting width to a stretch you can control.",
+    "Squeeze your legs together until the pads meet, then pause briefly.",
+    "Open slowly back to the start, keeping your hips on the seat."
+  ],
+  "selectorized_glute_kickback": [
+    "Brace on the pad and handles, with your hips level and facing forward.",
+    "Push the leg back by squeezing your glute, not by arching your lower back.",
+    "Stop when your hip is fully extended; don't swing past it.",
+    "Return slowly; finish all reps on that side."
+  ],
+  "selectorized_calf_raise_standing": [
+    "Set the shoulder pads so you stand tall under them with your knees extended.",
+    "Balls of your feet on the edge of the step, heels free.",
+    "Lower your heels for a full stretch, then rise as high as you can.",
+    "Pause at the top; don't bounce at the bottom."
+  ],
+  "selectorized_calf_raise_seated": [
+    "Sit with the balls of your feet on the platform, heels free.",
+    "Set the seat or leg pad so your knees stay still; only your ankles move.",
+    "Use the full range: a deep stretch, then push all the way onto your toes.",
+    "Pause at the end of each rep and don't bounce."
+  ],
+  "selectorized_abdominal_crunch": [
+    "Set the seat so the pads or handles sit at your upper chest.",
+    "Hold on lightly; your abs do the work, not your arms.",
+    "Curl your torso down, bringing your ribs toward your hips.",
+    "Return slowly until you feel your abs stretch, without the weight stack touching down."
+  ],
+  "selectorized_back_extension": [
+    "Set the seat so the back pad sits across your shoulder blades.",
+    "Plant your feet and fasten the belt if the machine has one.",
+    "Push back with control until your torso is upright.",
+    "Don't arch past upright; return slowly to the start."
+  ],
+  "selectorized_torso_rotation": [
+    "Set the start position for one side and lock your legs in place.",
+    "Sit tall; turn with your midsection, not by pulling with your arms.",
+    "Rotate slowly through a range you can control, without jerking.",
+    "Return slowly; finish all reps on that side, then switch."
+  ],
+  "plate_chest_press": [
+    "Set the seat so the handles line up with your mid-chest.",
+    "Back against the pad, shoulder blades back and down.",
+    "Press until your arms are extended, without locking your elbows hard.",
+    "Load the same plates on both sides and return slowly to a stretch."
+  ],
+  "plate_chest_press_incline": [
+    "Set the seat so the handles start at your upper chest.",
+    "Keep your back on the pad and your shoulders down.",
+    "Press up and forward until your arms are extended.",
+    "Lower slowly to a stretch, moving both arms at the same pace."
+  ],
+  "plate_chest_press_decline": [
+    "Set the seat so the handles line up with your lower chest.",
+    "Back against the pad, shoulder blades pulled back.",
+    "Press forward and down until your arms are extended.",
+    "Return slowly without letting your shoulders roll forward."
+  ],
+  "plate_chest_press_one_arm": [
+    "Set the seat so the handle lines up with your mid-chest.",
+    "Hold the frame or the other handle to keep your torso still.",
+    "Press until your arm is extended, without twisting your torso.",
+    "Return slowly; finish all reps on that side."
+  ],
+  "plate_shoulder_press": [
+    "Set the seat so the handles start at about shoulder height.",
+    "Back against the pad and abs braced; don't arch.",
+    "Press up until your arms are extended, without shrugging.",
+    "Lower slowly to shoulder height, moving both arms at the same pace."
+  ],
+  "plate_row_chest_supported": [
+    "Set the seat so your chest is on the pad and you reach the handles with arms extended.",
+    "Keep your chest on the pad for the whole set.",
+    "Pull your elbows back past your torso, squeezing your shoulder blades.",
+    "Return slowly until your arms are extended."
+  ],
+  "plate_row_high": [
+    "Lock your thighs under the pad and reach up for the handles.",
+    "Keep your chest up for the whole set.",
+    "Pull down and back until your hands are near your chest, leading with your elbows.",
+    "Squeeze your shoulder blades at the end, then return slowly."
+  ],
+  "plate_row_low": [
+    "Sit with your chest against the pad and your feet braced.",
+    "Start with your arms extended and your chest up.",
+    "Pull the handles toward your waist, elbows close to your body.",
+    "Squeeze your shoulder blades, then return slowly."
+  ],
+  "plate_row_one_arm": [
+    "Set the seat so your chest rests on the pad and you can reach the handle.",
+    "Keep your chest on the pad and your torso from twisting.",
+    "Pull your elbow back past your torso, drawing your shoulder blade back.",
+    "Return slowly to a full stretch; finish all reps on that side."
+  ],
+  "plate_lat_pulldown": [
+    "Set the thigh pad so your legs are locked in snugly.",
+    "Start with your arms extended and your chest up.",
+    "Pull down, driving your elbows toward your sides, until your hands reach shoulder height.",
+    "Let the handles rise slowly, moving both arms at the same pace."
+  ],
+  "plate_t_bar_row_supported": [
+    "Stand on the foot plates and rest your chest on the pad.",
+    "Grip the handles and start with your arms extended, back flat.",
+    "Pull the handles toward your chest, leading with your elbows.",
+    "Keep your chest on the pad; don't jerk the weight with your legs."
+  ],
+  "plate_hack_squat": [
+    "Shoulders under the pads, back and hips firm against the backrest.",
+    "Feet about shoulder-width in the middle of the platform.",
+    "Release the safeties and lower with control, knees tracking over your toes.",
+    "Drive up through your whole foot; lock the safeties before you step out."
+  ],
+  "plate_pendulum_squat": [
+    "Shoulders under the pads, back and hips firm against the backrest.",
+    "Feet about hip-width in the middle of the platform.",
+    "Release the safety and lower as deep as you can control, knees over your toes.",
+    "Drive up through your whole foot; lock the safety before you step out."
+  ],
+  "plate_belt_squat": [
+    "Fasten the belt around your hips and stand on the platform.",
+    "Feet about shoulder-width; hold the handles for balance only.",
+    "Sit down between your heels with your torso upright.",
+    "Drive up through your whole foot, knees tracking over your toes."
+  ],
+  "plate_leverage_squat": [
+    "Shoulders under the pads, feet slightly in front of you on the platform.",
+    "Brace your abs, then release the safety.",
+    "Squat down with control, knees tracking over your toes.",
+    "Drive up through your whole foot; lock the safety before you step out."
+  ],
+  "plate_leg_press_45": [
+    "Back and hips firm on the seat, feet about hip-width on the platform.",
+    "Release the safeties and lower with control, stopping before your hips lift off the seat.",
+    "Press through your whole foot, knees in line with your feet.",
+    "Stop just short of locking your knees; lock the safeties when you finish."
+  ],
+  "plate_leg_press_horizontal": [
+    "Set the seat so your knees start at about 90° or a little deeper.",
+    "Back and hips against the pad, feet hip-width on the platform.",
+    "Push through your whole foot; stop just short of locking your knees.",
+    "Return slowly, keeping your knees in line with your feet."
+  ],
+  "plate_leg_press_one_leg": [
+    "Use a lighter load and put one foot in the middle of the platform.",
+    "Keep your hips on the seat; rest the other foot on the frame.",
+    "Lower with control, knee in line with your foot.",
+    "Press without locking your knee; finish all reps on that side."
+  ],
+  "plate_leg_extension": [
+    "Line your knees up with the machine's pivot, back against the pad.",
+    "Set the leg pad on the front of your lower shins, just above your feet.",
+    "Extend your knees fully and pause briefly at the top.",
+    "Hold the handles to keep your hips on the seat, and lower slowly."
+  ],
+  "plate_leg_curl": [
+    "Line your knees up with the machine's pivot.",
+    "Set the leg pad just above your heels.",
+    "Curl your heels toward your glutes without lifting your hips.",
+    "Lower slowly until your knees are almost extended."
+  ],
+  "plate_hip_thrust": [
+    "Set the pad across your hips, with your upper back on the backrest.",
+    "Feet flat and about hip-width, shins vertical at the top.",
+    "Drive through your heels until your shoulders, hips and knees line up.",
+    "Keep your ribs down and squeeze your glutes; don't arch to finish."
+  ],
+  "plate_calf_raise_seated": [
+    "Set the pad snugly on your lower thighs, just above your knees.",
+    "Balls of your feet on the edge of the step, heels free.",
+    "Release the safety and lower your heels for a full stretch.",
+    "Lift your heels as high as you can, pause, and lower slowly."
+  ],
+  "plate_calf_raise_standing": [
+    "Shoulders under the pads, standing tall with your knees extended.",
+    "Balls of your feet on the edge of the step, heels free.",
+    "Lower your heels for a full stretch, then rise as high as you can.",
+    "Pause at the top; don't bounce at the bottom."
+  ],
+  "plate_biceps_curl": [
+    "Set the seat so your armpits rest on the top edge of the pad.",
+    "Line your elbows up with the machine's pivot.",
+    "Curl up without lifting your elbows off the pad.",
+    "Lower slowly until your arms are almost extended; don't drop the weight."
+  ],
+  "plate_triceps_dip": [
+    "Set the seat so you start with your elbows bent at about 90°.",
+    "Sit tall, chest up, elbows close to your sides.",
+    "Push the handles down until your arms are fully extended.",
+    "Let the handles rise slowly, without shrugging or rocking your torso."
+  ],
+  "trap_bar_deadlift": [
+    "Step inside the bar and stand centered, handles beside your mid-foot.",
+    "Push your hips back and down, chest up, and grip the middle of the handles.",
+    "Brace, then push the floor away until you stand tall.",
+    "Lower the bar along the same path, keeping your back flat."
   ]
 }
