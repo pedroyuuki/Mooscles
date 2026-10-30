@@ -42,7 +42,8 @@ class WorkoutCalculationsBatchTimingTest {
         val expected = oracle.linearRepsPrsForWorkout(data, active.id)
         assertTrue(expected.isNotEmpty())
         assertEquals(expected, WorkoutCalculations.repsPrsForWorkout(data, active.id))
-        val timesMs = List(3) {
+        // The best of seven: on a shared CI runner another Gradle fork can take the CPU for a whole sample.
+        val timesMs = List(7) {
             val started = System.nanoTime()
             WorkoutCalculations.repsPrsForWorkout(data, active.id)
             (System.nanoTime() - started) / 1_000_000
