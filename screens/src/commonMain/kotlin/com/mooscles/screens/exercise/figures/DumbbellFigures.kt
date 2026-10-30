@@ -55,15 +55,15 @@ internal object DumbbellFigures {
             // both arms and both deltoids, feet as short stubs toward the viewer, toes on the floor.
             start {
                 front(); place(TOE_NEAR, 53f, 85f); trunk(0f)
-                nearArm(165f, 170f); farArm(195f, 190f)
-                nearLeg(172f, 177f, 160f); farLeg(188f, 183f, 200f)
+                nearArm(155f, 165f); farArm(205f, 195f)
+                nearLeg(170f, 176f, 160f); farLeg(190f, 184f, 200f)
                 floor(85f, TOE_NEAR, TOE_FAR)
                 dumbbell(HAND_NEAR); dumbbell(HAND_FAR)
             }
             end {
                 front(); place(TOE_NEAR, 53f, 85f); trunk(0f)
                 nearArm(85f, 95f); farArm(-85f, -95f)
-                nearLeg(172f, 177f, 160f); farLeg(188f, 183f, 200f)
+                nearLeg(170f, 176f, 160f); farLeg(190f, 184f, 200f)
                 floor(85f, TOE_NEAR, TOE_FAR)
                 dumbbell(HAND_NEAR); dumbbell(HAND_FAR)
             }

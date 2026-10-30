@@ -9,16 +9,18 @@ internal object MachineFigures {
             // Reclined against the back pad, feet on the sled: legs almost straight, then the knees bent.
             start {
                 hip(40f, 72f); trunk(-55f, -40f)
-                arms(125f, 125f)
-                legs(55f, 35f, -45f)
+                arms(150f, 120f)
+                legs(21.2f, 35.1f, -45f)
                 seat(39.6f, 77.8f, 26f, -55f)
+                groundLine(86.3f)
                 platform(ANKLE_NEAR, 16f, -45f)
             }
             end {
                 hip(40f, 72f); trunk(-55f, -40f)
-                arms(125f, 125f)
-                legs(0f, 90f, -45f)
+                arms(150f, 120f)
+                legs(-21.5f, 65f, -45f)
                 seat(39.6f, 77.8f, 26f, -55f)
+                groundLine(86.3f)
                 platform(ANKLE_NEAR, 16f, -45f)
             }
         }

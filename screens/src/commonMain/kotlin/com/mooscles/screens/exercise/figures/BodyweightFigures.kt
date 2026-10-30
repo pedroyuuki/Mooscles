@@ -12,15 +12,15 @@ internal object BodyweightFigures {
             // Hands on the bar: a dead hang, then the chin over the bar.
             start {
                 place(HAND_NEAR, 48f, 16f); trunk(-6f, -25f)
-                arms(16f, 16f)
+                arms(8f, 8f)
                 legs(172f, 215f, 160f)
-                bar(30f, 16f, 34f)
+                bar(40f, 16f, 16f)
             }
             end {
                 place(HAND_NEAR, 48f, 16f); trunk(-8f, 5f)
-                arms(150f, 0f)
+                arms(137.3f, -9.4f)
                 legs(165f, 215f, 160f)
-                bar(30f, 16f, 34f)
+                bar(40f, 16f, 16f)
             }
         }
         figure("bodyweight_push_up") {

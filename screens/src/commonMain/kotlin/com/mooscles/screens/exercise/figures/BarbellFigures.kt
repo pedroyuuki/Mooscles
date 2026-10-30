@@ -33,14 +33,14 @@ internal object BarbellFigures {
             // Standing with the bar on the upper back, then at the bottom with the thighs about parallel.
             start {
                 place(ANKLE_NEAR, 44f, 85f); trunk(0f)
-                arms(190f, -5f)
+                arms(245f, 50f)
                 legs(180f, 180f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)
             }
             end {
                 place(ANKLE_NEAR, 44f, 85f); trunk(35f, 20f)
-                arms(225f, 30f)
+                arms(280f, 85f)
                 legs(85f, 205f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)
