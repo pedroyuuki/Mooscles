@@ -185,7 +185,8 @@ jobs:
           # Ring iOS fix (:designsystem commonTest): RestTimerRingMathTest +1.
           # Merged with the ring fix: 813 + 1 = 814.
           # +1: in-process rest completion retry test
-          MIN_HOST_TESTS: 815
+          # Phase 4A task 2 (:shared commonTest): ExerciseAnatomyTest 15. 815 + 15 = 830.
+          MIN_HOST_TESTS: 830
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -310,7 +311,8 @@ jobs:
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
           # Phase 3 final review fixes: WorkoutPresentationTest +1, InProcessRestTimerTest +1. 221 + 2 = 223.
           # +1: in-process rest completion retry test
-          MIN_IOS_TESTS: 224
+          # Phase 4A task 2: ExerciseAnatomyTest 15. 224 + 15 = 239.
+          MIN_IOS_TESTS: 239
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
