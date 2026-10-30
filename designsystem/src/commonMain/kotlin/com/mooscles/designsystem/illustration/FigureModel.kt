@@ -57,20 +57,20 @@ data class FigurePose(
  * Unitless pose data, not measures: the drawing scales the box to the component.
  */
 object FigureSkeleton {
-    const val TRUNK = 30f
-    const val NECK = 4f
-    const val HEAD_RADIUS = 5f
-    const val UPPER_ARM = 15f
-    const val FOREARM = 14f
-    const val THIGH = 21f
-    const val SHIN = 20f
-    const val FOOT = 6f
+    const val TRUNK = 19f
+    const val NECK = 3f
+    const val HEAD_RADIUS = 4.5f
+    const val UPPER_ARM = 12f
+    const val FOREARM = 13f
+    const val THIGH = 16f
+    const val SHIN = 16f
+    const val FOOT = 5.5f
 
     /** A barbell seen from the side: its plate, facing the viewer, centered on the hand. */
-    const val PLATE_RADIUS = 10f
+    const val PLATE_RADIUS = 8f
 
     /** A dumbbell seen from the side: one small plate around the hand. */
-    const val DUMBBELL_RADIUS = 4.5f
+    const val DUMBBELL_RADIUS = 4f
 
     /** The kettlebell's handle around the hand, and the bell hanging below it. */
     const val KETTLEBELL_HANDLE = 2.5f
@@ -80,7 +80,7 @@ object FigureSkeleton {
     const val PULLEY_RADIUS = 2.5f
 
     /** The legs of a bench, and the post of a seat, straight down from the pad. */
-    const val BENCH_LEG = 12f
+    const val BENCH_LEG = 16f
 
     /** How far a floor line reaches past the rest of the figure on each side. */
     const val FLOOR_OVERHANG = 6f

@@ -10,8 +10,9 @@ import androidx.compose.ui.unit.dp
  * of the detail. [figureStroke] is the limbs and trunk (round caps: capsules); [figureHeadStroke]
  * the head ring and the equipment; [figureMargin] how far inside the box a pose keeps its joints
  * and equipment (at least half a [figureStroke], so no stroke is cut). [bodyMapStroke] is the
- * body map's outline, the 1 dp hairline of the spike. Starting values: Task 8 tunes them on the
- * pilot poses and pins the final ones in `IllustrationTokensTest`.
+ * body map's outline, the 1 dp hairline of the spike. Final after the pilot poses (Task 8, on the
+ * emulator at 64 dp and at half a phone's width): the starting values held, pinned in
+ * `IllustrationTokensTest`.
  */
 @Immutable
 data class MoosclesIllustration(

@@ -6,10 +6,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
 import com.mooscles.designsystem.gallery.GalleryScreen
 import com.mooscles.designsystem.gallery.rememberGalleryState
+import com.mooscles.screens.exercise.figures.figuresGalleryPage
 
 /**
  * The hidden entry to the design gallery: seven taps in a row on the installed version in
@@ -70,5 +72,7 @@ internal fun DeveloperGalleryRoute(nav: NavController) {
     }
     // The system back behaves like the gallery's own: it closes the open page first.
     BackHandler { gallery.back { nav.popBackStack() } }
-    GalleryScreen(onBack = { nav.popBackStack() }, state = gallery)
+    // The figures page lives in :screens, next to the poses (plan decision 5).
+    val extraPages = remember { listOf(figuresGalleryPage()) }
+    GalleryScreen(onBack = { nav.popBackStack() }, state = gallery, extraPages = extraPages)
 }

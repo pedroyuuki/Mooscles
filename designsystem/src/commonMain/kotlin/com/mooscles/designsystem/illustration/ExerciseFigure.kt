@@ -355,7 +355,7 @@ private fun figureOperations(
     bone(FigureJoint.HIP, FigureJoint.KNEE_NEAR, palette.body)
     if (FigureSegment.THIGH_FRONT in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, 0f, 1f, Side.FRONT, limb = true)
     if (FigureSegment.THIGH_BACK in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, GLUTE_END, 1f, Side.BACK, limb = true)
-    if (FigureSegment.HIP in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, 0f, GLUTE_END, Side.BACK, limb = true)
+    if (FigureSegment.HIP in highlights) highlight(FigureJoint.HIP, FigureJoint.KNEE_NEAR, 0f, GLUTE_END, Side.ALL, limb = true)
     bone(FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, palette.body)
     if (FigureSegment.SHIN_BACK in highlights) highlight(FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, 0f, CALF_END, Side.BACK, limb = true)
     bone(FigureJoint.ANKLE_NEAR, FigureJoint.TOE_NEAR, palette.body)
@@ -372,7 +372,13 @@ private fun figureOperations(
 /** The side of the pose box, in pose units. */
 private const val BOX = 100f
 
-/** Where on its bone each partial highlight ends (fraction from the joint nearer the trunk): pose data, not measures. */
+/**
+ * Where on its bone each partial highlight ends (fraction from the joint nearer the trunk): pose
+ * data, not measures. The deltoid and the glutes wrap their joint, so they light the whole width of
+ * the limb's first 40%; the hamstrings take the back of the rest of the thigh, the calf the back of
+ * the upper 60% of the shin. Tuned on the pilot poses (Task 8): a back-only glute band of 35% was
+ * too small to see at 64 dp, with the hip thrust's thigh level.
+ */
 private const val DELTOID_END = 0.4f
-private const val GLUTE_END = 0.35f
+private const val GLUTE_END = 0.4f
 private const val CALF_END = 0.6f

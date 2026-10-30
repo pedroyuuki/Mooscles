@@ -8,8 +8,9 @@ import kotlin.test.assertTrue
 
 class IllustrationTokensTest {
     /**
-     * Phase 4A (spec D3 and "Onde as figuras vivem"): the starting values of the figure renderer.
-     * Task 8 tunes them on the pilot poses and pins the final ones here, in the same commit.
+     * Phase 4A (spec D3 and "Onde as figuras vivem"): the figure renderer's values, final after the
+     * 20 pilot poses (Task 8). The strokes and the margin kept their starting values; the skeleton
+     * and the equipment changed.
      */
     @Test
     fun valuesArePinned() {
@@ -22,12 +23,24 @@ class IllustrationTokensTest {
         assertEquals(1.dp, i.bodyMapStroke)
         // A pose that keeps its joints `figureMargin` inside the box keeps its whole stroke inside too.
         assertTrue(i.figureMargin >= i.figureStroke / 2, "the margin holds half a limb stroke")
-        // The bones of the 100-unit box (spec: trunk 30, arm 15, forearm 14, thigh 21, shin 20, foot 6, head radius 5).
+        // The bones of the 100-unit box, final after the pilot poses (Task 8). The spec's example
+        // (trunk 30, thigh 21…) did not leave room for a standing overhead lockout with its plate, so
+        // the body is about two thirds of the box tall, in human proportions (trunk 19, arm 12 + 13,
+        // thigh and shin 16, foot 5.5, neck 3 and head radius 4.5).
         assertEquals(
-            listOf(30f, 4f, 5f, 15f, 14f, 21f, 20f, 6f),
+            listOf(19f, 3f, 4.5f, 12f, 13f, 16f, 16f, 5.5f),
             listOf(
                 FigureSkeleton.TRUNK, FigureSkeleton.NECK, FigureSkeleton.HEAD_RADIUS, FigureSkeleton.UPPER_ARM,
                 FigureSkeleton.FOREARM, FigureSkeleton.THIGH, FigureSkeleton.SHIN, FigureSkeleton.FOOT,
+            ),
+        )
+        // The equipment: plate, dumbbell, kettlebell, pulley, bench legs (a bench about knee high) and floor overhang.
+        assertEquals(
+            listOf(8f, 4f, 2.5f, 5f, 2.5f, 16f, 6f),
+            listOf(
+                FigureSkeleton.PLATE_RADIUS, FigureSkeleton.DUMBBELL_RADIUS, FigureSkeleton.KETTLEBELL_HANDLE,
+                FigureSkeleton.KETTLEBELL_RADIUS, FigureSkeleton.PULLEY_RADIUS, FigureSkeleton.BENCH_LEG,
+                FigureSkeleton.FLOOR_OVERHANG,
             ),
         )
     }

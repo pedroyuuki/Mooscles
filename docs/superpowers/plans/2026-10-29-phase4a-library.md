@@ -591,6 +591,6 @@ Todo o resto é sequencial: a Task 6 precisa da 1; a 8 precisa da 2 e da 5; a 9 
 
   | `stableId` | Referência (link) | O que se leu |
   | --- | --- | --- |
-  | | | |
+  | os 20 do piloto (Task 8, 2026-10-30) | nenhuma: nenhum acervo (Everkinetic, Workout Guide, free-exercise-db) foi aberto | as posições foram escritas a partir de conhecimento geral de execução e das dicas do próprio app (`files/exercise_cues/en.json`: início e fim de cada movimento), e conferidas só nas capturas do nosso renderizador |
 
 - **G1.** Data em que a folha foi entregue ao dono, resposta e data da resposta (preenchido pelo controlador).

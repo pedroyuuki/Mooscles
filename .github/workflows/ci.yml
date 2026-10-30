@@ -202,7 +202,8 @@ jobs:
           # Merged Task 11 + Task 6: 864 + 10 + 7 = 881.
           # Phase 4A task 10 (:screens commonTest): ShareCardDataTest +1. 874 + 1 = 875.
           # Merged Task 10: 881 + 1 = 882.
-          MIN_HOST_TESTS: 882
+          # Phase 4A task 8 (:screens commonTest): ExerciseFiguresTest 8, FigureHighlightsTest 2. 882 + 10 = 892.
+          MIN_HOST_TESTS: 892
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -440,8 +441,10 @@ jobs:
           # Phase 4A task 11: ExerciseCuesTest 4 (commonTest). 293 + 4 = 297.
           # Phase 4A task 10: ShareCardDataTest +1 (commonTest); ExerciseDisplayNamesTest 4, AnatomyTextsTest 3,
           # ActiveWorkoutScreenTest +1, WorkoutSummaryScreenTest +1 (uiTest). 297 + 10 = 307.
+          # Phase 4A task 8: ExerciseFiguresTest 8, FigureHighlightsTest 2 (commonTest); FiguresGalleryPageTest 1
+          # (uiTest). 307 + 11 = 318.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 307
+          MIN_SCREENS_IOS_TESTS: 318
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
