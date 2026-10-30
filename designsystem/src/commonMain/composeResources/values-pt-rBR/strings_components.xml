@@ -98,4 +98,5 @@
     <string name="ds_body_map_primary">Principais</string>
     <string name="ds_body_map_secondary">Secundários</string>
     <string name="ds_licenses_mooscles_media">Ilustrações, dicas de execução e nomes do Mooscles</string>
+    <string name="ds_search_clear">Limpar busca</string>
 </resources>

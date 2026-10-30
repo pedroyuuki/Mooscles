@@ -97,13 +97,15 @@ class IconsTest {
             "Play", "Trash2", "Undo2", "FileText", "Wifi", "ImageOff",
             "History", "LayoutGrid", "Search", "Keyboard", "Share2", "Pencil", "ArrowUp", "ArrowDown",
             "ArrowLeftRight",
+            // Phase 4A: the library.
+            "Settings", "SearchX",
             "Plate", "PlateRecord", "Dumbbell", "Barbell", "Kettlebell", "Bench", "Cable", "Machine",
             "Rope", "Body",
             "DumbbellFilled", "LayoutGridFilled", "HistoryFilled", "PlateRecordFilled",
         )
         assertEquals(expected, MIcons.all.map { it.first })
         for ((name, icon) in MIcons.all) assertEquals(name, icon.name)
-        assertEquals(51, expected.size)
-        assertEquals(51, MIcons.all.map { it.second }.toSet().size)
+        assertEquals(53, expected.size)
+        assertEquals(53, MIcons.all.map { it.second }.toSet().size)
     }
 }

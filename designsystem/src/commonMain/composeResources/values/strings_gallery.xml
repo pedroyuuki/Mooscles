@@ -110,4 +110,8 @@
     <string name="gallery_restore_set">Restore the set</string>
     <string name="gallery_sample_caption">Per hand: log one dumbbell's load.</string>
     <string name="gallery_sample_rest_chip">Rest 2:00</string>
+    <string name="gallery_section_search_field">Search field</string>
+    <string name="gallery_sample_search">Search by name, muscle or equipment</string>
+    <string name="gallery_sample_menu_chip">Equipment · 2</string>
+    <string name="gallery_section_info_chips">Read-only chips</string>
 </resources>
