@@ -26,11 +26,14 @@ import com.mooscles.designsystem.format.currentNumberLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.WeightUnits
+import com.mooscles.screens.format.catalogInPortuguese
+import com.mooscles.screens.format.displayName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_record_reps_detail
 import com.mooscles.screens.resources.workout_record_reps_title
 import com.mooscles.screens.resources.workout_record_weight_detail
 import com.mooscles.screens.resources.workout_record_weight_title
+import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.RecordKind
 import com.mooscles.ui.SetRecordUi
 import com.mooscles.ui.SetUi
@@ -102,9 +105,15 @@ object RecordAnnouncer {
      * of its category in [announced]. So a record already there when the screen opened (a resumed
      * workout), one inherited when another set is unchecked or removed, one kept while a done set is
      * corrected or typed into, and a first record (no `SetUi.record`, D18) say nothing; a later set
-     * beating the record again says it once more, with the new value.
+     * beating the record again says it once more, with the new value. [nameOf] gives each event's
+     * [RecordEvent.exerciseName]: the screen passes the name it shows ([com.mooscles.screens.format.exerciseName]).
      */
-    fun step(workout: WorkoutUi, checkedHere: Set<String>, announced: Map<String, RecordBest>): RecordStep {
+    fun step(
+        workout: WorkoutUi,
+        checkedHere: Set<String>,
+        announced: Map<String, RecordBest>,
+        nameOf: (ExerciseUi) -> String = { it.name },
+    ): RecordStep {
         if (checkedHere.isEmpty()) return RecordStep(emptySet(), emptyList(), announced)
         val consumed = HashSet<String>()
         val events = ArrayList<RecordEvent>()
@@ -117,7 +126,7 @@ object RecordAnnouncer {
                 val category = category(entry, record, set)
                 if (!beats(record.kind, set.weightKg, set.reps, best[category])) continue
                 best = best + (category to RecordBest(set.weightKg, set.reps))
-                events += RecordEvent(key(set.id, set.weightKg, set.reps, record), set.id, entry.exercise.name, record, set.weightKg, set.reps)
+                events += RecordEvent(key(set.id, set.weightKg, set.reps, record), set.id, nameOf(entry.exercise), record, set.weightKg, set.reps)
             }
         }
         return RecordStep(consumed, events, best)
@@ -142,6 +151,8 @@ object RecordAnnouncer {
 @Composable
 internal fun RecordReaction(workout: WorkoutUi, pounds: Boolean, screen: ActiveWorkoutScreenState, modifier: Modifier = Modifier) {
     val haptics = MTheme.haptics
+    val portuguese = catalogInPortuguese()
+    val nameOf: (ExerciseUi) -> String = { displayName(it, portuguese) }
     var queue by remember(workout.id) { mutableStateOf(emptyList<RecordEvent>()) }
     LaunchedEffect(workout) {
         val ids = workout.exercises.flatMapTo(HashSet()) { e -> e.sets.map { it.id } }
@@ -150,7 +161,7 @@ internal fun RecordReaction(workout: WorkoutUi, pounds: Boolean, screen: ActiveW
         // The row plays the check's haptic from its own effect; this one comes after it. Nothing
         // suspends after the frame, so a newer emission cannot cut the step in half.
         withFrameNanos { }
-        val step = RecordAnnouncer.step(workout, screen.checkedHere, screen.announced)
+        val step = RecordAnnouncer.step(workout, screen.checkedHere, screen.announced, nameOf)
         screen.settleRecords(step)
         if (step.announce.isNotEmpty()) {
             haptics.perform(HapticEvent.PersonalRecord)

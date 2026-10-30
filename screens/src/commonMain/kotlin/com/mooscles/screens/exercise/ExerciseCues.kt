@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.resources.Res
-import com.mooscles.screens.resources.catalog_names_language
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -15,7 +15,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.stringResource
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -96,7 +95,8 @@ internal class CueCache(private val read: suspend (String) -> ByteArray) {
  */
 @Composable
 internal fun rememberExerciseCues(exerciseId: String): List<String>? {
-    val portuguese = cuesInPortuguese()
+    // The same language as the names on screen ([catalogInPortuguese]).
+    val portuguese = catalogInPortuguese()
     val cues = remember(exerciseId, portuguese) {
         mutableStateOf(ExerciseCues.loaded(portuguese)?.let { ExerciseCues.cuesFor(it, exerciseId) })
     }
@@ -105,10 +105,3 @@ internal fun rememberExerciseCues(exerciseId: String): List<String>? {
     }
     return cues.value
 }
-
-/**
- * Whether the catalog texts follow Portuguese: the same resource Task 10's `catalogInPortuguese()`
- * reads, so the cues always match the names on screen. Swapped for that function when it lands.
- */
-@Composable
-private fun cuesInPortuguese(): Boolean = stringResource(Res.string.catalog_names_language) == "pt-BR"

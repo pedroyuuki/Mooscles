@@ -36,6 +36,7 @@ import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.format.equipmentLabel
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.muscleLabel
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_picker_all
@@ -159,7 +160,7 @@ private fun PickerRow(exercise: ExerciseUi, tag: String, onClick: () -> Unit) {
             modifier = Modifier.testTag(ExercisePickerEquipmentIconTag),
         )
         Column(Modifier.weight(1f)) {
-            MText(exercise.name, MTheme.type.bodyLg, color = colors.textPrimary)
+            MText(exerciseName(exercise), MTheme.type.bodyLg, color = colors.textPrimary)
             MText(
                 stringResource(Res.string.workout_picker_meta, muscleLabel(exercise.muscle), equipmentLabel(exercise.equipment)),
                 MTheme.type.bodyMd,

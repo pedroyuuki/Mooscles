@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Labels of the exercise catalog's fixed lists (muscle groups, equipment, load conventions).
-     English is the base; every key also exists in values-pt-rBR. Exercise names stay in English. -->
+     English is the base; every key also exists in values-pt-rBR. The catalog's exercise names are
+     not here: ExerciseNames (:shared) keeps them, in the language catalog_names_language names. -->
 <resources>
     <string name="catalog_muscle_chest">Chest</string>
     <string name="catalog_muscle_back">Back</string>
@@ -46,4 +47,7 @@
 
     <!-- The language of the catalog texts (exercise names, cues): "pt-BR" turns them Portuguese. -->
     <string name="catalog_names_language">en</string>
+
+    <!-- The default routine folder while its stored name is still RoutineFolder.DEFAULT_NAME. -->
+    <string name="catalog_default_folder">My routines</string>
 </resources>

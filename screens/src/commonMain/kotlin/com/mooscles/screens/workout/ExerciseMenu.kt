@@ -33,6 +33,7 @@ import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.format.conventionExplanation
 import com.mooscles.screens.format.conventionLabel
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_keep_training
 import com.mooscles.screens.resources.workout_menu_history
@@ -81,7 +82,7 @@ internal fun ExerciseMenuSheet(
     onDismiss: () -> Unit,
 ) {
     MBottomSheet(onDismiss = onDismiss) {
-        SheetTitle(entry.exercise.name)
+        SheetTitle(exerciseName(entry.exercise))
         MenuItem(MIcons.History, stringResource(Res.string.workout_menu_history), ExerciseMenuTags.HISTORY, onClick = onHistory)
         MenuItem(MIcons.ArrowLeftRight, stringResource(Res.string.workout_menu_swap), ExerciseMenuTags.SWAP, onClick = onSwap)
         MenuItem(
@@ -136,7 +137,7 @@ internal fun ExerciseConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val name = entry.exercise.name
+    val name = exerciseName(entry.exercise)
     when (confirm) {
         ExerciseConfirm.REMOVE -> MDialog(
             title = stringResource(Res.string.workout_menu_remove),

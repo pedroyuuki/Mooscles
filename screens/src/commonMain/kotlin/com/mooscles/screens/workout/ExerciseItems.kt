@@ -36,6 +36,7 @@ import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.format.conventionCaption
 import com.mooscles.screens.format.equipmentLabel
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.muscleLabel
 import com.mooscles.screens.format.shortDate
 import com.mooscles.screens.resources.Res
@@ -190,7 +191,7 @@ private fun ExerciseHeaderItem(
     val reduced = MTheme.reducedMotion
     val snappy = MTheme.motion.springSnappy
     ExerciseCardHeader(
-        name = entry.exercise.name,
+        name = exerciseName(entry.exercise),
         meta = meta,
         media = ExerciseMedia.None,
         equipmentIcon = EquipmentIcons.forEquipment(entry.exercise.equipment),
