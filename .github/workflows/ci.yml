@@ -555,7 +555,8 @@ jobs:
           # warmupsAreNamedAmongWarmupsNotAmongTheWorkingSets, undoAfterTheExerciseIsReplacedDoesNotRestore,
           # replacingAnExerciseDropsItsDraftsAndNeverWritesTheOldLoad, aFailedWriteLetsTheSavedValueBackAfterTheError). 612 + 7 = 619.
           # MIN_DS_IOS_TESTS stays 367 (no designsystem test changed).
-          MIN_SCREENS_IOS_TESTS: 619
+          # Phase 4B task 16: RoutinesFlowTest 2 (uiTest: routinesFlowPortugueseLightAtOneX, routinesFlowEnglishDarkAtTwoX). 619 + 2 = 621.
+          MIN_SCREENS_IOS_TESTS: 621
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
