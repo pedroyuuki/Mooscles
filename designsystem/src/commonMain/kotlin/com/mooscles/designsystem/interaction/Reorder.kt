@@ -641,6 +641,19 @@ fun <K : Any> Modifier.reorderActions(state: ReorderState<K>, key: K, name: Stri
     }
 }
 
+/**
+ * The moves of [reorderActions] for a menu's buttons: the function takes the index to move [key] to and does what
+ * the screen reader's action does, the same hold of the new order and the same announcement ("[name] moved to
+ * position 2 of 5"). It returns false, and writes nothing, for the index it already has, one out of range, or while
+ * an item is being dragged.
+ */
+@Composable
+fun <K : Any> reorderMover(state: ReorderState<K>, key: K, name: String): (to: Int) -> Boolean {
+    val count = state.order.size
+    val saids = List(count) { stringResource(Res.string.ds_reorder_moved, name, it + 1, count) }
+    return { to -> to in saids.indices && state.move(key, to, saids[to]) }
+}
+
 /** "Reorder Bench press" / "Reordenar Supino reto": the label of [name]'s drag handle. */
 @Composable
 fun reorderHandleLabel(name: String): String = stringResource(Res.string.ds_reorder_handle, name)

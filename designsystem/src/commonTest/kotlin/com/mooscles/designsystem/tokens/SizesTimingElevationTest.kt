@@ -76,6 +76,12 @@ class SizesTimingElevationTest {
         assertEquals(2_000L, MoosclesTiming().reorderEchoHold)
     }
 
+    /** Phase 4B (plan Task 11, decision D5 and pre-flight F21): the thumbnails of a routine card's strip are 56 dp. */
+    @Test
+    fun mediaStripIsFiftySix() {
+        assertEquals(56.dp, MoosclesSizes().mediaStrip)
+    }
+
     /** Phase 4B (plan Task 10): a form waits at most 15 s for the echo of its save. */
     @Test
     fun saveEchoWaitIsFifteenSeconds() {

@@ -233,7 +233,10 @@ jobs:
           # Phase 4B task 8 (:screens commonTest): RoutineTargetFormatTest 14. 1042 + 14 = 1056.
           # Phase 4B task 10: (:designsystem commonTest) SizesTimingElevationTest +1; (:screens commonTest) PhotoCacheTest 4;
           # (:app) OverlayWindowBarsHostTest 1. 1056 + 6 = 1062.
-          MIN_HOST_TESTS: 1062
+          # Phase 4B task 11: (:screens commonTest) RoutineSummariesTest 3; (:designsystem commonTest)
+          # SizesTimingElevationTest +1 (mediaStripIsFiftySix). 1062 + 4 = 1066.
+          # Phase 4B task 11 fix round 1: (:screens commonTest) RoutineNamesTest 3. 1066 + 3 = 1069.
+          MIN_HOST_TESTS: 1069
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -442,7 +445,8 @@ jobs:
           # Phase 4B task 5: ExerciseFigureTest.holdRequestsNoFrames (uiTest). 340 + 1 = 341.
           # Merged Task 5 (+1 over 340): 362 + 1 = 363.
           # Phase 4B task 10: SizesTimingElevationTest +1 (commonTest). 363 + 1 = 364.
-          MIN_DS_IOS_TESTS: 364
+          # Phase 4B task 11: SizesTimingElevationTest +1 (commonTest, mediaStripIsFiftySix). 364 + 1 = 365.
+          MIN_DS_IOS_TESTS: 365
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -519,7 +523,10 @@ jobs:
           # resaveAfterTheEchoSendsNothing), ExerciseInfoScreenTest +1 (photoThatTheSaveCouldNotKeepIsToastedOnce);
           # LibraryScreenTest's photo-toast test was replaced by the navigation one (net 0). Device XML: 21 + 22 + 26 tests. 487 + 6 = 493.
           # Phase 4B task 10 fix round 2: CustomExerciseFormPhotoTest +2 (saveWaitsWhileAChosenPhotoIsPrepared, failedStagingReleasesTheForm). 493 + 2 = 495.
-          MIN_SCREENS_IOS_TESTS: 495
+          # Phase 4B task 11: RoutineSummariesTest 3 (commonTest); TrainScreenTest 30 (uiTest). 495 + 33 = 528.
+          # Phase 4B task 11 fix round 1: RoutineNamesTest 3 (commonTest); TrainScreenTest +7 (uiTest: menu and move
+          # sheet scroll, busy entry points, menu move announces, dialog survives recreation, cap, copy failure). 528 + 10 = 538.
+          MIN_SCREENS_IOS_TESTS: 538
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
