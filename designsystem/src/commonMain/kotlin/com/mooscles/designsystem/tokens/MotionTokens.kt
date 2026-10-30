@@ -62,4 +62,9 @@ data class MoosclesTiming(
      * its keys to change (the write's echo). A write that never echoes (it failed) gives the keys back.
      */
     val reorderEchoHold: Long = 2_000,
+    /**
+     * Phase 4B (plan Task 10): the longest a form stays open and busy for the echo of its save. The echo comes in
+     * milliseconds; this only frees a form whose command was lost (a queue that stopped), so it is well past a slow write.
+     */
+    val saveEchoWait: Long = 15_000,
 )

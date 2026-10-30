@@ -231,7 +231,9 @@ jobs:
           # Phase 4B task 7 fix round 1 (:app, x2 for sdk 26 and 35): ExercisePhotoStoreHostTest +5 methods
           # (every EXIF orientation, transparent PNG, throwing EXIF block, failed second rename, thumbnail without photo). 1032 + 10 = 1042.
           # Phase 4B task 8 (:screens commonTest): RoutineTargetFormatTest 14. 1042 + 14 = 1056.
-          MIN_HOST_TESTS: 1056
+          # Phase 4B task 10: (:designsystem commonTest) SizesTimingElevationTest +1; (:screens commonTest) PhotoCacheTest 4;
+          # (:app) OverlayWindowBarsHostTest 1. 1056 + 6 = 1062.
+          MIN_HOST_TESTS: 1062
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -439,7 +441,8 @@ jobs:
           # Phase 4B task 4 fix round 1: ComponentColorsTest +1 (commonTest); ReorderTest +2 (uiTest). 359 + 3 = 362.
           # Phase 4B task 5: ExerciseFigureTest.holdRequestsNoFrames (uiTest). 340 + 1 = 341.
           # Merged Task 5 (+1 over 340): 362 + 1 = 363.
-          MIN_DS_IOS_TESTS: 363
+          # Phase 4B task 10: SizesTimingElevationTest +1 (commonTest). 363 + 1 = 364.
+          MIN_DS_IOS_TESTS: 364
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -509,7 +512,9 @@ jobs:
           # Phase 4B task 3: ScreensHelpersTest +1 (uiTest). 433 + 1 = 434.
           # Phase 4B task 8: RoutineTargetFormatTest 14 (commonTest), RoutineTargetLineTest 1, ActiveWorkoutScreenTest +3 (uiTest). 434 + 18 = 452.
           # Phase 4B task 9: ExercisePickerSheetTest +8 (uiTest, multiple mode). 452 + 8 = 460.
-          MIN_SCREENS_IOS_TESTS: 460
+          # Phase 4B task 10: PhotoCacheTest 4 (commonTest); CustomExerciseFormPhotoTest 16, LibraryScreenTest +3,
+          # ExerciseInfoScreenTest +3, ExercisePickerSheetTest +1 (uiTest). 460 + 27 = 487.
+          MIN_SCREENS_IOS_TESTS: 487
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

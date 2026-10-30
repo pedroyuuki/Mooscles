@@ -76,6 +76,12 @@ class SizesTimingElevationTest {
         assertEquals(2_000L, MoosclesTiming().reorderEchoHold)
     }
 
+    /** Phase 4B (plan Task 10): a form waits at most 15 s for the echo of its save. */
+    @Test
+    fun saveEchoWaitIsFifteenSeconds() {
+        assertEquals(15_000L, MoosclesTiming().saveEchoWait)
+    }
+
     @Test
     fun timerAnnounceHoldIsOneAndAHalfSeconds() {
         assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)

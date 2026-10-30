@@ -46,6 +46,7 @@ import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
 import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.ExerciseMediaFigureTag
+import com.mooscles.designsystem.components.ExerciseMediaPlaceholderTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.illustration.FigureJoint
 import com.mooscles.designsystem.illustration.FigurePose
@@ -57,6 +58,8 @@ import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.assertShownWhole
 import com.mooscles.screens.assertTextNotCut
 import com.mooscles.screens.exercise.CustomExerciseFormTags
+import com.mooscles.screens.exercise.FakeExercisePhotos
+import com.mooscles.screens.exercise.photo.PhotoRowTags
 import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
@@ -154,21 +157,25 @@ class LibraryScreenTest {
         tall: Boolean = false,
         restoration: ScreenRestoration? = null,
         fake: Fake = Fake(state),
+        photos: FakeExercisePhotos? = null,
     ): Requests {
         val requests = Requests()
         // A cache of the test's own (pre-flight F19), so no other test's model is reused.
         val seams = LibrarySeams(cache = LibraryModelCache(), build = builds.build, media = media)
         withScreen(locale = locale, fontScale = fontScale, size = size, restoration = restoration) {
-            TopAnchored(if (tall) TALL else null) {
-                LibraryRoute(
-                    state = state.value,
-                    actions = fake,
-                    onOpenExercise = { requests.opened += it },
-                    onOpenSettings = { requests.settings++ },
-                    modifier = Modifier,
-                    seams = seams,
-                )
+            val route: @androidx.compose.runtime.Composable () -> Unit = {
+                TopAnchored(if (tall) TALL else null) {
+                    LibraryRoute(
+                        state = state.value,
+                        actions = fake,
+                        onOpenExercise = { requests.opened += it },
+                        onOpenSettings = { requests.settings++ },
+                        modifier = Modifier,
+                        seams = seams,
+                    )
+                }
             }
+            if (photos != null) photos.Provide(route) else route()
         }
         waitForIdle()
         return requests
@@ -613,23 +620,21 @@ class LibraryScreenTest {
         onNodeWithTag(LibraryTags.CREATE).performClick()
         waitForIdle()
         val id = createInTheForm(fake, "Remada articulada")
-        // The form closes at once; the state has not brought the exercise yet, so nothing opens.
-        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
+        // The form stays (busy) until the state brings the exercise, so the library never shows between the form and
+        // the detail; nothing opens yet.
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
         assertEquals(emptyList(), requests.opened)
         // Unrelated changes while waiting open nothing either.
         runOnIdle { state.value = state.value.copy(history = history) }
         waitForIdle()
         assertEquals(emptyList(), requests.opened)
 
-        // The wait survives a recreation.
-        restoration.emulateSaveAndRestore()
-        waitForIdle()
-        assertEquals(emptyList(), requests.opened)
-
         val created = ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true)
         runOnIdle { state.value = state.value.copy(exercises = exercises + created) }
+        waitUntil(timeoutMillis = 5_000) { requests.opened.isNotEmpty() }
         waitForIdle()
         assertEquals(listOf(id), requests.opened)
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
         // Once: later states do not open it again.
         runOnIdle { state.value = state.value.copy(exercises = exercises + created.copy(name = "Remada articulada II")) }
         waitForIdle()
@@ -645,31 +650,78 @@ class LibraryScreenTest {
         onNodeWithTag(LibraryTags.CREATE).performClick()
         waitForIdle()
         val failed = createInTheForm(fake, "Remada articulada")
-        // The save fails before the exercise arrives: the error shows, and the wait is dropped.
-        runOnIdle { state.value = state.value.copy(error = "raw", errorCode = UiError.SAVE_FAILED) }
+        // The save fails before the exercise arrives: the form stays open, the error shows over it and is handed back.
+        runOnIdle {
+            state.value = state.value.copy(error = "raw", errorCode = UiError.SAVE_FAILED, errorSubject = failed, subjectFailures = mapOf(failed to 1))
+        }
         waitForIdle()
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
         onNode(
             hasText("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.") and hasAnyAncestor(hasTestTag(TOAST)),
             useUnmergedTree = true,
         ).assertIsDisplayed()
         assertNull(state.value.errorCode)
+        assertEquals(emptyList(), requests.opened)
+        cancelForm()
+        // The wait is over: a list that later shows the exercise is not this save's echo.
         runOnIdle { state.value = state.value.copy(exercises = exercises + ExerciseUi(failed, "Remada articulada", "Back", "Plate-loaded machine", custom = true)) }
         waitForIdle()
         assertEquals(emptyList(), requests.opened)
 
         // An error that comes with the exercise already in the list (a repeated creation of the
-        // same id is refused) is no failure of this one: it opens.
+        // same id is refused) is no failure of this one: the exercise is there, so it opens.
         onNodeWithTag(LibraryTags.CREATE).performClick()
         waitForIdle()
         val second = createInTheForm(fake, "Remada cavalinho do Zé")
         runOnIdle {
             state.value = state.value.copy(
                 exercises = state.value.exercises + ExerciseUi(second, "Remada cavalinho do Zé", "Back", "Plate-loaded machine", custom = true),
-                error = "raw", errorCode = UiError.INVALID_VALUE,
+                error = "raw", errorCode = UiError.INVALID_VALUE, errorSubject = second, subjectFailures = mapOf(second to 1),
             )
         }
-        waitForIdle()
+        waitUntil(timeoutMillis = 5_000) { requests.opened.isNotEmpty() }
         assertEquals(listOf(second), requests.opened)
+    }
+
+    @Test
+    fun rowShowsTheCustomPhotoThumbnail() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.givePhoto(mine.id) }
+        show(photos = photos, builds = Builds(), tall = true)
+        val inMine = hasAnyAncestor(hasTestTag(LibraryTags.row(mine.id)))
+        // The image's placeholder (the equipment icon under it) is drawn only for a photo: ExerciseMedia.Image.
+        waitUntil(timeoutMillis = 5_000) { onAllNodes(hasTestTag(ExerciseMediaPlaceholderTag) and inMine, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNode(hasTestTag(ExerciseEquipmentIconTag) and inMine, useUnmergedTree = true).assertDoesNotExist()
+        // A catalog row has no photo to read: its icon stays.
+        val inSquat = hasAnyAncestor(hasTestTag(LibraryTags.row(squat.id)))
+        onNode(hasTestTag(ExerciseEquipmentIconTag) and inSquat, useUnmergedTree = true).assertExists()
+        onNode(hasTestTag(ExerciseMediaPlaceholderTag) and inSquat, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun photoThatCannotBeKeptToastsAfterTheFormClosed() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.commitWorks = false }
+        val state = stateOf()
+        val fake = Fake(state)
+        val requests = show(state = state, fake = fake, photos = photos)
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        onNodeWithTag(PhotoRowTags.GALLERY).performScrollTo().performClick()
+        waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag(PhotoRowTags.PREVIEW, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        val id = createInTheForm(fake, "Remada articulada")
+        runOnIdle { state.value = state.value.copy(exercises = exercises + ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true)) }
+        waitUntil(timeoutMillis = 5_000) { requests.opened.isNotEmpty() }
+        waitForIdle()
+        // The exercise is kept and opens; the photo is what failed.
+        assertEquals(listOf(id), requests.opened)
+        onNode(hasText("Não foi possível salvar a foto.") and hasAnyAncestor(hasTestTag(TOAST)), useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun withoutPhotosTheCustomRowKeepsItsIcon() = runComposeUiTest {
+        show(tall = true)
+        val inMine = hasAnyAncestor(hasTestTag(LibraryTags.row(mine.id)))
+        onNode(hasTestTag(ExerciseEquipmentIconTag) and inMine, useUnmergedTree = true).assertExists()
+        onNode(hasTestTag(ExerciseMediaPlaceholderTag) and inMine, useUnmergedTree = true).assertDoesNotExist()
     }
 
     private companion object {

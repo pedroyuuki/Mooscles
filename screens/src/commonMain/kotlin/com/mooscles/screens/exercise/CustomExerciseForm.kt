@@ -31,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
@@ -70,6 +72,9 @@ import com.mooscles.designsystem.components.MButtonVariant
 import com.mooscles.designsystem.components.MChip
 import com.mooscles.designsystem.components.MChipKind
 import com.mooscles.designsystem.components.MOverlayWindow
+import com.mooscles.designsystem.components.MToastHost
+import com.mooscles.designsystem.components.MToastHostState
+import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.MTextField
 import com.mooscles.designsystem.components.RadioGroup
@@ -77,6 +82,10 @@ import com.mooscles.designsystem.components.RadioRow
 import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.screens.exercise.photo.LocalExercisePhotos
+import com.mooscles.screens.exercise.photo.PhotoRow
+import com.mooscles.screens.exercise.photo.PhotoSource
+import com.mooscles.screens.exercise.photo.rememberStoredPhoto
 import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.format.conventionExplanation
 import com.mooscles.screens.format.conventionLabel
@@ -92,6 +101,8 @@ import com.mooscles.screens.resources.exercise_form_equipment
 import com.mooscles.screens.resources.exercise_form_equipment_required
 import com.mooscles.screens.resources.exercise_form_muscle
 import com.mooscles.screens.resources.exercise_form_muscle_required
+import com.mooscles.screens.resources.exercise_form_photo
+import com.mooscles.screens.resources.exercise_photo_failed
 import com.mooscles.screens.resources.exercise_form_name
 import com.mooscles.screens.resources.exercise_form_name_long
 import com.mooscles.screens.resources.exercise_form_name_required
@@ -100,7 +111,12 @@ import com.mooscles.screens.resources.exercise_form_required_hint
 import com.mooscles.screens.resources.exercise_form_save
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
+import com.mooscles.ui.UiError
 import com.mooscles.ui.UiState
+import com.mooscles.screens.workout.EquipmentIcons
+import com.mooscles.screens.workout.uiErrorText
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /** The test tags of [CustomExerciseForm]. */
@@ -126,8 +142,7 @@ internal object CustomExerciseFormTags {
 }
 
 /**
- * The custom exercise form (spec "Formulário de exercício personalizado", without the photo of
- * D2): a full screen page over the screen that opens it, in a window of its own, so Back cancels it
+ * The custom exercise form (spec "Formulário de exercício personalizado"): a full screen page over the screen that opens it, in a window of its own, so Back cancels it
  * like "Cancel" does (pre-flight F8: a page, not a 90% sheet). From the top: "Cancel" and "Save";
  * the title ("New exercise", or "Edit exercise" for [initial]); the name; the muscle group and the
  * equipment, one chip of each to choose (a line under the title says both are required); and the logging convention, five options with what each
@@ -143,12 +158,22 @@ internal object CustomExerciseFormTags {
  * error is announced. The window has the title as its pane title, and Escape cancels too. When an edit changes the convention of an exercise with logged sets, a line says those
  * sets keep theirs.
  *
- * "Save" clears any earlier error ([MoosclesActions.clearError], so the host only sees this save's),
- * calls [MoosclesActions.createCustomExercise] with the form's id, or
- * [MoosclesActions.saveCustomExercise] for [initial], once, and reports the id to [onSaved]; a later
- * tap (a double tap, or after a recreation) only reports the id again. "Cancel" and Back call
- * [onCancel] and nothing else. The draft (name, choices, id and whether it was saved) is kept with
- * `rememberSaveable`, in the host's composition, so it survives recreation.
+ * "Save" clears any earlier error ([MoosclesActions.clearError], so the host only sees this save's) and calls
+ * [MoosclesActions.createCustomExercise] with the form's id, or [MoosclesActions.saveCustomExercise] for [initial].
+ * A creation keeps the form open and busy (the button spins, further taps do nothing) until the state brings the
+ * exercise, then reports its id to [onSaved]; a failure of that command (`UiState.subjectFailures` of the id grows
+ * past its count when the command was sent) frees the form again, with the error shown over it and handed back
+ * through `clearError()`, and an error about anything else changes nothing (pre-flight F10). A wait also ends after
+ * `timing.saveEchoWait`. The wait is not saved: after a recreation the form is open and not busy, with its draft.
+ * An edit reports [onSaved] once the command is sent. "Cancel" and Back call [onCancel] (and drop the photo draft)
+ * and nothing else. The draft (name, choices, id and the photo's state) is kept with `rememberSaveable`, in the
+ * host's composition, so it survives recreation.
+ *
+ * With [com.mooscles.screens.exercise.photo.LocalExercisePhotos] provided (and a capture), a "Photo" section follows
+ * the name: the preview, "Choose from gallery", "Take photo" (only with a camera) and, with a photo, "Remove
+ * photo". A picked photo is a draft in the store under the form's id; after the creation is echoed it is committed
+ * under that id before [onSaved] (an edit commits it, or removes the saved photo, when it is saved). A photo that
+ * cannot be kept is [onPhotoFailed], and the exercise stays.
  *
  * [pageSize] is for tests: the page that size, at the window's top start, as on a phone that size
  * (the window itself always takes the whole screen, whatever size the host is given).
@@ -163,6 +188,7 @@ internal fun CustomExerciseForm(
     onSaved: (exerciseId: String) -> Unit,
     onCancel: () -> Unit,
     pageSize: DpSize? = null,
+    onPhotoFailed: () -> Unit = {},
 ) {
     val id = rememberSaveable { initial?.id ?: newId() }
     var name by rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -174,7 +200,36 @@ internal fun CustomExerciseForm(
     var convention by rememberSaveable { mutableStateOf(initial?.convention ?: LoadConvention.TOTAL_LOAD.label) }
     var conventionChosen by rememberSaveable { mutableStateOf(initial != null) }
     var attempted by rememberSaveable { mutableStateOf(false) }
-    var submitted by rememberSaveable { mutableStateOf(false) }
+    // The photo: a draft in the store under the form's id, and (editing) whether the saved photo goes on save.
+    var hasDraft by rememberSaveable { mutableStateOf(false) }
+    var removeOnSave by rememberSaveable { mutableStateOf(false) }
+    // The wait for the echo of a creation: the failure count of [id] when the command was sent. Never saved (preflight
+    // F10): after process death the view model starts with an empty map and the queued command is lost, so a restored
+    // wait would never end; the form comes back open and not busy, with its draft.
+    var wait by remember { mutableStateOf<Int?>(null) }
+    // The save was echoed (or is an edit) and the photo is being applied; nothing else can be sent meanwhile.
+    var finishing by remember { mutableStateOf(false) }
+    val busy = wait != null || finishing
+    val scope = rememberCoroutineScope()
+    val toast = remember { MToastHostState() }
+    val photoFailedText = stringResource(Res.string.exercise_photo_failed)
+    val photos = LocalExercisePhotos.current
+    val capture = photos?.capture
+    val staged: (String?) -> Unit = { uri ->
+        if (uri != null && photos != null && !busy) {
+            scope.launch {
+                if (photos.store.stage(id, uri)) {
+                    hasDraft = true
+                    removeOnSave = false
+                } else {
+                    toast.show(photoFailedText, MToastKind.Error)
+                }
+            }
+        }
+    }
+    val latestStaged by rememberUpdatedState(staged)
+    val pickGallery = capture?.rememberGalleryLauncher { latestStaged(it) }
+    val pickCamera = if (capture != null && capture.cameraAvailable) capture.rememberCameraLauncher { latestStaged(it) } else null
 
     val portuguese = catalogInPortuguese()
     // Folded once per list, not on every keystroke or unrelated state change.
@@ -207,11 +262,28 @@ internal fun CustomExerciseForm(
         }
     }
 
-    fun save() {
-        if (submitted) {
-            onSaved(id)
-            return
+    // Applies the photo to [id]: a creation has just been echoed (the exercise exists, so the draft can move under its
+    // id), an edit has just been sent. A removal only happens here, on save. A photo that cannot be kept is the host's
+    // toast; the exercise stays.
+    suspend fun applyPhoto() {
+        val store = photos?.store ?: return
+        if (removeOnSave && initial != null) {
+            store.remove(id)
+        } else if (hasDraft && !store.commit(id, id)) {
+            onPhotoFailed()
         }
+    }
+
+    fun finish() {
+        finishing = true
+        scope.launch {
+            applyPhoto()
+            onSaved(id)
+        }
+    }
+
+    fun save() {
+        if (busy) return
         attempted = true
         val chosenMuscle = muscle
         val chosenEquipment = equipment
@@ -219,19 +291,54 @@ internal fun CustomExerciseForm(
             refusals++
             return
         }
-        submitted = true
         val trimmed = name.text.trim()
         actions.clearError()
         if (initial == null) {
+            // The baseline is the failure count of [id] now. A reused id (the same form saved again after a recreation)
+            // may already have failures counted before this send, so a failure of an older send can release this wait early.
+            wait = state.subjectFailures[id] ?: 0
             actions.createCustomExercise(id, trimmed, chosenMuscle, chosenEquipment, convention)
         } else {
             actions.saveCustomExercise(id, trimmed, chosenMuscle, chosenEquipment, convention)
+            finish()
         }
-        onSaved(id)
+    }
+
+    fun cancel() {
+        if (finishing) return
+        if (hasDraft) photos?.discardInBackground(id)
+        onCancel()
+    }
+
+    // The creation's echo: the exercise comes in the state (the form closes through [onSaved], after the photo is
+    // committed under the new id), or the count of failures about [id] grows past the baseline (an unrelated error
+    // changes neither, and a second error cannot hide the first as it would [UiState.errorCode]): the form stays,
+    // the error shows over it, and Save is free again.
+    val failedText = uiErrorText(state.errorCode ?: UiError.SAVE_FAILED)
+    LaunchedEffect(wait, state.exercises, state.subjectFailures) {
+        val baseline = wait ?: return@LaunchedEffect
+        if (finishing) return@LaunchedEffect
+        if (state.exercises.any { it.id == id }) {
+            finish()
+        } else if ((state.subjectFailures[id] ?: 0) > baseline) {
+            wait = null
+            actions.clearError()
+            scope.launch { toast.show(failedText, MToastKind.Error) }
+        }
+    }
+    // A command that was lost must not hold the form for good.
+    val echoWait = MTheme.timing.saveEchoWait
+    LaunchedEffect(wait) {
+        if (wait == null) return@LaunchedEffect
+        delay(echoWait)
+        if (!finishing && wait != null) {
+            wait = null
+            toast.show(failedText, MToastKind.Error)
+        }
     }
 
     // The design system's overlay window: the host's density and font scale reach the page.
-    MOverlayWindow(onDismissRequest = onCancel) {
+    MOverlayWindow(onDismissRequest = ::cancel) {
         val bottom = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
         val title = stringResource(if (initial == null) Res.string.exercise_form_new else Res.string.exercise_form_edit)
         val windowFocus = remember { FocusRequester() }
@@ -246,7 +353,7 @@ internal fun CustomExerciseForm(
                     .semantics { paneTitle = title }
                     .onPreviewKeyEvent { event ->
                         val close = event.type == KeyEventType.KeyDown && (event.key == Key.Escape || event.key == Key.Back)
-                        if (close) onCancel()
+                        if (close) cancel()
                         close
                     }
                     .focusRequester(windowFocus)
@@ -265,7 +372,7 @@ internal fun CustomExerciseForm(
                 ) {
                     MButton(
                         stringResource(Res.string.exercise_form_cancel),
-                        onClick = onCancel,
+                        onClick = ::cancel,
                         modifier = Modifier.testTag(CustomExerciseFormTags.CANCEL),
                         variant = MButtonVariant.Text,
                     )
@@ -276,6 +383,7 @@ internal fun CustomExerciseForm(
                         onClick = ::save,
                         modifier = Modifier.testTag(CustomExerciseFormTags.SAVE),
                         variant = MButtonVariant.Primary,
+                        loading = busy,
                     )
                 }
                 Column(
@@ -316,6 +424,30 @@ internal fun CustomExerciseForm(
                         },
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                     )
+                    if (photos != null && capture != null && pickGallery != null) {
+                        val source = when {
+                            hasDraft -> PhotoSource.Draft(id)
+                            initial != null && !removeOnSave -> PhotoSource.Exercise(initial.id)
+                            else -> null
+                        }
+                        val preview = if (source != null) rememberStoredPhoto(photos, source, thumbnail = true) else null
+                        FormSection(title = stringResource(Res.string.exercise_form_photo), error = null) {
+                            PhotoRow(
+                                preview = preview,
+                                icon = EquipmentIcons.forEquipment(equipment ?: ""),
+                                cameraAvailable = pickCamera != null,
+                                onGallery = { if (!busy) pickGallery() },
+                                onCamera = { if (!busy) pickCamera?.invoke() },
+                                onRemove = {
+                                    if (!busy) {
+                                        if (hasDraft) photos.discardInBackground(id)
+                                        hasDraft = false
+                                        removeOnSave = initial != null
+                                    }
+                                },
+                            )
+                        }
+                    }
                     FormSection(
                         title = stringResource(Res.string.exercise_form_muscle),
                         error = if (attempted && muscle == null) stringResource(Res.string.exercise_form_muscle_required) else null,
@@ -377,6 +509,7 @@ internal fun CustomExerciseForm(
                     }
                 }
             }
+            MToastHost(toast, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
         }
     }
 }

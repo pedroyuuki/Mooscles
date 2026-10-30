@@ -46,7 +46,6 @@ import com.mooscles.screens.resources.library_custom
 import com.mooscles.screens.resources.library_meta
 import com.mooscles.screens.resources.library_row
 import com.mooscles.screens.resources.library_row_custom
-import com.mooscles.screens.resources.workout_picker_selected
 import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.ui.ExerciseUi
 import org.jetbrains.compose.resources.stringResource
@@ -62,8 +61,8 @@ internal const val THREE_LINE_NAME_FONT_SCALE = 2f
  * "Custom" tag. The media and 8 dp above and below it make the row at least 72 dp tall.
  *
  * With [selected] given (the picker's multiple mode) the row is a checkbox instead of a button: it
- * ends in a box that is checked while selected, its state is announced ("Selected") and a tap
- * calls [onClick] to toggle it.
+ * ends in a box that is checked while selected, its state is the checkbox's own (the platform
+ * says "checked" or "not checked") and a tap calls [onClick] to toggle it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -88,7 +87,6 @@ internal fun LibraryRow(
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val shape = RoundedCornerShape(MTheme.radius.md)
-    val selectedText = if (selected == true) stringResource(Res.string.workout_picker_selected) else null
     val action = if (selected == null) {
         Modifier.clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
     } else {
@@ -101,7 +99,6 @@ internal fun LibraryRow(
             .then(action)
             .semantics {
                 contentDescription = label
-                if (selectedText != null) stateDescription = selectedText
             }
             .mFocusRing(shape, source)
             .background(if (pressed) colors.bgInset else Color.Transparent, shape)

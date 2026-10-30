@@ -76,6 +76,7 @@ class CustomExerciseFormTest {
         initial: ExerciseUi? = null,
         prefill: String = "",
         state: UiState = UiState(loading = false, exercises = exercises),
+        holder: MutableState<UiState> = mutableStateOf(state),
         locale: String? = "pt-BR",
         fontScale: Float = 1f,
         size: DpSize? = null,
@@ -90,7 +91,7 @@ class CustomExerciseFormTest {
                 CustomExerciseForm(
                     initial = initial,
                     prefillName = prefill,
-                    state = state,
+                    state = holder.value,
                     actions = outcome.actions,
                     onSaved = { outcome.saved += it },
                     onCancel = { outcome.cancelled++ },
@@ -135,6 +136,10 @@ class CustomExerciseFormTest {
         onNode(hasText(text, substring = substring) and hasAnyAncestor(hasTestTag(CustomExerciseFormTags.ROOT)), useUnmergedTree = true)
 
     private val creations = { calls: List<String> -> calls.filter { it.startsWith("createCustomExercise:") } }
+
+    /** The id the form gave its creation. */
+    private fun createdId(outcome: Outcome): String =
+        creations(outcome.calls).last().removePrefix("createCustomExercise:").substringBefore(",")
 
     @Test
     fun blankNameShowsTheErrorAndStays() = runComposeUiTest {
@@ -200,7 +205,8 @@ class CustomExerciseFormTest {
         hasTextInForm("Já existe “Supino reto com barra”. Você pode salvar mesmo assim.").assertIsDisplayed()
         choose(MuscleGroup.CHEST, Equipment.BARBELL)
         save()
-        assertEquals(1, outcome.saved.size)
+        // A create is reported saved once the state brings the exercise, so only the call is seen here.
+        assertEquals(1, creations(outcome.calls).size)
         assertTrue(creations(outcome.calls).single().endsWith(",Barbell Bench Press,Chest,Barbell,Total load"))
         type("Supino reto inédito")
         hasTextInForm("Já existe", substring = true).assertDoesNotExist()
@@ -231,21 +237,28 @@ class CustomExerciseFormTest {
 
     @Test
     fun saveCreatesWithTheScreenId() = runComposeUiTest {
-        val outcome = showForm()
+        val holder = mutableStateOf(UiState(loading = false, exercises = exercises))
+        val outcome = showForm(holder = holder)
         type("Supino articulado")
         choose(MuscleGroup.CHEST, Equipment.PLATE_LOADED_MACHINE)
         save()
-        val id = outcome.saved.single()
+        val id = createdId(outcome)
         assertTrue(id.isNotBlank() && !id.startsWith("catalog_"), id)
         assertTrue(Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}").matches(id), id)
         assertEquals("createCustomExercise:$id,Supino articulado,Chest,Plate-loaded machine,Total load", outcome.calls.last())
         // A stale error from before is cleared first, so the host only sees this creation's.
         assertEquals(listOf("clearError:", outcome.calls.last()), outcome.calls)
+        // The form stays (busy) until the state brings the exercise, then reports the same id.
+        assertEquals(emptyList(), outcome.saved)
+        holder.value = holder.value.copy(exercises = exercises + ExerciseUi(id, "Supino articulado", "Chest", "Plate-loaded machine", custom = true))
+        waitForIdle()
+        assertEquals(listOf(id), outcome.saved)
     }
 
     @Test
     fun saveTwiceCreatesOnce() = runComposeUiTest {
-        val outcome = showForm()
+        val holder = mutableStateOf(UiState(loading = false, exercises = exercises))
+        val outcome = showForm(holder = holder)
         type("Supino articulado")
         choose(MuscleGroup.CHEST, Equipment.PLATE_LOADED_MACHINE)
         // Two taps in one frame, then a third once the first went through.
@@ -253,9 +266,12 @@ class CustomExerciseFormTest {
         waitForIdle()
         save()
         assertEquals(1, creations(outcome.calls).size, "${outcome.calls}")
-        // A tap after the first one only tells the host the same id again, so it can close.
-        val id = outcome.saved.first()
-        assertEquals(listOf(id, id, id), outcome.saved)
+        // The form is busy until the exercise arrives; then the host hears once.
+        assertEquals(emptyList(), outcome.saved)
+        val id = createdId(outcome)
+        holder.value = holder.value.copy(exercises = exercises + ExerciseUi(id, "Supino articulado", "Chest", "Plate-loaded machine", custom = true))
+        waitForIdle()
+        assertEquals(listOf(id), outcome.saved)
         assertTrue(creations(outcome.calls).single().startsWith("createCustomExercise:$id,"))
     }
 
@@ -337,15 +353,18 @@ class CustomExerciseFormTest {
         tap(CustomExerciseFormTags.equipment(Equipment.DUMBBELL.label))
         conventionNode(LoadConvention.ONE_SIDE).assertIsSelected()
         save()
-        val id = outcome.saved.single()
+        val id = createdId(outcome)
         assertEquals("createCustomExercise:$id,Remada articulada,Back,Dumbbell,One side", outcome.calls.last())
 
-        // Saved, then recreated: the id is the draft's, and that creation is not repeated.
+        // Saved, then recreated: the form is the draft's, open and free (a restored wait could never end after
+        // process death), with the same id; saving again sends the creation again for that id.
         restoration.emulateSaveAndRestore()
         waitForIdle()
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
+        assertEquals(emptyList(), outcome.saved)
         save()
-        assertEquals(1, creations(outcome.calls).size, "${outcome.calls}")
-        assertEquals(listOf(id, id), outcome.saved)
+        assertEquals(2, creations(outcome.calls).size, "${outcome.calls}")
+        assertEquals(id, createdId(outcome))
     }
 
     @Test

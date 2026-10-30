@@ -25,6 +25,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import com.mooscles.screens.exercise.photo.rememberStoredPhoto
+import com.mooscles.screens.exercise.photo.PhotoSource
+import com.mooscles.screens.exercise.photo.LocalExercisePhotos
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,6 +103,8 @@ import com.mooscles.screens.resources.exercise_muscles
 import com.mooscles.screens.resources.exercise_not_found
 import com.mooscles.screens.resources.exercise_not_found_body
 import com.mooscles.screens.resources.exercise_open
+import com.mooscles.screens.resources.exercise_photo_failed
+import com.mooscles.screens.resources.exercise_photo_label
 import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.screens.workout.MenuItem
 import com.mooscles.screens.workout.RecompositionProbe
@@ -116,6 +125,7 @@ internal object ExerciseInfoTags {
     const val MENU = "exercise-info-menu"
     const val BODY = "exercise-info-body"
     const val MEDIA = "exercise-info-media"
+    const val PHOTO = "exercise-info-photo"
     const val META = "exercise-info-meta"
     const val CAPTION = "exercise-info-caption"
     const val MUSCLES = "exercise-info-muscles"
@@ -146,16 +156,11 @@ internal object ExerciseInfoProbe {
 
 /**
  * An add that waits for its echo: the routine (or workout) [targetId] held [before] entries of the
- * exercise when it was asked for.
+ * exercise when it was asked for, and [failures] commands about it had failed (pre-flight F10: the wait ends when
+ * that count grows). Never saved: after process death the command is lost and the count starts again, so a
+ * restored wait would never end.
  */
-internal data class PendingAdd(val targetId: String, val before: Int) {
-    companion object {
-        val Saver: Saver<PendingAdd?, String> = Saver(
-            save = { pending -> pending?.let { "${it.before}:${it.targetId}" } },
-            restore = { saved -> PendingAdd(saved.substringAfter(':'), saved.substringBefore(':').toInt()) },
-        )
-    }
-}
+internal data class PendingAdd(val targetId: String, val before: Int, val failures: Int)
 
 /**
  * The exercise detail (spec "Detalhe do exercício", route `exerciseInfo/{id}`), from the top: back
@@ -172,11 +177,12 @@ internal data class PendingAdd(val targetId: String, val before: Int) {
  * ([AddToRoutineSheet]) and, with a workout in progress, "Add to workout".
  *
  * "Added to …" (with "Open": [onOpenRoutine] or [onOpenWorkout]) shows only once the state brings
- * the routine or the workout with the exercise once more (the echo), never on the tap; an error
- * that arrives first drops the wait and its own toast shows instead ([ScreenErrorToast], plan
- * decision 14, never `UiState.error`). An exercise that is not in the state (any more: a backup
+ * the routine or the workout with the exercise once more (the echo), never on the tap; a failure
+ * of that add (`UiState.subjectFailures` of the routine or the workout grows) drops the wait and its own
+ * toast shows instead ([ScreenErrorToast], plan decision 14, never `UiState.error`); an error about anything
+ * else changes nothing. An exercise that is not in the state (any more: a backup
  * import, say) shows "Exercise not found" with "Back to the library" ([onBack]). The open sheets,
- * the edit form and the waits are kept with `rememberSaveable`.
+ * the edit form is kept with `rememberSaveable`; the waits are not (a recreation drops them).
  *
  * [foreground] comes from the host's lifecycle (plan decision 15): the common code reads no
  * platform state of its own.
@@ -199,8 +205,8 @@ fun ExerciseInfoRoute(
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var routineSheet by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
-    var pendingRoutine by rememberSaveable(stateSaver = PendingAdd.Saver) { mutableStateOf<PendingAdd?>(null) }
-    var pendingWorkout by rememberSaveable(stateSaver = PendingAdd.Saver) { mutableStateOf<PendingAdd?>(null) }
+    var pendingRoutine by remember { mutableStateOf<PendingAdd?>(null) }
+    var pendingWorkout by remember { mutableStateOf<PendingAdd?>(null) }
     val openRoutine by rememberUpdatedState(onOpenRoutine)
     val openWorkout by rememberUpdatedState(onOpenWorkout)
     val openLabel = stringResource(Res.string.exercise_open)
@@ -208,17 +214,18 @@ fun ExerciseInfoRoute(
         state.routines.firstOrNull { it.id == pending.targetId }?.let { stringResource(Res.string.exercise_added_to, it.name) }
     }
     val workoutText = stringResource(Res.string.exercise_added_to_workout)
+    val photoFailedText = stringResource(Res.string.exercise_photo_failed)
 
-    // First: an error that comes before an echo drops every wait (its own toast says what failed).
-    LaunchedEffect(state.errorCode) {
-        if (state.errorCode == null) return@LaunchedEffect
-        pendingRoutine = null
-        pendingWorkout = null
+    // The error toast of a failed add (an error toast belongs to the screen, never to a wait). A failure about the
+    // routine or the workout asked for ends its wait; any other error leaves the waits alone (pre-flight F10).
+    // While the edit form is open it shows the error of its own save, and this one waits for it to close.
+    ScreenErrorToast(state.errorCode.takeIf { !editing }, actions, host)
+    LaunchedEffect(state.subjectFailures) {
+        pendingRoutine?.let { if ((state.subjectFailures[it.targetId] ?: 0) > it.failures) pendingRoutine = null }
+        pendingWorkout?.let { if ((state.subjectFailures[it.targetId] ?: 0) > it.failures) pendingWorkout = null }
     }
-    ScreenErrorToast(state.errorCode, actions, host)
     LaunchedEffect(pendingRoutine, state.routines) {
         val pending = pendingRoutine ?: return@LaunchedEffect
-        if (state.errorCode != null) return@LaunchedEffect
         val routine = state.routines.firstOrNull { it.id == pending.targetId } ?: return@LaunchedEffect
         if (routine.exercises.count { it.exercise.id == exerciseId } <= pending.before) return@LaunchedEffect
         pendingRoutine = null
@@ -229,7 +236,6 @@ fun ExerciseInfoRoute(
     }
     LaunchedEffect(pendingWorkout, state.active) {
         val pending = pendingWorkout ?: return@LaunchedEffect
-        if (state.errorCode != null) return@LaunchedEffect
         val workout = state.active
         if (workout == null || workout.id != pending.targetId) {
             // The workout ended meanwhile: nothing to open any more.
@@ -267,7 +273,7 @@ fun ExerciseInfoRoute(
                     onAddWorkout = state.active?.let { active ->
                         {
                             if (pendingWorkout == null) {
-                                pendingWorkout = PendingAdd(active.id, active.exercises.count { it.exercise.id == exerciseId })
+                                pendingWorkout = PendingAdd(active.id, active.exercises.count { it.exercise.id == exerciseId }, state.subjectFailures[active.id] ?: 0)
                                 actions.addWorkoutExercise(active.id, exerciseId)
                             }
                         }
@@ -320,7 +326,7 @@ fun ExerciseInfoRoute(
             actions = actions,
             onAdded = { routineId, _ ->
                 val routine = state.routines.firstOrNull { it.id == routineId }
-                pendingRoutine = PendingAdd(routineId, routine?.exercises?.count { it.exercise.id == exerciseId } ?: 0)
+                pendingRoutine = PendingAdd(routineId, routine?.exercises?.count { it.exercise.id == exerciseId } ?: 0, state.subjectFailures[routineId] ?: 0)
                 routineSheet = false
             },
             onDismiss = { routineSheet = false },
@@ -334,6 +340,7 @@ fun ExerciseInfoRoute(
             actions = actions,
             onSaved = { editing = false },
             onCancel = { editing = false },
+            onPhotoFailed = { scope.launch { host.show(photoFailedText, MToastKind.Error) } },
         )
     }
 }
@@ -414,6 +421,9 @@ private fun InfoMedia(exercise: ExerciseUi, name: String, primary: List<MuscleRe
     RecompositionProbe(ExerciseInfoProbe.FIGURE)
     val frames = remember(exercise.id, exercise.custom) { if (exercise.custom) null else ExerciseFigures.forExercise(exercise.id) }
     val highlights = remember(primary) { FigureHighlights.forRegions(primary) }
+    // The photo of a custom exercise, full size, once it is read and decoded; without one the equipment's icon.
+    val photo = if (exercise.custom) rememberStoredPhoto(LocalExercisePhotos.current, PhotoSource.Exercise(exercise.id), thumbnail = false) else null
+    val photoLabel = stringResource(Res.string.exercise_photo_label, name)
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(
             Modifier
@@ -424,14 +434,19 @@ private fun InfoMedia(exercise: ExerciseUi, name: String, primary: List<MuscleRe
                 .background(MTheme.colors.bgInset, RoundedCornerShape(MTheme.radius.lg)),
             contentAlignment = Alignment.Center,
         ) {
-            if (frames != null) {
-                AnimatedExerciseFigure(
+            when {
+                photo != null -> Image(
+                    BitmapPainter(photo),
+                    contentDescription = photoLabel,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(MTheme.radius.lg)).testTag(ExerciseInfoTags.PHOTO),
+                    contentScale = ContentScale.Crop,
+                )
+                frames != null -> AnimatedExerciseFigure(
                     frames.start, frames.end, highlights, name,
                     Modifier.fillMaxSize().padding(MTheme.space.s4),
                     foreground = foreground,
                 )
-            } else {
-                MIcon(
+                else -> MIcon(
                     EquipmentIcons.forEquipment(exercise.equipment), contentDescription = null,
                     modifier = Modifier.testTag(ExerciseEquipmentIconTag),
                     size = MTheme.sizes.media, tint = MTheme.colors.textTertiary,

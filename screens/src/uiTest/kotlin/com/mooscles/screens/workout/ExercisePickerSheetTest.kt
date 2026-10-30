@@ -414,7 +414,8 @@ class ExercisePickerSheetTest {
         // Tapping a row selects it; it neither picks nor closes.
         assertEquals(emptyList(), picks.picked)
         assertEquals(0, picks.dismissed)
-        pickerRow(bench).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Selecionado"))
+        // The state is the checkbox's own; the row adds no wording of its own to it.
+        pickerRow(bench).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
     }
 
     @Test
@@ -454,7 +455,12 @@ class ExercisePickerSheetTest {
         tap(squat)
         // A search that hides both keeps them.
         search("rosca")
-        onNodeWithTag(ExercisePickerAddTag).assertIsEnabled()
+        // The language is the system's here (no override survives the restoration), so only the count is read.
+        onNodeWithTag(ExercisePickerAddTag).assertIsEnabled().assert(
+            SemanticsMatcher("the text says 2 exercises") { node ->
+                node.config[SemanticsProperties.Text].joinToString("") { it.text }.contains("2")
+            },
+        )
         // A filter that hides one of them.
         search("")
         click(LibraryTags.muscleChip("Chest"))
@@ -508,6 +514,24 @@ class ExercisePickerSheetTest {
         onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 1 exercício")
         add()
         assertEquals(listOf(listOf(bench)), picks.many)
+    }
+
+    @Test
+    fun returningExerciseShowsCheckedAgain() = runComposeUiTest {
+        val state = mutableStateOf(exercises)
+        val picks = showPicker(mode = PickerMode.Multiple, exercisesState = state)
+        tap(fly)
+        tap(bench)
+        runOnIdle { state.value = exercises - fly }
+        waitForIdle()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 1 exercício")
+        // The exercise comes back (a list rebuilt after a backup import, say): still selected, and counted again.
+        runOnIdle { state.value = exercises }
+        waitForIdle()
+        pickerRow(fly).assertIsOn()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 2 exercícios")
+        add()
+        assertEquals(listOf(listOf(fly, bench)), picks.many)
     }
 
     @Test

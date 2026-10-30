@@ -58,7 +58,6 @@
         <item quantity="one">Add %1$d exercise</item>
         <item quantity="other">Add %1$d exercises</item>
     </plurals>
-    <string name="workout_picker_selected">Selected</string>
     <!-- The active workout screen: header, end of the list, finish, discard, rename, no workout. -->
     <string name="workout_minimize">Minimize workout</string>
     <string name="workout_more_options">More options</string>

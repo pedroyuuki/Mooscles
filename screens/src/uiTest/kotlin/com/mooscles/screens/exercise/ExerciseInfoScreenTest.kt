@@ -129,20 +129,24 @@ class ExerciseInfoScreenTest {
         idle: Boolean = true,
         fake: Fake = Fake(state),
         exerciseId: String = exercise.id,
+        photos: FakeExercisePhotos? = null,
     ): Requests {
         val requests = Requests()
         withScreen(locale = "pt-BR", reducedMotion = reducedMotion, fontScale = fontScale, size = size, probe = probe) {
-            ExerciseInfoRoute(
-                exerciseId = exerciseId,
-                state = state.value,
-                actions = fake,
-                onBack = { requests.back++ },
-                onOpenHistory = { requests.history += it },
-                onOpenRoutine = { requests.routines += it },
-                onOpenWorkout = { requests.workout++ },
-                modifier = Modifier,
-                foreground = foreground.value,
-            )
+            val route: @androidx.compose.runtime.Composable () -> Unit = {
+                ExerciseInfoRoute(
+                    exerciseId = exerciseId,
+                    state = state.value,
+                    actions = fake,
+                    onBack = { requests.back++ },
+                    onOpenHistory = { requests.history += it },
+                    onOpenRoutine = { requests.routines += it },
+                    onOpenWorkout = { requests.workout++ },
+                    modifier = Modifier,
+                    foreground = foreground.value,
+                )
+            }
+            if (photos != null) photos.Provide(route) else route()
         }
         if (idle) waitForIdle()
         return requests
@@ -550,7 +554,7 @@ class ExerciseInfoScreenTest {
         tap(ExerciseInfoTags.ADD_ROUTINE)
         onNodeWithTag(AddToRoutineSheetTags.routine("r1")).performClick()
         waitForIdle()
-        state.value = state.value.copy(routines = emptyList(), error = "raw", errorCode = UiError.GENERIC)
+        state.value = state.value.copy(routines = emptyList(), error = "raw", errorCode = UiError.GENERIC, errorSubject = "r1", subjectFailures = mapOf("r1" to 1))
         waitForIdle()
         toastWith("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.").assertIsDisplayed()
         assertTrue("clearError:" in fake.calls, "${fake.calls}")
@@ -563,6 +567,59 @@ class ExerciseInfoScreenTest {
         state.value = state.value.copy(routines = listOf(routine.copy(exercises = listOf(PlannedExerciseUi("p9", bench)))))
         waitForIdle()
         toastWith("Adicionado a Treino A").assertDoesNotExist()
+    }
+
+    /**
+     * Pre-flight F10: an error about anything else, even a second one that replaces the first, leaves the wait alone,
+     * so the "Added to" toast still comes with the echo.
+     */
+    @Test
+    fun unrelatedErrorKeepsThePendingAddToast() = runComposeUiTest {
+        val routine = RoutineUi("r1", "Treino A", exercises = listOf(PlannedExerciseUi("p1", bench)))
+        val state = stateOf(routines = listOf(routine))
+        val fake = Fake(state)
+        show(state = state, fake = fake)
+        tap(ExerciseInfoTags.ADD_ROUTINE)
+        onNodeWithTag(AddToRoutineSheetTags.routine("r1")).performClick()
+        waitForIdle()
+        state.value = state.value.copy(error = "raw", errorCode = UiError.SAVE_FAILED, errorSubject = "r2", subjectFailures = mapOf("r2" to 1))
+        waitForIdle()
+        toastWith("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.").assertIsDisplayed()
+        onNodeWithTag(TOAST_CLOSE, useUnmergedTree = true).performClick()
+        waitForIdle()
+        state.value = state.value.copy(errorCode = UiError.GENERIC, errorSubject = null, subjectFailures = mapOf("r2" to 2))
+        waitForIdle()
+        onNodeWithTag(TOAST_CLOSE, useUnmergedTree = true).performClick()
+        waitForIdle()
+        // The echo of the add still comes: the toast is shown.
+        state.value = state.value.copy(routines = listOf(routine.copy(exercises = routine.exercises + PlannedExerciseUi("p2", bench))))
+        waitForIdle()
+        toastWith("Adicionado a Treino A").assertIsDisplayed()
+    }
+
+    @Test
+    fun customWithPhotoShowsThePhotoWithoutAlternation() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.givePhoto(mine.id) }
+        show(mine, photos = photos)
+        waitUntil(timeoutMillis = 5_000) { exists(ExerciseInfoTags.PHOTO) }
+        val bounds = onNodeWithTag(ExerciseInfoTags.PHOTO, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val frame = onNodeWithTag(ExerciseInfoTags.MEDIA).getUnclippedBoundsInRoot()
+        // The photo fills the square frame.
+        assertEquals(frame.width, bounds.width)
+        assertEquals(frame.height, bounds.height)
+        assertEquals(bounds.width, bounds.height)
+        assertTrue(!exists(AnimatedFigureTag), "a photo does not alternate")
+        assertTrue(!exists(ExerciseEquipmentIconTag), "the icon stands in only while there is no photo")
+        onNodeWithTag(ExerciseInfoTags.PHOTO, useUnmergedTree = true)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Foto de ${mine.name}")))
+    }
+
+    @Test
+    fun customWithoutAPhotoKeepsTheEquipmentIcon() = runComposeUiTest {
+        show(mine, photos = FakeExercisePhotos())
+        waitForIdle()
+        assertTrue(!exists(ExerciseInfoTags.PHOTO))
+        assertTrue(exists(ExerciseEquipmentIconTag))
     }
 
     /** Fix round 1 (I1): the longest name a custom exercise can have, at 2x on a small phone. */

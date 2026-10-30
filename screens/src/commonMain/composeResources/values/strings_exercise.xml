@@ -43,4 +43,10 @@
     <string name="exercise_not_found_body">It may have been removed, for example by importing a backup.</string>
     <string name="exercise_back_to_library">Back to the library</string>
     <string name="exercise_more">More options</string>
+    <string name="exercise_form_photo">Photo</string>
+    <string name="exercise_form_photo_gallery">Choose from gallery</string>
+    <string name="exercise_form_photo_camera">Take photo</string>
+    <string name="exercise_form_photo_remove">Remove photo</string>
+    <string name="exercise_photo_failed">Couldn’t save the photo.</string>
+    <string name="exercise_photo_label">Photo of %1$s</string>
 </resources>

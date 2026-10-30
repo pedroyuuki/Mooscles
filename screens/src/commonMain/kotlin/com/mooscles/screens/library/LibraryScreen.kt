@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,6 +40,9 @@ import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.MIconButton
 import com.mooscles.designsystem.components.MSearchField
 import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.components.MToastHost
+import com.mooscles.designsystem.components.MToastHostState
+import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.pluralCount
@@ -46,6 +50,7 @@ import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.illustration.prepareBodyMap
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.exercise.CustomExerciseForm
+import com.mooscles.screens.exercise.photo.rememberCustomPhotoMedia
 import com.mooscles.screens.exercise.ExerciseCues
 import com.mooscles.screens.exercise.exerciseMedia
 import com.mooscles.screens.format.catalogInPortuguese
@@ -55,6 +60,7 @@ import com.mooscles.screens.resources.library_catalog_empty
 import com.mooscles.screens.resources.library_catalog_empty_body
 import com.mooscles.screens.resources.library_clear_filters
 import com.mooscles.screens.resources.library_count
+import com.mooscles.screens.resources.exercise_photo_failed
 import com.mooscles.screens.resources.library_create
 import com.mooscles.screens.resources.library_create_named
 import com.mooscles.screens.resources.library_empty
@@ -68,6 +74,7 @@ import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.UiState
 import com.mooscles.ui.WorkoutUi
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /** The tag of the library route's root. */
@@ -145,11 +152,10 @@ internal class LibrarySeams(
  * screen ([ScreenErrorToast], plan decision 14), never [UiState.error].
  *
  * "Create exercise", and "Create “…”" with the search as the name, open [CustomExerciseForm] over
- * the library. Its save closes it and leaves the new exercise's id waiting (plan decision 13): the
- * detail opens ([onOpenExercise]) once the state brings that exercise, and an error that arrives
- * first drops the wait (the toast says what failed), unless the exercise is already in the list (a
- * repeated creation of the same id is refused, but the exercise is there). The open form, its
- * draft and the wait are kept with `rememberSaveable` too.
+ * the library. The form stays open and busy until the state brings the new exercise (plan decision 13,
+ * pre-flight F10), and then closes and the detail opens ([onOpenExercise]) with no library frame between
+ * them; a failed save keeps the form open, with the error shown over it. The open form and its draft are
+ * kept with `rememberSaveable` too; the wait is not (the form comes back not busy).
  *
  * Opening the library also reads ahead, off the main thread, what the exercise detail draws first:
  * the body map's paths ([prepareBodyMap]) and the cues of the screen's language.
@@ -178,8 +184,9 @@ internal fun LibraryRoute(
     var equipmentOpen by rememberSaveable { mutableStateOf(false) }
     // The name the open form started with; null while it is closed.
     var form by rememberSaveable { mutableStateOf<String?>(null) }
-    // The id of the exercise the form saved, until the state brings it or an error comes first.
-    var pending by rememberSaveable { mutableStateOf<String?>(null) }
+    val host = remember { MToastHostState() }
+    val toastScope = rememberCoroutineScope()
+    val photoFailedText = stringResource(Res.string.exercise_photo_failed)
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
     var focusReturns by remember { mutableIntStateOf(0) }
@@ -200,22 +207,6 @@ internal fun LibraryRoute(
         prepareBodyMap()
         ExerciseCues.load(portuguese)
     }
-    LaunchedEffect(pending, state.exercises) {
-        val id = pending ?: return@LaunchedEffect
-        if (state.exercises.any { it.id == id }) {
-            pending = null
-            openExercise(id)
-        }
-    }
-    // Keyed on the code alone: an error already there when the wait began is not this save's (the
-    // form clears errors before saving), and the toast clears each one as it shows it.
-    LaunchedEffect(state.errorCode) {
-        if (state.errorCode == null) return@LaunchedEffect
-        val id = pending ?: return@LaunchedEffect
-        pending = null
-        if (currentExercises.any { it.id == id }) openExercise(id)
-    }
-
     // A new search or filter starts the list from the top; a recreation keeps the scroll it had.
     var resultsShown by remember { mutableStateOf(false) }
     LaunchedEffect(query.text, filters) {
@@ -272,11 +263,9 @@ internal fun LibraryRoute(
                 modifier = Modifier.weight(1f),
             )
         }
-        ScreenErrorToast(
-            state.errorCode,
-            actions,
-            Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
-        )
+        // While the form is open it shows the error of its own save over itself; this one waits for it to close.
+        ScreenErrorToast(state.errorCode.takeIf { form == null }, actions, host)
+        MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
     form?.let { prefill ->
         CustomExerciseForm(
@@ -284,11 +273,13 @@ internal fun LibraryRoute(
             prefillName = prefill,
             state = state,
             actions = actions,
+            // The form closes once the state has the new exercise (it waits for it), so the detail can open at once.
             onSaved = { id ->
-                pending = id
                 form = null
+                open(id)
             },
             onCancel = { form = null },
+            onPhotoFailed = { toastScope.launch { host.show(photoFailedText, MToastKind.Error) } },
         )
     }
     if (equipmentOpen) {
@@ -366,17 +357,17 @@ private fun LibraryList(
                 if (recents.isNotEmpty()) {
                     item(key = "recent-header") { SectionHeader(recentTitle, Modifier.testTag(LibraryTags.RECENT_HEADER)) }
                     items(recents, key = { "recent-${it.id}" }) { exercise ->
-                        LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.recentRow(exercise.id), { onOpen(exercise.id) })
+                        LibraryRow(exercise, model.shownName(exercise), rowMedia(exercise, media), LibraryTags.recentRow(exercise.id), { onOpen(exercise.id) })
                     }
                 }
                 item(key = "all-header") { SectionHeader(allTitle, Modifier.testTag(LibraryTags.ALL_HEADER)) }
                 items(model.exercises, key = { "row-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.row(exercise.id), { onOpen(exercise.id) })
+                    LibraryRow(exercise, model.shownName(exercise), rowMedia(exercise, media), LibraryTags.row(exercise.id), { onOpen(exercise.id) })
                 }
             }
             results.isEmpty() -> item(key = "empty") { NoResults(query, filters, onFilters, onCreate) }
             else -> items(results, key = { "row-${it.id}" }) { exercise ->
-                LibraryRow(exercise, model.shownName(exercise), remember(exercise, media) { media(exercise) }, LibraryTags.row(exercise.id), { onOpen(exercise.id) })
+                LibraryRow(exercise, model.shownName(exercise), rowMedia(exercise, media), LibraryTags.row(exercise.id), { onOpen(exercise.id) })
             }
         }
     }
@@ -403,3 +394,8 @@ private fun NoResults(query: String, filters: LibraryFilters, onFilters: (Librar
 
 /** How many skeleton rows stand in for the list while it is built. */
 private const val SKELETON_ROWS = 6
+
+/** The media of a row: a custom exercise's photo once it is ready, else what [media] gives. */
+@Composable
+private fun rowMedia(exercise: ExerciseUi, media: (ExerciseUi) -> ExerciseMedia): ExerciseMedia =
+    rememberCustomPhotoMedia(exercise, thumbnail = true) ?: remember(exercise, media) { media(exercise) }

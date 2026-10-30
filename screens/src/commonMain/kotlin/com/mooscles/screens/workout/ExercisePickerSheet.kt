@@ -33,7 +33,7 @@ import com.mooscles.designsystem.components.MSearchField
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.theme.MTheme
-import com.mooscles.screens.exercise.exerciseMedia
+import com.mooscles.screens.exercise.photo.rememberExerciseMedia
 import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.library.EquipmentFilterSheet
 import com.mooscles.screens.library.LibraryFilterBar
@@ -92,8 +92,9 @@ internal fun exercisePickerRowTag(exerciseId: String, recent: Boolean) =
  * "Add N exercises" pinned under the list (off with none selected) reports the selection to
  * [onPickMany] in the order of the taps, once, and then closes through [onDismiss]; [onPick] is
  * not called. [onPickMany] never gets an empty list. The selection (a list of ids, in
- * `rememberSaveable`) outlives searches, filters and recreation; an exercise that leaves
- * [exercises] leaves the selection.
+ * `rememberSaveable`) outlives searches, filters and recreation. An exercise that leaves
+ * [exercises] is only hidden from the selection (the count and [onPickMany] skip it); its id stays
+ * in the saved list, so the exercise shows checked again if it returns.
  */
 @Composable
 internal fun ExercisePickerSheet(
@@ -112,7 +113,8 @@ internal fun ExercisePickerSheet(
     var equipmentOpen by rememberSaveable { mutableStateOf(false) }
     var picked by remember { mutableStateOf(false) }
     var selectedIds by rememberSaveable(stateSaver = IdListSaver) { mutableStateOf(emptyList<String>()) }
-    // Only what [exercises] still has, in the order of the taps.
+    // Only what [exercises] still has, in the order of the taps. A vanished id is hidden, not deleted: it stays in
+    // [selectedIds] and counts again if the exercise comes back.
     val selection = remember(selectedIds, exercises) {
         val byId = exercises.associateBy { it.id }
         selectedIds.mapNotNull { byId[it] }
@@ -182,13 +184,13 @@ internal fun ExercisePickerSheet(
             if (!searching && recents.isNotEmpty()) {
                 item(key = "header-recent") { SectionHeader(stringResource(Res.string.workout_picker_recent)) }
                 items(recents, key = { "recent-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = true), { pick(exercise) }, selected = if (multiple) exercise.id in selectedSet else null)
+                    LibraryRow(exercise, model.shownName(exercise), rememberExerciseMedia(exercise, thumbnail = true), exercisePickerRowTag(exercise.id, recent = true), { pick(exercise) }, selected = if (multiple) exercise.id in selectedSet else null)
                 }
             }
             if (results.isNotEmpty()) {
                 item(key = "header-all") { SectionHeader(stringResource(Res.string.workout_picker_all)) }
                 items(results, key = { "all-${it.id}" }) { exercise ->
-                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = false), { pick(exercise) }, selected = if (multiple) exercise.id in selectedSet else null)
+                    LibraryRow(exercise, model.shownName(exercise), rememberExerciseMedia(exercise, thumbnail = true), exercisePickerRowTag(exercise.id, recent = false), { pick(exercise) }, selected = if (multiple) exercise.id in selectedSet else null)
                 }
             } else {
                 item(key = "none") {
