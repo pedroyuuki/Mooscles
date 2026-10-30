@@ -48,15 +48,15 @@ import org.jetbrains.compose.resources.stringResource
 // that label and read the localized text. A label no enum has (an old or unknown value) is shown
 // as it is, so nothing is ever blank.
 
-/** The localized name of the muscle group whose English label is [label]. */
+/** The localized name of the muscle group whose English label (or enum name) is [label]. */
 @Composable
 fun muscleLabel(label: String): String =
-    MuscleGroup.entries.firstOrNull { it.label == label }?.let { stringResource(it.text()) } ?: label
+    MuscleGroup.fromLabelOrName(label)?.let { stringResource(it.text()) } ?: label
 
-/** The localized name of the equipment whose English label is [label]. */
+/** The localized name of the equipment whose English label (or enum name) is [label]. */
 @Composable
 fun equipmentLabel(label: String): String =
-    Equipment.entries.firstOrNull { it.label == label }?.let { stringResource(it.text()) } ?: label
+    Equipment.fromLabelOrName(label)?.let { stringResource(it.text()) } ?: label
 
 /** The localized name of the load convention whose English label is [label]. */
 @Composable

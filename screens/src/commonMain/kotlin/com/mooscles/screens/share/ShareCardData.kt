@@ -2,6 +2,7 @@ package com.mooscles.screens.share
 
 import androidx.compose.runtime.Composable
 import com.mooscles.data.AppData
+import com.mooscles.data.ExerciseNames
 import com.mooscles.data.LoadConvention
 import com.mooscles.data.Workout
 import com.mooscles.data.WorkoutStatus
@@ -14,6 +15,7 @@ import com.mooscles.screens.format.BestSets
 import com.mooscles.screens.format.Durations
 import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
+import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.format.two
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.best_set_assistance_only
@@ -101,6 +103,11 @@ data class ShareCardTexts(
     val assistanceOnly: String,
     val noWorkingSet: String,
     val labels: ShareCardLabels,
+    /**
+     * Whether the catalog's exercise names are drawn in Portuguese ([catalogInPortuguese], which
+     * [rememberShareCardTexts] reads); a custom exercise keeps its typed name either way.
+     */
+    val catalogPortuguese: Boolean = false,
 ) {
     init {
         require(months.size == 12) { "Twelve month names" }
@@ -149,6 +156,10 @@ object ShareCards {
         val unit = if (pounds) "lb" else "kg"
         fun plain(kg: Double) = MoosclesNumbers.plain(WeightUnits.fromKg(kg, pounds))
         fun weight(kg: Double) = MoosclesNumbers.weight(plain(kg), unit, locale)
+        // The name shown, as on the screens: custom by the exercise table, as the presentation does.
+        val custom = data.exercises.associate { it.id to it.custom }
+        fun name(exerciseId: String, stored: String) =
+            ExerciseNames.display(exerciseId, stored, custom[exerciseId] ?: false, texts.catalogPortuguese)
         fun loadByReps(kg: Double, reps: Int) =
             if (kg > 0.0) MoosclesNumbers.setText(plain(kg), unit, reps, locale) else fillTemplate(texts.bodyweightSet, reps)
 
@@ -171,7 +182,7 @@ object ShareCards {
                 !best.warmup && BestSets.sameLoad(best.weightKg, record.weightKg) && best.reps == record.newReps &&
                     (best.assistance || entry.exercise.convention == LoadConvention.ASSISTANCE) == record.assistance
             }
-            ShareCardRow(entry.exercise.name, completed.size, bestText, bestIsWeightPr || bestIsRepsPr)
+            ShareCardRow(name(entry.exercise.exerciseId, entry.exercise.name), completed.size, bestText, bestIsWeightPr || bestIsRepsPr)
         }
 
         // One line per variation, in workout order: its weight record, else its first repetitions record.
@@ -183,8 +194,8 @@ object ShareCards {
             val repsRecord = entry.repsPrs.firstOrNull()
             val row = when {
                 weightRecord != null ->
-                    ShareRecordRow(weightRecord.exerciseName, loadByReps(weightRecord.newWeightKg, weightRecord.reps))
-                repsRecord != null -> ShareRecordRow(repsRecord.exerciseName,
+                    ShareRecordRow(name(weightRecord.exerciseId, weightRecord.exerciseName), loadByReps(weightRecord.newWeightKg, weightRecord.reps))
+                repsRecord != null -> ShareRecordRow(name(repsRecord.exerciseId, repsRecord.exerciseName),
                     if (repsRecord.assistance) fillTemplate(texts.assistedSet, weight(repsRecord.weightKg), repsRecord.newReps)
                     else loadByReps(repsRecord.weightKg, repsRecord.newReps))
                 else -> null
@@ -258,6 +269,7 @@ fun rememberShareCardTexts(): ShareCardTexts {
         warmupOnly = stringResource(Res.string.best_set_warmup_only),
         assistanceOnly = stringResource(Res.string.best_set_assistance_only),
         noWorkingSet = stringResource(Res.string.best_set_no_working_set),
+        catalogPortuguese = catalogInPortuguese(),
         labels = ShareCardLabels(
             duration = stringResource(Res.string.share_duration),
             sets = stringResource(Res.string.share_sets),

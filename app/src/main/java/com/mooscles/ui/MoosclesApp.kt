@@ -21,6 +21,8 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.flow.first
 import com.mooscles.designsystem.licenses.LicensesScreen
 import com.mooscles.designsystem.theme.MTheme
+import com.mooscles.screens.exercise.ExerciseInfoRoute
+import com.mooscles.screens.library.LibraryRoute
 import com.mooscles.screens.shell.AppShellBottom
 import com.mooscles.screens.shell.ShellTabs
 import com.mooscles.screens.summary.WorkoutSummaryScreen
@@ -36,9 +38,53 @@ private const val SUMMARY_ARG = "summary"
 
 private fun detailRoute(id: String, summary: Boolean) = "workoutDetail/$id?summary=$summary"
 
+/** The exercise detail ([ExerciseInfoRoute]), opened from the library and from the workout's menu. */
+internal const val EXERCISE_INFO_ROUTE = "exerciseInfo/{id}"
+
+private fun NavHostController.openExerciseInfo(id: String) = navigate("exerciseInfo/$id") {
+    // A second tap before the first one lands opens no second detail over it.
+    launchSingleTop = true
+}
+
+/**
+ * The routes of the new screens that show their own placeholders while the state loads (decision
+ * 17, pre-flight F21) and their own errors (decision 19, plan 4A decision 14). The one list both
+ * the snackbar and the loading overlay read.
+ */
+private val OWN_PLACEHOLDER_ROUTES = setOf(WORKOUT_ROUTE, ShellTabs.LIBRARY, EXERCISE_INFO_ROUTE)
+
+/** The route the app's frame is drawn for, and [summary] when it is the end-of-workout summary. */
+internal data class ShownRoute(val route: String, val summary: Boolean = false) {
+    /** A new screen: its own top bar, background and errors (the summary too). */
+    val newScreen: Boolean get() = route in OWN_PLACEHOLDER_ROUTES || summary
+    /** Whether the app's spinner covers it while the state loads (not the routes with their own placeholders). */
+    val loadingOverlay: Boolean get() = route !in OWN_PLACEHOLDER_ROUTES
+}
+
+/**
+ * The route of the back stack entry in view, given as its [entryRoute] and [entrySummary] (null
+ * without an entry). Only a real entry counts (as the selected tab): the first frame after a
+ * recreation has none yet, and it keeps the route the last entry had (saved), so the library,
+ * the detail or the summary are not drawn for one frame as Train, with the app's spinner or the
+ * global snackbar (final review, item 4). Before any entry, it is Train, the start destination.
+ */
+@Composable
+internal fun rememberShownRoute(entryRoute: String?, entrySummary: Boolean): ShownRoute {
+    var savedRoute by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
+    var savedSummary by rememberSaveable { mutableStateOf(false) }
+    SideEffect {
+        if (entryRoute != null) {
+            savedRoute = entryRoute
+            savedSummary = entrySummary
+        }
+    }
+    return if (entryRoute != null) ShownRoute(entryRoute, entrySummary) else ShownRoute(savedRoute, savedSummary)
+}
+
 /**
  * The app: the old screens and, from `:screens`, the active workout ([ActiveWorkoutRoute]), the
- * end-of-workout summary ([WorkoutSummaryScreen]) and the shell's bottom ([AppShellBottom]).
+ * end-of-workout summary ([WorkoutSummaryScreen]), the library tab ([LibraryRoute]), the exercise
+ * detail ([ExerciseInfoRoute], [EXERCISE_INFO_ROUTE]) and the shell's bottom ([AppShellBottom]).
  *
  * Every route but [WORKOUT_ROUTE] has the shell: the workout bar while a workout is active and the
  * four tabs. The selected tab is the root of the stack in view, kept across recreation; tapping it
@@ -47,25 +93,41 @@ private fun detailRoute(id: String, summary: Boolean) = "workoutDetail/$id?summa
  * notification), each new value once. Minimizing it, or the system Back, returns to where it was
  * opened. Finishing replaces it with `workoutDetail/{id}?summary=true`.
  *
+ * The new screens bring their own top bar, show their own errors in the app's language (the global
+ * snackbar waits until they are left) and their own placeholders while the state loads (the
+ * spinner overlay is only the old screens'). The library opens the detail, and Settings from its
+ * shortcut; the detail opens the old exercise history, the routine editor and the workout.
+ *
  * [timerState] is the ticking rest timer, read only by the workout bar and the workout's timer;
- * without it they read [UiState.timer].
+ * without it they read [UiState.timer]. [foreground] is whether the app is in the foreground (the
+ * Activity's lifecycle, plan decision 15): the detail's figure stops while it is not.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<TimerUi>? = null, workoutRequest: Long = 0L) {
+fun MoosclesApp(
+    state: UiState,
+    actions: MoosclesActions,
+    timerState: State<TimerUi>? = null,
+    workoutRequest: Long = 0L,
+    foreground: Boolean = true,
+) {
     MoosclesTheme(state.preferences.theme) {
         val nav = rememberNavController()
         val entry by nav.currentBackStackEntryAsState()
-        val route = entry?.destination?.route ?: ShellTabs.TRAIN
-        val summary = route == DETAIL_ROUTE && entry?.arguments?.getBoolean(SUMMARY_ARG) == true
+        val entryRoute = entry?.destination?.route
+        val shown = rememberShownRoute(entryRoute, entryRoute == DETAIL_ROUTE && entry?.arguments?.getBoolean(SUMMARY_ARG) == true)
+        val route = shown.route
         val fallbackTimer = rememberUpdatedState(state.timer)
         val timer = timerState ?: fallbackTimer
 
         // The root of the stack in view: set by a tab, and by reaching a tab's route any other way
-        // (shown at once, in the same frame; kept for the routes above it).
+        // (shown at once, in the same frame; kept for the routes above it). Only a real entry counts:
+        // the first frame after a recreation has none yet, and its stand-in Train must not replace
+        // the restored tab of the screen above a root (a change of language, theme or text size).
         var savedTab by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
-        val selectedTab = if (route in ShellTabs.keys) route else savedTab
-        SideEffect { if (route in ShellTabs.keys) savedTab = route }
+        val reached = entry?.destination?.route?.takeIf { it in ShellTabs.keys }
+        val selectedTab = reached ?: savedTab
+        SideEffect { if (reached != null) savedTab = reached }
         fun selectTab(tab: String) {
             // A saved tab stack never keeps the workout: restored after the workout ended, it
             // would show "No workout in progress". Leaving drops what was opened from it.
@@ -158,10 +220,11 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
             }
         }
 
-        // Decision 19: the new screens show their own localized error and clear it; the global
-        // snackbar waits until the workout or the summary is left.
+        // Decision 19 (and plan 4A decision 14): the new screens show their own localized error and
+        // clear it; the global snackbar waits until the workout, the summary, the library or the
+        // exercise detail is left.
         val snack = remember { SnackbarHostState() }
-        val newScreen = route == WORKOUT_ROUTE || summary
+        val newScreen = shown.newScreen
         LaunchedEffect(state.error, newScreen) {
             if (!newScreen) state.error?.let { snack.showSnackbar(it); actions.clearError() }
         }
@@ -189,7 +252,22 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                         else MissingScreen("Routine unavailable")
                     }
                     composable(WORKOUT_ROUTE) { WorkoutRoute(state, timer, hosted, nav, skeletonCards, workoutScreen, onChooseRoutine = { selectTab(ShellTabs.TRAIN) }) }
-                    composable(ShellTabs.LIBRARY) { LibraryScreen(state, hosted, onHistory = { nav.navigate("exercise/$it") }) }
+                    composable(ShellTabs.LIBRARY) {
+                        LibraryRoute(state, hosted, onOpenExercise = { nav.openExerciseInfo(it) },
+                            onOpenSettings = { nav.navigate(SettingsRoutes.settings()) { launchSingleTop = true } })
+                    }
+                    composable(EXERCISE_INFO_ROUTE, arguments = listOf(navArgument("id") { type = NavType.StringType })) { page ->
+                        ExerciseInfoRoute(
+                            exerciseId = page.arguments?.getString("id").orEmpty(),
+                            state = state,
+                            actions = hosted,
+                            onBack = { nav.popBackStack() },
+                            onOpenHistory = { nav.navigate("exercise/$it") },
+                            onOpenRoutine = { nav.navigate("routine/$it") },
+                            onOpenWorkout = ::openWorkout,
+                            foreground = foreground,
+                        )
+                    }
                     composable(ShellTabs.HISTORY) { HistoryScreen(state, hosted, onDetail = { nav.navigate(detailRoute(it, summary = false)) }) }
                     composable(DETAIL_ROUTE, arguments = listOf(navArgument("id") { type = NavType.StringType }, navArgument(SUMMARY_ARG) { type = NavType.BoolType; defaultValue = false })) { page ->
                         val workout = state.history.find { it.id == page.arguments?.getString("id") }
@@ -215,8 +293,8 @@ fun MoosclesApp(state: UiState, actions: MoosclesActions, timerState: State<Time
                     composable(SettingsRoutes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
                     composable(DeveloperGallery.ROUTE) { DeveloperGalleryRoute(nav) }
                 }
-                // The workout route shows its own placeholders while loading (decision 17).
-                if (state.loading && route != WORKOUT_ROUTE) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                // The new screens show their own placeholders while loading (decision 17, pre-flight F21).
+                if (state.loading && shown.loadingOverlay) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
         }
     }
@@ -289,6 +367,7 @@ private fun WorkoutRoute(
         onOpenSummary = { id -> nav.navigate(detailRoute(id, summary = true)) { popUpTo(WORKOUT_ROUTE) { inclusive = true } } },
         onExerciseHistory = { nav.navigate("exercise/$it") },
         onChooseRoutine = onChooseRoutine,
+        onExerciseInfo = { nav.openExerciseInfo(it) },
         skeletonCards = skeletonCards,
         screen = screen,
     )

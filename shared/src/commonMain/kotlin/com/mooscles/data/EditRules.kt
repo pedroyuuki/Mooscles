@@ -7,9 +7,12 @@ internal object EditRules {
     const val MAX_ROUTINE_SETS = 50
     const val MAX_WORKOUT_SETS = 100
 
-    fun name(value: String): String = value.trim().also {
-        dataRequire(it.isNotEmpty(), DataError.INVALID_VALUE) { "Enter a name." }
-        dataRequire(it.length <= 120, DataError.INVALID_VALUE) { "Names must be 120 characters or fewer." }
+    /** [NameRule], throwing: the same trim and limits, so the two cannot drift apart. */
+    fun name(value: String): String {
+        val problem = NameRule.problem(value)
+        dataRequire(problem != NameRule.Problem.BLANK, DataError.INVALID_VALUE) { "Enter a name." }
+        dataRequire(problem != NameRule.Problem.TOO_LONG, DataError.INVALID_VALUE) { "Names must be 120 characters or fewer." }
+        return value.trim()
     }
 
     fun target(reps: Int, weightKg: Double?) {
@@ -39,5 +42,27 @@ internal object EditRules {
         dataRequire(item.reps in 0..9999, DataError.INVALID_VALUE) { "Reps must be between 0 and 9999." }
         dataRequire(item.weightKg.isFinite() && item.weightKg >= 0 && item.weightKg <= 100000, DataError.INVALID_VALUE) { "Enter a valid non-negative weight." }
         dataRequire(!item.completed || item.reps > 0, DataError.INVALID_VALUE) { "Enter at least 1 rep before completing a set." }
+    }
+}
+
+/**
+ * The name rule, for screens that check a name before saving it (they show their own text):
+ * [EditRules.name] applies this rule when the name is saved, and throws.
+ */
+object NameRule {
+    /** The most characters a name has, once trimmed. */
+    const val MAX_LENGTH = 120
+
+    /** Why a name is refused. */
+    enum class Problem { BLANK, TOO_LONG }
+
+    /** Why [value] is refused as a name, or null when it is accepted. */
+    fun problem(value: String): Problem? {
+        val name = value.trim()
+        return when {
+            name.isEmpty() -> Problem.BLANK
+            name.length > MAX_LENGTH -> Problem.TOO_LONG
+            else -> null
+        }
     }
 }

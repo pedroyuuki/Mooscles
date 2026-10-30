@@ -18,34 +18,6 @@ import androidx.compose.ui.window.Dialog
 import com.mooscles.data.ExerciseSearch
 
 @Composable
-fun LibraryScreen(state: UiState, actions: MoosclesActions, onHistory: (String) -> Unit) {
-    var search by remember { mutableStateOf("") }
-    var muscle by remember { mutableStateOf("") }
-    var equipment by remember { mutableStateOf("") }
-    var customOnly by remember { mutableStateOf(false) }
-    var create by remember { mutableStateOf(false) }
-    val filtered = state.exercises.filter { exercise ->
-        ExerciseSearch.matches(exercise.id, exercise.name, exercise.muscle, exercise.equipment, search) &&
-            (muscle.isEmpty() || exercise.muscle == muscle) && (equipment.isEmpty() || exercise.equipment == equipment) && (!customOnly || exercise.custom)
-    }
-    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { PageHeading("Know your movements", "Exercise library", "${state.exercises.size} exercises. Every variation keeps its own history.", trailing = { FilledIconButton(onClick = { create = true }) { Icon(Icons.Outlined.Add, "Create custom exercise") } }) }
-        item { SearchField(search, { search = it }, "Search exercises") }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ChoiceFilter("Muscle", muscle, state.exercises.map { it.muscle }.distinct().sorted(), { muscle = it }, Modifier.weight(1f))
-                ChoiceFilter("Equipment", equipment, state.exercises.map { it.equipment }.distinct().sorted(), { equipment = it }, Modifier.weight(1f))
-            }
-            FilterChip(selected = customOnly, onClick = { customOnly = !customOnly }, label = { Text("My exercises") }, leadingIcon = { Icon(Icons.Outlined.PersonOutline, null, Modifier.size(18.dp)) })
-        }
-        item { Text("${filtered.size} movements", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        if (filtered.isEmpty()) item { EmptyState(Icons.Outlined.SearchOff, "No exercises found", "Try another search or create your own movement.", "Create exercise", { create = true }) }
-        items(filtered, key = { it.id }) { exercise -> ExerciseCard(exercise, onClick = { onHistory(exercise.id) }) }
-    }
-    if (create) CustomExerciseDialog(null, state.exercises, actions, onDismiss = { create = false })
-}
-
-@Composable
 fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String) {
     OutlinedTextField(value, onChange, modifier = Modifier.fillMaxWidth(), singleLine = true,
         placeholder = { Text(placeholder) }, leadingIcon = { Icon(Icons.Outlined.Search, null) },
@@ -62,21 +34,6 @@ fun ChoiceFilter(label: String, selected: String, choices: List<String>, onSelec
         DropdownMenu(expanded, { expanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
             if (allowAll) DropdownMenuItem(text = { Text("All ${label.lowercase()}") }, onClick = { onSelect(""); expanded = false })
             choices.forEach { option -> DropdownMenuItem(text = { Text(human(option)) }, onClick = { onSelect(option); expanded = false }) }
-        }
-    }
-}
-
-@Composable
-fun ExerciseCard(exercise: ExerciseUi, onClick: () -> Unit, trailing: @Composable (() -> Unit)? = null) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)) { Icon(Icons.Outlined.FitnessCenter, null, Modifier.padding(12.dp).size(22.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer) }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(exercise.name, style = MaterialTheme.typography.titleMedium)
-                Text("${human(exercise.muscle)} · ${human(exercise.equipment)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (exercise.custom) Text("CUSTOM EXERCISE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            if (trailing == null) Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) else trailing()
         }
     }
 }

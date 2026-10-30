@@ -185,7 +185,39 @@ jobs:
           # Ring iOS fix (:designsystem commonTest): RestTimerRingMathTest +1.
           # Merged with the ring fix: 813 + 1 = 814.
           # +1: in-process rest completion retry test
-          MIN_HOST_TESTS: 815
+          # Phase 4A task 2 (:shared commonTest): ExerciseAnatomyTest 15. 815 + 15 = 830.
+          # Phase 4A task 4 (:app host): CustomExerciseIdTest 4, AppViewModelCustomExerciseHostTest 2. 830 + 6 = 836.
+          # Phase 4A task 3 (:shared commonTest): ExerciseNamesTest 8, ExerciseSearchIndexTest 9;
+          # (:screens androidHostTest) SearchTermsDriftTest 2. 830 + 19 = 849.
+          # Task 3 fix round 1 (:shared androidHostTest): ExerciseSearchIndexJvmTest 1 (the exhaustive
+          # legacy check moved off iOS; the commonTest one now samples). 849 + 1 = 850.
+          # Merged Task 4 + Task 3: 830 + 6 + 20 = 856.
+          # Phase 4A task 5 (:designsystem commonTest): FigureGeometryTest 5, IllustrationTokensTest 2,
+          # ComponentColorsTest +1. 815 + 8 = 823.
+          # Merged Tasks 2–5: 815 + 15 (T2) + 6 (T4) + 20 (T3) + 8 (T5) = 864.
+          # Phase 4A task 11 (:screens commonTest): ExerciseCuesTest 4; (:screens androidHostTest)
+          # ExerciseCuesFilesTest 6. 864 + 10 = 874.
+          # Phase 4A task 6 (:designsystem commonTest): BodyMapPathsTest 4, ComponentColorsTest +1;
+          # (:designsystem androidHostTest) LicenseFilesTest 2. 864 + 7 = 871.
+          # Merged Task 11 + Task 6: 864 + 10 + 7 = 881.
+          # Phase 4A task 10 (:screens commonTest): ShareCardDataTest +1. 874 + 1 = 875.
+          # Merged Task 10: 881 + 1 = 882.
+          # Phase 4A task 14 (:screens commonTest): LibraryModelTest 10; (:screens androidHostTest)
+          # LibraryModelTimingTest 1. 882 + 11 = 893.
+          # Phase 4A task 7 (:designsystem commonTest): SizesTimingElevationTest +1 (IconsTest updated, not added). 881 + 1 = 882.
+          # Merged Task 7: 893 + 1 = 894.
+          # Phase 4A task 16 (:shared commonTest): EditRulesTest +1; (:screens commonTest)
+          # CustomExerciseRulesTest 4. 894 + 5 = 899.
+          # Phase 4A task 8 (:screens commonTest): ExerciseFiguresTest 8, FigureHighlightsTest 2. 882 + 10 = 892.
+          # Task 8 fix round 1 (:designsystem commonTest): FigureHighlightDrawingTest 2. 892 + 2 = 894.
+          # Phase 4A task 9 (:designsystem commonTest): FigureHighlightDrawingTest +2. 894 + 2 = 896.
+          # Merged Tasks 8–9 (+14 over 882): 899 + 14 = 913.
+          # Phase 4A task 17 (:screens commonTest): ExerciseHistorySummariesTest 6, BodyRegionBridgeTest 1. 913 + 7 = 920.
+          # Phase 4A task 18 (:screens commonTest): ExercisePickerTest -2 (ported to LibraryModelTest). 920 - 2 = 918.
+          # Phase 4A task 19 (:app): LibraryNavigationHostTest 8 (the temporary LibraryTapBaselineHostTest came and went in the task). 918 + 8 = 926.
+          # Phase 4A task 23 (:app): ShellNavigationHostTest +1; (:designsystem commonTest) LicenseTextTest +1. 926 + 2 = 928.
+          # Phase 4A final review fixes: AppViewModelRestoreHostTest +1, LibraryNavigationHostTest +2 (:app); RoutineGroupsTest 2 (:screens commonTest); ExerciseAnatomyTest +2 (:shared commonTest). 928 + 7 = 935.
+          MIN_HOST_TESTS: 935
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -310,7 +342,12 @@ jobs:
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
           # Phase 3 final review fixes: WorkoutPresentationTest +1, InProcessRestTimerTest +1. 221 + 2 = 223.
           # +1: in-process rest completion retry test
-          MIN_IOS_TESTS: 224
+          # Phase 4A task 2: ExerciseAnatomyTest 15. 224 + 15 = 239.
+          # Phase 4A task 3: ExerciseNamesTest 8, ExerciseSearchIndexTest 9. 239 + 17 = 256.
+          # Task 3 fix round 1: +0 (the new exhaustive test is JVM-only). 256.
+          # Phase 4A task 16: EditRulesTest +1. 256 + 1 = 257.
+          # Phase 4A final review fixes: ExerciseAnatomyTest +2. 257 + 2 = 259.
+          MIN_IOS_TESTS: 259
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -370,7 +407,19 @@ jobs:
           # commonTest, uiTest and iosTest at the phase 3 end (that count matched the CI at 53b13ba and 5d94a7f).
           # Ring iOS fix: RestTimerRingMathTest +1. Run 40944220889 counted 295 (294 + 1).
           # Raise it in every task that adds design system tests to commonTest, iosTest or uiTest.
-          MIN_DS_IOS_TESTS: 295
+          # Phase 4A task 5: FigureGeometryTest 5, IllustrationTokensTest 2, ComponentColorsTest +1 (commonTest);
+          # ExerciseFigureTest 9, GallerySmokeTest +1 (uiTest). 295 + 18 = 313.
+          # Phase 4A task 6: BodyMapPathsTest 4, ComponentColorsTest +1 (commonTest); BodyMapTest 4,
+          # LicensesScreenTest 1 (uiTest). 313 + 10 = 323.
+          # Phase 4A task 7: SizesTimingElevationTest +1 (commonTest); MSearchFieldTest 5, MChipTest +1,
+          # MInfoChipTest 2 (uiTest). 323 + 9 = 332.
+          # Phase 4A task 8 fix round 1: FigureHighlightDrawingTest 2 (commonTest). 323 + 2 = 325.
+          # Phase 4A task 9: FigureHighlightDrawingTest +2 (commonTest). 325 + 2 = 327.
+          # Merged Tasks 8–9 (+4 over 323): 332 + 4 = 336.
+          # Phase 4A task 17 fix round 1: RowsTest +1 (TopBar without a title, uiTest). 336 + 1 = 337.
+          # Phase 4A task 21: MBottomSheetTest +1, MDialogTest +1 (the host's density in the window, uiTest). 337 + 2 = 339.
+          # Phase 4A task 23: LicenseTextTest +1 (commonTest). 339 + 1 = 340.
+          MIN_DS_IOS_TESTS: 340
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -413,8 +462,31 @@ jobs:
           # Task 31 (screen critique): ShareCardDataTest +1 (commonTest).
           # Final review fixes: RecordAnnouncerTest +1, RestDraftTest +2 (commonTest), ActiveWorkoutScreenTest +3
           # (uiTest). 287 + 3 + 3 = 293.
+          # Phase 4A task 11: ExerciseCuesTest 4 (commonTest). 293 + 4 = 297.
+          # Phase 4A task 10: ShareCardDataTest +1 (commonTest); ExerciseDisplayNamesTest 4, AnatomyTextsTest 3,
+          # ActiveWorkoutScreenTest +1, WorkoutSummaryScreenTest +1 (uiTest). 297 + 10 = 307.
+          # Phase 4A task 14: LibraryModelTest 10 (commonTest). 307 + 10 = 317.
+          # Phase 4A task 15 (uiTest): LibraryScreenTest 17, LibraryFiltersUiTest 6. 317 + 23 = 340.
+          # Phase 4A task 16: CustomExerciseRulesTest 4 (commonTest); CustomExerciseFormTest 13,
+          # LibraryScreenTest +2 (uiTest). 340 + 19 = 359.
+          # Task 16 fix round 1: CustomExerciseFormTest +2 (uiTest). 359 + 2 = 361.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 293
+          # Phase 4A task 8: ExerciseFiguresTest 8, FigureHighlightsTest 2 (commonTest); FiguresGalleryPageTest 1
+          # (uiTest). 307 + 11 = 318.
+          # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
+          # Merged Tasks 8–9 (+11 over 307): 361 + 11 = 372.
+          # Phase 4A task 17: ExerciseHistorySummariesTest 6, BodyRegionBridgeTest 1 (commonTest);
+          # ExerciseInfoScreenTest 20, AddToRoutineSheetTest 3 (uiTest). 372 + 30 = 402.
+          # Phase 4A task 18: ExercisePickerTest -2 (commonTest, ported to LibraryModelTest); ExercisePickerSheetTest +4,
+          # ActiveWorkoutScreenTest +1, ExerciseListTest +1 (uiTest). 402 + 6 - 2 = 406.
+          # Task 17 fix round 1: ExerciseInfoScreenTest +1 (uiTest). 402 + 1 = 403.
+          # Merged Task 17 fix round: 406 + 1 = 407.
+          # Phase 4A task 20: LibraryFlowTest 2 (uiTest). 407 + 2 = 409.
+          # Phase 4A task 21: TapBudgetTest +2, LibraryAccessibilitySweepTest 16 (uiTest). 407 + 18 = 425.
+          # Merged Tasks 20 + 21: 407 + 2 + 18 = 427.
+          # Phase 4A task 23: ExerciseInfoScreenTest +1, CustomExerciseFormTest +1, ExercisePickerSheetTest +1 (uiTest). 427 + 3 = 430.
+          # Phase 4A final review fixes: ActiveWorkoutScreenTest +1 (uiTest), RoutineGroupsTest 2 (commonTest). 430 + 3 = 433.
+          MIN_SCREENS_IOS_TESTS: 433
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

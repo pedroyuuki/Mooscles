@@ -8,6 +8,7 @@ import com.mooscles.designsystem.interaction.MoosclesHaptics
 import com.mooscles.designsystem.interaction.NoHaptics
 import com.mooscles.designsystem.tokens.MoosclesColors
 import com.mooscles.designsystem.tokens.MoosclesElevation
+import com.mooscles.designsystem.tokens.MoosclesIllustration
 import com.mooscles.designsystem.tokens.MoosclesMotion
 import com.mooscles.designsystem.tokens.MoosclesRadius
 import com.mooscles.designsystem.tokens.MoosclesSizes
@@ -25,6 +26,7 @@ internal val LocalMoosclesTargets = staticCompositionLocalOf { MoosclesTargets()
 internal val LocalMoosclesSizes = staticCompositionLocalOf { MoosclesSizes() }
 internal val LocalMoosclesMotion = staticCompositionLocalOf { MoosclesMotion() }
 internal val LocalMoosclesTiming = staticCompositionLocalOf { MoosclesTiming() }
+internal val LocalMoosclesIllustration = staticCompositionLocalOf { MoosclesIllustration() }
 internal val LocalMoosclesReducedMotion = staticCompositionLocalOf { false }
 internal val LocalMoosclesHaptics = staticCompositionLocalOf<MoosclesHaptics> { NoHaptics }
 internal val LocalMoosclesDark = staticCompositionLocalOf { false }
@@ -46,6 +48,7 @@ object MTheme {
     val sizes: MoosclesSizes @Composable @ReadOnlyComposable get() = LocalMoosclesSizes.current
     val motion: MoosclesMotion @Composable @ReadOnlyComposable get() = LocalMoosclesMotion.current
     val timing: MoosclesTiming @Composable @ReadOnlyComposable get() = LocalMoosclesTiming.current
+    val illustration: MoosclesIllustration @Composable @ReadOnlyComposable get() = LocalMoosclesIllustration.current
     val reducedMotion: Boolean @Composable @ReadOnlyComposable get() = LocalMoosclesReducedMotion.current
     val haptics: MoosclesHaptics @Composable @ReadOnlyComposable get() = LocalMoosclesHaptics.current
     val isDark: Boolean @Composable @ReadOnlyComposable get() = LocalMoosclesDark.current

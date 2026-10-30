@@ -101,7 +101,8 @@ private const val PICK_TO_ADD = ""
  * the exercise picker's. Under the list, [WorkoutTimerLayer] holds the rest timer, the only part
  * that reads [timer], and the keyboard's room: the list ends above both. When the expanded timer
  * closes after the rest, the list goes back to the next set ([returnToSet]); [onTimerHeight]
- * gets the timer's height, so the route's toasts sit above it.
+ * gets the timer's height, so the route's toasts sit above it. A card menu's "About the exercise"
+ * calls [onExerciseInfo] with the catalog exercise's id, "Exercise history" [onExerciseHistory].
  */
 @Composable
 internal fun ActiveWorkoutScreen(
@@ -122,6 +123,7 @@ internal fun ActiveWorkoutScreen(
     nowMillis: () -> Long,
     timer: State<TimerUi>,
     onTimerHeight: (Int) -> Unit = {},
+    onExerciseInfo: (exerciseId: String) -> Unit = {},
 ) {
     val space = MTheme.space
     val haptics = MTheme.haptics
@@ -154,10 +156,12 @@ internal fun ActiveWorkoutScreen(
         }
     }
     val exerciseHistory by rememberUpdatedState(onExerciseHistory)
+    val exerciseInfo by rememberUpdatedState(onExerciseInfo)
     val callbacks = remember(screen, actions, workout.id) {
         ExerciseCallbacks(
             onRestChip = { restEntryId = it.id },
             onSwap = { picker = it.id },
+            onAbout = { exerciseInfo(it) },
             onHistory = { exerciseHistory(it) },
             onHowToLog = { howToLogId = it.id },
             onChangeType = { set, _ -> screen.openTypeSheet(set.id) },

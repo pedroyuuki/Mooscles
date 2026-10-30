@@ -2,6 +2,7 @@ package com.mooscles.screens.share
 
 import com.mooscles.data.AppData
 import com.mooscles.data.Equipment
+import com.mooscles.data.Exercise
 import com.mooscles.data.LoadConvention
 import com.mooscles.data.MuscleGroup
 import com.mooscles.data.Workout
@@ -285,6 +286,27 @@ class ShareCardDataTest {
         assertEquals("qua., 31 de dez. de 2025 · 23:30–00:40",
             card(source, locale = NumberLocale.PT_BR, texts = PortugueseTexts).dateText)
         assertEquals("Thu, Jan 1, 2026 · 00:30–01:40", card(source, zone = TimeZone.of("Europe/Berlin")).dateText)
+    }
+
+    /** Plan decision 11: with the catalog in Portuguese, rows and records show the catalog's pt-BR name. */
+    @Test fun portugueseNamesWhenAsked() {
+        val bench = WorkoutExercise("entry", "selected", "catalog_barbell_bench_flat", "Barbell bench press",
+            MuscleGroup.CHEST, Equipment.BARBELL, LoadConvention.TOTAL_LOAD, 0)
+        val typed = exercise(id = "typed", variation = "custom_row", position = 1)
+        val source = AppData(
+            workouts = listOf(workout()),
+            exercises = listOf(Exercise("custom_row", "Saved custom_row", MuscleGroup.BACK, Equipment.CABLE, custom = true)),
+            workoutExercises = listOf(bench, typed),
+            sets = listOf(set(bench, 80.0, 5), set(typed, 40.0, 10)),
+        )
+        val english = card(source)
+        assertEquals(listOf("Barbell bench press", "Saved custom_row"), english.rows.map { it.name })
+        assertEquals(listOf("Barbell bench press", "Saved custom_row"), english.records.map { it.name })
+        val portuguese = card(source, locale = NumberLocale.PT_BR, texts = PortugueseTexts.copy(catalogPortuguese = true))
+        assertEquals(listOf("Supino reto com barra", "Saved custom_row"), portuguese.rows.map { it.name })
+        assertEquals(listOf("Supino reto com barra", "Saved custom_row"), portuguese.records.map { it.name })
+        // The default stays English: a caller that does not ask gets the stored catalog name.
+        assertEquals("Barbell bench press", card(source, texts = PortugueseTexts).rows.first().name)
     }
 
     @Test fun templatesReplaceOnlyNumberedPlaceholders() {

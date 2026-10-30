@@ -27,6 +27,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
@@ -45,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.components.ExerciseCardCaptionTag
 import com.mooscles.designsystem.components.ExerciseCardDoneTag
 import com.mooscles.designsystem.components.ExerciseCardProgressTag
+import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
+import com.mooscles.designsystem.components.ExerciseMediaFigureTag
+import com.mooscles.designsystem.components.ExerciseMediaPlaceholderTag
 import com.mooscles.designsystem.components.ExerciseHeaderToggleTag
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.PrBadgeTag
@@ -52,6 +56,7 @@ import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
 import com.mooscles.designsystem.components.SetRowRepsTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
+import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.tokens.MoosclesTiming
 import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.withScreen
@@ -150,6 +155,7 @@ class ExerciseListTest {
                 ExerciseCallbacks(
                     onRestChip = { shown.callbacks += "rest:${it.id}" },
                     onSwap = { shown.callbacks += "swap:${it.id}" },
+                    onAbout = { shown.callbacks += "about:$it" },
                     onHistory = { shown.callbacks += "history:$it" },
                     onHowToLog = { howToLog = it },
                     onChangeType = { set, _ -> screen.openTypeSheet(set.id) },
@@ -552,14 +558,14 @@ class ExerciseListTest {
     }
 
     @Test
-    fun menuHasTheSixItems() = runComposeUiTest {
+    fun menuHasTheSevenItems() = runComposeUiTest {
         val exercises = mutableStateOf(
             listOf(WorkoutExerciseUi("e1", bench, sets = sets("s", 1)), WorkoutExerciseUi("e2", curl, sets = sets("c", 1))),
         )
         showList(exercises, Actions(exercises))
         openMenu("e1")
         val labels = listOf(
-            "Histórico do exercício", "Trocar exercício", "Mover para cima", "Mover para baixo", "Como registrar", "Remover exercício",
+            "Sobre o exercício", "Histórico do exercício", "Trocar exercício", "Mover para cima", "Mover para baixo", "Como registrar", "Remover exercício",
         )
         val tops = ExerciseMenuTags.all.mapIndexed { i, tag ->
             val item = onNodeWithTag(tag)
@@ -680,6 +686,23 @@ class ExerciseListTest {
         onNodeWithTag(ExerciseMenuTags.MOVE_DOWN).performClick()
         waitForIdle()
         assertEquals(listOf("moveWorkoutExercise:e2,-1", "moveWorkoutExercise:e1,1"), actions.calls)
+    }
+
+    @Test
+    fun cardShowsTheStillFigureOrTheEquipmentIcon() = runComposeUiTest {
+        // Pre-flight F2 (spec D5): a catalog exercise with a figure shows its still frame B in the
+        // card's 64 dp tile, with the equipment's small icon beside the meta; one without, the icon.
+        val entry = ExerciseCatalog.exercises.single { it.id == "catalog_barbell_bench_flat" }
+        val pilot = ExerciseUi(entry.id, entry.name, entry.muscle.label, entry.equipment.label, entry.convention.label)
+        val exercises = mutableStateOf(
+            listOf(WorkoutExerciseUi("e1", pilot, sets = sets("s", 1)), WorkoutExerciseUi("e2", curl, sets = sets("c", 1))),
+        )
+        showList(exercises, Actions(exercises))
+        inHeader("e1", ExerciseMediaFigureTag).assertIsDisplayed().assertWidthIsEqualTo(64.dp)
+        inHeader("e1", ExerciseMediaPlaceholderTag).assertDoesNotExist()
+        inHeader("e1", ExerciseEquipmentIconTag).assertIsDisplayed().assertWidthIsEqualTo(16.dp)
+        inHeader("e2", ExerciseMediaFigureTag).assertDoesNotExist()
+        inHeader("e2", ExerciseEquipmentIconTag).assertIsDisplayed().assertWidthIsEqualTo(28.dp)
     }
 
     @Test

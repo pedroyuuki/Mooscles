@@ -92,4 +92,10 @@ data class MoosclesSizes(
     val dialogMaxWidth: Dp = 360.dp,
     /** Phase 3: the widest the content of a screen gets, centered (spec "Tela do treino ativo", 600 dp). */
     val contentMaxWidth: Dp = 600.dp,
+    /** Phase 4A: the media of a library row (spec "Aba Biblioteca", "mídia de 56 dp"). */
+    val mediaList: Dp = 56.dp,
+    /** Phase 4A: the widest the square media frame of the exercise detail gets (spec "até 360 dp"). */
+    val mediaDetailMax: Dp = 360.dp,
+    /** Phase 4A: the drawn height of a read-only chip (plan decision 12); it grows with the text. */
+    val infoChipHeight: Dp = 32.dp,
 )

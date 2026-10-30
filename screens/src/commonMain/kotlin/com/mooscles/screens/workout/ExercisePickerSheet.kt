@@ -1,45 +1,47 @@
 package com.mooscles.screens.workout
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.mooscles.designsystem.components.MBottomSheet
 import com.mooscles.designsystem.components.MText
-import com.mooscles.designsystem.components.MTextField
+import com.mooscles.designsystem.components.MSearchField
 import com.mooscles.designsystem.components.SectionHeader
-import com.mooscles.designsystem.icons.MIcon
-import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.theme.MTheme
-import com.mooscles.screens.format.equipmentLabel
-import com.mooscles.screens.format.muscleLabel
+import com.mooscles.screens.exercise.exerciseMedia
+import com.mooscles.screens.format.catalogInPortuguese
+import com.mooscles.screens.library.EquipmentFilterSheet
+import com.mooscles.screens.library.LibraryFilterBar
+import com.mooscles.screens.library.LibraryFilters
+import com.mooscles.screens.library.LibraryModel
+import com.mooscles.screens.library.LibraryModelCache
+import com.mooscles.screens.library.LibraryRow
+import com.mooscles.screens.library.LibrarySkeletonRow
+import com.mooscles.screens.library.buildOffTheMainThread
+import com.mooscles.screens.library.rememberLibraryModel
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_picker_all
-import com.mooscles.screens.resources.workout_picker_meta
 import com.mooscles.screens.resources.workout_picker_none
 import com.mooscles.screens.resources.workout_picker_recent
 import com.mooscles.screens.resources.workout_picker_search
@@ -50,26 +52,30 @@ import org.jetbrains.compose.resources.stringResource
 /** The tag of the picker's list. */
 internal const val ExercisePickerListTag = "exercise-picker-list"
 
-/** The tag of the equipment icon of a picker row. */
-internal const val ExercisePickerEquipmentIconTag = "exercise-picker-equipment"
-
 /** The tag of the row of [exerciseId] in "Recent" ([recent]) or in "All". */
 internal fun exercisePickerRowTag(exerciseId: String, recent: Boolean) =
     if (recent) "exercise-picker-recent-$exerciseId" else "exercise-picker-all-$exerciseId"
 
 /**
  * The exercise picker (spec "Seletor de exercício"): an `MBottomSheet` at 90% of the screen with
- * a search field ("Search exercises"), then "Recent" (up to 8 exercises of the latest workouts in
- * [history], [ExercisePicker.recents], each shown as [exercises] has it now; an exercise no longer
- * there is left out) and "All" ([exercises] in alphabetical order). A search lists only the
- * matches ([ExercisePicker.filter]), without "Recent", or says that nothing matched. Each row, 56 dp
- * or taller, has the exercise's name, "Chest · Barbell" in the app's language and the equipment's
- * icon.
+ * the library's search field ("Search exercises" as its placeholder and name, with "Clear search" once
+ * typed), then, scrolling with the list, the library's filters (the
+ * muscle chips and the "Equipment" chip, which opens [EquipmentFilterSheet] over the picker; no
+ * "My exercises"), "Recent" (up to 8 exercises of the latest workouts in [history], each shown as
+ * [exercises] has it now; an exercise no longer there is left out) and "All". The search, the
+ * filters and the order are the library's ([LibraryModel]: bilingual search, alphabetical by the
+ * shown name). A search or a filter lists only the matches, without "Recent", or says that nothing
+ * matched; a new one starts the list from the top. Each row is the library's ([LibraryRow]): the
+ * 56 dp media (the still figure, frame B, or the equipment's icon), the name and "Chest ·
+ * Barbell" in the app's language. Until the model is built ([rememberLibraryModel], off the main
+ * thread; at once when the library already built it) the list shows skeleton rows, while the
+ * search and the filters already take input.
  *
  * A tap on a row reports the exercise to [onPick] and then closes the picker through [onDismiss],
  * once: the caller turns the pick into `addWorkoutExercise` or `replaceWorkoutExercise` and drops
  * the sheet in [onDismiss], which is also the close without a choice (the scrim, Back, a drag
- * down). The search survives recreation.
+ * down). The search, the filters and the open equipment sheet survive recreation. [cache] and
+ * [build] are the model's seams for tests (pre-flight F19).
  */
 @Composable
 internal fun ExercisePickerSheet(
@@ -77,15 +83,21 @@ internal fun ExercisePickerSheet(
     history: List<WorkoutUi>,
     onPick: (ExerciseUi) -> Unit,
     onDismiss: () -> Unit,
+    cache: LibraryModelCache = LibraryModelCache.process,
+    build: suspend (List<ExerciseUi>, Boolean) -> LibraryModel = ::buildOffTheMainThread,
 ) {
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+    var filters by rememberSaveable(stateSaver = LibraryFilters.Saver) { mutableStateOf(LibraryFilters()) }
+    var equipmentOpen by rememberSaveable { mutableStateOf(false) }
     var picked by remember { mutableStateOf(false) }
-    val searching = query.text.isNotBlank()
-    val recents = remember(exercises, history) {
-        val current = exercises.associateBy { it.id }
-        ExercisePicker.recents(history, limit = Int.MAX_VALUE).mapNotNull { current[it.id] }.take(ExercisePicker.RECENT_LIMIT)
-    }
-    val results = remember(exercises, query.text) { ExercisePicker.filter(exercises, query.text) }
+    val equipmentFocus = remember { FocusRequester() }
+    var focusReturns by remember { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
+    val model = rememberLibraryModel(exercises, catalogInPortuguese(), cache, build)
+    val searching = query.text.isNotBlank() || filters.active
+    val recents = remember(model, history) { model?.recents(history).orEmpty() }
+    val results = remember(model, query.text, filters) { model?.results(query.text, filters).orEmpty() }
+    val bottom = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     val pick: (ExerciseUi) -> Unit = { exercise ->
         if (!picked) {
             picked = true
@@ -93,30 +105,58 @@ internal fun ExercisePickerSheet(
             onDismiss()
         }
     }
+
+    // A new search or filter starts the list from the top; a recreation keeps the scroll it had.
+    var resultsShown by remember { mutableStateOf(false) }
+    LaunchedEffect(query.text, filters) {
+        if (resultsShown) listState.scrollToItem(0) else resultsShown = true
+    }
+    LaunchedEffect(focusReturns) {
+        if (focusReturns == 0) return@LaunchedEffect
+        // Once the chip is back in the layout (the list's first item, as in the library).
+        withFrameNanos { }
+        runCatching { equipmentFocus.requestFocus() }
+    }
+
     MBottomSheet(onDismiss = onDismiss) {
-        MTextField(
+        // The library's search field (spec: "a mesma busca"), with its icon and its clear button.
+        MSearchField(
             value = query,
             onValueChange = { query = it },
-            label = stringResource(Res.string.workout_picker_search),
+            placeholder = stringResource(Res.string.workout_picker_search),
+            onClear = { query = TextFieldValue() },
             modifier = Modifier.fillMaxWidth().padding(horizontal = MTheme.space.s4).padding(bottom = MTheme.space.s2),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            singleLine = true,
         )
         // Weighted, so the sheet keeps its full height while the matches change.
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth().testTag(ExercisePickerListTag),
-            contentPadding = PaddingValues(bottom = MTheme.space.s4),
+            state = listState,
+            contentPadding = PaddingValues(bottom = bottom + MTheme.space.s4),
         ) {
+            item(key = "filters") {
+                LibraryFilterBar(
+                    filters = filters,
+                    onChange = { filters = it },
+                    onOpenEquipment = { equipmentOpen = true },
+                    equipmentFocus = equipmentFocus,
+                    modifier = Modifier.padding(top = MTheme.space.s1, bottom = MTheme.space.s2),
+                    mine = false,
+                )
+            }
+            if (model == null) {
+                items(SKELETON_ROWS, key = { "skeleton-$it" }) { LibrarySkeletonRow() }
+                return@LazyColumn
+            }
             if (!searching && recents.isNotEmpty()) {
                 item(key = "header-recent") { SectionHeader(stringResource(Res.string.workout_picker_recent)) }
                 items(recents, key = { "recent-${it.id}" }) { exercise ->
-                    PickerRow(exercise, exercisePickerRowTag(exercise.id, recent = true)) { pick(exercise) }
+                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = true), { pick(exercise) })
                 }
             }
             if (results.isNotEmpty()) {
                 item(key = "header-all") { SectionHeader(stringResource(Res.string.workout_picker_all)) }
                 items(results, key = { "all-${it.id}" }) { exercise ->
-                    PickerRow(exercise, exercisePickerRowTag(exercise.id, recent = false)) { pick(exercise) }
+                    LibraryRow(exercise, model.shownName(exercise), remember(exercise) { exerciseMedia(exercise) }, exercisePickerRowTag(exercise.id, recent = false), { pick(exercise) })
                 }
             } else {
                 item(key = "none") {
@@ -130,41 +170,17 @@ internal fun ExercisePickerSheet(
             }
         }
     }
-}
-
-/** A picker row: the equipment's icon, the name and "Chest · Barbell"; the whole row is one button. */
-@Composable
-private fun PickerRow(exercise: ExerciseUi, tag: String, onClick: () -> Unit) {
-    val colors = MTheme.colors
-    val source = remember { MutableInteractionSource() }
-    val pressed by source.collectIsPressedAsState()
-    val shape = RoundedCornerShape(MTheme.radius.md)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .testTag(tag)
-            .heightIn(min = MTheme.sizes.rowMin)
-            .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
-            .mFocusRing(shape, source)
-            .background(if (pressed) colors.bgInset else Color.Transparent, shape)
-            .padding(horizontal = MTheme.space.s4, vertical = MTheme.space.s1),
-        horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MIcon(
-            EquipmentIcons.forEquipment(exercise.equipment),
-            contentDescription = null,
-            size = MTheme.sizes.icon24,
-            tint = colors.textSecondary,
-            modifier = Modifier.testTag(ExercisePickerEquipmentIconTag),
+    if (equipmentOpen) {
+        EquipmentFilterSheet(
+            selected = filters.equipment,
+            onChange = { filters = filters.copy(equipment = it) },
+            onDismiss = {
+                equipmentOpen = false
+                focusReturns++
+            },
         )
-        Column(Modifier.weight(1f)) {
-            MText(exercise.name, MTheme.type.bodyLg, color = colors.textPrimary)
-            MText(
-                stringResource(Res.string.workout_picker_meta, muscleLabel(exercise.muscle), equipmentLabel(exercise.equipment)),
-                MTheme.type.bodyMd,
-                color = colors.textSecondary,
-            )
-        }
     }
 }
+
+/** How many skeleton rows stand in for the list while it is built. */
+private const val SKELETON_ROWS = 6

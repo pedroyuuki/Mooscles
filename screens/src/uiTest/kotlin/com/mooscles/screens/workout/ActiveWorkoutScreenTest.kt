@@ -28,6 +28,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -43,12 +44,16 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
+import com.mooscles.designsystem.components.TimerDockTag
+import com.mooscles.designsystem.components.TimerOpenTag
+import com.mooscles.designsystem.components.TimerTitleTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.RecordingActions
 import com.mooscles.screens.assertShownWhole
+import com.mooscles.screens.ScreenFrame
 import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
@@ -173,6 +178,7 @@ class ActiveWorkoutScreenTest {
         probe: ((String) -> Unit)? = null,
         restoration: ScreenRestoration? = null,
         now: () -> Long = { START + ELAPSED_MS },
+        timer: TimerUi = TimerUi(),
     ) {
         withScreen(
             locale = locale, reducedMotion = reducedMotion, size = size, fontScale = fontScale, density = density,
@@ -180,12 +186,13 @@ class ActiveWorkoutScreenTest {
         ) {
             ActiveWorkoutRoute(
                 state = fake.state.value,
-                timer = remember { mutableStateOf(TimerUi()) },
+                timer = remember { mutableStateOf(timer) },
                 actions = fake,
                 onMinimize = { events.list += "minimize" },
                 onOpenSummary = { events.list += "summary:$it" },
                 onExerciseHistory = { events.list += "history:$it" },
                 onChooseRoutine = { events.list += "chooseRoutine" },
+                onExerciseInfo = { events.list += "info:$it" },
                 skeletonCards = skeletonCards,
                 nowMillis = now,
             )
@@ -231,6 +238,16 @@ class ActiveWorkoutScreenTest {
     }
 
     private fun ComposeUiTest.row(id: String): SemanticsNodeInteraction = onNodeWithTag(workoutSetRowTag(id))
+
+    /**
+     * The "All" row of [exerciseId] in the open picker, once its list is built: the route's picker
+     * builds the library's model off the main thread, which the test's idle does not wait for.
+     */
+    private fun ComposeUiTest.pickerAllRow(exerciseId: String): SemanticsNodeInteraction {
+        val tag = exercisePickerRowTag(exerciseId, recent = false)
+        waitUntil(timeoutMillis = 5_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+        return onNode(hasTestTag(tag))
+    }
 
     private fun ComposeUiTest.check(id: String): SemanticsNodeInteraction =
         onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(hasTestTag(workoutSetRowTag(id))))
@@ -317,7 +334,7 @@ class ActiveWorkoutScreenTest {
         // "Add exercise" opens the picker; a pick adds to this workout.
         onNodeWithTag(ActiveWorkoutTags.ADD_EXERCISE).performClick()
         waitForIdle()
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("addWorkoutExercise:w1,curl", fake.calls.last())
     }
@@ -674,10 +691,23 @@ class ActiveWorkoutScreenTest {
         onNodeWithTag(ExerciseMenuTags.SWAP).performClick()
         waitForIdle()
         // No set done: the picker opens directly, and the pick replaces this entry.
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
         assertFalse(fake.calls.any { it.startsWith("addWorkoutExercise") })
+    }
+
+    @Test
+    fun menuAboutOpensTheExerciseInfo() = runComposeUiTest {
+        val events = Events()
+        show(Fake(stateOf(nothingDone)), events)
+        openCardMenuItem("e2", ExerciseMenuTags.ABOUT)
+        // The menu closed and the app was asked for the detail of the catalog exercise, not the entry.
+        assertEquals(listOf("info:row"), events.list)
+        onNodeWithTag(ExerciseMenuTags.ABOUT).assertDoesNotExist()
+        // "Exercise history" stays, after it, with its own callback.
+        openCardMenuItem("e2", ExerciseMenuTags.HISTORY)
+        assertEquals(listOf("info:row", "history:row"), events.list)
     }
 
     private fun ComposeUiTest.openCardMenuItem(entryId: String, tag: String) {
@@ -695,13 +725,13 @@ class ActiveWorkoutScreenTest {
         toast("Série 3 removida").assertIsDisplayed()
         // Swapping another exercise leaves the undo up: the set still has its own entry to go back to.
         openCardMenuItem("e2", ExerciseMenuTags.SWAP)
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e2,curl", fake.calls.last())
         toast("Série 3 removida").assertExists()
         // Swapping its own exercise closes it: "Undo" would put the bench set into the new exercise.
         openCardMenuItem("e1", ExerciseMenuTags.SWAP)
-        onNode(hasTestTag(exercisePickerRowTag("curl", recent = false))).performClick()
+        pickerAllRow("curl").performClick()
         waitForIdle()
         assertEquals("replaceWorkoutExercise:e1,curl", fake.calls.last())
         toast("Série 3 removida").assertDoesNotExist()
@@ -807,6 +837,109 @@ class ActiveWorkoutScreenTest {
         waitForIdle()
         assertEquals("renameWorkout:w1,Treino C", fake.calls.last())
         onNodeWithTag(RenameSheetTags.SAVE).assertDoesNotExist()
+    }
+
+    /**
+     * Plan decision 11, pre-flight F1: a catalog exercise shows its pt-BR name on the card, in its
+     * menu and confirmation, in the rest sheet and in the dock, even while the timer carries the
+     * English name the view model stored on an automatic rest. The rest the sheet starts carries
+     * the entry and its snapshot name, as the automatic rest does (final review, item 1).
+     */
+    @Test
+    fun catalogNamesFollowPortuguese() = runComposeUiTest {
+        val bench = ExerciseUi("catalog_barbell_bench_flat", "Barbell bench press", "Chest", "Barbell", convention = "Total load")
+        val workout = WorkoutUi(
+            id = "w1", name = "Treino A", startedAt = START,
+            exercises = listOf(
+                WorkoutExerciseUi("e1", bench, (1..3).map { n -> SetUi("e1s$n", reps = 8, weightKg = 60.0, completed = n == 1) }),
+            ),
+        )
+        val fake = Fake(UiState(loading = false, active = workout, exercises = listOf(bench)))
+        val autoRest = TimerUi("Barbell bench press", remainingSeconds = 90, durationSeconds = 120, running = true, workoutExerciseId = "e1")
+        show(fake, timer = autoRest)
+        val name = "Supino reto com barra"
+        onNode(hasText(name) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).assertExists()
+        onNode(hasText("Descanso · $name") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+        val shown = onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size
+
+        // The menu's title.
+        onNode(hasTestTag(ExerciseMenuTag) and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).performClick()
+        waitForIdle()
+        assertEquals(shown + 1, onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size, "menu title")
+        // The removal's confirmation.
+        onNodeWithTag(ExerciseMenuTags.REMOVE).performClick()
+        waitForIdle()
+        onNodeWithText("Remover $name? As 3 séries dele saem deste treino.", useUnmergedTree = true).assertExists()
+        dialogButton("Continuar treinando").performClick()
+        waitForIdle()
+
+        // The rest sheet, and the rest it starts carries the entry and its snapshot name.
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        assertEquals(shown + 1, onAllNodesWithText(name, useUnmergedTree = true).fetchSemanticsNodes().size, "rest sheet")
+        onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
+        waitForIdle()
+        assertEquals("startTimer:Barbell bench press,${workout.exercises.single().restSeconds},e1", fake.calls.last())
+        onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
+
+        // The expanded timer's title, by the same entry.
+        onNodeWithTag(TimerOpenTag).performClick()
+        waitForIdle()
+        tag(TimerTitleTag).assertTextEquals("Descanso · $name · série 1 de 3")
+        onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    /**
+     * Final review, item 1: a rest started from the rest sheet is started as the automatic rest is,
+     * with the entry and its snapshot name (what the timer stores), so after a change of language
+     * the dock names the exercise in the new language, not in the one the rest started in.
+     */
+    @Test
+    fun aManualRestFollowsALanguageChange() = runComposeUiTest {
+        val bench = ExerciseUi("catalog_barbell_bench_flat", "Barbell bench press", "Chest", "Barbell", convention = "Total load")
+        val workout = WorkoutUi(
+            id = "w1", name = "Treino A", startedAt = START,
+            exercises = listOf(WorkoutExerciseUi("e1", bench, (1..3).map { n -> SetUi("e1s$n", reps = 8, weightKg = 60.0) })),
+        )
+        val timer = mutableStateOf(TimerUi())
+        // The view model and the timer: the rest carries what startTimer was given.
+        val fake = object : MoosclesActions by RecordingActions() {
+            val calls = mutableListOf<String>()
+            override fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String?) {
+                calls += "startTimer:$exerciseName,$seconds,$workoutExerciseId"
+                timer.value = TimerUi(exerciseName, remainingSeconds = seconds, durationSeconds = seconds, running = true,
+                    workoutExerciseId = workoutExerciseId)
+            }
+        }
+        val locale = mutableStateOf("pt-BR")
+        setContent {
+            ScreenFrame(locale = locale.value, size = DpSize(412.dp, 800.dp)) {
+                ActiveWorkoutRoute(
+                    state = UiState(loading = false, active = workout, exercises = listOf(bench)),
+                    timer = timer,
+                    actions = fake,
+                    onMinimize = {}, onOpenSummary = {}, onExerciseHistory = {}, onChooseRoutine = {}, onExerciseInfo = {},
+                    nowMillis = { START + ELAPSED_MS },
+                )
+            }
+        }
+        waitForIdle()
+        onNodeWithTag(exerciseRestTag("e1")).performClick()
+        waitForIdle()
+        onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
+        waitForIdle()
+        // What the timer stores is the snapshot name, whatever the screen's language.
+        assertEquals(listOf("startTimer:Barbell bench press,${workout.exercises.single().restSeconds},e1"), fake.calls)
+        onNode(hasText("Descanso · Supino reto com barra") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+
+        locale.value = "en"
+        waitForIdle()
+        onNode(hasText("Rest · Barbell bench press") and hasAnyAncestor(hasTestTag(TimerDockTag)), useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Supino reto com barra", substring = true, useUnmergedTree = true).assertCountEquals(0)
+        // The expanded timer names it by the entry too; with no set done yet, without "set 0 of 3".
+        onNodeWithTag(TimerOpenTag).performClick()
+        waitForIdle()
+        tag(TimerTitleTag).assertTextEquals("Rest · Barbell bench press")
     }
 
     private companion object {

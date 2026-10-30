@@ -17,6 +17,16 @@ class EditRulesTest {
         assertEquals("a".repeat(120), EditRules.name("a".repeat(120)))
     }
 
+    @Test fun nameRuleAgreesWithTheThrowingRule() {
+        for (value in listOf("", "   ", " Bench ", "a".repeat(120), " ${"a".repeat(120)} ", "a".repeat(121))) {
+            val accepted = runCatching { EditRules.name(value) }.isSuccess
+            assertEquals(accepted, NameRule.problem(value) == null, "\"$value\"")
+        }
+        assertEquals(NameRule.Problem.BLANK, NameRule.problem(" \t "))
+        assertEquals(NameRule.Problem.TOO_LONG, NameRule.problem("a".repeat(NameRule.MAX_LENGTH + 1)))
+        assertEquals(null, NameRule.problem("a".repeat(NameRule.MAX_LENGTH)))
+    }
+
     @Test fun targetValidAndInvalid() {
         EditRules.target(0, null)
         EditRules.target(9999, 100000.0)

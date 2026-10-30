@@ -38,6 +38,7 @@ import com.mooscles.designsystem.resources.ds_stepper_decrease
 import com.mooscles.designsystem.resources.ds_stepper_increase
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.RestDuration
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_field_rest
 import com.mooscles.screens.resources.workout_rest_note
@@ -133,7 +134,9 @@ internal class RestDraft(value: Int, saved: Int, pending: List<Int> = emptyList(
  * recreation the sheet keeps only what the database settled: a rest written and not yet seen back
  * gives way to the saved one ([RestDraft.Saver]). 0:00 turns the exercise's rest off (a set completed then starts no rest),
  * and then there is no rest to start: "Start rest now" is disabled (F19). "Start rest now" starts
- * `startTimer(entry.exercise.name, seconds)` with the rest shown and closes the sheet through
+ * the rest shown as the automatic rest starts one (final review, item 1): `startTimer` with the
+ * entry's snapshot name and its id, so the timer names it by the entry in the screen's language
+ * (after a change of language too), and closes the sheet through
  * [onDismiss], which is also the close without a choice (the scrim, Back, a drag down). Nothing
  * else here touches the rest timer: the rest running now keeps its own time.
  *
@@ -159,7 +162,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
         ) {
             Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() }) {
                 MText(stringResource(Res.string.workout_rest_title), MTheme.type.titleMd)
-                MText(entry.exercise.name, MTheme.type.bodyMd, color = MTheme.colors.textSecondary)
+                MText(exerciseName(entry.exercise), MTheme.type.bodyMd, color = MTheme.colors.textSecondary)
             }
             Stepper(
                 value = seconds.toDouble(),
@@ -200,7 +203,7 @@ internal fun RestSheet(entry: WorkoutExerciseUi, actions: MoosclesActions, onDis
             MButton(
                 stringResource(Res.string.workout_rest_start_now),
                 onClick = {
-                    actions.startTimer(entry.exercise.name, draft.value)
+                    actions.startTimer(entry.exercise.name, draft.value, entry.id)
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),

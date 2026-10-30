@@ -1,5 +1,30 @@
 # Verification — 2026-10-23
 
+## Phase 4A exercise library (unreleased, fork branch) — 2026-10-30
+
+Branch `feat/phase4a-library` in the fork, not in a published release. It adds the new Library tab, exercise detail, custom exercise form and exercise picker (in the `:screens` module, English and Brazilian Portuguese), the figure renderer and body map in `:designsystem`, and the exercise data in `:shared` (anatomy, pt-BR names, aliases, bilingual search index and the `createCustomExercise` action) for all 287 catalog exercises, with figures for a pilot of 20. versionCode 16 and versionName 1.4.5 are unchanged; no Room schema, DataStore key, updater contract or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-30-phase4a-verificacao.md](docs/superpowers/reports/2026-10-30-phase4a-verificacao.md).
+
+Verified:
+
+- Host tests: 935 on CI (run 41046481599, `2784ed1`, the merged phase 4A head), 0 failures; on iOS simulator `:shared` 259, `:designsystem` 340 and `:screens` 433, all passing on the first attempt, including the end-to-end library flow test with its screenshots.
+- Android 15 emulator, full suites once: `:designsystem` 339 (one order-dependent test failure, fixed in test code and rerun), `:screens` 430 of 430 (1 opt-in capture skipped) and `:app` 25 with 0 failures (2 opt-in fixtures skipped); the classes touched afterwards were rerun.
+- Touch budget: finding an exercise by muscle and opening it takes 3 taps (4 on the old screen); creating a custom exercise takes 4 taps plus typing (6 plus typing before).
+- Upgrade in place on the emulator from the fork's main (`739a800`), with network off: database still version 5, byte-identical preferences file (same MD5), the running rest kept its deadline, and the export after matched the export before.
+- Offline: on a fresh install with the network off, the library, search (Portuguese on an English screen), filters, detail (figure, map, cues), form and picker worked, and the branch adds no network call.
+- Performance on the emulator (R8 build, catalog plus 300 custom exercises): a search keystroke median 0.50 ms and p95 1.25 ms (budget 4 and 8 ms); fast scroll of the whole library with figures 0.61% janky (budget 5%); the detail figure stops drawing frames in the background. Opening a tab or a detail is composed on the second frame after the tap, as on every route of the app shell (History behaves the same), not the next.
+- Debug APK size (local build, CI base `739a800`): +450,168 bytes (limit 629,146). No new dependency (the dependency tree is identical).
+- Accessibility sweep in tests: labels on every clickable node, 48 dp targets, no clipped number or button text, at font scales 1.0, 1.3, 2.0 and 2.01, at 320 and 412 dp, in both themes and both languages.
+- Fixed along the way (pre-existing): after a recreation (language, theme, font size or density change) on a screen above another tab's root, the bottom bar marked Train.
+
+Not verified:
+
+- Anything on an iPhone: VoiceOver, the figure and the map on a device, performance, the real keyboard. The end-to-end library flow test on the iOS simulator had not run on CI when this was written.
+- Anything on a physical Android phone: a real TalkBack session (the reading order comes from the accessibility tree and tests), 120 Hz, Android 8 to 14. The detail figure keeps the frame callbacks running at about 60 Hz while it holds a frame (13 draws per second); its battery cost was not measured.
+- Whether the figures, cues and names are good for people who train, beyond the screen critique and the content review. Gate G1 (the owner approving the 20 pilot figures) is pending; the sheet was delivered on 2026-10-30.
+- The `MSearchField` (and the phase 2 item #11, the field reading its value before its name) with a real TalkBack.
+- The name shown by the automatic-rest timer and its notification stays the stored name (English), until the view-model messages are localized.
+- The release path from a published APK signed with the original key: the key is not on this Mac, and v1.5.0 is not published.
+
 ## Phase 3 active workout redesign (unreleased, fork branch) — 2026-10-29
 
 Branch `feat/phase3-active-workout` in the fork, not in a published release. It adds the `:screens` module (the new active workout, end-of-workout summary, share card and app shell, in shared Compose Multiplatform code, English and Brazilian Portuguese), the ongoing rest notification with actions, a new launcher icon and a side-by-side `preview` build. versionCode 16 and versionName 1.4.5 are unchanged; no Room schema, DataStore key, updater contract or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-29-phase3-verificacao.md](docs/superpowers/reports/2026-10-29-phase3-verificacao.md).

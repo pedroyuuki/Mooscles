@@ -191,7 +191,7 @@ class RestSheetTest {
         val open = showSheet(exercises, actions)
         onNodeWithText("Iniciar descanso agora").performClick()
         waitForIdle()
-        assertEquals(listOf("startTimer:Supino reto,120"), actions.calls)
+        assertEquals(listOf("startTimer:Supino reto,120,e1"), actions.calls)
         // Starting the rest closes the sheet.
         assertNull(open.value)
         value().assertDoesNotExist()
@@ -202,7 +202,7 @@ class RestSheetTest {
         onNodeWithText("Iniciar descanso agora").performClick()
         waitForIdle()
         assertEquals(
-            listOf("startTimer:Supino reto,120", "updateWorkoutExerciseRest:e1,90", "startTimer:Supino reto,90"),
+            listOf("startTimer:Supino reto,120,e1", "updateWorkoutExerciseRest:e1,90", "startTimer:Supino reto,90,e1"),
             actions.calls,
         )
     }

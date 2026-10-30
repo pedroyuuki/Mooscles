@@ -41,6 +41,18 @@ The active workout, the end-of-workout summary, the share card and the app's bot
 
 Not changed: the saved data (Room schema 5, no new preference), the update channel and the signing identity; an upgrade over the previous build keeps an active workout and a running rest. Exercise names stay in English, and Train, routines, the library, history and records keep their current screens until their phases. Tested on the Android 15 emulator and, for the shared screens, on the iOS simulator in CI; not yet on a physical phone with TalkBack or haptics. See the [phase 3 verification report](docs/superpowers/reports/2026-10-29-phase3-verificacao.md).
 
+## New exercise library
+
+The Library tab is rebuilt with the new design system, in English and Brazilian Portuguese. This is not in a published release yet.
+
+- **Search and filters:** search finds exercises in English or Portuguese, including common nicknames, as you type. Filter by muscle (one row of chips) and by equipment (a sheet), or show only your own exercises. "Recently used" lists what you trained lately.
+- **Exercise detail:** a figure that alternates the start and end of the movement (it stops with "reduce motion" and when the app is in the background), a body map with the primary and secondary muscles, four execution cues, and a summary of your own history with the exercise. From there you can add it to a routine or to the workout in progress.
+- **Names and cues in Portuguese:** all 287 catalog exercises have a Brazilian Portuguese name, their muscles and four cues, offline, written for this app (CC0). Only the first 20 exercises have a figure so far; the rest show the equipment icon until the figures are approved.
+- **Your own exercises:** a full-screen form for name, muscle, equipment and weight convention (no photo yet). The exercise opens in its detail once saved.
+- **The exercise picker in the workout** uses the same search and filters, and "About the exercise" opens the detail from the active workout.
+
+Not changed: the saved data (Room schema 5, no new preference), the update channel, the signing identity and the network use (there is none; everything works offline). Debug APK grew by 450,168 bytes. Tested on the Android 15 emulator and, for the shared screens, on the iOS simulator in CI; not yet on a physical phone with TalkBack, nor on an iPhone, and the figures still wait for the owner's approval. See the [phase 4A verification report](docs/superpowers/reports/2026-10-30-phase4a-verificacao.md).
+
 ## Download
 
 The current release is **1.4.5 / Build 16**, with saved routine folders, reliable discard navigation, and keyboard-aware timer placement.

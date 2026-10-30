@@ -5,11 +5,13 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -280,6 +282,23 @@ class WorkoutSummaryScreenTest {
             }
             LocalAppLocale.restore()
         }
+    }
+
+    /** Plan decision 11: the exercise lines and the records show the catalog's pt-BR name, never the stored English one. */
+    @Test
+    fun catalogNamesFollowPortuguese() = runComposeUiTest {
+        val bench = exercise("catalog_barbell_bench_flat", "Barbell bench press")
+        val workout = WorkoutUi(
+            id = "w1", name = "Treino A", startedAt = start, endedAt = end,
+            exercises = listOf(WorkoutExerciseUi("e1", bench, listOf(done("b1", 80.0, 8), done("b2", 87.5, 6)))),
+            records = listOf(RecordUi(bench, 87.5, 6, previousKg = 85.0)),
+        )
+        summary(workout = workout, history = listOf(workout))
+        onNode(hasText("Supino reto com barra") and hasAnyAncestor(hasTestTag(summaryExerciseTag("e1"))), useUnmergedTree = true)
+            .assertExists()
+        onNode(hasText("Supino reto com barra · 87,5\u00A0kg\u00A0×\u00A06 · antes 85\u00A0kg") and hasAnyAncestor(hasTestTag(SummaryRecordsTag)))
+            .shown()
+        onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
     }
 
     private companion object {

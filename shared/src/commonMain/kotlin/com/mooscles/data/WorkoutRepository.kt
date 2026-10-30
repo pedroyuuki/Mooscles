@@ -379,10 +379,19 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
         if (existing == null) dao.insertExercise(valid.copy(custom = true)) else dao.updateExercise(valid.copy(custom = true))
     }
 
-    suspend fun createCustomExercise(name: String, muscle: MuscleGroup, equipment: Equipment, convention: LoadConvention): String {
-        val item = Exercise(name = EditRules.name(name), muscle = muscle, equipment = equipment, convention = convention, custom = true)
-        saveExercise(item)
-        return item.id
+    /**
+     * Creates a custom exercise under [id], which the screen may choose ahead of time. An id that already
+     * exists is refused instead of updated, and so are a blank id and a `catalog_` one: the catalog seed
+     * inserts with IGNORE, so a custom row there would keep a future catalog entry from ever arriving.
+     */
+    suspend fun createCustomExercise(
+        name: String, muscle: MuscleGroup, equipment: Equipment, convention: LoadConvention, id: String = newId(),
+    ): String = db.writeTransaction {
+        val valid = EditRules.name(name)
+        dataRequire(id.isNotBlank() && !id.startsWith(ExerciseCatalog.ID_PREFIX), DataError.INVALID_VALUE) { "Invalid exercise id." }
+        dataRequire(dao.exercise(id) == null, DataError.INVALID_VALUE) { "Exercise already exists." }
+        dao.insertExercise(Exercise(id = id, name = valid, muscle = muscle, equipment = equipment, convention = convention, custom = true))
+        id
     }
 
     /** Returning the existing active id makes double taps and process recreation idempotent. */

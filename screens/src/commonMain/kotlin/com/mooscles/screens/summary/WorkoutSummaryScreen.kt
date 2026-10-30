@@ -52,10 +52,10 @@ import com.mooscles.domain.currentTimeMillis
 import com.mooscles.screens.format.NoBestSet
 import com.mooscles.screens.format.ScreenDates
 import com.mooscles.screens.format.durationText
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.summaryDateRange
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.best_set_assistance_only
-import com.mooscles.screens.resources.best_set_bodyweight
 import com.mooscles.screens.resources.best_set_no_working_set
 import com.mooscles.screens.resources.best_set_warmup_only
 import com.mooscles.screens.resources.summary_assistance_load
@@ -84,6 +84,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
+import com.mooscles.screens.workout.bestSetText
 import org.jetbrains.compose.resources.stringResource
 
 /** The card of the four numbers; it carries [SummaryEntrance] when this composition played its entrance. */
@@ -322,7 +323,7 @@ private fun RecordSection(
             ) {
                 PrBadge(soft = soft)
                 MText(
-                    stringResource(Res.string.summary_record_line, record.exercise.name, recordDetail(record, pounds, locale)),
+                    stringResource(Res.string.summary_record_line, exerciseName(record.exercise), recordDetail(record, pounds, locale)),
                     MTheme.type.bodyMd,
                     Modifier.weight(1f),
                 )
@@ -363,12 +364,9 @@ private fun recordLoad(record: RecordUi, pounds: Boolean, locale: NumberLocale):
 private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: NumberLocale, stacked: Boolean) {
     val colors = MTheme.colors
     val type = MTheme.type
+    val name = exerciseName(entry.exercise)
     val best = SummaryStats.bestSet(entry)
-    val bestText = when {
-        best == null -> null
-        best.weightKg == 0.0 -> stringResource(Res.string.best_set_bodyweight, best.reps)
-        else -> MoosclesNumbers.setText(MoosclesNumbers.plain(WeightUnits.fromKg(best.weightKg, pounds)), unit(pounds), best.reps, locale)
-    }
+    val bestText = best?.let { bestSetText(it.weightKg, it.reps, pounds, locale) }
     val value: @Composable (Modifier) -> Unit = { valueModifier ->
         if (bestText != null) {
             MText(bestText, type.numSm, valueModifier)
@@ -384,12 +382,12 @@ private fun ExerciseLine(entry: WorkoutExerciseUi, pounds: Boolean, locale: Numb
     val rowModifier = Modifier.fillMaxWidth().testTag(summaryExerciseTag(entry.id)).semantics(mergeDescendants = true) {}
     if (stacked) {
         Column(rowModifier, verticalArrangement = Arrangement.spacedBy(MTheme.space.s1)) {
-            MText(entry.exercise.name, type.bodyLg)
+            MText(name, type.bodyLg)
             value(Modifier)
         }
     } else {
         Row(rowModifier, horizontalArrangement = Arrangement.spacedBy(MTheme.space.s3), verticalAlignment = Alignment.CenterVertically) {
-            MText(entry.exercise.name, type.bodyLg, Modifier.weight(1f))
+            MText(name, type.bodyLg, Modifier.weight(1f))
             value(Modifier)
         }
     }

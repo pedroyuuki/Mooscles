@@ -7,7 +7,11 @@ import com.mooscles.designsystem.i18n.LocaleEpoch
 import com.mooscles.designsystem.interaction.MoosclesHaptics
 import com.mooscles.designsystem.interaction.rememberPlatformHaptics
 import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesIllustration
 import com.mooscles.designsystem.tokens.rememberMoosclesTypography
+
+/** The figure and body map strokes (phase 4A); the same in both themes. */
+private val Illustration = MoosclesIllustration()
 
 /**
  * Provides every design system token to [content]. [reducedMotion] defaults to the system
@@ -30,6 +34,7 @@ fun MoosclesDesignTheme(
             LocalMoosclesReducedMotion provides reducedMotion,
             LocalMoosclesHaptics provides haptics,
             LocalMoosclesDark provides dark,
+            LocalMoosclesIllustration provides Illustration,
             LocalMContentColor provides colors.textPrimary,
             content = content,
         )

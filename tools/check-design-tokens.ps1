@@ -7,7 +7,7 @@ Values live only in designsystem/.../tokens/. Everywhere else the rules below ap
 violation is printed as "file:line: rule". Exit code 1 when there is any, 0 when clean.
 Line comments (//) and KDoc lines are ignored.
 
-Without -Path the target is the component, gallery and licenses folders of :designsystem
+Without -Path the target is the component, gallery, licenses and illustration folders of :designsystem
 (folders that do not exist yet are skipped), the files of the pilot screen (Settings) in :app and
 the common code of the redesigned screens (:screens).
 .PARAMETER Path
@@ -23,7 +23,7 @@ if (-not $Path -or $Path.Count -eq 0) {
     $base = 'designsystem/src/commonMain/kotlin/com/mooscles/designsystem'
     $pilot = 'app/src/main/java/com/mooscles/ui'
     $Path = @(
-        "$base/components", "$base/gallery", "$base/licenses",
+        "$base/components", "$base/gallery", "$base/licenses", "$base/illustration",
         "$pilot/SettingsScreen.kt", "$pilot/UpdateSection.kt", "$pilot/DataSection.kt",
         "$pilot/SettingsRestDurationField.kt", "$pilot/SettingsTexts.kt",
         'screens/src/commonMain/kotlin/com/mooscles/screens'

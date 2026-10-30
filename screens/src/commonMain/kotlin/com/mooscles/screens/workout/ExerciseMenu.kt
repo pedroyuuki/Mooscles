@@ -33,8 +33,10 @@ import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.format.conventionExplanation
 import com.mooscles.screens.format.conventionLabel
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_keep_training
+import com.mooscles.screens.resources.workout_menu_about
 import com.mooscles.screens.resources.workout_menu_history
 import com.mooscles.screens.resources.workout_menu_how_to_log
 import com.mooscles.screens.resources.workout_menu_move_down
@@ -50,29 +52,32 @@ import org.jetbrains.compose.resources.stringResource
 
 /** The test tags of the exercise menu's items, in their order. */
 internal object ExerciseMenuTags {
+    const val ABOUT = "exercise-menu-about"
     const val HISTORY = "exercise-menu-history"
     const val SWAP = "exercise-menu-swap"
     const val MOVE_UP = "exercise-menu-move-up"
     const val MOVE_DOWN = "exercise-menu-move-down"
     const val HOW_TO_LOG = "exercise-menu-how-to-log"
     const val REMOVE = "exercise-menu-remove"
-    val all = listOf(HISTORY, SWAP, MOVE_UP, MOVE_DOWN, HOW_TO_LOG, REMOVE)
+    val all = listOf(ABOUT, HISTORY, SWAP, MOVE_UP, MOVE_DOWN, HOW_TO_LOG, REMOVE)
 }
 
 /** What the exercise menu asks to confirm before doing it. */
 internal enum class ExerciseConfirm { REMOVE, SWAP }
 
 /**
- * The menu of an exercise card, a bottom sheet under the exercise's name: Exercise history,
- * Swap exercise, Move up, Move down, How to log and Remove exercise (destructive, last). Moving
- * up is disabled for the first exercise ([index] 0) and down for the last of [count]. Each item
- * closes the menu (the caller takes it out of composition) and then does its part.
+ * The menu of an exercise card, a bottom sheet under the exercise's name: About the exercise (the
+ * library's detail of the catalog exercise), Exercise history, Swap exercise, Move up, Move down,
+ * How to log and Remove exercise (destructive, last). Moving up is disabled for the first exercise
+ * ([index] 0) and down for the last of [count]. Each item closes the menu (the caller takes it out
+ * of composition) and then does its part.
  */
 @Composable
 internal fun ExerciseMenuSheet(
     entry: WorkoutExerciseUi,
     index: Int,
     count: Int,
+    onAbout: () -> Unit,
     onHistory: () -> Unit,
     onSwap: () -> Unit,
     onMove: (direction: Int) -> Unit,
@@ -81,7 +86,8 @@ internal fun ExerciseMenuSheet(
     onDismiss: () -> Unit,
 ) {
     MBottomSheet(onDismiss = onDismiss) {
-        SheetTitle(entry.exercise.name)
+        SheetTitle(exerciseName(entry.exercise))
+        MenuItem(MIcons.Dumbbell, stringResource(Res.string.workout_menu_about), ExerciseMenuTags.ABOUT, onClick = onAbout)
         MenuItem(MIcons.History, stringResource(Res.string.workout_menu_history), ExerciseMenuTags.HISTORY, onClick = onHistory)
         MenuItem(MIcons.ArrowLeftRight, stringResource(Res.string.workout_menu_swap), ExerciseMenuTags.SWAP, onClick = onSwap)
         MenuItem(
@@ -136,7 +142,7 @@ internal fun ExerciseConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val name = entry.exercise.name
+    val name = exerciseName(entry.exercise)
     when (confirm) {
         ExerciseConfirm.REMOVE -> MDialog(
             title = stringResource(Res.string.workout_menu_remove),

@@ -86,6 +86,16 @@ internal fun WorkoutErrorToast(
 @Composable
 fun ScreenErrorToast(errorCode: UiError?, actions: MoosclesActions, modifier: Modifier = Modifier) {
     val host = remember { MToastHostState() }
+    ScreenErrorToast(errorCode, actions, host)
+    MToastHost(host, modifier)
+}
+
+/**
+ * [ScreenErrorToast] on a [host] the screen draws itself, for a screen that shows toasts of its own
+ * too (the exercise detail's "Added to …"): the host shows one toast at a time.
+ */
+@Composable
+internal fun ScreenErrorToast(errorCode: UiError?, actions: MoosclesActions, host: MToastHostState) {
     val text = errorCode?.let { uiErrorText(it) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(errorCode) {
@@ -93,5 +103,4 @@ fun ScreenErrorToast(errorCode: UiError?, actions: MoosclesActions, modifier: Mo
         actions.clearError()
         scope.launch { host.show(message, MToastKind.Error) }
     }
-    MToastHost(host, modifier)
 }

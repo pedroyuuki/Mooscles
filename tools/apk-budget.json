@@ -1,8 +1,8 @@
 {
-  "baseCommit": "4f2911cb6b514f9552e283023b4a4482bd6dd555",
-  "baseApkSource": "app-debug-apk artifact of the green CI run 40783553904 on main (after phase 2)",
-  "baseApkBytes": 23119851,
-  "maxGrowthBytes": 1048576,
+  "baseCommit": "739a80039b61cb7edd2c09eeca6320518a44b4c1",
+  "baseApkSource": "app-debug-apk artifact of the green CI run 40983711502 on main (phase 4A base, where feat/phase4a-library starts)",
+  "baseApkBytes": 23652343,
+  "maxGrowthBytes": 629146,
   "maxFontBytes": 921600,
   "maxFontsAndIconsBytes": 1048576
 }

@@ -6,13 +6,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -37,6 +35,7 @@ import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.assertNumbersWhole
 import com.mooscles.screens.assertWorkoutTargets
+import com.mooscles.screens.library.LibraryTags
 import com.mooscles.screens.summary.SummaryRecordsTag
 import com.mooscles.screens.summary.SummaryStat
 import com.mooscles.screens.summary.SummaryStatsTag
@@ -285,6 +284,8 @@ class ActiveWorkoutFlowTest {
     /** In the open exercise picker: sweeps it, searches [query] and picks [exerciseId]. */
     private fun ComposeUiTest.pick(name: String, state: String, query: String, exerciseId: String) {
         await("the exercise picker opens") { exists(hasTestTag(ExercisePickerListTag)) }
+        // Its list is the library's model, built off the main thread: skeleton rows until then.
+        await("the exercise picker's list is built") { !exists(hasTestTag(LibraryTags.SKELETON_ROW)) }
         waitForIdle()
         sweep(name, state)
         onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(SHEET))).performTextReplacement(query)
@@ -308,25 +309,6 @@ class ActiveWorkoutFlowTest {
         if (workout) assertWorkoutTargets(state)
         assertNumbersWhole()
         capture("$name-$state")
-    }
-
-    /**
-     * Takes a capture of each root (the screen, and a dialog or sheet over it) and hands it to the
-     * platform ([saveFlowCapture]: a PNG on iOS). Where `captureToImage` is not supported, says so once and goes on.
-     */
-    private fun ComposeUiTest.capture(state: String) {
-        val roots = onAllNodes(isRoot())
-        val count = roots.fetchSemanticsNodes().size
-        for (i in 0 until count) {
-            // Only the capture may be unsupported; a failure to encode or write the PNG fails the flow.
-            val image = try {
-                roots[i].captureToImage()
-            } catch (failure: Throwable) {
-                println("FLOW capture unsupported ($state): ${failure.message}")
-                return
-            }
-            saveFlowCapture(if (i == 0) state else "$state-$i", image)
-        }
     }
 
     private companion object {

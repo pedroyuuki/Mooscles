@@ -48,8 +48,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.mooscles.designsystem.components.MOverlayWindow
 import com.mooscles.designsystem.components.RestTimerCompact
 import com.mooscles.designsystem.components.RestTimerDock
 import com.mooscles.designsystem.components.RestTimerExpanded
@@ -60,6 +59,7 @@ import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.resources.ds_reps_count
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.RestDuration
+import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_timer_title
 import com.mooscles.screens.resources.workout_timer_title_short
@@ -69,6 +69,7 @@ import com.mooscles.screens.resources.workout_up_next_value
 import com.mooscles.screens.shell.rememberBarRestPhase
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.TimerUi
+import com.mooscles.ui.WorkoutExerciseUi
 import com.mooscles.ui.WorkoutUi
 import org.jetbrains.compose.resources.stringResource
 import com.mooscles.designsystem.resources.Res as DsRes
@@ -84,6 +85,13 @@ private const val COMPACT_FONT_SCALE = 1.5f
 
 /** What −15 s and +15 s move the rest by. */
 private const val ADJUST_SECONDS = 15
+
+/**
+ * The exercise of [workout] whose rest [timer] counts; none for a rest of another workout, or one
+ * without an entry (a rest the rest sheet started before it passed its entry, final review item 1).
+ */
+private fun timerEntryOf(workout: WorkoutUi, timer: TimerUi): WorkoutExerciseUi? =
+    timer.workoutExerciseId?.let { id -> workout.exercises.firstOrNull { it.id == id } }
 
 /** The last rest the layer drew, kept for the exit animation, when the timer already has none. Not state. */
 private class LastRest {
@@ -136,7 +144,14 @@ internal fun WorkoutTimerLayer(
     val keyboard by remember(imeInsets, density) { derivedStateOf { imeInsets.getBottom(density) > 0 } }
     val compact = keyboard || density.fontScale >= COMPACT_FONT_SCALE
 
-    val label = stringResource(Res.string.workout_timer_title_short, current.exerciseName)
+    // By the timer's exercise of this workout (pre-flight F1): on an automatic rest the view model
+    // stores the entry's snapshot name, which does not follow the screen's language (plan decision
+    // 11), so the label shows the entry's name as the screen shows it.
+    val timerEntry = remember(workout, current.workoutExerciseId) { timerEntryOf(workout, current) }
+    val label = stringResource(
+        Res.string.workout_timer_title_short,
+        timerEntry?.let { exerciseName(it.exercise) } ?: current.exerciseName,
+    )
     val visual = phase?.let {
         RestTimerVisual(if (it == TimerPhase.Done) 0 else current.remainingSeconds.coerceAtLeast(0), current.durationSeconds, it, label)
     }
@@ -259,9 +274,13 @@ private fun ExpandedRest(
     actions: MoosclesActions,
     onClose: () -> Unit,
 ) {
-    val entry = timer.workoutExerciseId?.let { id -> workout.exercises.firstOrNull { it.id == id } }
-    val title = if (entry != null) {
-        stringResource(Res.string.workout_timer_title, entry.exercise.name, entry.sets.count { it.completed }, entry.sets.size)
+    val entry = remember(workout, timer.workoutExerciseId) { timerEntryOf(workout, timer) }
+    val done = entry?.sets?.count { it.completed } ?: 0
+    // A rest started from the rest sheet before any set is done has no "set 0 of n": the name alone.
+    val title = if (entry != null && done > 0) {
+        stringResource(Res.string.workout_timer_title, exerciseName(entry.exercise), done, entry.sets.size)
+    } else if (entry != null) {
+        stringResource(Res.string.workout_timer_title_short, exerciseName(entry.exercise))
     } else {
         stringResource(Res.string.workout_timer_title_short, timer.exerciseName)
     }
@@ -276,10 +295,8 @@ private fun ExpandedRest(
     LaunchedEffect(Unit) {
         shown.animateTo(1f, if (reduced) tween(motion.fast) else tween(motion.slow, easing = motion.easeDrawer))
     }
-    Dialog(
-        onDismissRequest = { close() },
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
-    ) {
+    // The design system's overlay window: the host's density and font scale reach the timer.
+    MOverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
         LaunchedEffect(Unit) { focus.requestFocus() }
         Box(

@@ -93,4 +93,14 @@
     </plurals>
     <string name="ds_card_expand">Show sets</string>
     <string name="ds_card_collapse">Hide sets</string>
+    <string name="ds_figure_label">Illustration: start and end of %1$s</string>
+    <string name="ds_figure_show_start">Show the start of the movement</string>
+    <string name="ds_figure_show_end">Show the end of the movement</string>
+    <!-- The body map legend: the swatch of the main muscles and of the secondary ones. -->
+    <string name="ds_body_map_primary">Primary</string>
+    <string name="ds_body_map_secondary">Secondary</string>
+    <!-- The licenses entry of the own media, under CC0 1.0. -->
+    <string name="ds_licenses_mooscles_media">Mooscles illustrations, exercise tips and names</string>
+    <!-- The clear button of the search field. -->
+    <string name="ds_search_clear">Clear search</string>
 </resources>

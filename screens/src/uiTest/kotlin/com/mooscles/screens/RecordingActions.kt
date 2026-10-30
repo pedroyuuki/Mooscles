@@ -56,6 +56,8 @@ class RecordingActions : MoosclesActions {
     override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = record("updateRoutineSet", setId, reps, weightKg)
     override fun inheritRoutineSet(setId: String) = record("inheritRoutineSet", setId)
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = record("updateRoutineExerciseRest", entryId, seconds)
+    override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) =
+        record("createCustomExercise", id, name, muscle, equipment, convention)
     override fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String) =
         record("saveCustomExercise", id, name, muscle, equipment, convention)
     override fun startWorkout(routineId: String?) = record("startWorkout", routineId)
@@ -77,7 +79,8 @@ class RecordingActions : MoosclesActions {
     override fun setTheme(theme: String) = record("setTheme", theme)
     override fun setAutoRest(enabled: Boolean) = record("setAutoRest", enabled)
     override fun setDefaultRest(seconds: Int) = record("setDefaultRest", seconds)
-    override fun startTimer(exerciseName: String, seconds: Int) = record("startTimer", exerciseName, seconds)
+    override fun startTimer(exerciseName: String, seconds: Int, workoutExerciseId: String?) =
+        record("startTimer", exerciseName, seconds, workoutExerciseId)
     override fun pauseTimer() = record("pauseTimer")
     override fun resumeTimer() = record("resumeTimer")
     override fun resetTimer() = record("resetTimer")
