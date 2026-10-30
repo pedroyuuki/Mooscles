@@ -42,14 +42,22 @@ class WorkoutCalculationsBatchTimingTest {
         val expected = oracle.linearRepsPrsForWorkout(data, active.id)
         assertTrue(expected.isNotEmpty())
         assertEquals(expected, WorkoutCalculations.repsPrsForWorkout(data, active.id))
-        // The best of seven: on a shared CI runner another Gradle fork can take the CPU for a whole sample.
+        // The best of seven, measured against the flat scan it replaced on the same machine: an absolute bound
+        // (30 ms) passed locally at ~10 ms but failed on CI runners at 31-44 ms while other Gradle forks ran.
+        // Locally the flat scan takes 8 to 15 times as long once warm; a third of it is the bar (a return to the flat scan is ~1).
         val timesMs = List(7) {
             val started = System.nanoTime()
             WorkoutCalculations.repsPrsForWorkout(data, active.id)
             (System.nanoTime() - started) / 1_000_000
         }
         println("active reps=${timesMs}ms")
-        assertTrue(timesMs.min() < 30, "active reps took ${timesMs}ms")
+        val oracleMs = List(3) {
+            val started = System.nanoTime()
+            oracle.linearRepsPrsForWorkout(data, active.id)
+            (System.nanoTime() - started) / 1_000_000
+        }
+        println("flat scan=${oracleMs}ms")
+        assertTrue(timesMs.min() * 3 < oracleMs.min(), "active reps took ${timesMs}ms, the flat scan ${oracleMs}ms")
     }
 
     @Test fun batchOnLargeHistoryIsFast() {
