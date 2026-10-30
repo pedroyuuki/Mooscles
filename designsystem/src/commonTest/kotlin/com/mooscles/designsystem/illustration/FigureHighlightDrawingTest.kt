@@ -9,13 +9,18 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Where the renderer puts a muscle highlight on the figure (Task 8: spans tuned on the pilot poses). */
+/**
+ * Where the renderer puts a muscle highlight on the figure (Task 8: spans tuned on the pilot poses),
+ * and how it gives the body weight and depth (Task 9: the pilot sheet's critique).
+ */
 class FigureHighlightDrawingTest {
     private val palette = FigurePalette(body = Color(1), far = Color(2), equipment = Color(3), highlight = Color(4))
     private val illustration = MoosclesIllustration()
 
     // At 100 × 100 a pixel is a box unit.
     private val stroke = illustration.figureStroke * 100f
+    private val trunkStroke = illustration.figureTrunkStroke * 100f
+    private val gap = illustration.figureGap * 100f
 
     private val standing = FigurePose(
         hipX = 50f, hipY = 50f, trunk = 0f, head = 0f,
@@ -74,5 +79,51 @@ class FigureHighlightDrawingTest {
             assertTrue(near(shoulder + (joints.getValue(elbow) - shoulder) * 0.4f, delt.end), "and covers 40% of the $elbow arm")
         }
         assertEquals(0, front.lines(palette.far).size, "no far tone from the front")
+    }
+
+    /** The trunk is heavier than the limbs (a body, not a pole), and its highlights halve its own width. */
+    @Test
+    fun trunkIsHeavierThanTheLimbs() {
+        val joints = FigureKinematics.solve(standing).joints
+        val hip = joints.getValue(FigureJoint.HIP)
+        val shoulder = joints.getValue(FigureJoint.SHOULDER)
+        val operations = operations(standing, setOf(FigureSegment.TORSO_FRONT))
+        val trunk = operations.lines(palette.body).single { near(hip, it.start) && near(shoulder, it.end) }
+        assertEquals(trunkStroke, trunk.width, "the trunk's stroke")
+        assertTrue(trunk.width > stroke, "heavier than a limb")
+        val chest = operations.lines(palette.highlight).single()
+        assertEquals(trunkStroke / 2f, chest.width, "the chest takes the front half of the trunk")
+        assertEquals(trunkStroke / 4f, (chest.start - hip).getDistance(), 0.01f)
+    }
+
+    /**
+     * The head and the arms in front get a gap, cleared before they are drawn: the head's before the
+     * trunk (so only the equipment and the far limbs under it go), each lit arm's right before its
+     * bones. From the side only the near arm has one; from the front both arms do.
+     */
+    @Test
+    fun gapsSetTheHeadAndTheArmsInFront() {
+        val joints = FigureKinematics.solve(standing).joints
+        val side = operations(standing, emptySet())
+        val disc = side.filterIsInstance<FigureOperation.GapDisc>().single()
+        assertTrue(near(joints.getValue(FigureJoint.HEAD), disc.center), "the head's gap is on the head")
+        assertEquals(FigureSkeleton.HEAD_RADIUS + illustration.figureHeadStroke * 100f / 2f + gap, disc.radius, 0.01f)
+        val trunkAt = side.indexOfFirst { it is FigureOperation.Line && it.width == trunkStroke }
+        assertTrue(side.indexOf(disc) < trunkAt, "the head's gap comes before the trunk")
+        val dumbbell = side.indexOfFirst { it is FigureOperation.Ring && it.color == palette.equipment }
+        assertTrue(dumbbell in 0 until side.indexOf(disc), "and after the equipment it clears")
+
+        val gaps = side.filterIsInstance<FigureOperation.Gap>()
+        assertEquals(2, gaps.size, "the near upper arm and forearm")
+        for (band in gaps) assertEquals(stroke + 2f * gap, band.width, 0.01f)
+        val shoulder = joints.getValue(FigureJoint.SHOULDER)
+        val elbow = joints.getValue(FigureJoint.ELBOW_NEAR)
+        assertTrue(near(shoulder, gaps[0].start) && near(elbow, gaps[0].end), "the upper arm's gap")
+        val nearArm = side.indexOfLast { it is FigureOperation.Line && near(shoulder, it.start) && near(elbow, it.end) }
+        assertTrue(side.indexOf(gaps[1]) < nearArm, "the gaps come before the near arm")
+        assertTrue(side.indexOf(gaps[0]) > trunkAt, "and after the trunk")
+
+        val front = operations(standing.copy(frontView = true), emptySet())
+        assertEquals(4, front.filterIsInstance<FigureOperation.Gap>().size, "both arms from the front")
     }
 }

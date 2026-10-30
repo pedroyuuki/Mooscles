@@ -25,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -80,9 +82,12 @@ private inline fun ProbeComposition(scope: String) {
 /**
  * One still frame of an exercise: [pose] drawn with forward kinematics in a square that fits the
  * component (give it a size with [modifier]), on a transparent background. The figure is
- * `text.secondary`, the far limbs behind it `text.tertiary`, the equipment `text.tertiary` and the
- * [highlights] `accent.solid`, all with round caps. The geometry is rebuilt only when the size or
- * the pose changes; nothing is drawn to a bitmap. [contentDescription] null makes it decorative.
+ * `text.secondary`, the far limbs behind it [MoosclesFigureColors.farLimb], the equipment
+ * `text.tertiary` and the [highlights] `accent.solid`, all with round caps. The geometry is rebuilt
+ * only when the size or the pose changes; nothing is drawn to a bitmap. The figure composites in an
+ * offscreen layer of its own, so the gaps that set the head and the arms in front of what lies
+ * behind them clear to the background, whatever it is (Task 9). [contentDescription] null makes it
+ * decorative.
  */
 @Composable
 fun ExerciseFigure(
@@ -111,8 +116,11 @@ fun ExerciseFigure(
     } else {
         Modifier
     }
-    Spacer(modifier.then(described).then(draw))
+    Spacer(modifier.then(described).then(OffscreenLayer).then(draw))
 }
+
+/** The figure's own layer: a gap clears what is under it in the figure, not the surface behind. */
+private val OffscreenLayer = Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
 
 /**
  * An exercise's two frames, [start] and [end], for the detail screen (spec D5). They alternate
@@ -276,6 +284,20 @@ internal sealed interface FigureOperation {
     class Frame(val topLeft: Offset, val size: Size, val color: Color, val width: Float) : FigureOperation {
         override fun draw(scope: DrawScope) = scope.drawRect(color, topLeft, size, style = Stroke(width))
     }
+
+    /**
+     * A gap: clears a round-capped band of [width] under a limb drawn next, so the limb reads in
+     * front. [paint] is any opaque color: with `BlendMode.Clear` it never shows.
+     */
+    class Gap(val start: Offset, val end: Offset, val width: Float, val paint: Color) : FigureOperation {
+        override fun draw(scope: DrawScope) =
+            scope.drawLine(paint, start, end, strokeWidth = width, cap = StrokeCap.Round, blendMode = BlendMode.Clear)
+    }
+
+    /** A gap under the head: clears a disc of [radius], so the head ring reads in front of a plate or a bar. */
+    class GapDisc(val center: Offset, val radius: Float, val paint: Color) : FigureOperation {
+        override fun draw(scope: DrawScope) = scope.drawCircle(paint, radius, center, blendMode = BlendMode.Clear)
+    }
 }
 
 /** Which side of a segment a highlight covers: all of it, or the half toward the front or the back. */
@@ -283,9 +305,14 @@ internal enum class Side { ALL, FRONT, BACK }
 
 /**
  * The drawing steps of a solved pose in a [size] canvas: the 100-unit box is the largest centered
- * square. Back to front: equipment, far leg and arm, trunk, neck and head, near leg, near arm; each
- * segment's highlights right after it, so a limb in front covers the trunk's highlight. Limb
- * highlights go on the near limbs, and on the far ones too in a [frontView].
+ * square. Back to front: equipment, far leg and arm, the head's gap, trunk, neck and head, near leg,
+ * the near arm's gap and the near arm; each segment's highlights right after it, so a limb in front
+ * covers the trunk's highlight. The trunk is drawn with the heavier `figureTrunkStroke`, so a
+ * standing figure has a body and not a pole. The gaps (`figureGap` on each side) clear what lies
+ * under the head and the near arm (a plate behind the head, the trunk behind an arm held at the
+ * side), so they read in front at 64 dp (Task 9). Limb highlights go on the near limbs; in a
+ * [frontView] both arms face the viewer, so the far arm is drawn like the near one, gap and
+ * highlights included, and the far leg in the body color, lit.
  */
 internal fun figureOperations(
     joints: Map<FigureJoint, Offset>,
@@ -302,7 +329,9 @@ internal fun figureOperations(
     fun px(point: Offset) = origin + point * scale
     fun at(joint: FigureJoint) = px(joints.getValue(joint))
     val stroke = illustration.figureStroke * side
+    val trunkStroke = illustration.figureTrunkStroke * side
     val thin = illustration.figureHeadStroke * side
+    val gap = illustration.figureGap * side
     val operations = mutableListOf<FigureOperation>()
 
     fun bone(from: FigureJoint, to: FigureJoint, color: Color) {
@@ -314,14 +343,14 @@ internal fun figureOperations(
      * a line half as wide, moved a quarter stroke toward that side, so it stays inside the capsule.
      * [limb] says the segment points away from the trunk, which turns its front the other way.
      */
-    fun highlight(from: FigureJoint, to: FigureJoint, t0: Float, t1: Float, which: Side, limb: Boolean) {
+    fun highlight(from: FigureJoint, to: FigureJoint, t0: Float, t1: Float, which: Side, limb: Boolean, width: Float = stroke) {
         val a = at(from)
         val b = at(to)
         val along = b - a
         val start = a + along * t0
         val end = a + along * t1
         if (which == Side.ALL) {
-            operations += FigureOperation.Line(start, end, palette.highlight, stroke)
+            operations += FigureOperation.Line(start, end, palette.highlight, width)
             return
         }
         val length = along.getDistance()
@@ -331,8 +360,8 @@ internal fun figureOperations(
         val clockwise = Offset(-unit.y, unit.x)
         val toFront = if (limb) -clockwise else clockwise
         val normal = if (which == Side.FRONT) toFront else -toFront
-        val shift = normal * (stroke / 4f)
-        operations += FigureOperation.Line(start + shift, end + shift, palette.highlight, stroke / 2f)
+        val shift = normal * (width / 4f)
+        operations += FigureOperation.Line(start + shift, end + shift, palette.highlight, width / 2f)
     }
 
     fun leg(hip: FigureJoint, knee: FigureJoint, ankle: FigureJoint, toe: FigureJoint, color: Color, lit: Boolean) {
@@ -347,6 +376,11 @@ internal fun figureOperations(
 
     fun arm(elbow: FigureJoint, hand: FigureJoint, color: Color, lit: Boolean) {
         val shoulder = FigureJoint.SHOULDER
+        // In front of the trunk and the head: clear a band around it first.
+        if (lit) {
+            operations += FigureOperation.Gap(at(shoulder), at(elbow), stroke + 2f * gap, palette.body)
+            operations += FigureOperation.Gap(at(elbow), at(hand), stroke + 2f * gap, palette.body)
+        }
         bone(shoulder, elbow, color)
         if (lit && FigureSegment.UPPER_ARM_FRONT in highlights) highlight(shoulder, elbow, 0f, 1f, Side.FRONT, limb = true)
         if (lit && FigureSegment.UPPER_ARM_BACK in highlights) highlight(shoulder, elbow, 0f, 1f, Side.BACK, limb = true)
@@ -368,19 +402,31 @@ internal fun figureOperations(
         }
     }
 
-    // The far side, behind the body. Seen from the front both sides face the viewer: the far limbs
-    // take the body's color and their highlights too.
-    val farColor = if (frontView) palette.body else palette.far
-    leg(FigureJoint.HIP, FigureJoint.KNEE_FAR, FigureJoint.ANKLE_FAR, FigureJoint.TOE_FAR, farColor, lit = frontView)
-    arm(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, farColor, lit = frontView)
+    // The far side, behind the body. Seen from the front both sides face the viewer: the far leg
+    // takes the body's color and its highlights, and the far arm is drawn like the near one, below.
+    if (frontView) {
+        leg(FigureJoint.HIP, FigureJoint.KNEE_FAR, FigureJoint.ANKLE_FAR, FigureJoint.TOE_FAR, palette.body, lit = true)
+    } else {
+        leg(FigureJoint.HIP, FigureJoint.KNEE_FAR, FigureJoint.ANKLE_FAR, FigureJoint.TOE_FAR, palette.far, lit = false)
+        arm(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, palette.far, lit = false)
+    }
 
-    bone(FigureJoint.HIP, FigureJoint.SHOULDER, palette.body)
-    if (FigureSegment.TORSO_FRONT in highlights) highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.FRONT, limb = false)
-    if (FigureSegment.TORSO_BACK in highlights) highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.BACK, limb = false)
+    // The head in front of what is behind it (a plate on the back, a bar): its gap goes before the
+    // trunk and the neck, so it clears the equipment and the far limbs only.
+    val headRadius = FigureSkeleton.HEAD_RADIUS * scale
+    operations += FigureOperation.GapDisc(at(FigureJoint.HEAD), headRadius + thin / 2f + gap, palette.body)
+    operations += FigureOperation.Line(at(FigureJoint.HIP), at(FigureJoint.SHOULDER), palette.body, trunkStroke)
+    if (FigureSegment.TORSO_FRONT in highlights) {
+        highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.FRONT, limb = false, width = trunkStroke)
+    }
+    if (FigureSegment.TORSO_BACK in highlights) {
+        highlight(FigureJoint.HIP, FigureJoint.SHOULDER, 0f, 1f, Side.BACK, limb = false, width = trunkStroke)
+    }
     bone(FigureJoint.SHOULDER, FigureJoint.NECK, palette.body)
-    operations += FigureOperation.Ring(at(FigureJoint.HEAD), FigureSkeleton.HEAD_RADIUS * scale, palette.body, thin)
+    operations += FigureOperation.Ring(at(FigureJoint.HEAD), headRadius, palette.body, thin)
 
     leg(FigureJoint.HIP, FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, FigureJoint.TOE_NEAR, palette.body, lit = true)
+    if (frontView) arm(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, palette.body, lit = true)
     arm(FigureJoint.ELBOW_NEAR, FigureJoint.HAND_NEAR, palette.body, lit = true)
     return operations
 }

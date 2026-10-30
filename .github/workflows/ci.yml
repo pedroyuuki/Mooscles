@@ -204,7 +204,8 @@ jobs:
           # Merged Task 10: 881 + 1 = 882.
           # Phase 4A task 8 (:screens commonTest): ExerciseFiguresTest 8, FigureHighlightsTest 2. 882 + 10 = 892.
           # Task 8 fix round 1 (:designsystem commonTest): FigureHighlightDrawingTest 2. 892 + 2 = 894.
-          MIN_HOST_TESTS: 894
+          # Phase 4A task 9 (:designsystem commonTest): FigureHighlightDrawingTest +2. 894 + 2 = 896.
+          MIN_HOST_TESTS: 896
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -397,7 +398,8 @@ jobs:
           # Phase 4A task 6: BodyMapPathsTest 4, ComponentColorsTest +1 (commonTest); BodyMapTest 4,
           # LicensesScreenTest 1 (uiTest). 313 + 10 = 323.
           # Phase 4A task 8 fix round 1: FigureHighlightDrawingTest 2 (commonTest). 323 + 2 = 325.
-          MIN_DS_IOS_TESTS: 325
+          # Phase 4A task 9: FigureHighlightDrawingTest +2 (commonTest). 325 + 2 = 327.
+          MIN_DS_IOS_TESTS: 327
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

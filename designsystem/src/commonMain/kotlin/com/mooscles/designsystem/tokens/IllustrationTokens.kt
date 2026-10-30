@@ -8,17 +8,22 @@ import androidx.compose.ui.unit.dp
 /**
  * Phase 4A: the strokes of the exercise figures and the body map. The figure values are fractions
  * of the figure's 100-unit box, so a figure reads the same at the 64 dp of a list and at the size
- * of the detail. [figureStroke] is the limbs and trunk (round caps: capsules); [figureHeadStroke]
- * the head ring and the equipment; [figureMargin] how far inside the box a pose keeps its joints
- * and equipment (at least half a [figureStroke], so no stroke is cut). [bodyMapStroke] is the
- * body map's outline, the 1 dp hairline of the spike. Final after the pilot poses (Task 8, on the
- * emulator at 64 dp and at half a phone's width): the starting values held, pinned in
+ * of the detail. [figureStroke] is the limbs (round caps: capsules); [figureTrunkStroke] the
+ * trunk, half as heavy again, so a standing figure reads as a body and not a pole at 64 dp;
+ * [figureHeadStroke] the head ring and the equipment; [figureGap] the band cleared on each side of
+ * the head and of an arm in front, so they read over the trunk or a plate; [figureMargin] how far
+ * inside the box a pose keeps its joints and equipment (at least half a [figureTrunkStroke], so no
+ * stroke is cut). [bodyMapStroke] is the body map's outline, the 1 dp hairline of the spike. The
+ * limb, head and margin values held through the pilot poses (Task 8); the trunk and the gap came
+ * from the pilot sheet's critique (Task 9, on the emulator at 64 dp and at 360 dp). All pinned in
  * `IllustrationTokensTest`.
  */
 @Immutable
 data class MoosclesIllustration(
     val figureStroke: Float = 0.06f,
+    val figureTrunkStroke: Float = 0.09f,
     val figureHeadStroke: Float = 0.04f,
+    val figureGap: Float = 0.012f,
     val figureMargin: Float = 0.05f,
     val bodyMapStroke: Dp = 1.dp,
 )

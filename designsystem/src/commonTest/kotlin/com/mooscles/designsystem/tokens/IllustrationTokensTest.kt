@@ -9,8 +9,9 @@ import kotlin.test.assertTrue
 class IllustrationTokensTest {
     /**
      * Phase 4A (spec D3 and "Onde as figuras vivem"): the figure renderer's values, final after the
-     * 20 pilot poses (Task 8). The strokes and the margin kept their starting values; the skeleton
-     * and the equipment changed.
+     * 20 pilot poses (Task 8) and their sheet (Task 9). The limb and head strokes and the margin
+     * kept their starting values; the skeleton and the equipment changed; the trunk stroke and the
+     * gap were added.
      */
     @Test
     fun valuesArePinned() {
@@ -19,6 +20,10 @@ class IllustrationTokensTest {
         assertEquals(0.06f, i.figureStroke)
         assertEquals(0.04f, i.figureHeadStroke)
         assertEquals(0.05f, i.figureMargin)
+        // From the pilot sheet's critique (Task 9): a trunk half as heavy again as a limb, and the
+        // band cleared on each side of the head and of an arm in front (about 2 px at 64 dp).
+        assertEquals(0.09f, i.figureTrunkStroke)
+        assertEquals(0.012f, i.figureGap)
         // The body map's outline: the 1 dp hairline the spike used (sizes.border).
         assertEquals(1.dp, i.bodyMapStroke)
         // The far limbs' tone (Task 8 fix round 1): iron 57 in both themes.
@@ -26,6 +31,7 @@ class IllustrationTokensTest {
         assertEquals(Primitives.ferro57, MoosclesFigureColors.Dark.farLimb)
         // A pose that keeps its joints `figureMargin` inside the box keeps its whole stroke inside too.
         assertTrue(i.figureMargin >= i.figureStroke / 2, "the margin holds half a limb stroke")
+        assertTrue(i.figureMargin >= i.figureTrunkStroke / 2, "and half the trunk's")
         // The bones of the 100-unit box, final after the pilot poses (Task 8). The spec's example
         // (trunk 30, thigh 21…) did not leave room for a standing overhead lockout with its plate, so
         // the body is about two thirds of the box tall, in human proportions (trunk 19, arm 12 + 13,
