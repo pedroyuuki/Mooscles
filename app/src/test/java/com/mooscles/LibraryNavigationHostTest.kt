@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.components.ExerciseMenuTag
@@ -14,6 +15,7 @@ import com.mooscles.designsystem.components.MTabBarTag
 import com.mooscles.screens.exercise.ExerciseInfoScreenTag
 import com.mooscles.screens.library.LibraryScreenTag
 import com.mooscles.screens.library.LibraryTags
+import com.mooscles.screens.shell.ShellTabs
 import com.mooscles.ui.*
 import java.lang.reflect.Proxy
 import org.junit.Assert.*
@@ -178,6 +180,66 @@ class LibraryNavigationHostTest {
         compose.onNodeWithTag(LibraryScreenTag).assertIsDisplayed()
         compose.onAllNodesWithTag(LibraryTags.SKELETON_ROW).onFirst().assertIsDisplayed()
         compose.onAllNodes(spinner).assertCountEquals(0)
+    }
+
+    /**
+     * Final review, item 4: in the first frames after a recreation the back stack is not there yet.
+     * Those frames must not count as Train: on the library and on the detail, while the state
+     * reloads with an error, neither the app's spinner nor the global snackbar may flash.
+     */
+    @Test fun aRecreationWhileLoadingNeverFlashesTheOverlayOrTheSnackbar() {
+        clearErrorClears = false
+        state = mutableStateOf(UiState(loading = false, exercises = catalog, routines = listOf(push), history = listOf(past)))
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MoosclesApp(state.value, actions) }
+        compose.waitForIdle()
+        openLibrary()
+        recreateWhileLoading(restoration)
+        compose.onNodeWithTag(LibraryScreenTag).assertIsDisplayed()
+
+        compose.runOnIdle { state.value = state.value.copy(loading = false, exercises = catalog, error = null, errorCode = null) }
+        compose.waitForIdle()
+        openRow(incline)
+        recreateWhileLoading(restoration)
+        compose.onNodeWithTag("exercise-info-loading").assertIsDisplayed()
+    }
+
+    /** Reloads with an error and recreates: the route keeps its own placeholder, with no spinner and no snackbar. */
+    private fun recreateWhileLoading(restoration: StateRestorationTester) {
+        compose.runOnIdle {
+            state.value = state.value.copy(loading = true, exercises = emptyList(), error = "Raw reload failure", errorCode = UiError.SAVE_FAILED)
+        }
+        compose.waitForIdle()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onAllNodes(spinner).assertCountEquals(0)
+        compose.onNodeWithText("Raw reload failure").assertDoesNotExist()
+    }
+
+    /**
+     * Final review, item 4: the first frame after a recreation has no back stack entry yet. It
+     * keeps the route the last entry had (the library, the detail, the summary), never Train, so
+     * neither the app's spinner nor the global snackbar flash on a new screen.
+     */
+    @Test fun theFrameWithoutAnEntryKeepsTheLastRoute() {
+        val entry = mutableStateOf<ShownRoute?>(ShownRoute(ShellTabs.LIBRARY))
+        val frames = mutableListOf<ShownRoute>()
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent {
+            val current = entry.value
+            frames += rememberShownRoute(current?.route, current?.summary ?: false)
+        }
+        compose.waitForIdle()
+        for (shown in listOf(ShownRoute(ShellTabs.LIBRARY), ShownRoute(EXERCISE_INFO_ROUTE), ShownRoute("workoutDetail/{id}?summary={summary}", summary = true))) {
+            compose.runOnIdle { entry.value = shown }
+            compose.waitForIdle()
+            // The recreation: the new composition starts without an entry.
+            compose.runOnIdle { entry.value = null; frames.clear() }
+            restoration.emulateSavedInstanceStateRestore()
+            assertEquals(listOf(shown), frames.distinct())
+            assertTrue(frames.last().newScreen)
+            assertEquals(shown.summary, frames.last().loadingOverlay)
+        }
+        assertFalse(ShownRoute(ShellTabs.TRAIN).newScreen)
     }
 
     private fun reload() {

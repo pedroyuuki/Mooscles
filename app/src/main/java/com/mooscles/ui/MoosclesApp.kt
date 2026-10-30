@@ -47,6 +47,41 @@ private fun NavHostController.openExerciseInfo(id: String) = navigate("exerciseI
 }
 
 /**
+ * The routes of the new screens that show their own placeholders while the state loads (decision
+ * 17, pre-flight F21) and their own errors (decision 19, plan 4A decision 14). The one list both
+ * the snackbar and the loading overlay read.
+ */
+private val OWN_PLACEHOLDER_ROUTES = setOf(WORKOUT_ROUTE, ShellTabs.LIBRARY, EXERCISE_INFO_ROUTE)
+
+/** The route the app's frame is drawn for, and [summary] when it is the end-of-workout summary. */
+internal data class ShownRoute(val route: String, val summary: Boolean = false) {
+    /** A new screen: its own top bar, background and errors (the summary too). */
+    val newScreen: Boolean get() = route in OWN_PLACEHOLDER_ROUTES || summary
+    /** Whether the app's spinner covers it while the state loads (not the routes with their own placeholders). */
+    val loadingOverlay: Boolean get() = route !in OWN_PLACEHOLDER_ROUTES
+}
+
+/**
+ * The route of the back stack entry in view, given as its [entryRoute] and [entrySummary] (null
+ * without an entry). Only a real entry counts (as the selected tab): the first frame after a
+ * recreation has none yet, and it keeps the route the last entry had (saved), so the library,
+ * the detail or the summary are not drawn for one frame as Train, with the app's spinner or the
+ * global snackbar (final review, item 4). Before any entry, it is Train, the start destination.
+ */
+@Composable
+internal fun rememberShownRoute(entryRoute: String?, entrySummary: Boolean): ShownRoute {
+    var savedRoute by rememberSaveable { mutableStateOf(ShellTabs.TRAIN) }
+    var savedSummary by rememberSaveable { mutableStateOf(false) }
+    SideEffect {
+        if (entryRoute != null) {
+            savedRoute = entryRoute
+            savedSummary = entrySummary
+        }
+    }
+    return if (entryRoute != null) ShownRoute(entryRoute, entrySummary) else ShownRoute(savedRoute, savedSummary)
+}
+
+/**
  * The app: the old screens and, from `:screens`, the active workout ([ActiveWorkoutRoute]), the
  * end-of-workout summary ([WorkoutSummaryScreen]), the library tab ([LibraryRoute]), the exercise
  * detail ([ExerciseInfoRoute], [EXERCISE_INFO_ROUTE]) and the shell's bottom ([AppShellBottom]).
@@ -79,8 +114,9 @@ fun MoosclesApp(
     MoosclesTheme(state.preferences.theme) {
         val nav = rememberNavController()
         val entry by nav.currentBackStackEntryAsState()
-        val route = entry?.destination?.route ?: ShellTabs.TRAIN
-        val summary = route == DETAIL_ROUTE && entry?.arguments?.getBoolean(SUMMARY_ARG) == true
+        val entryRoute = entry?.destination?.route
+        val shown = rememberShownRoute(entryRoute, entryRoute == DETAIL_ROUTE && entry?.arguments?.getBoolean(SUMMARY_ARG) == true)
+        val route = shown.route
         val fallbackTimer = rememberUpdatedState(state.timer)
         val timer = timerState ?: fallbackTimer
 
@@ -188,7 +224,7 @@ fun MoosclesApp(
         // clear it; the global snackbar waits until the workout, the summary, the library or the
         // exercise detail is left.
         val snack = remember { SnackbarHostState() }
-        val newScreen = route == WORKOUT_ROUTE || summary || route == ShellTabs.LIBRARY || route == EXERCISE_INFO_ROUTE
+        val newScreen = shown.newScreen
         LaunchedEffect(state.error, newScreen) {
             if (!newScreen) state.error?.let { snack.showSnackbar(it); actions.clearError() }
         }
@@ -258,7 +294,7 @@ fun MoosclesApp(
                     composable(DeveloperGallery.ROUTE) { DeveloperGalleryRoute(nav) }
                 }
                 // The new screens show their own placeholders while loading (decision 17, pre-flight F21).
-                if (state.loading && route != WORKOUT_ROUTE && route != ShellTabs.LIBRARY && route != EXERCISE_INFO_ROUTE) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                if (state.loading && shown.loadingOverlay) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
         }
     }
