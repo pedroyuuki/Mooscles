@@ -65,6 +65,7 @@ Cada uma gera `research/` + `reports/` antes da spec da fase que depende dela.
 | P2 | Fonte de mídia dos exercícios: bancos abertos ou licenciáveis de imagens, GIFs e vídeos, licença comercial e de redistribuição, formato e tamanho (WebP animado, MP4 curto, Lottie), hospedagem gratuita para download sob demanda | Fase 4 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-midia-exercicios.md) |
 | P3 | Bibliotecas multiplataforma para gráficos, animações (Lottie no Compose Multiplatform), carregamento de imagens com cache e players de vídeo | Fases 2 e 4 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-bibliotecas-cmp-graficos-animacao-midia.md) (5 spikes antes da spec) |
 | P4 | Fontes e ícones com licença livre (OFL) que funcionem bem com números grandes e tabulares | Fase 2 **Feita em 2026-10-27:** [relatório](reports/2026-10-27-fontes-icones-livres.md) (confirmar `tnum` no iOS antes de escolher a fonte dos números) |
+| P5 | Figuras de exercício e mapa muscular: bibliotecas, acervos, poses e IA | Fase 4 **Feita em 2026-10-29:** [relatório](reports/2026-10-29-figuras-mapa-muscular.md) |
 
 ## Fases
 
