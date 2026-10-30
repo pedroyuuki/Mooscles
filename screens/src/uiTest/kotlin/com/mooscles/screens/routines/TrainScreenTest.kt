@@ -216,9 +216,10 @@ class TrainScreenTest {
         tall: Boolean = true,
         height: Dp? = null,
         restoration: ScreenRestoration? = null,
+        density: Float? = null,
     ): Requests {
         val requests = Requests()
-        withScreen(locale = locale, fontScale = fontScale, restoration = restoration) {
+        withScreen(locale = locale, fontScale = fontScale, restoration = restoration, density = density) {
             TopAnchored(height ?: if (tall) 2400.dp else null, width) {
                 TrainRoute(
                     state = state.value,
@@ -255,6 +256,14 @@ class TrainScreenTest {
         onNodeWithTag(tag).performClick()
         waitForIdle()
     }
+
+    /** How far the scrolling node under [tag] can scroll down (its range's maximum). */
+    private fun ComposeUiTest.scrollRangeOf(tag: String): Float =
+        onNodeWithTag(tag).fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].maxValue()
+
+    /** The node under [tag] is composed and in sight (a clipped or absent one is not). */
+    private fun ComposeUiTest.isShown(tag: String): Boolean =
+        onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() && runCatching { onNodeWithTag(tag).assertIsDisplayed() }.isSuccess
 
     private fun ComposeUiTest.textsOf(tag: String): List<String> =
         onNodeWithTag(tag).fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text }
@@ -738,9 +747,18 @@ class TrainScreenTest {
     @Test
     fun routineMenuScrollsAtTwoXInAShortWindow() = runComposeUiTest {
         val fake = Fake(stateOf())
-        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp)
+        // The menu is a sheet, a window of its own: a screen 1.5 times as dense is what makes it short enough to overflow.
+        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp, density = density.density * 1.5f)
         openMenu("a")
         onNodeWithTag(TrainTags.MENU_LIST).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        // A real overflow: the list scrolls, its last item is out of sight until it does, and in sight after.
+        assertTrue(scrollRangeOf(TrainTags.MENU_LIST) > 0f, "the card menu does not overflow")
+        assertTrue(!isShown(TrainTags.MENU_DELETE), "the last item of the card menu is shown before scrolling")
+        onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_DELETE))
+        waitForIdle()
+        assertTrue(isShown(TrainTags.MENU_DELETE), "the last item of the card menu is not shown after scrolling")
+        onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_EDIT))
+        waitForIdle()
         assertClickablesLabeledAndSized("Train menu at 2x")
         onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_BOTTOM))
         pick(TrainTags.MENU_BOTTOM)
@@ -755,12 +773,17 @@ class TrainScreenTest {
     fun moveSheetScrollsWithManyFolders() = runComposeUiTest {
         val many = folders + List(12) { RoutineFolderUi("extra$it", "Pasta extra $it") }
         val fake = Fake(stateOf().apply { value = value.copy(routineFolders = many) })
-        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp)
+        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp, density = density.density * 1.5f)
         openMenu("a")
         onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_MOVE))
         pick(TrainTags.MENU_MOVE)
         onNodeWithTag(TrainTags.MOVE_LIST).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        // A real overflow: the last folder is out of sight until the list scrolls, and in sight after.
+        assertTrue(scrollRangeOf(TrainTags.MOVE_LIST) > 0f, "the move sheet does not overflow")
+        assertTrue(!isShown(TrainTags.moveTo("extra11")), "the last folder is shown before scrolling")
         onNodeWithTag(TrainTags.MOVE_LIST).performScrollToNode(hasTestTag(TrainTags.moveTo("extra11")))
+        waitForIdle()
+        assertTrue(isShown(TrainTags.moveTo("extra11")), "the last folder is not shown after scrolling")
         pick(TrainTags.moveTo("extra11"))
         assertEquals("moveRoutineToFolder:a,extra11", fake.calls.last())
     }

@@ -248,6 +248,7 @@ jobs:
           # screens went; reorder goes through reorderRoutines. 1083 - 1 = 1082. No :shared test changed, so MIN_IOS_TESTS stays 275.
           # Phase 4B task 14 fix round 1: (:screens commonTest) PlannedSetDraftsTest +2 (foldedEchoesDoNotLeaveTheLastWritePending,
           # forgottenWritesLetTheSavedValuesBackAndTheNextEditWriteAgain). 1082 + 2 = 1084.
+          # Phase 4B tasks 16-17: only uiTest classes changed (they do not run on the host), so MIN_HOST_TESTS stays 1084.
           MIN_HOST_TESTS: 1084
         run: |
           $files = @(
@@ -556,7 +557,13 @@ jobs:
           # replacingAnExerciseDropsItsDraftsAndNeverWritesTheOldLoad, aFailedWriteLetsTheSavedValueBackAfterTheError). 612 + 7 = 619.
           # MIN_DS_IOS_TESTS stays 367 (no designsystem test changed).
           # Phase 4B task 16: RoutinesFlowTest 2 (uiTest: routinesFlowPortugueseLightAtOneX, routinesFlowEnglishDarkAtTwoX). 619 + 2 = 621.
-          MIN_SCREENS_IOS_TESTS: 621
+          # Phase 4B task 17: TapBudgetTest +5 (uiTest: buildARoutineWithFiveExercises, moveTheFifthExerciseToTheTop,
+          # addAPlannedSetLikeTheOneAbove, markAPlannedSetAsWarmup, startAWorkoutFromARoutine); RoutinesAccessibilitySweepTest 11
+          # (uiTest: trainWithRoutines, trainEmptyFolder, trainLoading, folderManager, folderDeleteDialog, editorWithWarmup,
+          # editorWithASetInEdit, editorEmpty, multiplePicker, trainReadingOrder, editorReadingOrder). 621 + 16 = 637.
+          # TrainScreenTest's two overflow tests (routineMenuScrollsAtTwoXInAShortWindow, moveSheetScrollsWithManyFolders)
+          # were strengthened in place (+0). 619 + 18 = 637.
+          MIN_SCREENS_IOS_TESTS: 637
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
