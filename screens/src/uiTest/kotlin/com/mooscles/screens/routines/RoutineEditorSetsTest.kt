@@ -9,7 +9,9 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -240,13 +242,14 @@ class RoutineEditorSetsTest {
     @Test
     fun labelsNumberWorkingSetsAndMarkWarmups() = runComposeUiTest {
         show()
-        label("e1w").assertTextEquals("A").assertContentDescriptionEquals("Série de aquecimento")
+        label("e1w").assertTextEquals("A").assertContentDescriptionEquals("Aquecimento 1")
         label("e1a").assertTextEquals("1").assertContentDescriptionEquals("Série 1")
         label("e1b").assertTextEquals("2").assertContentDescriptionEquals("Série 2")
         // The numbers count the working sets only.
         label("e2a").assertTextEquals("1")
         load("e1a").assertContentDescriptionEquals("Carga da série 1")
-        load("e1w").assertContentDescriptionEquals("Carga da série 1")
+        load("e1w").assertContentDescriptionEquals("Carga do aquecimento 1")
+        reps("e1w").assertContentDescriptionEquals("Repetições do aquecimento 1")
         assertEquals("80", load("e1a").editableText())
         assertEquals("8", reps("e1a").editableText())
     }
@@ -598,5 +601,91 @@ class RoutineEditorSetsTest {
         // The start button stays above the keyboard as well.
         val start = onNodeWithTag(RoutineEditorTags.START).fetchSemanticsNode().boundsInRoot
         assertTrue(start.bottom <= keyboardTop + 1f, "start $start below the keyboard")
+    }
+
+    @Test
+    fun onlyTheTypeItemsReportSelected() = runComposeUiTest {
+        show()
+        openMenu("e1a")
+        // The two type items are a choice: selected or not. Remove and Follow are plain buttons that say nothing.
+        onNodeWithTag(PlannedSetMenuTags.NORMAL).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected))
+        onNodeWithTag(PlannedSetMenuTags.WARMUP).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected))
+        onNodeWithTag(PlannedSetMenuTags.FOLLOW).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+        onNodeWithTag(PlannedSetMenuTags.REMOVE).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+    }
+
+    @Test
+    fun warmupsAreNamedAmongWarmupsNotAmongTheWorkingSets() = runComposeUiTest {
+        val two = e1.copy(setTargets = listOf(set("w1", 10, 40.0, warmup = true), set("w2", 8, 60.0, warmup = true), set("a", 8, 80.0, inherited = false)))
+        val fake = Fake(stateOf(two, e2))
+        show(fake.state, fake)
+        label("w2").assertContentDescriptionEquals("Aquecimento 2")
+        label("a").assertContentDescriptionEquals("Série 1")
+        load("w2").assertContentDescriptionEquals("Carga do aquecimento 2")
+        load("a").assertContentDescriptionEquals("Carga da série 1")
+        load("w2").performClick()
+        waitForIdle()
+        onNodeWithContentDescription("Editando carga do aquecimento 2").assertIsDisplayed()
+        reps("w2").performClick()
+        waitForIdle()
+        onNodeWithContentDescription("Editando repetições do aquecimento 2").assertIsDisplayed()
+        openMenu("w2")
+        pick(PlannedSetMenuTags.REMOVE)
+        toastWith("Aquecimento 2 removido").assertIsDisplayed()
+    }
+
+    @Test
+    fun undoAfterTheExerciseIsReplacedDoesNotRestore() = runComposeUiTest {
+        val fake = Fake(stateOf(e1, e2, e3))
+        show(fake.state, fake)
+        openMenu("e1b")
+        pick(PlannedSetMenuTags.REMOVE)
+        toastWith("Série 2 removida").assertIsDisplayed()
+        // The entry keeps its id and its sets' ids but holds another exercise now.
+        fake.editEntries { list -> list.map { if (it.id == "e1") it.copy(exercise = row) else it } }
+        waitForIdle()
+        onAllNodesWithText("Desfazer").assertCountEquals(0)
+        assertTrue(fake.calls.none { it.startsWith("restoreRoutineSet") }, fake.calls.toString())
+    }
+
+    @Test
+    fun replacingAnExerciseDropsItsDraftsAndNeverWritesTheOldLoad() = runComposeUiTest {
+        val fake = Fake(stateOf(e1, e2, e3)).apply { echo = false }
+        show(fake.state, fake)
+        load("e1a").performTextReplacement("20")
+        waitForIdle()
+        assertEquals("20", load("e1a").editableText())
+        fake.editEntries { list ->
+            list.map { e ->
+                if (e.id != "e1") e else e.copy(exercise = pullUp, setTargets = e.setTargets.map { it.copy(weightKg = null, reps = 12, inherited = true) })
+            }
+        }
+        waitForIdle()
+        assertEquals("", load("e1a").editableText())
+        assertEquals("12", reps("e1a").editableText())
+        reps("e1a").performTextReplacement("13")
+        waitForIdle()
+        assertEquals("updateRoutineSet:e1a,13,null", fake.writes().last())
+    }
+
+    @Test
+    fun aFailedWriteLetsTheSavedValueBackAfterTheError() = runComposeUiTest {
+        val fake = Fake(stateOf(e1, e2, e3)).apply { echo = false }
+        show(fake.state, fake)
+        reps("e1a").performTextReplacement("11")
+        waitForIdle()
+        assertEquals("11", reps("e1a").editableText())
+        fake.state.value = fake.state.value.copy(errorCode = UiError.SAVE_FAILED)
+        waitForIdle()
+        // The row is still in edit (typing focused it): it keeps what was typed until the person leaves it.
+        assertEquals("11", reps("e1a").editableText())
+        reveal(RoutineEditorTags.header("e1"))
+        onNodeWithTag(RoutineEditorTags.header("e1")).performClick()
+        waitForIdle()
+        assertEquals("8", reps("e1a").editableText())
+        // Nothing is waited for any more: the next edit writes again.
+        reps("e1a").performTextReplacement("11")
+        waitForIdle()
+        assertEquals(2, fake.writes().size)
     }
 }

@@ -246,7 +246,9 @@ jobs:
           # Post-15 cleanup (:app): RoutineFolderPersistenceTest.routineMoveUsesNeighborsInItsFolderWithoutChangingOtherFoldersOrActiveWorkout
           # retired (-1, sdk 35 only): MoosclesActions.moveRoutine and WorkoutRepository.moveRoutine were removed, no caller since the old routine
           # screens went; reorder goes through reorderRoutines. 1083 - 1 = 1082. No :shared test changed, so MIN_IOS_TESTS stays 275.
-          MIN_HOST_TESTS: 1082
+          # Phase 4B task 14 fix round 1: (:screens commonTest) PlannedSetDraftsTest +2 (foldedEchoesDoNotLeaveTheLastWritePending,
+          # forgottenWritesLetTheSavedValuesBackAndTheNextEditWriteAgain). 1082 + 2 = 1084.
+          MIN_HOST_TESTS: 1084
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -547,7 +549,11 @@ jobs:
           # Phase 4B task 12 fix round 1: FolderManagerSheetTest +2 (uiTest: menuMovesReorderAndAnnounce, errorWhileManagingShowsInTheSheet). 578 + 2 = 580.
           # Phase 4B task 14: PlannedSetDraftsTest 13 (commonTest); RoutineEditorSetsTest 19 (uiTest: the 17 of the brief,
           # removeKeepsAPendingEditInTheSnapshot, restoringTheFiftyFirstSetSaysTheLimit). 580 + 32 = 612.
-          MIN_SCREENS_IOS_TESTS: 612
+          # Phase 4B task 14 fix round 1: PlannedSetDraftsTest +2 (commonTest); RoutineEditorSetsTest +5 (uiTest: onlyTheTypeItemsReportSelected,
+          # warmupsAreNamedAmongWarmupsNotAmongTheWorkingSets, undoAfterTheExerciseIsReplacedDoesNotRestore,
+          # replacingAnExerciseDropsItsDraftsAndNeverWritesTheOldLoad, aFailedWriteLetsTheSavedValueBackAfterTheError). 612 + 7 = 619.
+          # MIN_DS_IOS_TESTS stays 367 (no designsystem test changed).
+          MIN_SCREENS_IOS_TESTS: 619
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

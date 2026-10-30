@@ -79,6 +79,7 @@ import com.mooscles.screens.resources.editor_replace_body
 import com.mooscles.screens.resources.editor_replace_confirm
 import com.mooscles.screens.resources.editor_replace_title
 import com.mooscles.screens.resources.editor_set_limit
+import com.mooscles.screens.resources.editor_warmup_removed
 import com.mooscles.screens.resources.editor_start
 import com.mooscles.screens.resources.workout_set_removed
 import com.mooscles.screens.resources.workout_undo
@@ -315,8 +316,29 @@ fun RoutineEditorRoute(
         editing.setId?.let { if (it !in sets) editing.end() }
     }
     val removedTemplate = stringResource(Res.string.workout_set_removed, SET_NUMBER_TOKEN)
+    val warmupRemovedTemplate = stringResource(Res.string.editor_warmup_removed, SET_NUMBER_TOKEN)
     val undoText = stringResource(Res.string.workout_undo)
     var undoJob by remember { mutableStateOf<Job?>(null) }
+    // The entry and exercise the pending undo belongs to: once the entry holds another exercise (a replacement keeps
+    // the entry and set ids), the set would come back into a different movement, so the offer is withdrawn.
+    var undoFor by remember { mutableStateOf<Pair<String, String>?>(null) }
+    LaunchedEffect(entries) {
+        val (entryId, exerciseId) = undoFor ?: return@LaunchedEffect
+        val entry = entries.firstOrNull { it.id == entryId }
+        if (!state.loading && entry != null && entry.exercise.id != exerciseId) {
+            undoJob?.cancel()
+            undoFor = null
+        }
+    }
+    // A write failed: none in flight will be echoed. The rows not in edit show the saved values again at once; the one
+    // in edit does when it is left.
+    val failedCode = state.errorCode?.takeUnless { it == UiError.SET_LIMIT || it == UiError.SET_NOT_RESTORED }
+    LaunchedEffect(failedCode) {
+        if (failedCode != null) {
+            drafts.forgetWrites()
+            sets.keys.filterNot { editing.isEditing(it) }.forEach(drafts::settle)
+        }
+    }
     val callbacks = remember(drafts) {
         RoutineExerciseCallbacks(
             onMenu = { menuFor = it.id },
@@ -339,8 +361,10 @@ fun RoutineEditorRoute(
         if (editing.isEditing(set.id)) editing.end()
         currentActions.removeRoutineSet(set.id)
         undoJob?.cancel()
+        undoFor = entry.id to entry.exercise.id
+        val template = if (set.warmup) warmupRemovedTemplate else removedTemplate
         undoJob = toastScope.launch {
-            val shown = host.show(removedTemplate.replace(SET_NUMBER_TOKEN, number.toString()), MToastKind.Info, undoText)
+            val shown = host.show(template.replace(SET_NUMBER_TOKEN, number.toString()), MToastKind.Info, undoText)
             if (shown == MToastResult.ActionPerformed) currentActions.restoreRoutineSet(entry.id, index, snapshot)
         }
     }
@@ -529,7 +553,7 @@ fun RoutineEditorRoute(
             if (!state.loading) LaunchedEffect(id) { setMenuFor = null }
         } else {
             val index = entry.setTargets.indexOf(set)
-            val number = if (set.warmup) index + 1 else entry.setTargets.take(index + 1).count { !it.warmup }
+            val number = entry.setTargets.take(index + 1).count { it.warmup == set.warmup }
             PlannedSetMenuSheet(
                 set = set,
                 number = number,

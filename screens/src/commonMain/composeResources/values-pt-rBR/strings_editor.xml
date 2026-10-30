@@ -34,8 +34,12 @@
     <string name="editor_set_follow_record">Seguir o recorde</string>
     <string name="editor_set_remove">Remover série</string>
     <string name="editor_set_last">Uma rotina precisa de pelo menos uma série por exercício.</string>
-    <string name="editor_add_set">Adicionar série</string>
     <string name="editor_set_limit">Até 50 séries por exercício.</string>
     <string name="editor_set_label">Série %1$d</string>
-    <string name="editor_set_warmup_label">Série de aquecimento</string>
+    <string name="editor_set_warmup_label">Aquecimento %1$d</string>
+    <string name="editor_warmup_load_of_set">Carga do aquecimento %1$d</string>
+    <string name="editor_warmup_reps_of_set">Repetições do aquecimento %1$d</string>
+    <string name="editor_editing_warmup_load">Editando carga do aquecimento %1$d</string>
+    <string name="editor_editing_warmup_reps">Editando repetições do aquecimento %1$d</string>
+    <string name="editor_warmup_removed">Aquecimento %1$d removido</string>
 </resources>

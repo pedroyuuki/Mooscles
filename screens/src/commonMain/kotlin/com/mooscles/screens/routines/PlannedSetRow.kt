@@ -60,6 +60,8 @@ import com.mooscles.screens.resources.editor_set_label
 import com.mooscles.screens.resources.editor_set_no_load
 import com.mooscles.screens.resources.editor_set_warmup_label
 import com.mooscles.screens.resources.editor_set_warmup_short
+import com.mooscles.screens.resources.editor_warmup_load_of_set
+import com.mooscles.screens.resources.editor_warmup_reps_of_set
 import com.mooscles.screens.resources.workout_load_of_set
 import com.mooscles.screens.resources.workout_reps_of_set
 import com.mooscles.screens.workout.FieldTapGuard
@@ -86,8 +88,7 @@ private const val BLANK_REPS = "—"
  * the icon goes when the state shows it). Blank load is "No load" (or "Bodyweight" for an exercise logged with the
  * body's weight), blank reps are "—" and stand for 0. The row in edit is brought into view, above the keyboard too.
  *
- * [number] numbers the working sets (0 for a warm-up) and [position] is the 1-based place among all the sets of
- * [entry], which names the fields of a warm-up. The row is not one node: its label and fields stay their own, so a
+ * [number] numbers the set among its kind (working sets and warm-ups are counted apart), and names its fields. The row is not one node: its label and fields stay their own, so a
  * screen reader reaches and edits them.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -96,7 +97,6 @@ internal fun PlannedSetRow(
     set: RoutineSetUi,
     entry: PlannedExerciseUi,
     number: Int,
-    position: Int,
     pounds: Boolean,
     drafts: PlannedSetDrafts,
     editing: PlannedEditing,
@@ -106,7 +106,6 @@ internal fun PlannedSetRow(
 ) {
     val editingThis = editing.isEditing(set.id)
     val target = if (editingThis) editing.field else null
-    val fieldNumber = if (set.warmup) position else number
 
     // The state shows this set (after our write or a change from elsewhere), then the drafts that only repeat it go.
     LaunchedEffect(set) { drafts.acknowledge(set) }
@@ -200,7 +199,7 @@ internal fun PlannedSetRow(
                     onValueChange = { text -> drafts.edit(set.id, SetField.LOAD, text)?.let(onWrite) },
                     kind = NumericKind.Load,
                     // The placeholder is not read by itself: a blank load is named in the field's label.
-                    accessibilityLabel = stringResource(Res.string.workout_load_of_set, fieldNumber).let { if (loadText.isEmpty()) "$it, $noLoad" else it },
+                    accessibilityLabel = stringResource(if (set.warmup) Res.string.editor_warmup_load_of_set else Res.string.workout_load_of_set, number).let { if (loadText.isEmpty()) "$it, $noLoad" else it },
                     modifier = Modifier.testTag(RoutineEditorTags.setLoad(set.id)),
                     suggested = noLoad,
                     selected = target == SetField.LOAD,
@@ -222,7 +221,7 @@ internal fun PlannedSetRow(
                 value = repsText,
                 onValueChange = { text -> drafts.edit(set.id, SetField.REPS, text)?.let(onWrite) },
                 kind = NumericKind.Reps,
-                accessibilityLabel = stringResource(Res.string.workout_reps_of_set, fieldNumber),
+                accessibilityLabel = stringResource(if (set.warmup) Res.string.editor_warmup_reps_of_set else Res.string.workout_reps_of_set, number),
                 modifier = Modifier.testTag(RoutineEditorTags.setReps(set.id)),
                 suggested = BLANK_REPS,
                 selected = target == SetField.REPS,
@@ -274,7 +273,7 @@ internal fun PlannedSetRow(
             }
         }
         if (target != null) {
-            PlannedStepperPanel(set, fieldNumber, target, drafts, editing, pounds, onWrite)
+            PlannedStepperPanel(set, number, target, drafts, editing, pounds, onWrite)
         }
     }
 }
@@ -285,7 +284,7 @@ private fun SetLabel(set: RoutineSetUi, number: Int, onMenu: () -> Unit) {
     val source = remember { MutableInteractionSource() }
     val shape = RoundedCornerShape(MTheme.radius.md)
     val text = if (set.warmup) stringResource(Res.string.editor_set_warmup_short) else number.toString()
-    val spoken = if (set.warmup) stringResource(Res.string.editor_set_warmup_label) else stringResource(Res.string.editor_set_label, number)
+    val spoken = if (set.warmup) stringResource(Res.string.editor_set_warmup_label, number) else stringResource(Res.string.editor_set_label, number)
     Box(
         Modifier
             .testTag(RoutineEditorTags.setLabel(set.id))

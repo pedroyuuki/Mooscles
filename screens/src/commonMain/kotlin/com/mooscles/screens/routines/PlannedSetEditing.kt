@@ -45,6 +45,8 @@ import com.mooscles.designsystem.resources.ds_unit_lb_spoken
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.WeightUnits
 import com.mooscles.screens.resources.Res
+import com.mooscles.screens.resources.editor_editing_warmup_load
+import com.mooscles.screens.resources.editor_editing_warmup_reps
 import com.mooscles.screens.resources.workout_editing_load
 import com.mooscles.screens.resources.workout_editing_reps
 import com.mooscles.screens.resources.workout_field_load
@@ -209,13 +211,30 @@ internal class PlannedSetDrafts(
             dropDrafts(set.id)
             return
         }
-        val index = writes.indexOfFirst { it.reps == set.reps && it.weightKg == norm(set.weightKg) }
+        val index = writes.indexOfFirst { matches(it, set) }
         if (index >= 0) writes.subList(0, index + 1).clear()
+        // Echoes the database folded into one (8, 80, 8 coming back as 8) leave the last write equal to what is saved.
+        if (writes.isNotEmpty() && matches(writes.last(), set)) writes.clear()
+    }
+
+    private fun matches(write: PlannedSave, set: RoutineSetUi) = write.reps == set.reps && write.weightKg == norm(set.weightKg)
+
+    /**
+     * A write failed (an error arrived): nothing in flight will be echoed. The drafts stay (the person sees what was
+     * typed until the row leaves the edit and [settle]s), but no write is waited for, so the next edit writes again
+     * and the saved values are the truth. As the workout's `dropPendingWrites`.
+     */
+    fun forgetWrites() {
+        sent.clear()
+        held.clear()
     }
 
     /** The row left the edit: with nothing in flight its drafts only repeat the saved values (or are invalid) and go. */
     fun settle(setId: String) {
-        if (sent[setId].isNullOrEmpty()) dropDrafts(setId)
+        val writes = sent[setId]
+        val set = saved(setId)
+        if (!writes.isNullOrEmpty() && set != null && matches(writes.last(), set)) writes.clear()
+        if (writes.isNullOrEmpty()) dropDrafts(setId)
     }
 
     /** The set as "Undo" puts it back: the values as written (or in flight) and manual when a write is in flight. */
@@ -346,7 +365,15 @@ internal fun PlannedStepperPanel(
                 max = if (load) MoosclesNumbers.plain(WeightUnits.fromKg(MAX_LOAD_KG, pounds)).toDouble() else MAX_REPS.toDouble(),
                 onValueChangeFinished = { drafts.release(set.id)?.let(onWrite) },
                 focusRequester = requester,
-                contentDescription = stringResource(if (load) Res.string.workout_editing_load else Res.string.workout_editing_reps, number),
+                contentDescription = stringResource(
+                    when {
+                        set.warmup && load -> Res.string.editor_editing_warmup_load
+                        set.warmup -> Res.string.editor_editing_warmup_reps
+                        load -> Res.string.workout_editing_load
+                        else -> Res.string.workout_editing_reps
+                    },
+                    number,
+                ),
                 widest = if (load) MoosclesNumbers.weight(stepperPlain(if (pounds) WIDEST_LOAD_LB else WIDEST_LOAD_KG), unit, locale) else WIDEST_REPS,
             )
             MText(stringResource(Res.string.workout_step, stepText), MTheme.type.caption, color = MTheme.colors.textSecondary)

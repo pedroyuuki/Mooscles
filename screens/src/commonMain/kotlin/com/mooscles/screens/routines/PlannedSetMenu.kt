@@ -58,7 +58,7 @@ internal fun PlannedSetMenuSheet(
     onDismiss: () -> Unit,
 ) {
     MBottomSheet(onDismiss = onDismiss) {
-        SheetTitle(if (set.warmup) stringResource(Res.string.editor_set_warmup_label) else stringResource(Res.string.editor_set_label, number))
+        SheetTitle(if (set.warmup) stringResource(Res.string.editor_set_warmup_label, number) else stringResource(Res.string.editor_set_label, number))
         Column(Modifier.testTag(PlannedSetMenuTags.LIST).verticalScroll(rememberScrollState())) {
             MText(
                 stringResource(Res.string.editor_set_type),

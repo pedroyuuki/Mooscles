@@ -224,13 +224,49 @@ class PlannedSetDraftsTest {
     @Test
     fun settleDropsDraftsOnceNothingIsInFlight() {
         val d = drafts()
-        d.type("bench-1", SetField.REPS, "9")
+        // "09" is valid and shown as typed; the saved 9 is shown "9".
+        d.type("bench-1", SetField.REPS, "09")
         d.settle("bench-1")
-        assertEquals("9", d.shown("bench-1", SetField.REPS))
+        assertEquals("09", d.shown("bench-1", SetField.REPS))
         d.echo(saves.single())
+        assertEquals("09", d.shown("bench-1", SetField.REPS))
         d.settle("bench-1")
         assertEquals("9", d.shown("bench-1", SetField.REPS))
         assertEquals("17", d.shown("bench-1", SetField.LOAD))
+    }
+
+    @Test
+    fun foldedEchoesDoNotLeaveTheLastWritePending() {
+        val d = drafts()
+        d.type("bench-1", SetField.REPS, "9")
+        d.type("bench-1", SetField.REPS, "10")
+        d.type("bench-1", SetField.REPS, "9")
+        // Room folded the three writes into one echo of 9: it matches the first write, and the last one too, so
+        // nothing stays in flight.
+        change("bench-1") { it.copy(reps = 9, inherited = false) }
+        d.acknowledge(sets.getValue("bench-1"))
+        d.settle("bench-1")
+        assertEquals("9", d.shown("bench-1", SetField.REPS))
+        // A later change from elsewhere is not ignored as "older".
+        change("bench-1") { it.copy(reps = 6, weightKg = 22.0) }
+        d.acknowledge(sets.getValue("bench-1"))
+        assertEquals("6", d.shown("bench-1", SetField.REPS))
+        assertEquals("22", d.shown("bench-1", SetField.LOAD))
+    }
+
+    @Test
+    fun forgottenWritesLetTheSavedValuesBackAndTheNextEditWriteAgain() {
+        val d = drafts()
+        d.type("bench-1", SetField.REPS, "12")
+        assertEquals(1, saves.size)
+        // The write failed: nothing will be echoed.
+        d.forgetWrites()
+        assertEquals("12", d.shown("bench-1", SetField.REPS)) // still the person's, until the row is left
+        d.settle("bench-1")
+        assertEquals("8", d.shown("bench-1", SetField.REPS))
+        d.type("bench-1", SetField.REPS, "12")
+        assertEquals(PlannedSave("bench-1", 12, 17.0), saves.last())
+        assertEquals(2, saves.size)
     }
 
     @Test

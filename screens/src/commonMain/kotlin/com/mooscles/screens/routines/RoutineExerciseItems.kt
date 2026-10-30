@@ -83,14 +83,13 @@ internal fun LazyListScope.routineExerciseItems(
             RoutineExerciseHeader(entry, reorder, collapsed, pounds, callbacks)
         }
         if (collapsed) continue
-        val numbers = workingNumbers(entry.setTargets)
+        val numbers = ordinals(entry.setTargets)
         itemsIndexed(entry.setTargets, key = { _, set -> plannedSetKey(set.id) }, contentType = { _, _ -> SET_TYPE }) { index, set ->
             ExerciseCardSegment {
                 PlannedSetRow(
                     set = set,
                     entry = entry,
                     number = numbers[index],
-                    position = index + 1,
                     pounds = pounds,
                     drafts = callbacks.drafts,
                     editing = callbacks.editing,
@@ -112,10 +111,11 @@ internal fun LazyListScope.routineExerciseItems(
     }
 }
 
-/** The number of each working set (1, 2, 3…); 0 for a warm-up, which is lettered. */
-private fun workingNumbers(sets: List<RoutineSetUi>): List<Int> {
-    var next = 0
-    return sets.map { if (it.warmup) 0 else ++next }
+/** The number of each set among its kind: working sets 1, 2, 3… and warm-ups 1, 2… (each counted apart). */
+private fun ordinals(sets: List<RoutineSetUi>): List<Int> {
+    var working = 0
+    var warmups = 0
+    return sets.map { if (it.warmup) ++warmups else ++working }
 }
 
 /** The target of [entry] for [targetLine]: its working sets as planned, and how many warm-ups; null without sets. */

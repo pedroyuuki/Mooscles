@@ -34,8 +34,12 @@
     <string name="editor_set_follow_record">Follow the record</string>
     <string name="editor_set_remove">Remove set</string>
     <string name="editor_set_last">A routine needs at least one set per exercise.</string>
-    <string name="editor_add_set">Add set</string>
     <string name="editor_set_limit">Up to 50 sets per exercise.</string>
     <string name="editor_set_label">Set %1$d</string>
-    <string name="editor_set_warmup_label">Warm-up set</string>
+    <string name="editor_set_warmup_label">Warm-up %1$d</string>
+    <string name="editor_warmup_load_of_set">Load of warm-up %1$d</string>
+    <string name="editor_warmup_reps_of_set">Reps of warm-up %1$d</string>
+    <string name="editor_editing_warmup_load">Editing load of warm-up %1$d</string>
+    <string name="editor_editing_warmup_reps">Editing reps of warm-up %1$d</string>
+    <string name="editor_warmup_removed">Warm-up %1$d removed</string>
 </resources>
