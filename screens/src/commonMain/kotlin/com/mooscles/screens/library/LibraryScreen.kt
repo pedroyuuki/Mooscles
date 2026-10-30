@@ -43,8 +43,11 @@ import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcons
+import com.mooscles.designsystem.illustration.prepareBodyMap
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.exercise.CustomExerciseForm
+import com.mooscles.screens.exercise.ExerciseCues
+import com.mooscles.screens.exercise.exerciseMedia
 import com.mooscles.screens.format.catalogInPortuguese
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.library_all
@@ -112,10 +115,9 @@ object LibraryTags {
 internal class LibrarySeams(
     val cache: LibraryModelCache = LibraryModelCache.process,
     val build: suspend (List<ExerciseUi>, Boolean) -> LibraryModel = ::buildOffTheMainThread,
-    val media: (ExerciseUi) -> ExerciseMedia = { ExerciseMedia.None },
+    val media: (ExerciseUi) -> ExerciseMedia = ::exerciseMedia,
 ) {
     companion object {
-        // The media is Task 8's `exerciseMedia` (frame B, still) once the poses are merged.
         val Default = LibrarySeams()
     }
 }
@@ -145,6 +147,9 @@ internal class LibrarySeams(
  * first drops the wait (the toast says what failed), unless the exercise is already in the list (a
  * repeated creation of the same id is refused, but the exercise is there). The open form, its
  * draft and the wait are kept with `rememberSaveable` too.
+ *
+ * Opening the library also reads ahead, off the main thread, what the exercise detail draws first:
+ * the body map's paths ([prepareBodyMap]) and the cues of the screen's language.
  */
 @Composable
 fun LibraryRoute(
@@ -175,7 +180,8 @@ internal fun LibraryRoute(
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
     var focusReturns by remember { mutableIntStateOf(0) }
-    val built = rememberLibraryModel(state.exercises, catalogInPortuguese(), seams.cache, seams.build)
+    val portuguese = catalogInPortuguese()
+    val built = rememberLibraryModel(state.exercises, portuguese, seams.cache, seams.build)
     // The loading state's empty list builds a model too; it stands for nothing, so the skeleton stays.
     val model = built?.takeIf { !state.loading && !(it.exercises.isEmpty() && state.exercises.isNotEmpty()) }
     val currentExercises by rememberUpdatedState(state.exercises)
@@ -185,6 +191,12 @@ internal fun LibraryRoute(
     }
     val create: (String) -> Unit = remember { { prefill -> form = prefill } }
 
+    // The detail's body map and cues, read ahead off the main thread: the first map of a fresh
+    // process would otherwise draw empty for about 0.1 s, and the cues would arrive a frame late.
+    LaunchedEffect(portuguese) {
+        prepareBodyMap()
+        ExerciseCues.load(portuguese)
+    }
     LaunchedEffect(pending, state.exercises) {
         val id = pending ?: return@LaunchedEffect
         if (state.exercises.any { it.id == id }) {

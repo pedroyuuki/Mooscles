@@ -16,4 +16,29 @@
     <string name="exercise_form_muscle_required">Escolha um grupo muscular.</string>
     <string name="exercise_form_equipment_required">Escolha o equipamento.</string>
     <string name="exercise_form_required_hint">Escolha um grupo muscular e o equipamento.</string>
+
+    <!-- O detalhe do exercício (Task 17). -->
+    <string name="exercise_muscles">Músculos</string>
+    <string name="exercise_how_to">Como fazer</string>
+    <string name="exercise_history">Seu histórico</string>
+    <string name="exercise_history_none">Você ainda não fez este exercício.</string>
+    <string name="exercise_history_last">%1$s · %2$s</string>
+    <string name="exercise_history_last_label">Última vez</string>
+    <string name="exercise_history_best_label">Melhor</string>
+    <plurals name="exercise_history_sessions">
+        <item quantity="one">%1$d sessão</item>
+        <item quantity="other">%1$d sessões</item>
+    </plurals>
+    <string name="exercise_history_full">Ver histórico completo</string>
+    <string name="exercise_edit">Editar exercício</string>
+    <string name="exercise_add_routine">Adicionar à rotina</string>
+    <string name="exercise_add_workout">Adicionar ao treino</string>
+    <string name="exercise_added_to">Adicionado a %1$s</string>
+    <string name="exercise_added_to_workout">Adicionado ao treino</string>
+    <string name="exercise_open">Abrir</string>
+    <string name="exercise_add_no_routines">Você ainda não tem rotinas. Crie uma na aba Treinar.</string>
+    <string name="exercise_not_found">Exercício não encontrado</string>
+    <string name="exercise_not_found_body">Ele pode ter sido removido, por exemplo ao importar um backup.</string>
+    <string name="exercise_back_to_library">Voltar à biblioteca</string>
+    <string name="exercise_more">Mais opções</string>
 </resources>
