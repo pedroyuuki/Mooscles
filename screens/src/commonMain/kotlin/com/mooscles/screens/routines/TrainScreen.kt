@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.mooscles.data.RoutineFolder
 import com.mooscles.data.newId
 import com.mooscles.designsystem.components.EmptyState
 import com.mooscles.designsystem.components.MButton
@@ -45,6 +46,7 @@ import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.ReorderAnnouncer
 import com.mooscles.designsystem.interaction.rememberReorderState
+import com.mooscles.designsystem.interaction.reorderMover
 import com.mooscles.designsystem.interaction.reorderItem
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.domain.currentTimeMillis
@@ -102,6 +104,9 @@ internal object TrainTags {
     const val MENU_TOP = "routine-menu-top"
     const val MENU_BOTTOM = "routine-menu-bottom"
     const val MENU_DELETE = "routine-menu-delete"
+    /** The scrolling list of items of the card menu, and of the move-to-folder sheet. */
+    const val MENU_LIST = "routine-menu-list"
+    const val MOVE_LIST = "move-to-folder-list"
     val MENU_ITEMS = listOf(
         MENU_EDIT, MENU_RENAME, MENU_DUPLICATE, MENU_MOVE, MENU_UP, MENU_DOWN, MENU_TOP, MENU_BOTTOM, MENU_DELETE,
     )
@@ -124,19 +129,6 @@ private const val SKELETON_CARDS = 3
 
 /** A creation or duplication whose routine has not come back in the state yet. */
 private class EchoWait(val id: String, val baseline: Int, val duplicate: Boolean)
-
-/**
- * [routineIds] with [id] moved to index [to], or the same list when that changes nothing: the order the card
- * menu's four moves write.
- */
-internal fun movedTo(routineIds: List<String>, id: String, to: Int): List<String> {
-    val from = routineIds.indexOf(id)
-    if (from < 0 || to == from || to !in routineIds.indices) return routineIds
-    return routineIds.toMutableList().apply {
-        removeAt(from)
-        add(to, id)
-    }
-}
 
 /**
  * The Train tab (spec "Treinar (aba)"): "Train" with the Settings shortcut ([onOpenSettings]); a row of folder
@@ -170,11 +162,12 @@ fun TrainRoute(
     now: () -> Long = ::currentTimeMillis,
 ) {
     val zone = remember { TimeZone.currentSystemDefault() }
-    val nowMillis = now()
+    // Read when the routines change, not on every recomposition: the cards do not all redraw for a menu or a toast.
+    val nowMillis = remember(state.routines) { now() }
     val folders = state.routineFolders
     val folder = folders.firstOrNull { it.id == state.preferences.selectedRoutineFolderId }
         ?: folders.firstOrNull()
-        ?: RoutineFolderUi("default", "My routines")
+        ?: RoutineFolderUi(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)
     val routines = remember(state.routines, folder.id) { state.routines.filter { it.folderId == folder.id } }
     val byId = remember(routines) { routines.associateBy { it.id } }
     val ids = remember(routines) { routines.map { it.id } }
@@ -185,11 +178,12 @@ fun TrainRoute(
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var moving by rememberSaveable { mutableStateOf<String?>(null) }
     var deleting by rememberSaveable { mutableStateOf<String?>(null) }
-    var blockedBy by rememberSaveable { mutableStateOf(false) }
+    // The id of the workout the "in progress" dialog was opened for: it closes when that workout is not the one under way.
+    var blockedFor by rememberSaveable { mutableStateOf<String?>(null) }
     var creating by rememberSaveable { mutableStateOf(false) }
     // The folder manager is Task 12's; "Folders" only remembers that it was asked for until then.
     var managingFolders by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(active?.id) { blockedBy = false }
+    LaunchedEffect(active?.id) { if (blockedFor != active?.id) blockedFor = null }
 
     val listState = rememberLazyListState()
     val reorder = rememberReorderState(listState, ids, onDrop = { actions.reorderRoutines(folder.id, it) })
@@ -265,7 +259,7 @@ fun TrainRoute(
                             title = stringResource(Res.string.routines_empty_folder),
                             body = stringResource(Res.string.routines_empty_folder_body),
                             modifier = Modifier.testTag(TrainTags.EMPTY),
-                            primaryAction = stringResource(Res.string.routines_new) to { creating = true },
+                            primaryAction = if (wait == null) stringResource(Res.string.routines_new) to { creating = true } else null,
                         )
                     }
                 } else {
@@ -282,7 +276,7 @@ fun TrainRoute(
                             onStart = {
                                 when {
                                     active?.sourceRoutineId == routine.id -> onOpenWorkout()
-                                    active != null -> blockedBy = true
+                                    active != null -> blockedFor = active.id
                                     else -> {
                                         actions.startWorkout(routine.id)
                                         onOpenWorkout()
@@ -296,15 +290,17 @@ fun TrainRoute(
                 }
                 item(key = KEY_ACTIONS) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = space.s4), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                        if (ids.isNotEmpty()) {
+                        // While a creation or a copy is on its way, "New routine" shows it (also in an empty folder, whose
+                        // empty state then has no button of its own), and nothing opens a second sheet.
+                        if (ids.isNotEmpty() || wait != null) {
                             MButton(
                                 stringResource(Res.string.routines_new),
-                                onClick = { creating = true },
+                                onClick = { if (wait == null) creating = true },
                                 modifier = Modifier.fillMaxWidth().testTag(TrainTags.NEW_ROUTINE),
                                 variant = MButtonVariant.Secondary,
                                 size = MButtonSize.L,
                                 icon = MIcons.Plus,
-                                loading = wait?.duplicate == false,
+                                loading = wait != null,
                             )
                         }
                         MButton(
@@ -349,7 +345,8 @@ fun TrainRoute(
     menuFor?.let { id ->
         state.routines.firstOrNull { it.id == id }?.let { routine ->
             val order = reorder.order
-            val copyName = stringResource(Res.string.routines_copy_name, routine.name).take(NAME_MAX)
+            val copyTemplate = stringResource(Res.string.routines_copy_name, RoutineNames.NAME_TOKEN)
+            val moveTo = reorderMover(reorder, id, routine.name)
             RoutineMenuSheet(
                 routine = routine,
                 index = order.indexOf(id),
@@ -362,12 +359,13 @@ fun TrainRoute(
                     menuFor = null
                     renaming = id
                 },
+                duplicateEnabled = wait == null,
                 onDuplicate = {
                     menuFor = null
                     if (wait == null) {
                         val copyId = newId()
                         wait = EchoWait(copyId, state.subjectFailures[copyId] ?: 0, duplicate = true)
-                        actions.duplicateRoutine(id, copyName, copyId)
+                        actions.duplicateRoutine(id, RoutineNames.copyName(routine.name, copyTemplate), copyId)
                     }
                 },
                 onMoveToFolder = {
@@ -376,8 +374,7 @@ fun TrainRoute(
                 },
                 onMoveTo = { to ->
                     menuFor = null
-                    val next = movedTo(order, id, to)
-                    if (next != order) actions.reorderRoutines(folder.id, next)
+                    moveTo(to)
                 },
                 onDelete = {
                     menuFor = null
@@ -423,20 +420,17 @@ fun TrainRoute(
             )
         }
     }
-    if (blockedBy && active != null) {
+    if (blockedFor != null && active != null && active.id == blockedFor) {
         ActiveWorkoutDialog(
             activeName = active.name,
             onResume = {
-                blockedBy = false
+                blockedFor = null
                 onOpenWorkout()
             },
-            onDismiss = { blockedBy = false },
+            onDismiss = { blockedFor = null },
         )
     }
 }
-
-/** The routine name's length limit; a copy's name is cut to it. */
-private const val NAME_MAX = 120
 
 /**
  * The folders as a scrolling row of chips, one choice of a group, in their saved order, and "Folders" at its end,

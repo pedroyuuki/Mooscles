@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -198,7 +199,7 @@ internal fun RoutineCardSkeleton(modifier: Modifier = Modifier) {
         Skeleton(Modifier.fillMaxWidth(NAME_BAR).height(space.s6))
         Skeleton(Modifier.fillMaxWidth(SUMMARY_BAR).height(space.s4))
         Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-            repeat(STRIP_THUMBNAILS) { Skeleton(Modifier.height(MTheme.sizes.mediaStrip).weight(1f)) }
+            repeat(STRIP_THUMBNAILS) { Skeleton(Modifier.size(MTheme.sizes.mediaStrip)) }
         }
         Skeleton(Modifier.fillMaxWidth().height(MTheme.sizes.buttonL))
     }

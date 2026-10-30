@@ -24,6 +24,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
@@ -49,9 +51,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.i18n.LocalAppLocale
+import com.mooscles.designsystem.interaction.ReorderAnnouncerTag
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import com.mooscles.screens.INJECTS_DRAG
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.RecordingActions
+import com.mooscles.screens.ScreenRestoration
+import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.assertButtonTextsWhole
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.withScreen
@@ -127,6 +133,9 @@ class TrainScreenTest {
 
         /** False: a created or duplicated routine does not come back until [deliver]. */
         var echo = true
+
+        /** False: a reorder is recorded but the state keeps its order (a write whose echo has not come back). */
+        var applyReorder = true
         private val undelivered = mutableListOf<RoutineUi>()
 
         fun deliver() {
@@ -155,6 +164,7 @@ class TrainScreenTest {
 
         override fun reorderRoutines(folderId: String, ids: List<String>) {
             recording.reorderRoutines(folderId, ids)
+            if (!applyReorder) return
             val all = state.value.routines
             val inFolder = ids.mapNotNull { id -> all.firstOrNull { it.id == id } }
             var next = 0
@@ -204,10 +214,12 @@ class TrainScreenTest {
         fontScale: Float = 1f,
         width: Dp? = null,
         tall: Boolean = true,
+        height: Dp? = null,
+        restoration: ScreenRestoration? = null,
     ): Requests {
         val requests = Requests()
-        withScreen(locale = locale, fontScale = fontScale) {
-            TopAnchored(if (tall) 2400.dp else null, width) {
+        withScreen(locale = locale, fontScale = fontScale, restoration = restoration) {
+            TopAnchored(height ?: if (tall) 2400.dp else null, width) {
                 TrainRoute(
                     state = state.value,
                     actions = fake,
@@ -612,7 +624,145 @@ class TrainScreenTest {
             assertEquals(emptyList(), requests.routines)
             newRoutine()
             onNodeWithTag(RenameSheetTags.FIELD).assertIsDisplayed()
+            onNodeWithText("Criar").performClick()
+            waitForIdle()
+            assertEquals(2, fake.calls.count { it.startsWith("createRoutine:") })
         }
+    }
+
+    @Test
+    fun newRoutineWaitEndsAtTheCap() = runComposeUiTest {
+        val fake = Fake(stateOf()).apply { echo = false }
+        val requests = show(state = fake.state, fake = fake, tall = false)
+        newRoutine()
+        onNodeWithText("Criar").performClick()
+        waitForIdle()
+        // The command was lost: after the cap the screen is free again, with the error, and opens nothing.
+        mainClock.advanceTimeBy(MoosclesTiming().saveEchoWait + 1_000)
+        waitForIdle()
+        toastWith("Não foi possível salvar a última mudança").assertIsDisplayed()
+        fake.deliver()
+        waitForIdle()
+        assertEquals(emptyList(), requests.routines)
+        newRoutine()
+        onNodeWithTag(RenameSheetTags.FIELD).assertIsDisplayed()
+    }
+
+    @Test
+    fun duplicateFailureReleasesTheWait() = runComposeUiTest {
+        val fake = Fake(stateOf()).apply { echo = false }
+        show(state = fake.state, fake = fake, tall = false)
+        openMenu("b")
+        pick(TrainTags.MENU_DUPLICATE)
+        val copyId = fake.calls.last().substringAfterLast(",")
+        fake.state.value = fake.state.value.copy(errorCode = UiError.SAVE_FAILED, errorSubject = copyId, subjectFailures = mapOf(copyId to 1))
+        waitForIdle()
+        toastWith("Não foi possível salvar a última mudança").assertIsDisplayed()
+        // A late echo shows no "duplicated" toast, and Duplicate is there again.
+        fake.deliver()
+        waitForIdle()
+        toastWith("Rotina duplicada").assertDoesNotExist()
+        openMenu("a")
+        onNodeWithTag(TrainTags.MENU_DUPLICATE).assertIsEnabled()
+    }
+
+    @Test
+    fun creationAndCopyAreBusyWhileAnEchoIsPending() {
+        runComposeUiTest {
+            val fake = Fake(stateOf()).apply { echo = false }
+            show(state = fake.state, fake = fake)
+            openMenu("b")
+            pick(TrainTags.MENU_DUPLICATE)
+            assertEquals(1, fake.calls.count { it.startsWith("duplicateRoutine:") })
+            // Another copy cannot start, and "New routine" does not open its sheet.
+            openMenu("a")
+            onNodeWithTag(TrainTags.MENU_DUPLICATE).assertIsNotEnabled()
+            pick(TrainTags.MENU_EDIT)
+            onNodeWithTag(TrainScreenTag).performScrollToNode(hasTestTag(TrainTags.NEW_ROUTINE))
+            pick(TrainTags.NEW_ROUTINE)
+            onNodeWithTag(RenameSheetTags.FIELD).assertDoesNotExist()
+            // The copy arrives: both are free again.
+            fake.deliver()
+            waitForIdle()
+            pick(TrainTags.NEW_ROUTINE)
+            onNodeWithTag(RenameSheetTags.FIELD).assertIsDisplayed()
+        }
+        LocalAppLocale.restore()
+        // An empty folder: its empty state has no button while a creation is on its way; "New routine" shows it.
+        runComposeUiTest {
+            val fake = Fake(stateOf(selected = "empty")).apply { echo = false }
+            show(state = fake.state, fake = fake)
+            onNode(hasText("Nova rotina") and hasAnyAncestor(hasTestTag(TrainTags.EMPTY)), useUnmergedTree = true).performClick()
+            waitForIdle()
+            onNodeWithText("Criar").performClick()
+            waitForIdle()
+            onNode(hasText("Nova rotina") and hasAnyAncestor(hasTestTag(TrainTags.EMPTY)), useUnmergedTree = true).assertDoesNotExist()
+            onNodeWithTag(TrainTags.NEW_ROUTINE).assertExists()
+            onNodeWithTag(TrainTags.NEW_ROUTINE).performClick()
+            waitForIdle()
+            onNodeWithTag(RenameSheetTags.FIELD).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun menuMoveHoldsTheOrderAndAnnounces() = runComposeUiTest {
+        val fake = Fake(stateOf()).apply { applyReorder = false }
+        show(state = fake.state, fake = fake)
+        openMenu("a")
+        mainClock.autoAdvance = false
+        onNodeWithTag(TrainTags.MENU_DOWN).performClick()
+        mainClock.advanceTimeBy(200)
+        assertEquals("reorderRoutines:default,b|a|c", fake.calls.last())
+        // The write has not come back, and the list already shows the new order, as after a drag.
+        assertEquals(listOf("b", "a", "c"), cardIds())
+        onNodeWithTag(ReorderAnnouncerTag).assertContentDescriptionEquals("Treino A agora na posição 2 de 3")
+    }
+
+    @Test
+    fun inProgressDialogSurvivesRecreationAndClosesWithItsWorkout() = runComposeUiTest {
+        val restoration = screenRestoration()
+        val fake = Fake(stateOf(active = activeFrom("b", "Treino B")))
+        show(state = fake.state, fake = fake, locale = null, restoration = restoration)
+        start("a").performClick()
+        waitForIdle()
+        onNodeWithTag("dialog").assertExists()
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        onNodeWithTag("dialog").assertExists()
+        // Another workout is under way now: the dialog was about the old one.
+        fake.state.value = fake.state.value.copy(active = activeFrom("a").copy(id = "other-session"))
+        waitForIdle()
+        onNodeWithTag("dialog").assertDoesNotExist()
+    }
+
+    @Test
+    fun routineMenuScrollsAtTwoXInAShortWindow() = runComposeUiTest {
+        val fake = Fake(stateOf())
+        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp)
+        openMenu("a")
+        onNodeWithTag(TrainTags.MENU_LIST).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        assertClickablesLabeledAndSized("Train menu at 2x")
+        onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_BOTTOM))
+        pick(TrainTags.MENU_BOTTOM)
+        assertEquals("reorderRoutines:default,b|c|a", fake.calls.last())
+        openMenu("b")
+        onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_DELETE))
+        pick(TrainTags.MENU_DELETE)
+        inDialog("Excluir Treino B?").assertIsDisplayed()
+    }
+
+    @Test
+    fun moveSheetScrollsWithManyFolders() = runComposeUiTest {
+        val many = folders + List(12) { RoutineFolderUi("extra$it", "Pasta extra $it") }
+        val fake = Fake(stateOf().apply { value = value.copy(routineFolders = many) })
+        show(state = fake.state, fake = fake, fontScale = LINEAR_TWO_X_FONT_SCALE, width = 360.dp, height = 640.dp)
+        openMenu("a")
+        onNodeWithTag(TrainTags.MENU_LIST).performScrollToNode(hasTestTag(TrainTags.MENU_MOVE))
+        pick(TrainTags.MENU_MOVE)
+        onNodeWithTag(TrainTags.MOVE_LIST).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        onNodeWithTag(TrainTags.MOVE_LIST).performScrollToNode(hasTestTag(TrainTags.moveTo("extra11")))
+        pick(TrainTags.moveTo("extra11"))
+        assertEquals("moveRoutineToFolder:a,extra11", fake.calls.last())
     }
 
     // --- States ------------------------------------------------------------------------------

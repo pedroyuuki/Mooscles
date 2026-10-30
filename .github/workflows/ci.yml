@@ -235,7 +235,8 @@ jobs:
           # (:app) OverlayWindowBarsHostTest 1. 1056 + 6 = 1062.
           # Phase 4B task 11: (:screens commonTest) RoutineSummariesTest 3; (:designsystem commonTest)
           # SizesTimingElevationTest +1 (mediaStripIsFiftySix). 1062 + 4 = 1066.
-          MIN_HOST_TESTS: 1066
+          # Phase 4B task 11 fix round 1: (:screens commonTest) RoutineNamesTest 3. 1066 + 3 = 1069.
+          MIN_HOST_TESTS: 1069
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -518,7 +519,9 @@ jobs:
           # Phase 4B task 10: PhotoCacheTest 4 (commonTest); CustomExerciseFormPhotoTest 16, LibraryScreenTest +3,
           # ExerciseInfoScreenTest +3, ExercisePickerSheetTest +1 (uiTest). 460 + 27 = 487.
           # Phase 4B task 11: RoutineSummariesTest 3 (commonTest); TrainScreenTest 30 (uiTest). 487 + 33 = 520.
-          MIN_SCREENS_IOS_TESTS: 520
+          # Phase 4B task 11 fix round 1: RoutineNamesTest 3 (commonTest); TrainScreenTest +7 (uiTest: menu and move
+          # sheet scroll, busy entry points, menu move announces, dialog survives recreation, cap, copy failure). 520 + 10 = 530.
+          MIN_SCREENS_IOS_TESTS: 530
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

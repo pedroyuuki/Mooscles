@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -59,7 +62,8 @@ import com.mooscles.designsystem.resources.Res as DesignRes
  * folder, Move up, Move down, Move to top, Move to bottom and Delete (destructive, last). The four moves are
  * the screen reader's alternatives to dragging as buttons of their own; "up" and "top" are off for the first
  * routine of its folder ([index] 0) and "down" and "bottom" for the last of [count]. Each item closes the menu
- * (the caller takes it out of composition) and then does its part.
+ * (the caller takes it out of composition) and then does its part. The items scroll, under the title, when the sheet
+ * is shorter than they are (large text, landscape). "Duplicate" is off while [duplicateEnabled] is false.
  */
 @Composable
 internal fun RoutineMenuSheet(
@@ -69,6 +73,7 @@ internal fun RoutineMenuSheet(
     onEdit: () -> Unit,
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
+    duplicateEnabled: Boolean,
     onMoveToFolder: () -> Unit,
     onMoveTo: (position: Int) -> Unit,
     onDelete: () -> Unit,
@@ -78,9 +83,10 @@ internal fun RoutineMenuSheet(
     val last = index >= count - 1
     MBottomSheet(onDismiss = onDismiss) {
         SheetTitle(routine.name)
+        Column(Modifier.testTag(TrainTags.MENU_LIST).verticalScroll(rememberScrollState())) {
         MenuItem(MIcons.Pencil, stringResource(Res.string.routines_edit), TrainTags.MENU_EDIT, onClick = onEdit)
         MenuItem(MIcons.Pencil, stringResource(Res.string.routines_rename), TrainTags.MENU_RENAME, onClick = onRename)
-        MenuItem(MIcons.Plus, stringResource(Res.string.routines_duplicate), TrainTags.MENU_DUPLICATE, onClick = onDuplicate)
+        MenuItem(MIcons.Plus, stringResource(Res.string.routines_duplicate), TrainTags.MENU_DUPLICATE, enabled = duplicateEnabled, onClick = onDuplicate)
         MenuItem(MIcons.ArrowLeftRight, stringResource(Res.string.routines_move_to_folder), TrainTags.MENU_MOVE, onClick = onMoveToFolder)
         MenuItem(
             MIcons.ArrowUp, stringResource(DesignRes.string.ds_reorder_up), TrainTags.MENU_UP,
@@ -103,6 +109,7 @@ internal fun RoutineMenuSheet(
             destructive = true, onClick = onDelete,
         )
         Spacer(Modifier.height(MTheme.space.s4))
+        }
     }
 }
 
@@ -119,12 +126,14 @@ internal fun MoveToFolderSheet(
 ) {
     MBottomSheet(onDismiss = onDismiss) {
         SheetTitle(stringResource(Res.string.routines_move_to_folder))
-        for (folder in folders) {
-            FolderChoice(folderName(folder), current = folder.id == routine.folderId, tag = TrainTags.moveTo(folder.id)) {
-                if (folder.id == routine.folderId) onDismiss() else onMove(folder.id)
+        Column(Modifier.testTag(TrainTags.MOVE_LIST).verticalScroll(rememberScrollState())) {
+            for (folder in folders) {
+                FolderChoice(folderName(folder), current = folder.id == routine.folderId, tag = TrainTags.moveTo(folder.id)) {
+                    if (folder.id == routine.folderId) onDismiss() else onMove(folder.id)
+                }
             }
+            Spacer(Modifier.height(MTheme.space.s4))
         }
-        Spacer(Modifier.height(MTheme.space.s4))
     }
 }
 

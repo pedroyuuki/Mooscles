@@ -5,17 +5,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -36,9 +33,6 @@ import com.mooscles.screens.resources.workout_rename_field
 import com.mooscles.screens.resources.workout_save
 import org.jetbrains.compose.resources.stringResource
 
-/** For how many frames the sheet keeps asking for the focus (about half a second). */
-private const val FOCUS_FRAMES = 30
-
 /** The test tags of the rename sheet. */
 internal object RenameSheetTags {
     const val FIELD = "workout-rename-field"
@@ -52,8 +46,8 @@ internal object RenameSheetTags {
  * Saving a name that is not blank calls [onRename] with it trimmed, unless it is the same name (a rename that changes
  * nothing writes nothing), and closes; with [submitUnchanged] the same name is submitted too, which a "New …" sheet
  * needs, since its default name is the name to create. The button is off while the field is blank; the keyboard's Done
- * saves the same way. With [selectAll] the name starts selected and the field takes the focus (the keyboard opens), so
- * typing replaces it. What is typed survives recreation.
+ * saves the same way. With [selectAll] the name starts selected and the field takes the focus once, when the sheet
+ * is open (the keyboard opens), so typing replaces it. What is typed survives recreation.
  */
 @Composable
 internal fun RenameSheet(
@@ -71,7 +65,6 @@ internal fun RenameSheet(
     }
     var saved by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
-    var focused by remember { mutableStateOf(false) }
     val trimmed = value.text.trim()
     val save: () -> Unit = {
         if (!saved && trimmed.isNotEmpty()) {
@@ -81,17 +74,7 @@ internal fun RenameSheet(
         }
     }
     val space = MTheme.space
-    MBottomSheet(onDismiss = onDismiss) {
-        if (selectAll) {
-            // In the sheet's own window composition, after the sheet has taken the focus for itself (it does, on
-            // its first frame): ask for the field's focus again whenever it is not there, for a few frames.
-            LaunchedEffect(Unit) {
-                repeat(FOCUS_FRAMES) {
-                    withFrameNanos { }
-                    if (!focused) runCatching { focus.requestFocus() }
-                }
-            }
-        }
+    MBottomSheet(onDismiss = onDismiss, initialFocus = if (selectAll) focus else null) {
         MText(
             title,
             MTheme.type.titleMd,
@@ -105,7 +88,7 @@ internal fun RenameSheet(
             value = value,
             onValueChange = { value = it },
             label = fieldLabel,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = space.s4).focusRequester(focus).onFocusChanged { focused = it.isFocused }.testTag(RenameSheetTags.FIELD),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = space.s4).focusRequester(focus).testTag(RenameSheetTags.FIELD),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { save() }),
             singleLine = true,
