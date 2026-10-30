@@ -45,6 +45,8 @@ import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
 import com.mooscles.designsystem.components.TimerDockTag
+import com.mooscles.designsystem.components.TimerOpenTag
+import com.mooscles.designsystem.components.TimerTitleTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.designsystem.interaction.HapticEvent
 import com.mooscles.designsystem.interaction.RecordingHaptics
@@ -852,6 +854,12 @@ class ActiveWorkoutScreenTest {
         onNode(hasClickAction() and hasText("Iniciar descanso agora")).performClick()
         waitForIdle()
         assertTrue(fake.calls.last().startsWith("startTimer:$name,"), fake.calls.last())
+        onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
+
+        // The expanded timer's title, by the same entry.
+        onNodeWithTag(TimerOpenTag).performClick()
+        waitForIdle()
+        tag(TimerTitleTag).assertTextEquals("Descanso · $name · série 1 de 3")
         onAllNodesWithText("Barbell bench press", substring = true, useUnmergedTree = true).assertCountEquals(0)
     }
 

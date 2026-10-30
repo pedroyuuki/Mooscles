@@ -143,7 +143,8 @@ internal fun WorkoutTimerLayer(
     val compact = keyboard || density.fontScale >= COMPACT_FONT_SCALE
 
     // By the timer's exercise of this workout (pre-flight F1): on an automatic rest the view model
-    // stores the catalog's English name (plan decision 11), so the label shows the entry's name.
+    // stores the entry's snapshot name, which does not follow the screen's language (plan decision
+    // 11), so the label shows the entry's name as the screen shows it.
     val timerEntry = remember(workout, current.workoutExerciseId) { timerEntryOf(workout, current) }
     val label = stringResource(
         Res.string.workout_timer_title_short,
