@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A linha de alvo da rotina (pt-BR), "Alvo 3×8 · 80 kg". -->
+<resources>
+    <string name="routines_target_prefix">Alvo</string>
+    <plurals name="routines_target_sets">
+        <item quantity="one">%1$d série</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
+    <string name="routines_target_reps">%1$s reps</string>
+    <plurals name="routines_target_warmups">
+        <item quantity="one">+ %1$d aquec.</item>
+        <item quantity="other">+ %1$d aquec.</item>
+    </plurals>
+</resources>

@@ -41,6 +41,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.mooscles.designsystem.components.ExerciseCardSublineTag
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
@@ -59,6 +60,8 @@ import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.withScreen
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
+import com.mooscles.ui.RoutineTargetUi
+import com.mooscles.ui.TargetSetUi
 import com.mooscles.ui.SetUi
 import com.mooscles.ui.TimerUi
 import com.mooscles.ui.UiError
@@ -940,6 +943,54 @@ class ActiveWorkoutScreenTest {
         onNodeWithTag(TimerOpenTag).performClick()
         waitForIdle()
         tag(TimerTitleTag).assertTextEquals("Rest · Barbell bench press")
+    }
+
+    /** One exercise of three sets, with the [target] of its source routine. */
+    private fun targeted(target: RoutineTargetUi?) = WorkoutUi(
+        id = "w1", name = "Treino A", startedAt = START,
+        exercises = listOf(
+            WorkoutExerciseUi("e1", exercises[0], (1..3).map { n -> SetUi("e1s$n", reps = 8, weightKg = 60.0) }, target = target),
+        ),
+    )
+
+    private val threeByEight get() = RoutineTargetUi(List(3) { TargetSetUi(8, 80.0) }, warmups = 0)
+
+    @Test
+    fun targetLineSitsUnderTheMeta() = runComposeUiTest {
+        show(Fake(stateOf(targeted(threeByEight))))
+        val nb = "\u00A0"
+        val subline = tag(ExerciseCardSublineTag)
+        assertEquals("Alvo 3×8 · 80${nb}kg", layoutOf(ExerciseCardSublineTag).layoutInput.text.text)
+        subline.assertIsDisplayed()
+        val meta = onNode(hasText("série 1 de 3", substring = true), useUnmergedTree = true).getBoundsInRoot()
+        val name = onNode(hasText("Supino reto") and hasAnyAncestor(hasTestTag(exerciseHeaderTag("e1"))), useUnmergedTree = true).getBoundsInRoot()
+        val bounds = subline.getBoundsInRoot()
+        assertTrue(bounds.top >= meta.bottom - 0.5.dp && meta.top >= name.bottom - 0.5.dp, "name $name, meta $meta, target $bounds")
+    }
+
+    @Test
+    fun noTargetWithoutASourceRoutine() = runComposeUiTest {
+        show(Fake(stateOf(targeted(null))))
+        onAllNodesWithTag(ExerciseCardSublineTag, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun targetLineWholeAtTwoX() {
+        val target = RoutineTargetUi(listOf(TargetSetUi(10, 70.0), TargetSetUi(8, 75.0), TargetSetUi(6, 80.0)), warmups = 2)
+        for ((scale, density) in listOf(2f to null, LINEAR_TWO_X_FONT_SCALE to null, LINEAR_TWO_X_FONT_SCALE to 1f)) {
+            runComposeUiTest {
+                show(Fake(stateOf(targeted(target))), size = DpSize(320.dp, 800.dp), fontScale = scale, density = density)
+                val layout = layoutOf(ExerciseCardSublineTag)
+                val nb = "\u00A0"
+                assertEquals("Alvo 3 séries · 6–10 reps · 70–80${nb}kg + 2 aquec.", layout.layoutInput.text.text, "at $scale")
+                assertFalse(layout.hasVisualOverflow, "at $scale the target line is cut: ${layout.size}")
+                assertTrue(layout.multiParagraph.height <= layout.size.height + 0.5f, "at $scale the target line is clipped")
+                val header = onNodeWithTag(exerciseHeaderTag("e1")).getBoundsInRoot()
+                val bounds = tag(ExerciseCardSublineTag).getBoundsInRoot()
+                assertTrue(bounds.left >= header.left && bounds.right <= header.right + 0.5.dp, "at $scale: $bounds in $header")
+            }
+            LocalAppLocale.restore()
+        }
     }
 
     private companion object {

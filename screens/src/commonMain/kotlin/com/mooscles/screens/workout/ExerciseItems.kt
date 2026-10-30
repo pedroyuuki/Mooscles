@@ -39,6 +39,7 @@ import com.mooscles.screens.format.equipmentLabel
 import com.mooscles.screens.format.exerciseName
 import com.mooscles.screens.format.muscleLabel
 import com.mooscles.screens.format.shortDate
+import com.mooscles.screens.format.targetLine
 import com.mooscles.screens.resources.Res
 import com.mooscles.screens.resources.workout_card_meta
 import com.mooscles.screens.resources.workout_card_meta_short
@@ -130,7 +131,7 @@ internal fun LazyListScope.exerciseItems(
     open: Boolean,
 ) {
     item(key = "header-${entry.id}", contentType = "exercise-header") {
-        ExerciseHeaderItem(entry, index, count, open, screen, actions, callbacks, setRowItemMotion())
+        ExerciseHeaderItem(entry, index, count, open, pounds, screen, actions, callbacks, setRowItemMotion())
     }
     if (!open) return
     item(key = "cols-${entry.id}", contentType = "exercise-columns") {
@@ -170,6 +171,7 @@ private fun ExerciseHeaderItem(
     index: Int,
     count: Int,
     open: Boolean,
+    pounds: Boolean,
     screen: ActiveWorkoutScreenState,
     actions: MoosclesActions,
     callbacks: ExerciseCallbacks,
@@ -212,6 +214,7 @@ private fun ExerciseHeaderItem(
         done = total > 0 && done == total,
         caption = conventionCaption(entry.exercise.convention),
         support = { SupportLine(entry, callbacks) },
+        subline = targetLine(entry.target, pounds),
     )
 
     if (menu) {

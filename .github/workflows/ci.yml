@@ -230,7 +230,8 @@ jobs:
           # PhotoManifestHostTest 3, AppViewModelPhotosHostTest 4. 999 + 33 = 1032.
           # Phase 4B task 7 fix round 1 (:app, x2 for sdk 26 and 35): ExercisePhotoStoreHostTest +5 methods
           # (every EXIF orientation, transparent PNG, throwing EXIF block, failed second rename, thumbnail without photo). 1032 + 10 = 1042.
-          MIN_HOST_TESTS: 1042
+          # Phase 4B task 8 (:screens commonTest): RoutineTargetFormatTest 14. 1042 + 14 = 1056.
+          MIN_HOST_TESTS: 1056
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -506,7 +507,8 @@ jobs:
           # Phase 4A task 23: ExerciseInfoScreenTest +1, CustomExerciseFormTest +1, ExercisePickerSheetTest +1 (uiTest). 427 + 3 = 430.
           # Phase 4A final review fixes: ActiveWorkoutScreenTest +1 (uiTest), RoutineGroupsTest 2 (commonTest). 430 + 3 = 433.
           # Phase 4B task 3: ScreensHelpersTest +1 (uiTest). 433 + 1 = 434.
-          MIN_SCREENS_IOS_TESTS: 434
+          # Phase 4B task 8: RoutineTargetFormatTest 14 (commonTest), RoutineTargetLineTest 1, ActiveWorkoutScreenTest +3 (uiTest). 434 + 18 = 452.
+          MIN_SCREENS_IOS_TESTS: 452
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
