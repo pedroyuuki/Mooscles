@@ -166,6 +166,7 @@ fun TrainRoute(
     val nowMillis = remember(state.routines) { now() }
     val folders = state.routineFolders
     val folder = folders.firstOrNull { it.id == state.preferences.selectedRoutineFolderId }
+        ?: folders.firstOrNull { it.id == RoutineFolder.DEFAULT_ID }
         ?: folders.firstOrNull()
         ?: RoutineFolderUi(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)
     val routines = remember(state.routines, folder.id) { state.routines.filter { it.folderId == folder.id } }
@@ -181,7 +182,6 @@ fun TrainRoute(
     // The id of the workout the "in progress" dialog was opened for: it closes when that workout is not the one under way.
     var blockedFor by rememberSaveable { mutableStateOf<String?>(null) }
     var creating by rememberSaveable { mutableStateOf(false) }
-    // The folder manager is Task 12's; "Folders" only remembers that it was asked for until then.
     var managingFolders by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(active?.id) { if (blockedFor != active?.id) blockedFor = null }
 
@@ -319,10 +319,12 @@ fun TrainRoute(
             }
         }
         ReorderAnnouncer(reorder)
-        ScreenErrorToast(state.errorCode, actions, host)
+        // While the folder manager is open it shows the errors itself (its window covers this one).
+        ScreenErrorToast(if (managingFolders) null else state.errorCode, actions, host)
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
 
+    if (managingFolders) FolderManagerSheet(state, actions, onDismiss = { managingFolders = false })
     val newName = stringResource(Res.string.routines_new_name)
     if (creating) {
         RenameSheet(
