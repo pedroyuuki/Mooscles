@@ -12,6 +12,14 @@ Source
   License:    MIT License, Copyright (c) 2026 Jsplice / MuscleMap contributors. The source's
               LICENSE says it covers the SVG muscle path data in packages/assets, hand-traced
               in Inkscape (ASSET_PROVENANCE.md there).
+  Origin:     ASSET_PROVENANCE.md at the commit says the muscle paths are original vector work:
+              a person traced each surface by hand in Inkscape, over reference body photographs
+              that were generated with OpenAI image tooling and then edited. Those photographs
+              (packages/assets/bodies, apps/playground/public) are not part of Mooscles: only the
+              hand-traced path data is.
+  Decision:   Controller, 2026-10-29: the human-traced vectors ship under the MIT License and
+              are not an AI-generated asset under the phase 4 spec (whose rule excludes
+              AI-generated assets); the AI-generated reference photographs are not used.
   Imported:   2026-10-29, phase 4A of Mooscles (spec D6; spike report
               docs/superpowers/reports/2026-10-29-phase4a-spike-mapa.md).
 

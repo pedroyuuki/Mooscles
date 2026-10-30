@@ -36,6 +36,7 @@ class LicenseFilesTest {
         val source = read(File("illustrations/musclemap/LICENSE"))
         assertEquals("f7347b3759d6cb8c4a27d229a446aaed2af50e23012755615b98eb874af38a3d", sha256(source), "the LICENSE copied from the source")
         assertTrue(text.endsWith("\n\n-----\n\n$source"), "the notice ends with the source LICENSE, unchanged")
+        assertTrue("traced by hand in Inkscape" in text.replace(Regex("\\s+"), " "), "the preface says the paths are hand-traced")
         assertTrue("MIT License" in source && "Permission is hereby granted, free of charge" in source)
     }
 
@@ -44,8 +45,10 @@ class LicenseFilesTest {
     fun mediaLicenseKeepsItsWords() {
         val text = read(File(licenses, "media-CC0.md"))
         assertKeepsItsWords(text)
-        val (preface, legalCode) = text.split("\n\n-----\n\n", limit = 2)
-        for (covered in listOf("exercise figures", "poses", "exercise tips", "Brazilian\nPortuguese exercise names")) {
+        val (wrapped, legalCode) = text.split("\n\n-----\n\n", limit = 2)
+        // The preface may be re-wrapped: compare with single spaces.
+        val preface = wrapped.replace(Regex("\\s+"), " ")
+        for (covered in listOf("exercise figures", "poses", "exercise tips", "Brazilian Portuguese exercise names")) {
             assertTrue(covered in preface, "the preface covers $covered")
         }
         assertTrue("The body map is not covered" in preface)
