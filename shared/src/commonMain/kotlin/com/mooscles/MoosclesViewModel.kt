@@ -146,16 +146,23 @@ abstract class MoosclesViewModel(
         val item = dataRequireNotNull(repo.routineExercise(entryId), DataError.ROUTINE_NOT_FOUND) { "Routine exercise unavailable" }
         repo.updateRoutineExercise(item.copy(plannedSets = sets, targetReps = reps, targetWeightKg = weightKg, restSeconds = restSeconds))
     }
+    override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) = act {
+        repo.createCustomExercise(name, muscleOf(muscle), equipmentOf(equipment), conventionOf(convention), id)
+    }
     override fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String) = act {
-        val m = MuscleGroup.entries.firstOrNull { it.label == muscle || it.name == muscle } ?: MuscleGroup.FULL_BODY
-        val e = Equipment.entries.firstOrNull { it.label == equipment || it.name == equipment } ?: Equipment.OTHER
-        val c = LoadConvention.entries.firstOrNull { it.label == convention || it.name == convention } ?: LoadConvention.TOTAL_LOAD
+        val m = muscleOf(muscle)
+        val e = equipmentOf(equipment)
+        val c = conventionOf(convention)
         if (id == null) repo.createCustomExercise(name, m, e, c)
         else {
             val existing = dataRequireNotNull(repo.exercise(id), DataError.EXERCISE_NOT_FOUND) { "Exercise unavailable" }
             repo.saveExercise(existing.copy(name = name, muscle = m, equipment = e, convention = c))
         }
     }
+    private fun muscleOf(label: String) = MuscleGroup.entries.firstOrNull { it.label == label || it.name == label } ?: MuscleGroup.FULL_BODY
+    private fun equipmentOf(label: String) = Equipment.entries.firstOrNull { it.label == label || it.name == label } ?: Equipment.OTHER
+    private fun conventionOf(label: String) =
+        LoadConvention.entries.firstOrNull { it.label == label || it.name == label } ?: LoadConvention.TOTAL_LOAD
     override fun startWorkout(routineId: String?) {
         if (!startingWorkout.compareAndSet(false, true)) return
         error.value = null

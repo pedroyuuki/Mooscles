@@ -140,6 +140,8 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?)
     fun inheritRoutineSet(setId: String)
     fun updateRoutineExerciseRest(entryId: String, seconds: Int)
+    /** Creates a custom exercise under [id], chosen by the screen; an id already in use is refused, never overwritten. */
+    fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String)
     fun saveCustomExercise(id: String?, name: String, muscle: String, equipment: String, convention: String)
     fun startWorkout(routineId: String?)
     fun renameWorkout(id: String, name: String)
