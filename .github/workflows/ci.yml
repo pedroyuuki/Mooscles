@@ -214,7 +214,8 @@ jobs:
           # Merged Tasks 8–9 (+14 over 882): 899 + 14 = 913.
           # Phase 4A task 17 (:screens commonTest): ExerciseHistorySummariesTest 6, BodyRegionBridgeTest 1. 913 + 7 = 920.
           # Phase 4A task 18 (:screens commonTest): ExercisePickerTest -2 (ported to LibraryModelTest). 920 - 2 = 918.
-          MIN_HOST_TESTS: 918
+          # Phase 4A task 19 (:app): LibraryNavigationHostTest 8 (the temporary LibraryTapBaselineHostTest came and went in the task). 918 + 8 = 926.
+          MIN_HOST_TESTS: 926
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

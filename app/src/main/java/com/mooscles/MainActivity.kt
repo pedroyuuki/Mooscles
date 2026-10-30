@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -53,7 +54,10 @@ class MainActivity : ComponentActivity(), AppThemeBars {
             val state = vm.contentUi.collectAsStateWithLifecycle()
             val timer = vm.timerUi.collectAsStateWithLifecycle()
             val workoutRequest = vm.workoutRequest.collectAsStateWithLifecycle()
-            MoosclesApp(state.value, vm, timer, workoutRequest.value)
+            // Plan 4A decision 15: the common code reads no platform state; the detail's figure
+            // stops while the Activity is not started (in the background).
+            val lifecycleState = lifecycle.currentStateAsState()
+            MoosclesApp(state.value, vm, timer, workoutRequest.value, foreground = lifecycleState.value.isAtLeast(Lifecycle.State.STARTED))
         }
         // Only a fresh launch from a notification asks for its screen: a recreated Activity
         // (rotation, process restore) keeps the same intent, and asking again would navigate

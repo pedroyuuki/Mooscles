@@ -66,10 +66,11 @@ internal object ExerciseMenuTags {
 internal enum class ExerciseConfirm { REMOVE, SWAP }
 
 /**
- * The menu of an exercise card, a bottom sheet under the exercise's name: About the exercise
- * (the library's detail of the catalog exercise), Exercise history, Swap exercise, Move up, Move down, How to log and Remove exercise (destructive, last). Moving
- * up is disabled for the first exercise ([index] 0) and down for the last of [count]. Each item
- * closes the menu (the caller takes it out of composition) and then does its part.
+ * The menu of an exercise card, a bottom sheet under the exercise's name: About the exercise (the
+ * library's detail of the catalog exercise), Exercise history, Swap exercise, Move up, Move down,
+ * How to log and Remove exercise (destructive, last). Moving up is disabled for the first exercise
+ * ([index] 0) and down for the last of [count]. Each item closes the menu (the caller takes it out
+ * of composition) and then does its part.
  */
 @Composable
 internal fun ExerciseMenuSheet(

@@ -113,11 +113,11 @@ internal fun LazyListScope.exerciseCards(
  * and move with [setRowItemMotion]; the list must have no spacing of its own, or the card splits.
  *
  * The header shows the media (the still figure, frame B, of a catalog exercise that has one, with
- * the equipment's small icon beside the meta; otherwise the equipment icon), the name, "Barbell · Chest · set 4 of 5" (the first set
- * not done, only while open), the convention caption when the load is not the total load, the
- * rest chip and "Previous: Oct 21" (or "First time"). Collapsed, it is the whole card, with "3 of
- * 3 sets" and a check when all are done. A tap on it opens or closes the card by hand
- * ([ActiveWorkoutScreenState.toggleCard]); its menu is [ExerciseMenuSheet].
+ * the equipment's small icon beside the meta; otherwise the equipment icon), the name, "Barbell ·
+ * Chest · set 4 of 5" (the first set not done, only while open), the convention caption when the
+ * load is not the total load, the rest chip and "Previous: Oct 21" (or "First time"). Collapsed, it
+ * is the whole card, with "3 of 3 sets" and a check when all are done. A tap on it opens or closes
+ * the card by hand ([ActiveWorkoutScreenState.toggleCard]); its menu is [ExerciseMenuSheet].
  */
 internal fun LazyListScope.exerciseItems(
     entry: WorkoutExerciseUi,

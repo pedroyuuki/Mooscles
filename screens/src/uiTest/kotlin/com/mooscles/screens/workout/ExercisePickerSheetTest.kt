@@ -167,13 +167,13 @@ class ExercisePickerSheetTest {
     }
 
     @Test
-    fun rowsAreFiftySixWithMuscleAndEquipment() {
+    fun rowsHoldTheMediaWithMuscleAndEquipment() {
         for ((locale, meta) in listOf("pt-BR" to "Peito · Barra", "en" to "Chest · Barbell")) {
             runComposeUiTest {
                 showPicker(locale = locale)
                 val tag = exercisePickerRowTag(bench.id, recent = false)
-                // The library's row: the 56 dp media and 8 dp above and below it, so at least 56 dp (72).
-                pickerRow(bench).assertHeightIsAtLeast(56.dp).assertHeightIsAtLeast(72.dp).assertHasClickAction()
+                // The library's row: the 56 dp media and 8 dp above and below it, so at least 72 dp.
+                pickerRow(bench).assertHeightIsAtLeast(72.dp).assertHasClickAction()
                     .assertTextEquals("Supino reto", meta)
                 onNode(hasText(meta) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true).assertIsDisplayed()
                 // Without a figure, the media tile shows the equipment's icon.

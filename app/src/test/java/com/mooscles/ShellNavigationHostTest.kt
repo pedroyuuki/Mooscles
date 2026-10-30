@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.mooscles.designsystem.components.ExerciseMenuTag
 import com.mooscles.designsystem.components.MTabBarTag
 import com.mooscles.designsystem.licenses.LicensesContentTag
+import com.mooscles.screens.library.LibraryScreenTag
 import androidx.compose.ui.unit.dp
 import com.mooscles.ui.*
 import java.lang.reflect.Proxy
@@ -441,7 +442,7 @@ class ShellNavigationHostTest {
     private fun bounds(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
     private fun assertLibraryRoot() {
         tab("library").assertIsSelected()
-        compose.onNodeWithText("Exercise library").assertExists()
+        compose.onNodeWithTag(LibraryScreenTag).assertExists()
         compose.onNodeWithTag("settings-content").assertDoesNotExist()
         compose.onNodeWithTag(LicensesContentTag).assertDoesNotExist()
         compose.onNodeWithTag(GALLERY_SCREEN).assertDoesNotExist()
