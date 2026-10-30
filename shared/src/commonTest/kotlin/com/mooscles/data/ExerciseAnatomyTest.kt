@@ -83,7 +83,23 @@ class ExerciseAnatomyTest {
     fun customUsesTheMuscleGroupRegion() {
         assertEquals(Anatomy(listOf(CHEST), emptyList()), ExerciseAnatomy.forExercise("x", "Chest"))
         assertEquals(Anatomy(listOf(LATS), emptyList()), ExerciseAnatomy.forExercise("custom_1", "Back"))
-        assertEquals(Anatomy(listOf(MuscleRegion.ABDOMINALS), emptyList()), ExerciseAnatomy.forMuscleGroup(MuscleGroup.CORE))
+        // The whole mapping is pinned, so swapping one group's region (say Quadriceps to adductors) fails.
+        val expected = mapOf(
+            MuscleGroup.CHEST to CHEST,
+            MuscleGroup.BACK to LATS,
+            MuscleGroup.SHOULDERS to MuscleRegion.SHOULDERS,
+            MuscleGroup.BICEPS to MuscleRegion.BICEPS,
+            MuscleGroup.TRICEPS to TRICEPS,
+            MuscleGroup.QUADRICEPS to QUADRICEPS,
+            MuscleGroup.HAMSTRINGS to HAMSTRINGS,
+            MuscleGroup.GLUTES to GLUTES,
+            MuscleGroup.CALVES to MuscleRegion.CALVES,
+            MuscleGroup.CORE to MuscleRegion.ABDOMINALS,
+            MuscleGroup.FOREARMS to MuscleRegion.FOREARMS,
+            MuscleGroup.FULL_BODY to null
+        ).mapValues { (_, region) -> region?.let { Anatomy(listOf(it), emptyList()) } }
+        assertEquals(expected, MuscleGroup.entries.associateWith { ExerciseAnatomy.forMuscleGroup(it) })
+        assertEquals(expected, MuscleGroup.entries.associateWith { ExerciseAnatomy.forExercise("custom_1", it.label) })
     }
 
     @Test
