@@ -95,6 +95,9 @@ object LibraryTags {
     /** A custom row's "Custom" tag (unmerged tree). */
     const val ROW_CUSTOM = "library-custom-tag"
 
+    /** The checkbox of a selectable row (the picker's multiple mode; unmerged tree). */
+    const val ROW_CHECKBOX = "library-row-checkbox"
+
     /** The row of [exerciseId] in "All" or in the results. */
     fun row(exerciseId: String) = "library-row-$exerciseId"
 

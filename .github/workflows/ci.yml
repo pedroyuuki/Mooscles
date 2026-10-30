@@ -508,7 +508,8 @@ jobs:
           # Phase 4A final review fixes: ActiveWorkoutScreenTest +1 (uiTest), RoutineGroupsTest 2 (commonTest). 430 + 3 = 433.
           # Phase 4B task 3: ScreensHelpersTest +1 (uiTest). 433 + 1 = 434.
           # Phase 4B task 8: RoutineTargetFormatTest 14 (commonTest), RoutineTargetLineTest 1, ActiveWorkoutScreenTest +3 (uiTest). 434 + 18 = 452.
-          MIN_SCREENS_IOS_TESTS: 452
+          # Phase 4B task 9: ExercisePickerSheetTest +8 (uiTest, multiple mode). 452 + 8 = 460.
+          MIN_SCREENS_IOS_TESTS: 460
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -1,10 +1,12 @@
 package com.mooscles.screens.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,12 +28,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.ExerciseThumbnail
 import com.mooscles.designsystem.components.MInfoChip
+import com.mooscles.designsystem.icons.MIcon
 import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.Skeleton
+import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.mFocusRing
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.format.equipmentLabel
@@ -40,6 +46,7 @@ import com.mooscles.screens.resources.library_custom
 import com.mooscles.screens.resources.library_meta
 import com.mooscles.screens.resources.library_row
 import com.mooscles.screens.resources.library_row_custom
+import com.mooscles.screens.resources.workout_picker_selected
 import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.ui.ExerciseUi
 import org.jetbrains.compose.resources.stringResource
@@ -53,6 +60,10 @@ internal const val THREE_LINE_NAME_FONT_SCALE = 2f
  * ([ExerciseThumbnail] of [media]: the still figure, frame B, or the equipment's icon), [name] in
  * `title.sm` on up to two lines (three at 200%), "Chest · Barbell" and, for a custom exercise, the
  * "Custom" tag. The media and 8 dp above and below it make the row at least 72 dp tall.
+ *
+ * With [selected] given (the picker's multiple mode) the row is a checkbox instead of a button: it
+ * ends in a box that is checked while selected, its state is announced ("Selected") and a tap
+ * calls [onClick] to toggle it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -63,6 +74,7 @@ internal fun LibraryRow(
     tag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selected: Boolean? = null,
 ) {
     val colors = MTheme.colors
     val muscle = muscleLabel(exercise.muscle)
@@ -76,12 +88,21 @@ internal fun LibraryRow(
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val shape = RoundedCornerShape(MTheme.radius.md)
+    val selectedText = if (selected == true) stringResource(Res.string.workout_picker_selected) else null
+    val action = if (selected == null) {
+        Modifier.clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
+    } else {
+        Modifier.toggleable(value = selected, interactionSource = source, indication = null, role = Role.Checkbox, onValueChange = { onClick() })
+    }
     Row(
         modifier
             .fillMaxWidth()
             .testTag(tag)
-            .clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label }
+            .then(action)
+            .semantics {
+                contentDescription = label
+                if (selectedText != null) stateDescription = selectedText
+            }
             .mFocusRing(shape, source)
             .background(if (pressed) colors.bgInset else Color.Transparent, shape)
             .padding(horizontal = MTheme.space.s4, vertical = MTheme.space.s2),
@@ -110,6 +131,24 @@ internal fun LibraryRow(
                 }
             }
         }
+        if (selected != null) SelectionBox(selected)
+    }
+}
+
+/** The checkbox at the end of a selectable row: an outline, filled with a check while [checked]. */
+@Composable
+private fun SelectionBox(checked: Boolean) {
+    val colors = MTheme.colors
+    val shape = RoundedCornerShape(MTheme.radius.sm)
+    Box(
+        Modifier
+            .size(MTheme.sizes.icon24)
+            .background(if (checked) colors.accentSolid else colors.bgSurface, shape)
+            .border(MTheme.sizes.border, if (checked) colors.accentSolid else colors.borderStrong, shape)
+            .testTag(LibraryTags.ROW_CHECKBOX),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (checked) MIcon(MIcons.Check, contentDescription = null, size = MTheme.sizes.icon16, tint = colors.accentOn)
     }
 }
 
