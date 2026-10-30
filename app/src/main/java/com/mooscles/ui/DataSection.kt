@@ -32,6 +32,7 @@ import com.mooscles.designsystem.resources.settings_data_desc
 import com.mooscles.designsystem.resources.settings_data_dismiss
 import com.mooscles.designsystem.resources.settings_data_footer
 import com.mooscles.designsystem.resources.settings_data_title
+import com.mooscles.designsystem.resources.settings_data_export_photos_note
 import com.mooscles.designsystem.resources.settings_export
 import com.mooscles.designsystem.resources.settings_import
 import com.mooscles.designsystem.resources.settings_import_blocked
@@ -82,6 +83,13 @@ fun DataSection(state: BackupUi, workoutActive: Boolean, actions: DataActions, m
                     modifier = Modifier.testTag("data-import"),
                 )
             }
+            // Decision 18: the file carries no photos, said where the export is.
+            MText(
+                stringResource(Res.string.settings_data_export_photos_note),
+                MTheme.type.bodyMd,
+                color = colors.textSecondary,
+                modifier = Modifier.testTag("data-export-photos-note"),
+            )
             if (workoutActive) {
                 MText(stringResource(Res.string.settings_import_blocked), MTheme.type.bodyMd, color = colors.textSecondary)
             }

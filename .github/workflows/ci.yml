@@ -237,7 +237,13 @@ jobs:
           # SizesTimingElevationTest +1 (mediaStripIsFiftySix). 1062 + 4 = 1066.
           # Phase 4B task 11 fix round 1: (:screens commonTest) RoutineNamesTest 3. 1066 + 3 = 1069.
           # Phase 4B task 14: (:screens commonTest) PlannedSetDraftsTest 13. 1069 + 13 = 1082.
-          MIN_HOST_TESTS: 1082
+          # Phase 4B task 15 (:app): new RoutinesNavigationHostTest 11, AndroidPhotoCaptureHostTest 7, DataSectionHostTest +1 = 19;
+          # retired with the old routine screens (logic ported in tasks 11, 13 and 14): RoutineEditorHostTest 13,
+          # RoutineResumeHostTest 7, RoutineFoldersHostTest 2, RoutineEditorVisualHostTest 1 = 23. 1082 + 19 - 23 = 1078.
+          # Phase 4B task 15 fix round 1 (:app): RoutinesNavigationHostTest +2 (copyOpenReplacesTheEditor,
+          # restoringTheEditorWhileLoadingNeitherNavigatesNorLeaves); AndroidPhotoCaptureHostTest +3 (aMissingCameraApp...,
+          # aMissingPicker..., stagingNeverDeletes...; the double-launch test was replaced one for one). 1078 + 5 = 1083.
+          MIN_HOST_TESTS: 1083
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',

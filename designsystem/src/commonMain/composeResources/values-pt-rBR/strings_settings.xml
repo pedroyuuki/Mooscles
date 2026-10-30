@@ -28,6 +28,7 @@
     <string name="settings_export">Exportar dados</string>
     <string name="settings_import">Importar dados</string>
     <string name="settings_import_blocked">Conclua ou descarte o treino em andamento para importar</string>
+    <string name="settings_data_export_photos_note">As fotos dos exercícios personalizados não entram no arquivo.</string>
     <string name="settings_data_dismiss">Fechar</string>
     <string name="settings_data_footer">Os backups trazem todo o seu histórico de treinos sem criptografia. Guarde o arquivo em um lugar privado.</string>
     <string name="settings_import_title">Importar backup?</string>

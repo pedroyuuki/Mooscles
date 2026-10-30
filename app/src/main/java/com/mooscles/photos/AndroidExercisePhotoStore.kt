@@ -40,11 +40,20 @@ class AndroidExercisePhotoStore(
     private fun bump() = revisions.update { it + 1 }
 
     override suspend fun stage(draftKey: String, source: String): Boolean = withContext(io) {
-        if (!safe(draftKey)) return@withContext false
+        try {
+            stageFrom(draftKey, source)
+        } finally {
+            // A camera shot lives only until it is staged (plan 4B, F12); a gallery pick is not ours to delete.
+            discardCapture(context, source)
+        }
+    }
+
+    private suspend fun stageFrom(draftKey: String, source: String): Boolean {
+        if (!safe(draftKey)) return false
         val uri = source.toUri()
         val processed = PhotoProcessing.process({ context.contentResolver.openInputStream(uri) ?: throw IOException("No stream") }, Build.VERSION.SDK_INT)
-            ?: return@withContext false
-        gate.withLock {
+            ?: return false
+        return gate.withLock {
             val dir = drafts()
             var tmpFull: File? = null
             var tmpThumb: File? = null

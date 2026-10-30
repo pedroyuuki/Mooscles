@@ -186,11 +186,3 @@ fun NameDialog(title: String, initial: String = "", label: String = "Name", onDi
     }, confirmButton = { TextButton(onClick = { onSave(value.trim()); onDismiss() }, enabled = value.trim().isNotEmpty() && value.length <= 80) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
-
-@Composable
-fun OrderButtons(upEnabled: Boolean, downEnabled: Boolean, onMove: (Int) -> Unit) {
-    Row {
-        IconButton(onClick = { onMove(-1) }, enabled = upEnabled) { Icon(Icons.Outlined.KeyboardArrowUp, "Move up") }
-        IconButton(onClick = { onMove(1) }, enabled = downEnabled) { Icon(Icons.Outlined.KeyboardArrowDown, "Move down") }
-    }
-}
