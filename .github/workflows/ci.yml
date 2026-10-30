@@ -447,8 +447,9 @@ jobs:
           # Phase 4A task 10: ShareCardDataTest +1 (commonTest); ExerciseDisplayNamesTest 4, AnatomyTextsTest 3,
           # ActiveWorkoutScreenTest +1, WorkoutSummaryScreenTest +1 (uiTest). 297 + 10 = 307.
           # Phase 4A task 14: LibraryModelTest 10 (commonTest). 307 + 10 = 317.
+          # Phase 4A task 15 (uiTest): LibraryScreenTest 16, LibraryFiltersUiTest 6. 317 + 22 = 339.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 317
+          MIN_SCREENS_IOS_TESTS: 339
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

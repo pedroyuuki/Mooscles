@@ -7,9 +7,11 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,7 +50,7 @@ const val SearchFieldPlaceholderTag = "search-field-placeholder"
 /**
  * A one-line search field (plan decision 12): the `Search` icon at the start, [placeholder] in
  * `text.secondary` while it is empty, and, only while it has text, a 48 dp clear button
- * ("Clear search") at the end, which calls [onClear] and keeps the focus in the field. The
+ * ("Clear search") at the end, 8 dp after the field, which calls [onClear] and keeps the focus in the field. The
  * keyboard shows Search, which only closes it: the caller filters as the text changes.
  *
  * It has no label above it, unlike [MTextField]: [placeholder] is its accessible name, drawn while
@@ -123,6 +125,8 @@ fun MSearchField(
             )
         }
         if (!empty) {
+            // 8 dp between the field's touch area and the button's (two targets side by side).
+            Spacer(Modifier.width(MTheme.space.s2))
             MIconButton(
                 MIcons.X,
                 contentDescription = clearLabel,

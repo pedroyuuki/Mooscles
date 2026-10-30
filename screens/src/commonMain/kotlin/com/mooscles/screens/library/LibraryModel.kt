@@ -102,7 +102,9 @@ internal class LibraryModelCache {
  * The [LibraryModel] of [exercises] in the screen's catalog language: `null` until the first build,
  * which runs on [Dispatchers.Default]; at once when the process cache already holds this list and
  * language. When the list or the language changes, the previous model stays until the new one is
- * ready, so the list never falls back to the skeleton.
+ * ready, so the list never falls back to the skeleton; but a model of the other language is dropped
+ * at once (the skeleton shows until the new one is built), so a name is never shown in a language
+ * the screen around it is not in.
  */
 @Composable
 fun rememberLibraryModel(exercises: List<ExerciseUi>): LibraryModel? =
@@ -126,8 +128,9 @@ internal fun rememberLibraryModel(
         latest = cache.get(exercises, portuguese)
             ?: currentBuild(exercises, portuguese).also { cache.put(exercises, portuguese, it) }
     }
-    return cached ?: latest
+    return cached ?: latest?.takeIf { it.portuguese == portuguese }
 }
 
-private suspend fun buildOffTheMainThread(exercises: List<ExerciseUi>, portuguese: Boolean): LibraryModel =
+/** The default build of [rememberLibraryModel]: [LibraryModel.build] on [Dispatchers.Default]. */
+internal suspend fun buildOffTheMainThread(exercises: List<ExerciseUi>, portuguese: Boolean): LibraryModel =
     withContext(Dispatchers.Default) { LibraryModel.build(exercises, portuguese) }

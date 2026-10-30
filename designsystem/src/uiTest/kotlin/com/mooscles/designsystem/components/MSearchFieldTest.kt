@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.designsystem.assertShownWhole
+import com.mooscles.designsystem.tokens.MoosclesSpace
 import com.mooscles.designsystem.tokens.MoosclesTargets
 import com.mooscles.designsystem.withTheme
 import kotlin.test.Test
@@ -79,6 +80,10 @@ class MSearchFieldTest {
         val touch = button.fetchSemanticsNode().touchBoundsInRoot
         val min = with(density) { MoosclesTargets().min.toPx() } - 0.5f
         assertTrue(touch.width >= min && touch.height >= min, "clear is ${touch.width} x ${touch.height} px")
+        // 8 dp between the field's target and the button's.
+        val gap = touch.left - field().fetchSemanticsNode().boundsInRoot.right
+        val space = with(density) { MoosclesSpace().s2.toPx() } - 0.5f
+        assertTrue(gap >= space, "the clear button is $gap px after the field")
         field().performTextReplacement("")
         waitForIdle()
         onNode(clear).assertDoesNotExist()
