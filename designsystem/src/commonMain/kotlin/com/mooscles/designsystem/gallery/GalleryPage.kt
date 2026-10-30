@@ -57,6 +57,17 @@ fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
 
 fun galleryEntryTag(page: GalleryPage): String = "gallery-entry-${page.name}"
 
+/**
+ * A gallery page the design system does not own, given by its host (plan decision 5: the figure
+ * poses live in `:screens`, which the design system cannot see). [key] identifies it in
+ * [GalleryState.openExtra] and in its tags; it is listed after the design system's own pages.
+ */
+class GalleryExtraPage(val key: String, val title: @Composable () -> String, val content: @Composable () -> Unit)
+
+fun galleryExtraPageTag(key: String): String = "gallery-page-extra-$key"
+
+fun galleryExtraEntryTag(key: String): String = "gallery-entry-extra-$key"
+
 /** The page body, tagged so tests can find it. */
 @Composable
 fun GalleryPage.Content() {

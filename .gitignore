@@ -43,3 +43,6 @@ service_account*.json
 
 # Keep source, Room schemas, and the Gradle wrapper (including its JAR).
 .vscode/
+
+# Phase evidence that stays local (captures not cited in a report, generated fixtures)
+docs/superpowers/reports/*/local/

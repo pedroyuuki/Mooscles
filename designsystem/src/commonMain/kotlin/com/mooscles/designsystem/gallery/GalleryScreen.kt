@@ -120,10 +120,14 @@ class GalleryControls(dark: Boolean) {
     var expanded by mutableStateOf(true)
 }
 
-/** The open page and the controls. A host may hoist it to route the system back to [back]. */
+/**
+ * The open page and the controls. A host may hoist it to route the system back to [back]. At most
+ * one page is open: a design system page ([open]) or a host's extra page ([openExtra], its key).
+ */
 @Stable
 class GalleryState(initialPage: GalleryPage?, dark: Boolean) {
     var open by mutableStateOf(initialPage)
+    var openExtra by mutableStateOf<String?>(null)
     val controls = GalleryControls(dark)
 
     /**
@@ -132,8 +136,9 @@ class GalleryState(initialPage: GalleryPage?, dark: Boolean) {
      * comes next composes in the system language.
      */
     fun back(leave: () -> Unit) {
-        if (open != null) {
+        if (open != null || openExtra != null) {
             open = null
+            openExtra = null
             return
         }
         restoreLanguage()
@@ -157,13 +162,15 @@ fun rememberGalleryState(initialPage: GalleryPage? = null): GalleryState {
  * The gallery: the top bar, the controls (theme, text size, motion and language) and either
  * the page list or the open page. The whole screen, top bar and controls included, uses the
  * chosen theme and motion; only the page below the controls gets the chosen text size. Back
- * closes the page, then leaves through [onBack].
+ * closes the page, then leaves through [onBack]. [extraPages] are the host's own pages, listed
+ * after the design system's.
  */
 @Composable
 fun GalleryScreen(
     onBack: () -> Unit,
     initialPage: GalleryPage? = null,
     state: GalleryState = rememberGalleryState(initialPage),
+    extraPages: List<GalleryExtraPage> = emptyList(),
 ) {
     val controls = state.controls
     val haptics = MTheme.haptics
@@ -172,13 +179,34 @@ fun GalleryScreen(
         MoosclesDesignTheme(dark = controls.dark, reducedMotion = reducedMotion, haptics = haptics) {
             Column(Modifier.fillMaxSize().background(MTheme.colors.bgBase).testTag(GalleryTags.SCREEN)) {
                 val page = state.open
-                TopBar(stringResource(page?.title ?: Res.string.gallery_title), onBack = { state.back(onBack) })
+                // A key the host no longer passes shows the list; back still clears it.
+                val extra = if (page == null) state.openExtra?.let { key -> extraPages.firstOrNull { it.key == key } } else null
+                val title = when {
+                    page != null -> stringResource(page.title)
+                    extra != null -> extra.title()
+                    else -> stringResource(Res.string.gallery_title)
+                }
+                TopBar(title, onBack = { state.back(onBack) })
                 Controls(controls)
                 Box(Modifier.fillMaxWidth().height(MTheme.sizes.border).background(MTheme.colors.borderSubtle))
                 val density = LocalDensity.current
                 CompositionLocalProvider(LocalDensity provides Density(density.density, controls.fontScale.scale)) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        if (page == null) PageList(onOpen = { state.open = it }) else page.Content()
+                        when {
+                            page != null -> page.Content()
+                            extra != null -> Box(Modifier.testTag(galleryExtraPageTag(extra.key))) { extra.content() }
+                            else -> PageList(
+                                extraPages,
+                                onOpen = {
+                                    state.openExtra = null
+                                    state.open = it
+                                },
+                                onOpenExtra = {
+                                    state.open = null
+                                    state.openExtra = it
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -294,12 +322,15 @@ private fun DrawScope.fadeEdge(atRight: Boolean, width: Float, clear: Color, edg
     )
 }
 
-/** One row per page, each a settings row with a chevron, at least 56 dp tall. */
+/** One row per page, each a settings row with a chevron, at least 56 dp tall; the [extraPages] last. */
 @Composable
-private fun PageList(onOpen: (GalleryPage) -> Unit) {
+private fun PageList(extraPages: List<GalleryExtraPage>, onOpen: (GalleryPage) -> Unit, onOpenExtra: (String) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = MTheme.space.s2)) {
         for (entry in GalleryPage.entries) {
             SettingsRow(stringResource(entry.title), Modifier.testTag(galleryEntryTag(entry)), onClick = { onOpen(entry) })
+        }
+        for (extra in extraPages) {
+            SettingsRow(extra.title(), Modifier.testTag(galleryExtraEntryTag(extra.key)), onClick = { onOpenExtra(extra.key) })
         }
     }
 }

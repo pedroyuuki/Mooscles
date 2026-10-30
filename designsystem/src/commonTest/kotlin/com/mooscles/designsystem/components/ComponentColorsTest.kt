@@ -1,5 +1,6 @@
 package com.mooscles.designsystem.components
 
+import com.mooscles.designsystem.illustration.figurePalette
 import com.mooscles.designsystem.tokens.Contrast
 import com.mooscles.designsystem.tokens.MoosclesColors
 import kotlin.test.Test
@@ -46,6 +47,20 @@ class ComponentColorsTest {
             atLeast(4.5, error.content, error.surface, "$name error message")
             atLeast(4.5, error.action, error.surface, "$name error action")
             atLeast(3.0, error.icon!!, error.surface, "$name error icon")
+        }
+    }
+
+    /** Phase 4A: every color of an exercise figure is a 3:1 graphic on the thumbnail tile and on the pages it sits on. */
+    @Test
+    fun figureColorsStandOutOnTheirBackgrounds() {
+        for ((name, colors) in themes) {
+            val palette = figurePalette(colors)
+            for ((surface, bg) in listOf("inset" to colors.bgInset, "surface" to colors.bgSurface, "base" to colors.bgBase)) {
+                atLeast(3.0, palette.body, bg, "$name figure on $surface")
+                atLeast(3.0, palette.far, bg, "$name far limbs on $surface")
+                atLeast(3.0, palette.equipment, bg, "$name equipment on $surface")
+                atLeast(3.0, palette.highlight, bg, "$name highlight on $surface")
+            }
         }
     }
 
