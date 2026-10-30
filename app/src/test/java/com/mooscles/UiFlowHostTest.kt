@@ -125,8 +125,18 @@ class UiFlowHostTest {
             vm.ui.value.routines.singleOrNull { it.id == createdRoutineId }?.exercises?.singleOrNull()?.setTargets?.size == 2
         }
         val entry = vm.ui.value.routines.single { it.id == createdRoutineId }.exercises.single()
-        // Planned targets and the routine's rest are edited in the editor's own tests (plan 4B, Tasks 13 and 14);
-        // here the routine keeps its defaults and the flow goes on from "Start workout".
+        // The routine's rest, from the editor's rest chip (Task 13), with a value that is not the default: 2:00 + 0:15.
+        // Planned reps wait for Task 14 and stay blank here.
+        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag("routine-exercise-${entry.id}-rest"))
+        compose.onNodeWithTag("routine-exercise-${entry.id}-rest").performClick()
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
+        compose.onNodeWithTag(StepperIncreaseTag).performClick()
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:15")
+        closeSheet()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("routine-editor-list").fetchSemanticsNodes()
+            runBlocking(Dispatchers.IO) { app.repository.snapshot() }.routineItems(createdRoutineId!!).singleOrNull()?.restSeconds == 135
+        }
         compose.onNodeWithTag("routine-editor-start").performClick()
         // The workout opens at once (the shell's full-screen route), then shows the started workout.
         compose.onNodeWithTag("workout-route").assertExists()
@@ -139,22 +149,22 @@ class UiFlowHostTest {
         val planned = started.routineItems(createdRoutine.id).single()
         val workoutExercise = started.workoutItems(started.activeWorkout!!.id).single()
         assertEquals(0, planned.targetReps)
-        assertEquals(120, planned.restSeconds)
-        assertEquals(120, workoutExercise.restSeconds)
+        assertEquals(135, planned.restSeconds)
+        assertEquals(135, workoutExercise.restSeconds)
         assertEquals(createdRoutine.id, started.activeWorkout!!.sourceRoutineId)
         assertEquals(listOf(0, 0), started.plannedSets(planned.id).map { it.targetReps })
         val sets = started.exerciseSets(workoutExercise.id)
         assertEquals(listOf(0, 0), sets.map { it.reps })
         assertTrue(sets.none { it.completed })
-        // This workout's next rests, from the exercise's rest sheet: 2:00 - 0:15.
+        // This workout's next rests, from the exercise's rest sheet: 2:15 - 0:15.
         openRestSheet(workoutExercise.id)
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:15")
         compose.onNodeWithTag(StepperDecreaseTag).performClick()
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("1:45")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
         closeSheet()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes()
-            vm.ui.value.active?.exercises?.single()?.restSeconds == 105
+            vm.ui.value.active?.exercises?.single()?.restSeconds == 120
         }
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("workout-set-${sets[0].id}"))
         field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
@@ -170,21 +180,21 @@ class UiFlowHostTest {
             // Querying Compose also drains the paused Robolectric main looper,
             // including the DataStore continuation that publishes timer state.
             compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes()
-            app.timer.state.value.let { it.running && it.durationMillis == 105_000L }
+            app.timer.state.value.let { it.running && it.durationMillis == 120_000L }
         }
-        assertEquals(105_000L, app.timer.state.value.durationMillis)
+        assertEquals(120_000L, app.timer.state.value.durationMillis)
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("workout-timer-layer").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("workout-timer-layer").assertIsDisplayed()
         val inProgressTimer = app.timer.state.value
-        // 1:45 + 3 × 0:15 = 2:30 for the next rests; the live interval keeps its own.
+        // 2:00 + 3 × 0:15 = 2:45 for the next rests; the live interval keeps its own.
         openRestSheet(workoutExercise.id)
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("1:45")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
         repeat(3) { compose.onNodeWithTag(StepperIncreaseTag).performClick() }
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:30")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:45")
         closeSheet()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes()
-            vm.ui.value.active?.exercises?.single()?.restSeconds == 150
+            vm.ui.value.active?.exercises?.single()?.restSeconds == 165
         }
         assertEquals("Changing the next rest must preserve the live interval", inProgressTimer, app.timer.state.value)
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("workout-set-${sets[1].id}"))
@@ -192,7 +202,7 @@ class UiFlowHostTest {
         check(sets[1].id).performClick()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes()
-            app.timer.state.value.let { it.running && it.durationMillis == 150_000L && it.token != inProgressTimer.token }
+            app.timer.state.value.let { it.running && it.durationMillis == 165_000L && it.token != inProgressTimer.token }
         }
         compose.onNodeWithTag("workout-timer-layer").assertIsDisplayed()
         compose.onNodeWithTag("workout-header-finish").performClick()
@@ -212,8 +222,8 @@ class UiFlowHostTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("SESSION BREAKDOWN").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("SESSION BREAKDOWN").assertIsDisplayed()
         val saved = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
-        assertEquals(150, saved.workoutExercises.single { it.id == workoutExercise.id }.restSeconds)
-        assertEquals(120, saved.routineExercises.single { it.id == planned.id }.restSeconds)
+        assertEquals(165, saved.workoutExercises.single { it.id == workoutExercise.id }.restSeconds)
+        assertEquals(135, saved.routineExercises.single { it.id == planned.id }.restSeconds)
 
     }
 

@@ -58,7 +58,9 @@ class AndroidPhotoCaptureHostTest {
 
     private class RecordingRegistry : ActivityResultRegistry() {
         val launches = mutableListOf<Pair<Int, Any?>>()
+        var missing = false
         override fun <I, O> onLaunch(requestCode: Int, contract: ActivityResultContract<I, O>, input: I, options: ActivityOptionsCompat?) {
+            if (missing) throw android.content.ActivityNotFoundException("no camera")
             launches += requestCode to input
         }
     }
@@ -99,13 +101,42 @@ class AndroidPhotoCaptureHostTest {
         assertFalse(file.exists())
     }
 
-    @Test fun eachShotGetsANewFileUnderTheCaptureFolder() {
+    @Test fun aSecondTapWhileTheCameraIsOpenLaunchesNothingAndTheNextShotGetsANewFile() {
         val launchers = mutableListOf<() -> Unit>()
         compose.setContent(content(launchers, camera = true))
         compose.waitForIdle()
         compose.runOnIdle { launchers.last()(); launchers.last()() }
-        val uris = registry.launches.map { it.second as Uri }
-        assertEquals(2, uris.toSet().size)
+        assertEquals(1, registry.launches.size)
+        val (code, first) = registry.launches.single()
+        compose.runOnIdle { registry.dispatchResult(code, Activity.RESULT_CANCELED, null) }
+        compose.runOnIdle { launchers.last()() }
+        assertEquals(2, registry.launches.size)
+        assertNotEquals(first, registry.launches.last().second)
+    }
+
+    @Test fun aMissingCameraAppIsACancelledShotAndCleansTheFile() {
+        val launchers = mutableListOf<() -> Unit>()
+        compose.setContent(content(launchers, camera = true))
+        compose.waitForIdle()
+        registry.missing = true
+        compose.runOnIdle { launchers.last()() }
+        assertEquals(listOf<String?>(null), results)
+        // Nothing is left pending: a later tap launches again.
+        registry.missing = false
+        compose.runOnIdle { launchers.last()() }
+        assertEquals(1, registry.launches.size)
+    }
+
+    @Test fun aMissingPickerIsACancelledPick() {
+        val launchers = mutableListOf<() -> Unit>()
+        compose.setContent(content(launchers, camera = false))
+        compose.waitForIdle()
+        registry.missing = true
+        compose.runOnIdle { launchers.last()() }
+        assertEquals(listOf<String?>(null), results)
+        registry.missing = false
+        compose.runOnIdle { launchers.last()() }
+        assertEquals(1, registry.launches.size)
     }
 
     @Test fun aPickedImageIsHandedBackAndNothingIsHandedBackWithoutOne() {
@@ -119,7 +150,7 @@ class AndroidPhotoCaptureHostTest {
             (input as androidx.activity.result.PickVisualMediaRequest).mediaType)
         val picked = Intent().setData(Uri.parse("content://media/picker/0/1"))
         compose.runOnIdle { registry.dispatchResult(code, Activity.RESULT_OK, picked) }
-        compose.runOnIdle { launchers.last()() }
+        compose.runOnIdle { launchers.last()() } // the picker is free again after a result
         compose.runOnIdle { registry.dispatchResult(registry.launches.last().first, Activity.RESULT_CANCELED, Intent()) }
         assertEquals(listOf<String?>("content://media/picker/0/1", null), results)
     }
@@ -157,6 +188,41 @@ class AndroidPhotoCaptureHostTest {
         assertFalse(capture.cameraAvailable)
         val info = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "com.example.camera"; name = "Camera" } }
         shadowOf(context.packageManager).addResolveInfoForIntent(Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE), info)
-        assertTrue(capture.cameraAvailable)
+        // Asked once per instance, not on every recomposition; a new instance asks again.
+        assertFalse(capture.cameraAvailable)
+        assertTrue(AndroidPhotoCapture(context).cameraAvailable)
+    }
+
+    /** Only our own capture files are ever deleted after a stage; every other URI is left as it is. */
+    @Test fun stagingNeverDeletesAnotherAuthorityOrAnotherFolderOrATraversal() {
+        val jpeg = PhotoTestImages.write(File(context.cacheDir, "safety-src/shot.jpg"), 400, 300, 1)
+        val shares = File(context.cacheDir, "workout-shares").apply { mkdirs() }
+        val card = File(shares, "card.jpg").also { jpeg.copyTo(it, overwrite = true) }
+        val cardUri = FileProvider.getUriForFile(context, captureAuthority(context), card)
+        assertEquals("/workout_cards/card.jpg", cardUri.path)
+        // The same authority, another shared folder.
+        assertFalse(discardCapture(context, cardUri.toString()))
+        assertTrue(card.exists())
+        // The capture folder's prefix, walking out of it (decoded and encoded).
+        for (path in listOf("photo_capture/../workout_cards/card.jpg", "photo_capture/..%2Fworkout_cards%2Fcard.jpg")) {
+            val traversal = "content://${captureAuthority(context)}/$path"
+            assertFalse(path, discardCapture(context, traversal))
+            assertTrue(path, card.exists())
+        }
+        // Another authority, the same path shape.
+        assertFalse(discardCapture(context, "content://com.example.other/photo_capture/card.jpg"))
+        // A file URI and a plain path.
+        assertFalse(discardCapture(context, Uri.fromFile(card).toString()))
+        assertFalse(discardCapture(context, card.absolutePath))
+        assertTrue(card.exists())
+        // And through the store: the card stays after a stage that reads it.
+        val store = AndroidExercisePhotoStore(context, Dispatchers.Unconfined)
+        try {
+            runBlocking { store.stage("draft-safe", cardUri.toString()) }
+            assertTrue(card.exists())
+        } finally {
+            File(context.filesDir, "exercise_photos").deleteRecursively(); shares.deleteRecursively()
+            File(context.cacheDir, "safety-src").deleteRecursively()
+        }
     }
 }

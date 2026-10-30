@@ -1,5 +1,6 @@
 package com.mooscles.photos
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -30,14 +31,34 @@ internal fun captureAuthority(context: Context) = "${context.packageName}.workou
  * deletes it here.
  */
 class AndroidPhotoCapture(private val context: Context) : PhotoCapture {
-    override val cameraAvailable: Boolean
-        get() = Intent(MediaStore.ACTION_IMAGE_CAPTURE).resolveActivity(context.packageManager) != null
+    // Asked once per instance (the form reads it in composition, on every keystroke); the host keeps one instance.
+    override val cameraAvailable: Boolean by lazy {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).resolveActivity(context.packageManager) != null
+    }
 
     @Composable
     override fun rememberGalleryLauncher(onResult: (uri: String?) -> Unit): () -> Unit {
         val latest by rememberUpdatedState(onResult)
-        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> latest(uri?.toString()) }
-        return remember(launcher) { { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } }
+        var launching by remember { mutableStateOf(false) }
+        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            launching = false
+            latest(uri?.toString())
+        }
+        // The picker is in front once launched; a second tap before it shows is ignored. It may be missing on a device
+        // without the document picker: that is a cancelled pick.
+        return remember(launcher) {
+            {
+                if (!launching) {
+                    launching = true
+                    try {
+                        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    } catch (_: ActivityNotFoundException) {
+                        launching = false
+                        latest(null)
+                    }
+                }
+            }
+        }
     }
 
     @Composable
@@ -59,9 +80,19 @@ class AndroidPhotoCapture(private val context: Context) : PhotoCapture {
         }
         return remember(launcher) {
             {
-                val uri = newCaptureUri(appContext)
-                pending = uri.toString()
-                launcher.launch(uri)
+                // One shot at a time: while the camera is in front, a second tap makes no second file.
+                if (pending == null) {
+                    val uri = newCaptureUri(appContext)
+                    pending = uri.toString()
+                    try {
+                        launcher.launch(uri)
+                    } catch (_: ActivityNotFoundException) {
+                        // The camera app went away after the check: a cancelled shot, its file cleaned.
+                        pending = null
+                        discardCapture(appContext, uri.toString())
+                        latest(null)
+                    }
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import com.mooscles.designsystem.components.SetRowCheckTag
 import com.mooscles.designsystem.components.SetRowLoadTag
 import com.mooscles.designsystem.components.SetRowRepsTag
 import com.mooscles.designsystem.components.StepperDecreaseTag
+import com.mooscles.designsystem.components.StepperIncreaseTag
 import com.mooscles.designsystem.components.StepperValueTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -62,7 +63,22 @@ class UiFlowTest {
             val entry = routineId?.let { data.routineItems(it).singleOrNull() }
             entry != null && data.plannedSets(entry.id).size == 2
         }
-        // Planned targets and the routine's rest are edited in the editor's own tests (plan 4B, Tasks 13 and 14).
+        // The routine's rest, from the editor's rest chip (Task 13), with a value that is not the default: 2:00 + 0:15.
+        // Planned reps wait for Task 14 and stay blank here.
+        val editorData = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
+        val entryId = editorData.routineItems(editorData.routines.single { it.name == name }.id).single().id
+        val restTag = "routine-exercise-$entryId-rest"
+        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(restTag))
+        compose.onNodeWithTag(restTag).performClick()
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
+        compose.onNodeWithTag(StepperIncreaseTag).performClick()
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:15")
+        compose.onNodeWithTag("sheet-scrim").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("sheet-scrim").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(10_000) {
+            val data = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
+            data.routines.singleOrNull { it.name == name }?.let { data.routineItems(it.id).singleOrNull()?.restSeconds } == 135
+        }
         compose.onNodeWithTag("routine-editor-start").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("workout-list").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("tab-bar").assertDoesNotExist()
@@ -70,31 +86,31 @@ class UiFlowTest {
         val planned = started.routineItems(started.routines.single { it.name == name }.id).single()
         val workoutExercise = started.workoutItems(started.activeWorkout!!.id).single()
         assertEquals(0, planned.targetReps)
-        assertEquals(120, planned.restSeconds)
-        assertEquals(120, workoutExercise.restSeconds)
+        assertEquals(135, planned.restSeconds)
+        assertEquals(135, workoutExercise.restSeconds)
         assertEquals(planned.routineId, started.activeWorkout!!.sourceRoutineId)
         assertEquals(listOf(0, 0), started.plannedSets(planned.id).map { it.targetReps })
         val sets = started.exerciseSets(workoutExercise.id)
         assertEquals(listOf(0, 0), sets.map { it.reps })
         assertTrue(sets.none { it.completed })
-        // This workout's next rests, from the exercise's rest sheet: 2:00 - 0:15.
+        // This workout's next rests, from the exercise's rest sheet: 2:15 - 0:15.
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("exercise-rest-${workoutExercise.id}"))
         compose.onNodeWithTag("exercise-rest-${workoutExercise.id}").performClick()
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:15")
         compose.onNodeWithTag(StepperDecreaseTag).performClick()
-        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("1:45")
+        compose.onNodeWithTag(StepperValueTag, useUnmergedTree = true).assertTextEquals("2:00")
         compose.onNodeWithTag("sheet-scrim").performSemanticsAction(SemanticsActions.OnClick)
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("sheet-scrim").fetchSemanticsNodes().isEmpty() }
         compose.waitUntil(10_000) {
-            runBlocking(Dispatchers.IO) { app.repository.snapshot() }.workoutExercises.single { it.id == workoutExercise.id }.restSeconds == 105
+            runBlocking(Dispatchers.IO) { app.repository.snapshot() }.workoutExercises.single { it.id == workoutExercise.id }.restSeconds == 120
         }
         compose.onNodeWithTag("workout-list").performScrollToNode(hasTestTag("workout-set-${sets[0].id}"))
         field(sets[0].id, SetRowRepsTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
         field(sets[0].id, SetRowLoadTag).performTextReplacement("20")
         field(sets[0].id, SetRowRepsTag).performTextReplacement("10")
         compose.onNode(hasTestTag(SetRowCheckTag) and hasAnyAncestor(hasTestTag("workout-set-${sets[0].id}"))).performClick()
-        compose.waitUntil(10_000) { app.timer.state.value.let { it.running && it.durationMillis == 105_000L } }
-        assertEquals(105_000L, app.timer.state.value.durationMillis)
+        compose.waitUntil(10_000) { app.timer.state.value.let { it.running && it.durationMillis == 120_000L } }
+        assertEquals(120_000L, app.timer.state.value.durationMillis)
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("workout-timer-layer").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("workout-timer-layer").assertIsDisplayed()
         compose.onNodeWithTag("workout-header-finish").performClick()
@@ -108,8 +124,8 @@ class UiFlowTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("SESSION BREAKDOWN").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("SESSION BREAKDOWN").assertIsDisplayed()
         val saved = runBlocking(Dispatchers.IO) { app.repository.snapshot() }
-        assertEquals(105, saved.workoutExercises.single { it.id == workoutExercise.id }.restSeconds)
-        assertEquals(120, saved.routineExercises.single { it.id == planned.id }.restSeconds)
+        assertEquals(120, saved.workoutExercises.single { it.id == workoutExercise.id }.restSeconds)
+        assertEquals(135, saved.routineExercises.single { it.id == planned.id }.restSeconds)
 
     }
 

@@ -91,8 +91,12 @@ class RoutinesNavigationHostTest {
         tab("routines").assertIsSelected()
     }
 
-    /** M9 (Task 13): the routine goes away in the same frame as Back; the screen must be Train, not an empty stack. */
-    @Test fun goneAndBackInTheSameFrameLeaveOnlyTheEditor() {
+    /**
+     * Smoke test of M9 (Task 13): the routine goes away in the same frame as Back and the app ends on Train. It does
+     * not tell a bare pop from the real guard (the editor is not recomposed in time to call `onGone` a second time);
+     * the proof of idempotence is [leavingTheEditorTwiceStillLandsOnTrain].
+     */
+    @Test fun backWhileTheRoutineGoesLandsOnTrain() {
         show(UiState(loading = false, exercises = listOf(bench, row), routines = listOf(push), routineFolders = folders))
         openEditor("push")
         compose.runOnIdle {
@@ -102,6 +106,43 @@ class RoutinesNavigationHostTest {
         compose.waitForIdle()
         compose.onNodeWithTag(TrainScreenTag).assertIsDisplayed()
         assertFalse(compose.activity.isFinishing)
+    }
+
+    /** The copy's "Open" replaces the editor in view, so Back from the copy lands on Train, not on the original. */
+    @Test fun copyOpenReplacesTheEditor() {
+        show(UiState(loading = false, exercises = listOf(bench, row), routines = listOf(push), routineFolders = folders))
+        openEditor("push")
+        compose.onNodeWithTag("routine-editor-menu").performClick()
+        compose.onNodeWithTag("routine-editor-menu-duplicate").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Open").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Open").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Push day (copy)").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag(RoutineEditorTag).assertIsDisplayed()
+        back()
+        compose.onNodeWithTag(TrainScreenTag).assertIsDisplayed()
+        compose.onNodeWithTag(RoutineEditorTag).assertDoesNotExist()
+    }
+
+    /** F11 at the host: a restore of `routine/{id}` while the state loads stays on the editor, and leaves only once loaded. */
+    @Test fun restoringTheEditorWhileLoadingNeitherNavigatesNorLeaves() {
+        state = mutableStateOf(UiState(loading = false, exercises = listOf(bench, row), routines = listOf(push), routineFolders = folders))
+        val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        restoration.setContent { MoosclesApp(state.value, actions) }
+        compose.waitForIdle()
+        openEditor("push")
+        compose.runOnIdle { state.value = state.value.copy(loading = true, routines = emptyList()) }
+        compose.waitForIdle()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        compose.onNodeWithTag(RoutineEditorTag).assertIsDisplayed()
+        compose.onNodeWithTag(TrainScreenTag).assertDoesNotExist()
+        compose.onAllNodes(androidx.compose.ui.test.hasProgressBarRangeInfo(androidx.compose.ui.semantics.ProgressBarRangeInfo.Indeterminate)).assertCountEquals(0)
+        compose.runOnIdle { state.value = state.value.copy(loading = false, routines = listOf(push)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(RoutineEditorTag).assertIsDisplayed()
+        compose.runOnIdle { state.value = state.value.copy(routines = emptyList()) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(TrainScreenTag).assertIsDisplayed()
     }
 
     @Test fun leavingTheEditorTwiceStillLandsOnTrain() {
@@ -229,6 +270,12 @@ class RoutinesNavigationHostTest {
                     "createRoutine" -> if (args!!.size == 3) {
                         val (name, folder, id) = args.map { it as String }
                         state.value = current.copy(routines = current.routines + RoutineUi(id, name, folderId = folder))
+                    }
+                    "duplicateRoutine" -> if (args!!.size == 3) {
+                        val (_, copyName, newId) = args.map { it as String }
+                        val source = current.routines.first()
+                        state.value = current.copy(routines = current.routines + source.copy(id = newId, name = copyName,
+                            exercises = source.exercises.map { it.copy(id = "$newId-${it.id}", setTargets = it.setTargets.map { t -> t.copy(id = "$newId-${t.id}") }) }))
                     }
                     "startWorkout" -> state.value = current.copy(active = WorkoutUi("active", "Push day", System.currentTimeMillis(),
                         sourceRoutineId = args!![0] as String?))
