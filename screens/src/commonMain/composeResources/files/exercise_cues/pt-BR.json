@@ -36,9 +36,9 @@
     "Suba a partir da pausa, sem impulso."
   ],
   "barbell_row_overhand": [
-    "Incline o tronco pelo quadril, costas retas, a uns 45° ou mais baixo.",
+    "Incline o tronco pelo quadril, costas retas, a uns 45° ou mais perto do paralelo.",
     "Pegada pronada, um pouco mais aberta que os ombros.",
-    "Puxe a barra em direção ao abdômen, guiando pelos cotovelos.",
+    "Puxe a barra em direção à parte alta do abdômen, guiando pelos cotovelos.",
     "Desça com controle, sem levantar o tronco entre as repetições."
   ],
   "barbell_row_underhand": [
@@ -73,7 +73,7 @@
   ],
   "barbell_meadows_row": [
     "Fique de lado para a ponta da barra, um pé à frente do outro.",
-    "Pegue a ponta grossa com pegada pronada e apoie o outro antebraço no joelho.",
+    "Segure a ponta grossa da barra (onde entram as anilhas), pegada pronada; o outro antebraço no joelho.",
     "Puxe o cotovelo para cima e para trás, passando da linha do tronco.",
     "Desça até alongar bem, sem arredondar as costas."
   ],
@@ -93,7 +93,7 @@
     "Comece com a barra apoiada na frente dos ombros.",
     "Flexione um pouco os joelhos, com o tronco ereto.",
     "Estenda as pernas com força e use o impulso para levar a barra acima da cabeça.",
-    "Trave os braços com a barra sobre o meio do pé e volte aos ombros."
+    "Trave os braços com a barra sobre o meio do pé e desça a barra até os ombros."
   ],
   "barbell_landmine_press": [
     "Segure a ponta da barra na altura do ombro com uma mão.",
@@ -103,7 +103,7 @@
   ],
   "barbell_upright_row": [
     "Pegada na largura dos ombros ou um pouco mais aberta.",
-    "Suba a barra rente ao corpo, levando os cotovelos.",
+    "Suba a barra rente ao corpo, guiando pelos cotovelos.",
     "Pare perto da parte baixa do peito, cotovelos no máximo na altura dos ombros.",
     "Desça devagar, com a barra perto do corpo."
   ],
@@ -117,7 +117,7 @@
     "Apoie a barra no alto do trapézio, não no pescoço.",
     "Puxe o ar e trave o abdômen antes de descer.",
     "Desça entre os calcanhares, com os joelhos na direção dos pés.",
-    "Tronco mais ereto; suba empurrando o chão com o pé inteiro."
+    "Tronco bem ereto; suba empurrando o chão com o pé inteiro."
   ],
   "barbell_back_squat_low_bar": [
     "Apoie a barra mais baixa, na parte de trás dos ombros.",
@@ -183,7 +183,7 @@
     "Base aberta, pontas dos pés para fora, barra sobre o meio do pé.",
     "Pegada por dentro dos joelhos, braços estendidos.",
     "Empurre os joelhos para fora, na linha dos pés, com o peito aberto.",
-    "Afaste o chão com os pés e leve o quadril à frente para terminar."
+    "Empurre o chão para os lados e leve o quadril à frente para terminar."
   ],
   "barbell_deadlift_romanian": [
     "Comece em pé, joelhos levemente flexionados, barra junto às coxas.",
@@ -284,7 +284,7 @@
   "barbell_rollout": [
     "Ajoelhe com as mãos na barra, abaixo dos ombros.",
     "Trave o abdômen e encaixe levemente o quadril.",
-    "Role para a frente só até onde a lombar não cede.",
+    "Role para a frente só até antes de a lombar ceder.",
     "Volte puxando com o abdômen, sem dobrar o quadril primeiro."
   ],
   "dumbbell_bench_flat": [
@@ -405,7 +405,7 @@
     "Sente na ponta do banco, com a coluna ereta.",
     "Eleve os halteres para os lados, cotovelos levemente flexionados.",
     "Pare perto da altura dos ombros.",
-    "Desça devagar; sentado não há impulso das pernas, então use menos carga."
+    "Desça devagar, sem mexer o tronco."
   ],
   "dumbbell_raise_front": [
     "Segure os halteres na frente das coxas.",
@@ -427,7 +427,7 @@
   ],
   "dumbbell_upright_row": [
     "Segure os halteres na frente das coxas.",
-    "Suba rente ao corpo, levando os cotovelos.",
+    "Suba rente ao corpo, guiando pelos cotovelos.",
     "Pare quando os cotovelos chegarem perto da altura dos ombros.",
     "Desça devagar até o início."
   ],
@@ -476,14 +476,14 @@
   "dumbbell_lunge_lateral": [
     "Comece com os pés juntos e os halteres ao lado do corpo.",
     "Dê um passo largo para o lado e leve o quadril para trás sobre esse pé.",
-    "Perna de fora estendida e os dois pés apontados para a frente.",
+    "A outra perna estendida e os dois pés apontados para a frente.",
     "Empurre com a perna flexionada para voltar ao início."
   ],
   "dumbbell_step_up": [
-    "Escolha uma caixa em que a coxa fique perto da paralela com o pé em cima.",
+    "Escolha uma caixa perto da altura do joelho; aumente só se a execução se mantiver.",
     "Apoie o pé inteiro na caixa.",
     "Suba empurrando com esse pé, sem impulso da perna de trás.",
-    "Desça com controle e termine o lado."
+    "Desça com controle e faça todas as repetições desse lado."
   ],
   "dumbbell_deadlift_romanian": [
     "Fique ereto com os halteres na frente das coxas, joelhos levemente flexionados.",
@@ -552,7 +552,7 @@
     "Desça devagar e termine um lado antes de trocar."
   ],
   "dumbbell_curl_preacher": [
-    "Apoie o braço inteiro no banco Scott.",
+    "Apoie a parte de trás do braço no banco Scott.",
     "Comece com o cotovelo quase estendido.",
     "Suba até o antebraço ficar perto da vertical.",
     "Desça devagar, sem tirar o cotovelo do apoio."
@@ -576,7 +576,7 @@
     "Embaixo, gire de novo as palmas para cima."
   ],
   "dumbbell_triceps_overhead_two_hands": [
-    "Segure um halter acima da cabeça com as duas mãos sob a anilha de cima.",
+    "Segure um halter acima da cabeça, as duas mãos segurando a ponta de cima.",
     "Cotovelos apontados para a frente e perto da cabeça.",
     "Dobre os cotovelos e desça o halter atrás da cabeça.",
     "Trave o abdômen e estenda os cotovelos sem arquear as costas."

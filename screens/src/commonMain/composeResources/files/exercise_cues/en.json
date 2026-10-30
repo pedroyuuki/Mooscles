@@ -170,7 +170,7 @@
   "barbell_walking_lunge": [
     "Step forward into a long stride with your torso upright.",
     "Lower until your back knee nearly touches the floor.",
-    "Drive up and bring your back leg straight into the next step.",
+    "Drive up and bring your back leg through into the next step.",
     "Keep your feet about hip-width apart for balance."
   ],
   "barbell_deadlift_conventional": [
@@ -405,7 +405,7 @@
     "Sit on the end of a bench with your back tall.",
     "Raise the dumbbells out to the sides with a slight bend in your elbows.",
     "Stop at about shoulder height.",
-    "Lower slowly; seated, you can't use your legs, so go lighter."
+    "Lower slowly and keep your torso still."
   ],
   "dumbbell_raise_front": [
     "Hold the dumbbells in front of your thighs.",
@@ -480,10 +480,10 @@
     "Push off the bent leg to return to the start."
   ],
   "dumbbell_step_up": [
-    "Pick a box that puts your thigh about parallel with your foot on it.",
+    "Pick a box around knee height; go higher only if your form holds.",
     "Place your whole foot on the box.",
     "Drive up through that foot without pushing off your back leg.",
-    "Step down under control and finish the side."
+    "Step down under control; finish all reps on that side."
   ],
   "dumbbell_deadlift_romanian": [
     "Stand tall with the dumbbells in front of your thighs, knees soft.",
@@ -576,7 +576,7 @@
     "Turn your palms back up at the bottom."
   ],
   "dumbbell_triceps_overhead_two_hands": [
-    "Hold one dumbbell overhead with both hands under the top plate.",
+    "Hold one dumbbell overhead, both hands cupping the top end.",
     "Keep your elbows pointing forward and close to your head.",
     "Bend your elbows to lower the dumbbell behind your head.",
     "Brace your abs and straighten your elbows without arching your back."

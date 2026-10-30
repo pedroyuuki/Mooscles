@@ -73,10 +73,15 @@ class ExerciseCuesFilesTest {
             "Cura a dor nas costas.", "Ajuda a curar o joelho.", "Bom tratamento para o ombro.", "Evita lesão.",
             "Previne lesões.", "Indicado pelo médico.", "Recomendação médica.", "Cures back pain.", "Treats knee pain.",
             "Prevents injury.", "Avoids injuries.", "A medical classic.",
+            // Inflections of the same roots (task 11 review, minor 1).
+            "Ombro tratado.", "Trate o joelho.", "Tratando a lombar.", "Joelho curado.", "Curando o ombro.",
+            "Pode lesionar o ombro.", "Ombro lesionado.", "Efeito curativo.", "Treated knees.", "A cured back.",
+            "Avoids injuring the knee.", "An injured shoulder.", "Medically sound.",
         )) assertTrue(HealthClaims.matches(claim), "should flag \"$claim\"")
         for (fine in listOf(
             "Curl the bar up.", "Barbell curl.", "Secure the bar.", "Occurs at the top.", "Percurso curto e curva suave.",
             "Rosca curta.", "Lower the bar to the curve of your chest.", "Retreat the shoulders.",
+            "Curling the bar.", "Secured feet.", "Costas curvadas.", "Curvas suaves.", "Retreating hips.",
         )) assertFalse(HealthClaims.matches(fine), "should pass \"$fine\"")
     }
 
@@ -98,13 +103,21 @@ class ExerciseCuesFilesTest {
         return false
     }
 
-    /** Medical or healing words, by whole word (spec D8: no health promise, no medical language). */
+    /**
+     * Medical or healing words, by whole word (spec D8: no health promise, no medical language).
+     * Each root lists its inflections instead of matching as a prefix, so "curl", "curva", "curto",
+     * "secure" and "retreat" pass.
+     */
     private object HealthClaims {
         private val portuguese = Regex(
-            "(?U)\\b(cura[rs]?|curam|curativ\\w*|trat(a|ar|am|amento|amentos)|les(ão|ões)|médic\\w*)\\b",
+            "(?U)\\b(cur(a|am|ar|as|e|em|ad[oa]s?|ando|ativ\\w*)|trat(a|am|ar|as|e|em|ad[oa]s?|ando|ament\\w*)" +
+                "|les(ão|ões|ion\\w*)|médic\\w*)\\b",
             RegexOption.IGNORE_CASE,
         )
-        private val english = Regex("(?U)\\b(cure[sd]?|curing|treat(s|ed|ing|ment|ments)?|injur(e|ed|es|y|ies)|medical\\w*)\\b", RegexOption.IGNORE_CASE)
+        private val english = Regex(
+            "(?U)\\b(cur(e|es|ed|ing|ative\\w*)|treat(s|ed|ing|ment|ments)?|injur\\w*|medical\\w*)\\b",
+            RegexOption.IGNORE_CASE,
+        )
 
         fun matches(text: String) = portuguese.containsMatchIn(text) || english.containsMatchIn(text)
     }
