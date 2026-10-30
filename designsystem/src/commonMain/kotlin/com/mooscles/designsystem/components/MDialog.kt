@@ -45,7 +45,7 @@ internal const val DialogConfirmTag = "dialog-confirm"
 internal const val DialogConfirmDangerTag = "dialog-confirm-danger"
 
 /**
- * A confirmation dialog: [title], [text] and actions at the end, with the confirmation last.
+ * A confirmation dialog: [title], [text] (none when null) and actions at the end, with the confirmation last.
  * [destructive] makes the confirmation the filled `Danger` button.
  *
  * Built on the common `androidx.compose.ui.window.Dialog` (a window on Android, a platform
@@ -60,7 +60,7 @@ internal const val DialogConfirmDangerTag = "dialog-confirm-danger"
 @Composable
 fun MDialog(
     title: String,
-    text: String,
+    text: String?,
     confirmLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -123,7 +123,8 @@ fun MDialog(
                     verticalArrangement = Arrangement.spacedBy(MTheme.space.s3),
                 ) {
                     MText(title, style = MTheme.type.titleLg, modifier = Modifier.semantics { heading() })
-                    MText(text, style = MTheme.type.bodyLg, color = colors.textSecondary)
+                    // A null text is a dialog of a title alone: no block and no gap for it.
+                    if (text != null) MText(text, style = MTheme.type.bodyLg, color = colors.textSecondary)
                     // Long labels wrap onto a second line, still at the end, instead of squeezing the confirmation.
                     FlowRow(
                         Modifier.fillMaxWidth().padding(top = MTheme.space.s2),

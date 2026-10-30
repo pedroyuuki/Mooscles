@@ -166,6 +166,7 @@ fun TrainRoute(
     val nowMillis = remember(state.routines) { now() }
     val folders = state.routineFolders
     val folder = folders.firstOrNull { it.id == state.preferences.selectedRoutineFolderId }
+        ?: folders.firstOrNull { it.id == RoutineFolder.DEFAULT_ID }
         ?: folders.firstOrNull()
         ?: RoutineFolderUi(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)
     val routines = remember(state.routines, folder.id) { state.routines.filter { it.folderId == folder.id } }
@@ -318,7 +319,8 @@ fun TrainRoute(
             }
         }
         ReorderAnnouncer(reorder)
-        ScreenErrorToast(state.errorCode, actions, host)
+        // While the folder manager is open it shows the errors itself (its window covers this one).
+        ScreenErrorToast(if (managingFolders) null else state.errorCode, actions, host)
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
 

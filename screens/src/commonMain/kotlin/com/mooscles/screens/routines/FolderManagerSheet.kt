@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,6 +29,15 @@ import com.mooscles.designsystem.components.MBottomSheet
 import com.mooscles.designsystem.components.MDialog
 import com.mooscles.designsystem.components.MIconButton
 import com.mooscles.designsystem.components.MText
+import com.mooscles.designsystem.components.MToastHost
+import com.mooscles.designsystem.components.MToastHostState
+import com.mooscles.designsystem.interaction.reorderMover
+import com.mooscles.designsystem.resources.ds_reorder_bottom
+import com.mooscles.designsystem.resources.ds_reorder_down
+import com.mooscles.designsystem.resources.ds_reorder_top
+import com.mooscles.designsystem.resources.ds_reorder_up
+import com.mooscles.screens.workout.ScreenErrorToast
+import com.mooscles.designsystem.resources.Res as DesignRes
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.interaction.ReorderAnnouncer
@@ -60,6 +71,11 @@ internal object FolderTags {
     const val NEW = "folders-new"
     const val MENU_RENAME = "folder-menu-rename"
     const val MENU_DELETE = "folder-menu-delete"
+    const val MENU_LIST = "folder-menu-list"
+    const val MENU_UP = "folder-menu-up"
+    const val MENU_DOWN = "folder-menu-down"
+    const val MENU_TOP = "folder-menu-top"
+    const val MENU_BOTTOM = "folder-menu-bottom"
 
     fun row(id: String) = "folder-$id-row"
     fun handle(id: String) = "folder-$id-handle"
@@ -93,6 +109,7 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
     var creating by rememberSaveable { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+    val toasts = remember { MToastHostState() }
     val reorder = rememberReorderState(listState, ids, onDrop = { actions.reorderRoutineFolders(it) })
     val space = MTheme.space
     MBottomSheet(onDismiss = onDismiss) {
@@ -105,6 +122,7 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
                 .padding(bottom = space.s2)
                 .semantics { heading() },
         )
+        // The weight keeps the list within the sheet and leaves the announcer below it a height of its own.
         LazyColumn(Modifier.weight(1f, fill = false).fillMaxWidth().testTag(FolderTags.LIST), state = listState) {
             items(reorder.order, key = { it }) { id ->
                 val folder = byId[id] ?: return@items
@@ -122,6 +140,9 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
             }
         }
         ReorderAnnouncer(reorder)
+        // The sheet is a window of its own over the tab: an error raised while it is open shows here, not behind it.
+        ScreenErrorToast(state.errorCode, actions, toasts)
+        MToastHost(toasts, Modifier.fillMaxWidth())
     }
 
     if (creating) {
@@ -137,6 +158,11 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
     }
     menuFor?.let { id ->
         byId[id]?.let { folder ->
+            val order = reorder.order
+            val index = order.indexOf(id)
+            val last = index >= order.size - 1
+            val first = index <= 0
+            val moveTo = reorderMover(reorder, id, folderName(folder))
             MBottomSheet(onDismiss = { menuFor = null }) {
                 MText(
                     folderName(folder),
@@ -147,17 +173,35 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
                         .padding(bottom = space.s2)
                         .semantics { heading() },
                 )
-                MenuItem(MIcons.Pencil, stringResource(Res.string.folders_rename), FolderTags.MENU_RENAME) {
-                    menuFor = null
-                    renaming = id
-                }
-                if (id != RoutineFolder.DEFAULT_ID) {
-                    MenuItem(MIcons.Trash2, stringResource(Res.string.folders_delete), FolderTags.MENU_DELETE, destructive = true) {
+                Column(Modifier.testTag(FolderTags.MENU_LIST).verticalScroll(rememberScrollState())) {
+                    MenuItem(MIcons.Pencil, stringResource(Res.string.folders_rename), FolderTags.MENU_RENAME) {
                         menuFor = null
-                        deleting = id
+                        renaming = id
                     }
+                    MenuItem(MIcons.ArrowUp, stringResource(DesignRes.string.ds_reorder_up), FolderTags.MENU_UP, enabled = !first) {
+                        menuFor = null
+                        moveTo(index - 1)
+                    }
+                    MenuItem(MIcons.ArrowDown, stringResource(DesignRes.string.ds_reorder_down), FolderTags.MENU_DOWN, enabled = !last) {
+                        menuFor = null
+                        moveTo(index + 1)
+                    }
+                    MenuItem(MIcons.ChevronUp, stringResource(DesignRes.string.ds_reorder_top), FolderTags.MENU_TOP, enabled = !first) {
+                        menuFor = null
+                        moveTo(0)
+                    }
+                    MenuItem(MIcons.ChevronDown, stringResource(DesignRes.string.ds_reorder_bottom), FolderTags.MENU_BOTTOM, enabled = !last) {
+                        menuFor = null
+                        moveTo(order.size - 1)
+                    }
+                    if (id != RoutineFolder.DEFAULT_ID) {
+                        MenuItem(MIcons.Trash2, stringResource(Res.string.folders_delete), FolderTags.MENU_DELETE, destructive = true) {
+                            menuFor = null
+                            deleting = id
+                        }
+                    }
+                    Spacer(Modifier.height(space.s4))
                 }
-                Spacer(Modifier.height(space.s4))
             }
         }
     }
@@ -233,7 +277,7 @@ private fun DeleteFolderDialog(folder: RoutineFolderUi, count: Int, home: Routin
     var confirmed by remember { mutableStateOf(false) }
     MDialog(
         title = stringResource(Res.string.folders_delete_title, folderName(folder)),
-        text = if (count == 0) "" else pluralCount(Res.plurals.folders_delete_body, count, count, folderName(home)),
+        text = if (count == 0) null else pluralCount(Res.plurals.folders_delete_body, count, count, folderName(home)),
         confirmLabel = stringResource(Res.string.folders_delete),
         onConfirm = {
             if (!confirmed) {

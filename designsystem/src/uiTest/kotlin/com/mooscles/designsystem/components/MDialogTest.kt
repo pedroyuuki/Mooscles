@@ -1,6 +1,10 @@
 package com.mooscles.designsystem.components
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.assertIsDisplayed
@@ -50,6 +54,19 @@ class MDialogTest {
         waitForIdle()
         assertEquals(1, confirmed)
         assertEquals(0, dismissed)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun nullTextLeavesNoTextNodeAndNoGap() = runComposeUiTest {
+        withTheme { MDialog("Delete?", null, "Delete", onConfirm = {}, onDismiss = {}, dismissLabel = "Cancel") }
+        waitForIdle()
+        val texts = onAllNodes(hasAnyAncestor(hasTestTag(DialogTag)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true)
+            .fetchSemanticsNodes().map { n -> n.config[SemanticsProperties.Text].joinToString("") { it.text } }
+        assertEquals(listOf("Delete?", "Cancel", "Delete"), texts)
+        // Title, then the column's gap (space.s3) and the buttons' top padding (space.s2): nothing between.
+        val gap = onNodeWithTag(DialogDismissTag).getBoundsInRoot().top - onNodeWithText("Delete?").getBoundsInRoot().bottom
+        assertTrue(gap <= 21.dp, "gap $gap")
     }
 
     @OptIn(ExperimentalTestApi::class)

@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -85,6 +86,11 @@ class FolderManagerSheetTest {
 
         /** False: a reorder is recorded but the state keeps its order. */
         var applyReorder = true
+
+        override fun clearError() {
+            recording.clearError()
+            state.value = state.value.copy(error = null, errorCode = null, errorSubject = null)
+        }
 
         override fun reorderRoutineFolders(ids: List<String>) {
             recording.reorderRoutineFolders(ids)
@@ -218,17 +224,59 @@ class FolderManagerSheetTest {
     }
 
     @Test
-    fun deleteDialogWithNoRoutinesHasOnlyTheTitleAndEnglishReads() = runComposeUiTest {
-        show(locale = "en")
-        open()
-        pick(FolderTags.menu("empty"))
-        pick(FolderTags.MENU_DELETE)
-        inDialog("Delete the Força folder?").assertIsDisplayed()
-        onAllNodesWithTagText("moves to").assertCountEquals(0)
+    fun deleteDialogWithNoRoutinesHasOnlyTheTitleAndButtons() {
+        for ((locale, title, cancel, delete) in listOf(
+            listOf("en", "Delete the Força folder?", "Cancel", "Delete"),
+            listOf("pt-BR", "Excluir a pasta Força?", "Cancelar", "Excluir"),
+        )) {
+            runComposeUiTest {
+                show(locale = locale)
+                open()
+                pick(FolderTags.menu("empty"))
+                pick(FolderTags.MENU_DELETE)
+                val texts = onAllNodes(hasAnyAncestor(hasTestTag("dialog")) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true)
+                    .fetchSemanticsNodes().map { n -> n.config[SemanticsProperties.Text].joinToString("") { it.text } }
+                assertEquals(listOf(title, cancel, delete), texts, locale)
+            }
+            LocalAppLocale.restore()
+        }
     }
 
-    private fun ComposeUiTest.onAllNodesWithTagText(part: String) =
-        onAllNodes(hasText(part, substring = true) and hasAnyAncestor(hasTestTag("dialog")), useUnmergedTree = true)
+    @Test
+    fun menuMovesReorderAndAnnounce() = runComposeUiTest {
+        val fake = Fake(stateOf()).apply { applyReorder = false }
+        show(state = fake.state, fake = fake)
+        open()
+        pick(FolderTags.menu("default"))
+        onNodeWithTag(FolderTags.MENU_UP).assertIsNotEnabled()
+        onNodeWithTag(FolderTags.MENU_TOP).assertIsNotEnabled()
+        pick(FolderTags.MENU_BOTTOM)
+        assertEquals(listOf("reorderRoutineFolders:hyper|empty|default"), fake.calls)
+        // Held: the list shows the new order though the write has not come back.
+        assertEquals(listOf("hyper", "empty", "default"), rowIds())
+        onNode(hasTestTag(ReorderAnnouncerTag) and hasAnyAncestor(hasTestTag("sheet")), useUnmergedTree = true)
+            .assertContentDescriptionEquals("Minhas rotinas agora na posição 3 de 3")
+        pick(FolderTags.menu("default"))
+        onNodeWithTag(FolderTags.MENU_DOWN).assertIsNotEnabled()
+        onNodeWithTag(FolderTags.MENU_BOTTOM).assertIsNotEnabled()
+        pick(FolderTags.MENU_UP)
+        assertEquals(2, fake.calls.size)
+        assertEquals("reorderRoutineFolders:hyper|default|empty", fake.calls.last())
+    }
+
+    @Test
+    fun errorWhileManagingShowsInTheSheet() = runComposeUiTest {
+        val fake = Fake(stateOf())
+        show(state = fake.state, fake = fake)
+        open()
+        fake.state.value = fake.state.value.copy(errorCode = com.mooscles.ui.UiError.SAVE_FAILED)
+        waitForIdle()
+        onNode(
+            hasText("Não foi possível salvar a última mudança", substring = true) and hasAnyAncestor(hasTestTag("toast")) and hasAnyAncestor(hasTestTag("sheet")),
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
+        assertEquals(null, fake.state.value.errorCode)
+    }
 
     @Test
     fun deleteDialogReadsInEnglish() = runComposeUiTest {
@@ -416,6 +464,9 @@ class FolderManagerSheetTest {
         onNodeWithTag(FolderTags.LIST).performScrollToNode(hasTestTag(FolderTags.row("extra29")))
         waitForIdle()
         onNodeWithTag(FolderTags.row("extra29")).assertIsDisplayed()
+        // The announcer below the list keeps a height of its own inside the sheet.
+        val announcer = onNode(hasTestTag(ReorderAnnouncerTag) and hasAnyAncestor(hasTestTag("sheet")), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue(announcer.bottom - announcer.top > 0.dp, "announcer height")
         onNodeWithTag(FolderTags.LIST).performScrollToNode(hasTestTag(FolderTags.NEW))
         waitForIdle()
         onNodeWithTag(FolderTags.NEW).assertIsDisplayed()
