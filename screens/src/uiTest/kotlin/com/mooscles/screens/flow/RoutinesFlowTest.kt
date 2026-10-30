@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import com.mooscles.data.WorkoutRepository
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.screens.INJECTS_DRAG
@@ -55,8 +56,10 @@ import kotlin.time.Duration.Companion.minutes
  * [LINEAR_TWO_X_FONT_SCALE]). Each run seeds the empty routine "Treino A", then: searches the bench press ("supino"
  * or "bench") in the library and opens it; "Add to routine" → "Treino A" (checked in the state, which comes from the
  * database); the Train tab, where "New routine" is created with its default name and opens its editor; "Add
- * exercises" with three marked in the multiple picker, which the routine holds in the order of the taps; the first
- * card moved down one place (by the finger where [INJECTS_DRAG], else by "Move down" in its menu) and the third to the top by its menu; the first set of the
+ * exercises" with three marked in the multiple picker, which the routine holds in the order of the taps; the third
+ * card to the top by the finger where [INJECTS_DRAG] (its handle scrolled to: at 2x the card is then the first one shown,
+ * and lifting collapses the cards until the list's end comes into view) and the first down one place by its menu, else
+ * both by their menus; the first set of the
  * first exercise marked as a warm-up through its menu; and "Start workout", whose first card shows the target line
  * with "+ 1 warm-up". In each main state ([sweep]): every clickable node has a label and a 48 dp target, every number
  * is shown whole and a capture is taken (a PNG on iOS, `screens/build/ios-captures/routines-<state>.png`).
@@ -156,29 +159,34 @@ class RoutinesFlowTest {
             waitForIdle()
             sweep(run, "editor")
 
-            // 5. The first card down one place: dragged where the harness can, else by its menu. Then the third to the top by its menu.
+            // 5. The third card to the top by the finger (else by its menu), and the first down one place by its menu.
             val entries = routine(vm, created.id).exercises.map { it.id }
             val third = entries[2]
             if (INJECTS_DRAG) {
-                lift(entries[0])
-                // Down in small steps until the second card has given way (moved up): how far that is depends on the scale.
+                lift(third)
+                // The finger up to just inside the list's top: there the list scrolls back to its top, and the card goes first.
+                // Bounds in px.
+                val handle = onNodeWithTag(RoutineEditorTags.handle(third), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                val list = onNodeWithTag(RoutineEditorTag).fetchSemanticsNode().boundsInRoot
+                dragBy(list.top + with(density) { TOP_INSET.toPx() } - handle.center.y)
                 mainClock.advanceTimeBy(SETTLE_MS)
                 waitForIdle()
-                val resting = headerTop(entries[1])
-                var moves = 0
-                while (headerTop(entries[1]) >= resting - GIVE_WAY_PX && moves++ < MAX_DRAG_MOVES) dragBy(DRAG_MOVE_PX, steps = 1)
-                assertTrue(moves < MAX_DRAG_MOVES, "the second card never gave way to the dragged one")
                 release()
+                await("the drag is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(third, entries[0], entries[1]) }
+                waitForIdle()
+                openExerciseMenu(entries[0])
+                onNodeWithTag(RoutineEditorTags.EXERCISE_DOWN).performClick()
+                waitForIdle()
             } else {
                 openExerciseMenu(entries[0])
                 onNodeWithTag(RoutineEditorTags.EXERCISE_DOWN).performClick()
                 waitForIdle()
+                await("the move is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(entries[1], entries[0], third) }
+                waitForIdle()
+                openExerciseMenu(third)
+                onNodeWithTag(RoutineEditorTags.EXERCISE_TOP).performClick()
+                waitForIdle()
             }
-            await("the drag is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(entries[1], entries[0], third) }
-            waitForIdle()
-            openExerciseMenu(third)
-            onNodeWithTag(RoutineEditorTags.EXERCISE_TOP).performClick()
-            waitForIdle()
             await("the order is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(third, entries[1], entries[0]) }
             waitForIdle()
             assertEquals(listOf(SQUAT, INCLINE, BENCH), routine(vm, created.id).exercises.map { it.exercise.id })
@@ -258,9 +266,6 @@ class RoutinesFlowTest {
         waitForIdle()
     }
 
-    private fun ComposeUiTest.headerTop(entryId: String): Float =
-        onNodeWithTag(RoutineEditorTags.header(entryId)).fetchSemanticsNode().boundsInRoot.top
-
     /** Puts a finger on [entryId]'s handle and holds it past the long-press timeout: the card lifts. */
     private fun ComposeUiTest.lift(entryId: String) {
         // Only when the handle is not in the list yet: scrolling to a handle in sight would make its card the first one shown.
@@ -315,12 +320,8 @@ class RoutinesFlowTest {
         const val LONG_PRESS_MARGIN = 100L
         const val DRAG_STEPS = 20
 
-        /** One move of the finger while it rises (px), and how many of them at most. */
-        const val DRAG_MOVE_PX = 12f
-        const val MAX_DRAG_MOVES = 80
-
-        /** The card the dragged one passes has given way once it has moved down this far (px); the clock settles the cards first. */
-        const val GIVE_WAY_PX = 20f
+        /** Where the finger stops, below the list's top: inside the edge zone, where the list scrolls back. */
+        val TOP_INSET = 8.dp
         const val SETTLE_MS = 1_000L
 
         val PORTUGUESE = Run(
