@@ -102,4 +102,6 @@ data class MoosclesSizes(
     val reorderEdgeZone: Dp = 64.dp,
     /** Phase 4B: how far that scroll goes each frame. */
     val reorderScrollStep: Dp = 12.dp,
+    /** Phase 4B (plan Task 11, 2026-10-30): each thumbnail of a routine card's strip, the same 56 dp as a library row. */
+    val mediaStrip: Dp = mediaList,
 )

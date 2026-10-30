@@ -391,6 +391,8 @@ Regra: um teste cujo alvo continua no código fica; um cujo alvo sai é portado 
 - [ ] **Step 4:** Os comandos do Step 2 verdes; `StringsParityTest`; `check-design-tokens` limpo.
 - [ ] **Step 5:** Subir `MIN_HOST_TESTS` e `MIN_SCREENS_IOS_TESTS` (e `MIN_DS_IOS_TESTS` pelo token). Commit `screens: Train tab with folders, routine cards and reordering`.
 
+> **Nota (2026-10-30, Task 11, pré-voo F21, F6 e F10):** a faixa de miniaturas do card usa 56 dp, não 40 dp (D5 da spec: a mesma mídia de 56 dp da biblioteca); o token `MoosclesSizes.mediaStrip` vale `mediaList` (56 dp) e o teste é `mediaStripIsFiftySix`, no lugar de `mediaStripIsForty` (F21). A `RenameSheet` ganha também `submitUnchanged` (F6): "Nova rotina" cria mesmo com o nome padrão intocado (`newRoutineWithTheDefaultNameCreates`). A espera do eco de "Nova rotina" e da duplicação não vai para o `rememberSaveable`, solta pela chegada da rotina, por `subjectFailures[id]` acima da base do envio ou por `saveEchoWait`, e o toast sai de um escopo que sobrevive ao efeito da espera (F10). `INJECTS_DRAG = true` nos dois `TestPlatform` do `:screens` (o Push 1 provou o arraste injetado no simulador). Textos a mais que o brief: `routines_summary` ("%1$s · %2$s") e `routines_empty_folder_body`.
+
 ### Task 12: Gerenciar pastas
 
 **Revisão:** Opus completa (exclusão, reordenação dentro de sheet).
