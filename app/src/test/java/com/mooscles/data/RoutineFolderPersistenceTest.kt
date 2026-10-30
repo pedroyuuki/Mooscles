@@ -36,7 +36,7 @@ class RoutineFolderPersistenceTest {
 
     private fun open(): WorkoutRepository {
         database = Room.databaseBuilder(context, WorkoutDatabase::class.java, filename).setDriver(AndroidSQLiteDriver())
-            .addMigrations(WorkoutDatabase.MIGRATION_4_5).build()
+            .addMigrations(WorkoutDatabase.MIGRATION_4_5, WorkoutDatabase.MIGRATION_5_6).build()
         return WorkoutRepository(database!!)
     }
 
@@ -50,13 +50,14 @@ class RoutineFolderPersistenceTest {
         val before = createSchemaFourFixture()
         var repo = open()
         val migrated = repo.snapshot()
-        assertEquals(5, database!!.userVersion())
+        assertEquals(6, database!!.userVersion())
         assertEquals(listOf(RoutineFolder(RoutineFolder.DEFAULT_ID, RoutineFolder.DEFAULT_NAME)), migrated.routineFolders)
         assertEquals(listOf("r-second", "r-first"), migrated.routines.map { it.id })
         assertTrue(migrated.routines.all { it.folderId == RoutineFolder.DEFAULT_ID })
         assertEquals("active", migrated.activeWorkout!!.id)
         assertEquals("r-first", migrated.activeWorkout!!.sourceRoutineId)
         assertEquals(before, readSavedValues(database!!))
+        assertEquals(listOf(listOf<Any?>(3L, 0L)), database!!.typedRows("SELECT COUNT(*), SUM(warmup) FROM routine_sets"))
         assertTrue(database!!.typedRows("PRAGMA foreign_key_check").isEmpty())
 
         // Reopening is a second real database connection, not another read of cached UI state.
@@ -198,6 +199,8 @@ class RoutineFolderPersistenceTest {
     private val savedQueries = listOf("exercises", "routines", "routine_exercises", "routine_sets", "workouts", "workout_exercises", "workout_sets", "routine_target_checkpoints")
         .associateWith { table ->
             if (table == "routines") "SELECT id, name, position FROM routines ORDER BY id"
+            // Version 4's columns: version 6 adds warmup, checked on its own.
+            else if (table == "routine_sets") "SELECT id, routineExerciseId, position, targetReps, targetWeightKg, inheritPr FROM routine_sets ORDER BY 1"
             else "SELECT * FROM `$table` ORDER BY 1"
         }
 }

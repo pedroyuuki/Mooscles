@@ -102,6 +102,17 @@ class ImportPlannerTest {
         assertEquals(preferences, plan.preferences)
     }
 
+    /** Exported, written as text and read back: a planned warm-up arrives as one, next to a working set. */
+    @Test
+    fun plannedWarmupsImport() {
+        val withWarmup = sample.copy(routineSets = listOf(pushSets[0].copy(inheritPr = false, warmup = true), pushSets[1]))
+        val file = BackupCodec.decode(BackupCodec.encode(fileWith(withWarmup)))
+        val plan = ImportPlanner.plan(file, fresh)
+
+        assertEquals(withWarmup.routineSets, plan.entities.routineSets)
+        assertEquals(listOf(true, false), plan.entities.routineSets.map { it.warmup })
+    }
+
     @Test
     fun existingWorkoutSkipsWholeAggregateEvenWithExtraSets() {
         val localWorkout = AppData(

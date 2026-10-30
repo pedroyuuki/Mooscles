@@ -11,6 +11,7 @@ import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import java.io.File
+import org.json.JSONObject
 
 /*
  * Helpers for tests that inspect the database through Room's own driver connection, which replaced
@@ -26,6 +27,33 @@ fun exportedSchemaFile(version: Int): File {
     return listOf(File("../$path"), File(path)).firstOrNull { it.isFile }
         ?: error("Room's exported version $version schema was not found at $path")
 }
+
+/**
+ * What Room ran to create the exported [version]: each entity's `createSql` followed by its
+ * indices, in the file's order, then the `setupQueries`, with `${TABLE_NAME}` resolved.
+ */
+fun exportedSchemaStatements(version: Int): List<String> {
+    val schema = JSONObject(exportedSchemaFile(version).readText()).getJSONObject("database")
+    check(schema.getInt("version") == version)
+    return buildList {
+        val entities = schema.getJSONArray("entities")
+        for (index in 0 until entities.length()) {
+            val entity = entities.getJSONObject(index)
+            val table = entity.getString("tableName")
+            add(entity.getString("createSql").replace("\${TABLE_NAME}", table))
+            val indices = entity.optJSONArray("indices")
+            if (indices != null) for (item in 0 until indices.length()) {
+                add(indices.getJSONObject(item).getString("createSql").replace("\${TABLE_NAME}", table))
+            }
+        }
+        val setup = schema.getJSONArray("setupQueries")
+        for (index in 0 until setup.length()) add(setup.getString(index))
+    }
+}
+
+/** The `identityHash` Room exported for [version]. */
+fun exportedIdentityHash(version: Int): String =
+    JSONObject(exportedSchemaFile(version).readText()).getJSONObject("database").getString("identityHash")
 
 /** `PRAGMA user_version`, read on Room's connection. */
 suspend fun WorkoutDatabase.userVersion(): Int = useReaderConnection { connection ->

@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Installed apps keep their data in `databases/mooscles.db`. Moving the database into the shared
- * module must open exactly that file, at version 5, and never create a second database next to it.
+ * module must open exactly that file, at the current version, and never create a second database next to it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -30,7 +30,7 @@ class WorkoutDatabaseFileTest {
         try {
             runBlocking {
                 database.dao().routineFolders()
-                assertEquals(5, database.userVersion())
+                assertEquals(6, database.userVersion())
             }
         } finally {
             database.close()

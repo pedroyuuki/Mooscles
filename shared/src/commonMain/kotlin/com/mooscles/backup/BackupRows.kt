@@ -35,7 +35,7 @@ fun BackupData.Companion.from(data: AppData, checkpoints: List<RoutineTargetChec
         RoutineExerciseRow(it.id, it.routineId, it.exerciseId, it.position, it.plannedSets, it.targetReps, it.targetWeightKg, it.restSeconds)
     },
     routineSets = data.routineSets.map {
-        RoutineSetRow(it.id, it.routineExerciseId, it.position, it.targetReps, it.targetWeightKg, it.inheritPr)
+        RoutineSetRow(it.id, it.routineExerciseId, it.position, it.targetReps, it.targetWeightKg, it.inheritPr, it.warmup)
     },
     workouts = data.workouts.map { WorkoutRow(it.id, it.name, it.startedAt, it.endedAt, it.status.name, it.sourceRoutineId) },
     workoutExercises = data.workoutExercises.map {
@@ -67,7 +67,7 @@ fun BackupData.toEntities(): BackupEntities = BackupEntities(
         RoutineExercise(it.id, it.routineId, it.exerciseId, it.position, it.plannedSets, it.targetReps, it.targetWeightKg, it.restSeconds)
     },
     routineSets = routineSets.map {
-        RoutineSet(it.id, it.routineExerciseId, it.position, it.targetReps, it.targetWeightKg, it.inheritPr)
+        RoutineSet(it.id, it.routineExerciseId, it.position, it.targetReps, it.targetWeightKg, it.inheritPr, it.warmup)
     },
     workouts = workouts.map {
         Workout(it.id, it.name, it.startedAt, it.endedAt, enumOf<WorkoutStatus>("status", it.status), it.sourceRoutineId)

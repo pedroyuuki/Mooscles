@@ -1,8 +1,10 @@
 package com.mooscles.backup
 
+import kotlinx.serialization.Serializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BackupCodecTest {
@@ -89,6 +91,64 @@ class BackupCodecTest {
         val file = sample()
         assertEquals(file, BackupCodec.decode("\uFEFF" + BackupCodec.encode(file)))
     }
+
+    @Test
+    fun routineSetWarmupRoundTrips() {
+        val file = withPlannedWarmup()
+        val text = BackupCodec.encode(file)
+        assertTrue(text.contains("\"inheritPr\":false,\"warmup\":true}"), text)
+        val decoded = BackupCodec.decode(text)
+        assertEquals(file, decoded)
+        assertEquals(listOf(true, false), decoded.data.toEntities().routineSets.map { it.warmup })
+    }
+
+    /** A file exported before version 6 has no warmup key: its planned sets are working sets. */
+    @Test
+    fun fileWithoutWarmupReadsAsWorkingSets() {
+        val text = BackupCodec.encode(sample()).replace(",\"warmup\":false}", "}")
+        assertFalse(text.contains("\"warmup\":false}"), text)
+        // workout_sets has its own warmup, which a file of today always carries; only the planned one is missing.
+        assertTrue(text.contains("\"inheritPr\":true}"), text)
+        val decoded = BackupCodec.decode(text)
+        assertEquals(sample(), decoded)
+        assertTrue(decoded.data.toEntities().routineSets.none { it.warmup })
+    }
+
+    /** An app before version 6 reads a new file with the same Json and drops the field: the planned warm-up becomes a working set. */
+    @Test
+    fun olderReaderIgnoresWarmup() {
+        val text = BackupCodec.encode(withPlannedWarmup())
+        val old = BackupCodec.json.decodeFromString(OldFile.serializer(), text)
+        assertEquals(
+            listOf(
+                OldRoutineSetRow("rs1", "re1", 0, 8, 0.1 + 0.2, false),
+                OldRoutineSetRow("rs2", "re1", 1, 0, null, false),
+            ),
+            old.data.routineSets,
+        )
+        // Apps before version 6 refuse a formatVersion above 1; the optional field keeps the file at 1.
+        assertEquals(1, old.formatVersion)
+    }
+
+    private fun withPlannedWarmup() = sample().let { file ->
+        file.copy(data = file.data.copy(routineSets = listOf(
+            RoutineSetRow("rs1", "re1", 0, 8, 0.1 + 0.2, inheritPr = false, warmup = true),
+            RoutineSetRow("rs2", "re1", 1, 0, null, inheritPr = false),
+        )))
+    }
+
+    // The shape of RoutineSetRow before version 6, inside only as much of the file as an old reader needs.
+    @Serializable
+    private data class OldRoutineSetRow(
+        val id: String, val routineExerciseId: String, val position: Int, val targetReps: Int,
+        val targetWeightKg: Double?, val inheritPr: Boolean,
+    )
+
+    @Serializable
+    private data class OldData(val routineSets: List<OldRoutineSetRow>)
+
+    @Serializable
+    private data class OldFile(val format: String, val formatVersion: Int, val data: OldData)
 
     @Test
     fun unknownEnumIsInvalid() {

@@ -92,7 +92,10 @@ data class RoutineExercise(
     val restSeconds: Int? = null
 )
 
-/** One independently saved prescription. Null load and zero reps are explicitly blank values. */
+/**
+ * One independently saved prescription. Null load and zero reps are explicitly blank values.
+ * [warmup] (version 6) plans a warm-up set; rows saved before it read as working sets.
+ */
 @Entity(
     tableName = "routine_sets",
     foreignKeys = [ForeignKey(entity = RoutineExercise::class, parentColumns = ["id"],
@@ -105,7 +108,8 @@ data class RoutineSet(
     val position: Int = 0,
     val targetReps: Int = 0,
     val targetWeightKg: Double? = null,
-    val inheritPr: Boolean = true
+    val inheritPr: Boolean = true,
+    @ColumnInfo(defaultValue = "0") val warmup: Boolean = false
 )
 
 @Entity(tableName = "workouts")

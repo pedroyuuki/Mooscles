@@ -217,7 +217,9 @@ jobs:
           # Phase 4A task 19 (:app): LibraryNavigationHostTest 8 (the temporary LibraryTapBaselineHostTest came and went in the task). 918 + 8 = 926.
           # Phase 4A task 23 (:app): ShellNavigationHostTest +1; (:designsystem commonTest) LicenseTextTest +1. 926 + 2 = 928.
           # Phase 4A final review fixes: AppViewModelRestoreHostTest +1, LibraryNavigationHostTest +2 (:app); RoutineGroupsTest 2 (:screens commonTest); ExerciseAnatomyTest +2 (:shared commonTest). 928 + 7 = 935.
-          MIN_HOST_TESTS: 935
+          # Phase 4B task 1 (:app): RoutineWarmupMigrationTest 3, SchemaV5FixtureTest 1, MigrationEquivalenceTest +1;
+          # (:shared commonTest) BackupCodecTest +3, ImportPlannerTest +1; (:shared androidHostTest) BackupSampleFileTest +1. 935 + 10 = 945.
+          MIN_HOST_TESTS: 945
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -336,7 +338,7 @@ jobs:
         shell: pwsh
         env:
           # The common tests in :shared (156 after phase 2, 183 with the lines below)
-          # plus the iOS-only entry point tests (6). Raise it when tests move into
+          # plus the iOS-only entry point tests (7 since phase 4B task 1). Raise it when tests move into
           # commonTest or iosTest, so a silently skipped class fails the job.
           # Phase 3 task 4: DataErrorsTest +3, UiErrorsTest +7.
           # Phase 3 task 5: WorkoutPresentationTest +14, WorkoutCalculationsTest +2, WorkoutCalculationsBatchTest +1.
@@ -347,7 +349,8 @@ jobs:
           # Task 3 fix round 1: +0 (the new exhaustive test is JVM-only). 256.
           # Phase 4A task 16: EditRulesTest +1. 256 + 1 = 257.
           # Phase 4A final review fixes: ExerciseAnatomyTest +2. 257 + 2 = 259.
-          MIN_IOS_TESTS: 259
+          # Phase 4B task 1: BackupCodecTest +3, ImportPlannerTest +1 (commonTest), IosDatabaseTest +1 (iosTest). 259 + 5 = 264.
+          MIN_IOS_TESTS: 264
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -373,7 +376,7 @@ jobs:
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           if ($files.Count -eq 0) { throw 'No iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests iOS simulator tests ran; at least $minimum are expected." }
-          if ($platform.Count -ne 6) { throw "$($platform.Count) iOS entry point tests ran; exactly 6 are expected (update this number and MIN_IOS_TESTS when adding or removing one)." }
+          if ($platform.Count -ne 7) { throw "$($platform.Count) iOS entry point tests ran; exactly 7 are expected (update this number and MIN_IOS_TESTS when adding or removing one)." }
 
       # The design system on its own, so a skipped :designsystem class cannot hide behind
       # the :shared total above.
