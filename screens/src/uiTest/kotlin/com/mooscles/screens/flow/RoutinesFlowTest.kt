@@ -19,7 +19,6 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.mooscles.data.WorkoutRepository
 import com.mooscles.designsystem.i18n.LocalAppLocale
-import com.mooscles.screens.INJECTS_DRAG
 import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.assertNumbersWhole
@@ -57,9 +56,8 @@ import kotlin.time.Duration.Companion.minutes
  * or "bench") in the library and opens it; "Add to routine" → "Treino A" (checked in the state, which comes from the
  * database); the Train tab, where "New routine" is created with its default name and opens its editor; "Add
  * exercises" with three marked in the multiple picker, which the routine holds in the order of the taps; the third
- * card to the top by the finger where [INJECTS_DRAG] (its handle scrolled to: at 2x the card is then the first one shown,
- * and lifting collapses the cards until the list's end comes into view) and the first down one place by its menu, else
- * both by their menus; the first set of the
+ * card to the top by the finger (its handle scrolled to: at 2x the card is then the first one shown,
+ * and lifting collapses the cards until the list's end comes into view) and the first down one place by its menu; the first set of the
  * first exercise marked as a warm-up through its menu; and "Start workout", whose first card shows the target line
  * with "+ 1 warm-up". In each main state ([sweep]): every clickable node has a label and a 48 dp target, every number
  * is shown whole and a capture is taken (a PNG on iOS, `screens/build/ios-captures/routines-<state>.png`).
@@ -114,7 +112,7 @@ class RoutinesFlowTest {
             await("its detail opens") { screen.value == RoutinesScreens.info(BENCH) }
             await("its title shows") { exists(hasTestTag(ExerciseInfoTags.TITLE)) }
             waitForIdle()
-            sweep(run, "detail")
+            sweep(run, "detail", numbers = 1)
 
             // 2. "Add to routine" → "Treino A".
             onNodeWithTag(ExerciseInfoTags.ADD_ROUTINE).performScrollTo().performClick()
@@ -157,13 +155,13 @@ class RoutinesFlowTest {
             await("the routine holds the three") { routine(vm, created.id).exercises.map { it.exercise.id } == PICKS }
             await("the picker closes") { !exists(hasTestTag(ExercisePickerAddTag)) }
             waitForIdle()
-            sweep(run, "editor")
+            sweep(run, "editor", numbers = 1)
 
-            // 5. The third card to the top by the finger (else by its menu), and the first down one place by its menu.
+            // 5. The third card to the top by the finger, and the first down one place by its menu.
             val entries = routine(vm, created.id).exercises.map { it.id }
             val third = entries[2]
-            if (INJECTS_DRAG) {
-                lift(third)
+            lift(third)
+            try {
                 // The finger up to just inside the list's top: there the list scrolls back to its top, and the card goes first.
                 // Bounds in px.
                 val handle = onNodeWithTag(RoutineEditorTags.handle(third), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -171,26 +169,18 @@ class RoutinesFlowTest {
                 dragBy(list.top + with(density) { TOP_INSET.toPx() } - handle.center.y)
                 mainClock.advanceTimeBy(SETTLE_MS)
                 waitForIdle()
+            } finally {
                 release()
-                await("the drag is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(third, entries[0], entries[1]) }
-                waitForIdle()
-                openExerciseMenu(entries[0])
-                onNodeWithTag(RoutineEditorTags.EXERCISE_DOWN).performClick()
-                waitForIdle()
-            } else {
-                openExerciseMenu(entries[0])
-                onNodeWithTag(RoutineEditorTags.EXERCISE_DOWN).performClick()
-                waitForIdle()
-                await("the move is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(entries[1], entries[0], third) }
-                waitForIdle()
-                openExerciseMenu(third)
-                onNodeWithTag(RoutineEditorTags.EXERCISE_TOP).performClick()
-                waitForIdle()
             }
+            await("the drag is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(third, entries[0], entries[1]) }
+            waitForIdle()
+            openExerciseMenu(entries[0])
+            onNodeWithTag(RoutineEditorTags.EXERCISE_DOWN).performClick()
+            waitForIdle()
             await("the order is saved") { routine(vm, created.id).exercises.map { it.id } == listOf(third, entries[1], entries[0]) }
             waitForIdle()
             assertEquals(listOf(SQUAT, INCLINE, BENCH), routine(vm, created.id).exercises.map { it.exercise.id })
-            sweep(run, "reordered")
+            sweep(run, "reordered", numbers = 1)
 
             // 6. The first set of the first exercise as a warm-up, through its menu.
             val first = routine(vm, created.id).exercises.first()
@@ -200,12 +190,12 @@ class RoutinesFlowTest {
             onNodeWithTag(RoutineEditorTags.setLabel(set)).performClick()
             await("the set menu opens") { exists(hasTestTag(PlannedSetMenuTags.WARMUP)) }
             waitForIdle()
-            sweep(run, "set-menu")
+            sweep(run, "set-menu", numbers = 1)
             onNodeWithTag(PlannedSetMenuTags.WARMUP).performClick()
             await("the set is a warm-up") { routine(vm, created.id).exercises.first().setTargets.first().warmup }
             await("the menu closes") { !exists(hasTestTag(PlannedSetMenuTags.WARMUP)) }
             waitForIdle()
-            sweep(run, "editor-warmup")
+            sweep(run, "editor-warmup", numbers = 1)
 
             // 7. "Start workout": the first card's target line says "+ 1 warm-up".
             onNodeWithTag(RoutineEditorTags.START).performClick()
@@ -213,7 +203,7 @@ class RoutinesFlowTest {
             val warmupText = hasText(run.warmupLine, substring = true)
             await("the target line shows the warm-up") { exists(warmupText, unmerged = true) }
             waitForIdle()
-            sweep(run, "workout")
+            sweep(run, "workout", numbers = 1)
             val active = active(vm)
             assertEquals(created.id, active.sourceRoutineId)
             assertEquals(listOf(SQUAT, INCLINE, BENCH), active.exercises.map { it.exercise.id })
@@ -301,10 +291,12 @@ class RoutinesFlowTest {
      * The checks of a main state: a label and a 48 dp target on every clickable node (every root: a sheet too),
      * every number text whole ([assertNumbersWhole]), and a capture, `routines-<run>-<state>`.
      */
-    private fun ComposeUiTest.sweep(run: Run, state: String) {
+    private fun ComposeUiTest.sweep(run: Run, state: String, numbers: Int = 0) {
         waitForIdle()
         assertClickablesLabeledAndSized("${run.name} $state")
-        assertNumbersWhole(atLeast = 0)
+        // [numbers] is the floor of number-only texts the state shows: 1 where a set's number label or the
+        // detail's history is on screen. 0 only where there is none (lists and sheets write counts as words).
+        assertNumbersWhole(atLeast = numbers)
         capture("routines-${run.name}-$state")
     }
 

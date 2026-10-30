@@ -169,13 +169,16 @@ class RoutinesAccessibilitySweepTest {
      * One look at a state: [scroll] brings part of it into view (null: as it is), and the tags in [required] must
      * then be shown.
      */
-    private class Pass(val name: String, val required: List<String> = emptyList(), val scroll: (ComposeUiTest.() -> Unit)? = null)
+    private class Pass(val name: String, val required: List<String> = emptyList(), val numbers: Int? = null, val scroll: (ComposeUiTest.() -> Unit)? = null)
 
     /**
      * Sets [content] once, in the frame of the current [Combo] (light, 1.0, 412 dp first; [content] gets the phone's
      * size), lets [reach] bring it to the state, then checks each combination (see the class comment): at least
      * [numbers] number texts, the text under [scaled] (a window's) laid out at the combination's scale, and [extra]
-     * (the state's own checks, which fail with their message).
+     * (the state's own checks, which fail with their message). The floor is 1 where a planned set's number label is
+     * on screen (the editor); 0 only where the state truly has no number-only text: the Train cards, the folder rows
+     * and the dialogs write their counts as words around the digits ("3 exercises"), the picker rows have none, and
+     * the empty editor and the loading Train tab have no sets.
      */
     private fun ComposeUiTest.sweep(
         state: String,
@@ -209,7 +212,7 @@ class RoutinesAccessibilitySweepTest {
                         assertTrue(onAllNodes(hasTestTag(tag) and isPlaced, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(), "$where: no $tag shown")
                     }
                     assertClickablesLabeledAndSized(where)
-                    assertNumbersWhole(atLeast = numbers)
+                    assertNumbersWhole(atLeast = pass.numbers ?: numbers)
                     buttonTexts += assertButtonTextsWhole(where)
                     assertStartsFiftySix(where)
                     if (scaled != null) assertDrawnAt(scaled, each.fontScale, where)
@@ -392,7 +395,8 @@ class RoutinesAccessibilitySweepTest {
 
     /** The top (name and the first cards), the middle (a card of its own) and the end ("Add exercises"; "Start workout" is always there). */
     private fun editorPasses() = listOf(
-        Pass("top", listOf(RoutineEditorTags.NAME, RoutineEditorTags.header("e1"), RoutineEditorTags.START)) { onNodeWithTag(RoutineEditorTag).performScrollToIndex(0) },
+        // The top shows the name and the first card, whose first set is the warm-up ("A"): at 320 dp and at 2x no set number fits yet.
+        Pass("top", listOf(RoutineEditorTags.NAME, RoutineEditorTags.header("e1"), RoutineEditorTags.START), numbers = 0) { onNodeWithTag(RoutineEditorTag).performScrollToIndex(0) },
         editorScroll("middle", RoutineEditorTags.set("e3a"), RoutineEditorTags.header("e3"), RoutineEditorTags.START),
         editorScroll("end", RoutineEditorTags.ADD, RoutineEditorTags.START),
     )
@@ -403,7 +407,7 @@ class RoutinesAccessibilitySweepTest {
     @Test
     fun editorWithWarmup() = runComposeUiTest(testTimeout = 8.minutes) {
         sweep(
-            "editor", numbers = 0, passes = editorPasses(),
+            "editor", numbers = 1, passes = editorPasses(),
             extra = { where -> assertMovesOfEveryHandle(where, entryIds, RoutineEditorTags::handle) },
         ) { Editor(editorState()) }
     }
@@ -412,7 +416,7 @@ class RoutinesAccessibilitySweepTest {
     @Test
     fun editorWithASetInEdit() = runComposeUiTest(testTimeout = 8.minutes) {
         sweep(
-            "editor editing", numbers = 0,
+            "editor editing", numbers = 1,
             reach = {
                 onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.set("e1a")))
                 waitForIdle()
@@ -425,6 +429,8 @@ class RoutinesAccessibilitySweepTest {
                 },
                 editorScroll("end", RoutineEditorTags.ADD, RoutineEditorTags.START),
             ),
+            // At 2x the set in edit fills the view and its card's handle is scrolled out: a handle shown is checked, none is not a failure.
+            extra = { where -> assertMovesOfEveryHandle(where, entryIds, RoutineEditorTags::handle, mustShow = false) },
         ) { Editor(editorState()) }
     }
 

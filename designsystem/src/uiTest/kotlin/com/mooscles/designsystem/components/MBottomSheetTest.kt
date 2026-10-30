@@ -9,6 +9,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Modifier
@@ -109,14 +110,17 @@ class MBottomSheetTest {
         val first = FocusRequester()
         val second = FocusRequester()
         val firstGains = mutableIntStateOf(0)
+        val recompositions = mutableIntStateOf(0)
         withTheme {
             MBottomSheet(onDismiss = {}, initialFocus = first) {
+                // Read in the sheet's content: bumping it recomposes the content, where a wrongly keyed effect would ask again.
+                val tick = recompositions.intValue
                 BasicTextField(
                     value = "one",
                     onValueChange = {},
                     modifier = Modifier.testTag("first-field").focusRequester(first).onFocusChanged { if (it.isFocused) firstGains.intValue++ },
                 )
-                BasicTextField(value = "two", onValueChange = {}, modifier = Modifier.testTag("second-field").focusRequester(second))
+                BasicTextField(value = "two$tick", onValueChange = {}, modifier = Modifier.testTag("second-field").focusRequester(second))
             }
         }
         waitForIdle()
@@ -126,7 +130,12 @@ class MBottomSheetTest {
         runOnIdle { second.requestFocus() }
         waitForIdle()
         onNodeWithTag("second-field").assertIsFocused()
-        // Time passes, frames pass: nothing asks the first field again.
+        // The content recomposes (twice), time passes, frames pass: nothing asks the first field again.
+        repeat(2) {
+            runOnIdle { recompositions.intValue++ }
+            waitForIdle()
+        }
+        onNodeWithTag("second-field").assertTextContains("two2")
         repeat(90) { mainClock.advanceTimeByFrame() }
         waitForIdle()
         onNodeWithTag("second-field").assertIsFocused()
