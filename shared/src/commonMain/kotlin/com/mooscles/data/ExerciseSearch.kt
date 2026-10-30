@@ -2,7 +2,8 @@ package com.mooscles.data
 
 /** Shared offline search for the library and picker; synonyms never create exercise identities. */
 object ExerciseSearch {
-    private val aliases = mapOf(
+    // Internal so ExerciseSearchIndex reads the same English aliases and folding; no behavior change.
+    internal val aliases = mapOf(
         "catalog_selectorized_shoulder_press" to listOf(
             "Selectorized shoulder press", "Seated machine shoulder press", "Machine overhead press"
         ),
@@ -41,7 +42,8 @@ object ExerciseSearch {
         "catalog_plate_hip_thrust" to listOf("Glute drive machine", "Plate-loaded glute drive")
     )
 
-    private val catalogNames by lazy { ExerciseCatalog.exercises.associate { it.id to it.name } }
+    // Catalog id -> English name; also read by ExerciseNames and ExerciseSearchIndex.
+    internal val catalogNames: Map<String, String> by lazy { ExerciseCatalog.exercises.associate { it.id to it.name } }
     private val equivalents = listOf(
         Regex("\\bdb\\b") to "dumbbell",
         Regex("\\bbb\\b") to "barbell",
@@ -74,7 +76,7 @@ object ExerciseSearch {
         }
     }
 
-    private fun normalize(value: String): String {
+    internal fun normalize(value: String): String {
         var normalized = SearchFolding.fold(value)
         equivalents.forEach { (pattern, replacement) -> normalized = pattern.replace(normalized, replacement) }
         return normalized
