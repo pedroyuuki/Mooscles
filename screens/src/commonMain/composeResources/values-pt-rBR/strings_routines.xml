@@ -56,4 +56,20 @@
     <string name="routines_active_title">Já existe um treino em andamento</string>
     <string name="routines_active_body">Termine ou descarte “%1$s” antes de começar outro.</string>
     <string name="routines_cancel">Cancelar</string>
+    <!-- Phase 4B task 12: the folder manager. -->
+    <string name="folders_title">Pastas</string>
+    <plurals name="folders_routine_count">
+        <item quantity="one">%1$d rotina</item>
+        <item quantity="other">%1$d rotinas</item>
+    </plurals>
+    <string name="folders_new">Nova pasta</string>
+    <string name="folders_name_field">Nome da pasta</string>
+    <string name="folders_more">Opções de %1$s</string>
+    <string name="folders_rename">Renomear</string>
+    <string name="folders_delete">Excluir</string>
+    <string name="folders_delete_title">Excluir a pasta %1$s?</string>
+    <plurals name="folders_delete_body">
+        <item quantity="one">A rotina dela vai para %2$s.</item>
+        <item quantity="other">As %1$d rotinas dela vão para %2$s.</item>
+    </plurals>
 </resources>

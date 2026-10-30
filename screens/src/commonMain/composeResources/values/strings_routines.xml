@@ -56,4 +56,20 @@
     <string name="routines_active_title">A workout is in progress</string>
     <string name="routines_active_body">Finish or discard “%1$s” before starting another.</string>
     <string name="routines_cancel">Cancel</string>
+    <!-- Phase 4B task 12: the folder manager. -->
+    <string name="folders_title">Folders</string>
+    <plurals name="folders_routine_count">
+        <item quantity="one">%1$d routine</item>
+        <item quantity="other">%1$d routines</item>
+    </plurals>
+    <string name="folders_new">New folder</string>
+    <string name="folders_name_field">Folder name</string>
+    <string name="folders_more">Options for %1$s</string>
+    <string name="folders_rename">Rename</string>
+    <string name="folders_delete">Delete</string>
+    <string name="folders_delete_title">Delete the %1$s folder?</string>
+    <plurals name="folders_delete_body">
+        <item quantity="one">Its routine moves to %2$s.</item>
+        <item quantity="other">Its %1$d routines move to %2$s.</item>
+    </plurals>
 </resources>

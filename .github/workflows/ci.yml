@@ -526,7 +526,8 @@ jobs:
           # Phase 4B task 11: RoutineSummariesTest 3 (commonTest); TrainScreenTest 30 (uiTest). 495 + 33 = 528.
           # Phase 4B task 11 fix round 1: RoutineNamesTest 3 (commonTest); TrainScreenTest +7 (uiTest: menu and move
           # sheet scroll, busy entry points, menu move announces, dialog survives recreation, cap, copy failure). 528 + 10 = 538.
-          MIN_SCREENS_IOS_TESTS: 538
+          # Phase 4B task 12: FolderManagerSheetTest 15 (uiTest). 538 + 15 = 553.
+          MIN_SCREENS_IOS_TESTS: 553
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

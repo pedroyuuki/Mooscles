@@ -181,7 +181,6 @@ fun TrainRoute(
     // The id of the workout the "in progress" dialog was opened for: it closes when that workout is not the one under way.
     var blockedFor by rememberSaveable { mutableStateOf<String?>(null) }
     var creating by rememberSaveable { mutableStateOf(false) }
-    // The folder manager is Task 12's; "Folders" only remembers that it was asked for until then.
     var managingFolders by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(active?.id) { if (blockedFor != active?.id) blockedFor = null }
 
@@ -323,6 +322,7 @@ fun TrainRoute(
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
 
+    if (managingFolders) FolderManagerSheet(state, actions, onDismiss = { managingFolders = false })
     val newName = stringResource(Res.string.routines_new_name)
     if (creating) {
         RenameSheet(
