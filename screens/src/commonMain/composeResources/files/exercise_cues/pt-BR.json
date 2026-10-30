@@ -1344,7 +1344,7 @@
     "Desça devagar até estender os braços."
   ],
   "smith_shrug": [
-    "Solte a barra dos ganchos com os braços estendidos, na frente das coxas.",
+    "Tire a barra dos ganchos com os braços estendidos, na frente das coxas.",
     "Suba os ombros em direção às orelhas, sem girá-los.",
     "Braços estendidos; não dobre os cotovelos para puxar.",
     "Segure no alto um instante e desça até o fim."
@@ -1386,7 +1386,7 @@
     "Leve o quadril à frente para subir, sem inclinar o tronco para trás no topo."
   ],
   "smith_hip_thrust": [
-    "Apoie a parte alta das costas num banco, com a barra sobre o quadril e um protetor.",
+    "Apoie a parte alta das costas num banco, barra com protetor sobre o quadril.",
     "Pés no chão na largura do quadril, canelas na vertical no topo.",
     "Empurre pelos calcanhares até ombros, quadril e joelhos ficarem alinhados.",
     "Costelas fechadas e glúteos contraídos; não arqueie a lombar no topo."
@@ -1413,7 +1413,7 @@
     "Ajuste o banco para os pegadores ficarem perto da altura dos ombros.",
     "Cotovelos levemente flexionados, sem mudar o ângulo.",
     "Junte os pegadores à frente do peito, contraindo o peitoral.",
-    "Abra devagar até sentir o alongamento, sem deixar os ombros irem para a frente."
+    "Abra devagar até os braços ficarem perto da linha do corpo, com os ombros para trás."
   ],
   "selectorized_shoulder_press": [
     "Ajuste o banco para os pegadores ficarem perto da altura dos ombros.",
@@ -1543,7 +1543,7 @@
   ],
   "selectorized_calf_raise_seated": [
     "Sente com a ponta dos pés na plataforma e os calcanhares livres.",
-    "Ajuste o banco ou o apoio das pernas para os joelhos ficarem parados; só os tornozelos se movem.",
+    "Ajuste o banco ou o apoio para o ângulo dos joelhos não mudar; só os tornozelos se movem.",
     "Use toda a amplitude: alongue bem e depois empurre até a ponta dos pés.",
     "Segure um instante no fim de cada repetição, sem quicar."
   ],
@@ -1626,7 +1626,7 @@
     "Deixe os pegadores subirem devagar, com os dois braços no mesmo ritmo."
   ],
   "plate_t_bar_row_supported": [
-    "Pise na base dos pés e encoste o peito no apoio.",
+    "Fique em pé na plataforma e encoste o peito no apoio.",
     "Segure os pegadores e comece com os braços estendidos e as costas retas.",
     "Puxe os pegadores em direção ao peito, guiando pelos cotovelos.",
     "Peito no apoio, sem dar impulso com as pernas."
@@ -1635,25 +1635,25 @@
     "Ombros sob os apoios, costas e quadril firmes no encosto.",
     "Pés na largura dos ombros, no meio da plataforma.",
     "Solte as travas e desça com controle, joelhos na direção dos pés.",
-    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+    "Suba empurrando com o pé inteiro; acione as travas antes de sair."
   ],
   "plate_pendulum_squat": [
     "Ombros sob os apoios, costas e quadril firmes no encosto.",
     "Pés na largura do quadril, no meio da plataforma.",
     "Solte a trava e desça até onde conseguir controlar, joelhos na direção dos pés.",
-    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+    "Suba empurrando com o pé inteiro; acione a trava antes de sair."
   ],
   "plate_belt_squat": [
     "Prenda o cinto no quadril e fique em pé na plataforma.",
     "Pés na largura dos ombros; segure nos pegadores só para equilibrar.",
-    "Desça entre os calcanhares, com o tronco ereto.",
+    "Desça o quadril entre os calcanhares, com o tronco ereto.",
     "Suba empurrando com o pé inteiro, joelhos na direção dos pés."
   ],
   "plate_leverage_squat": [
     "Ombros sob os apoios, pés um pouco à frente na plataforma.",
     "Firme o abdômen e solte a trava de segurança.",
     "Desça com controle, joelhos na direção dos pés.",
-    "Suba empurrando com o pé inteiro; trave de novo antes de sair."
+    "Suba empurrando com o pé inteiro; acione a trava antes de sair."
   ],
   "plate_leg_press_45": [
     "Costas e quadril firmes no banco, pés na largura do quadril na plataforma.",
