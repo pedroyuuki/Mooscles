@@ -8,21 +8,21 @@
 ## Resumo
 
 - **Android (emulador): aprovado.** Os 17 testes do `ReorderTest` (15 + 2 da rodada de correção 1) passam no `Mooscles_Pixel8_API35` (emulator-5556, Android 15, densidade 2,625), com `ExerciseCardTest` (12) e `GallerySmokeTest` (13). A primeira rodada teve 3 falhas: duas do próprio teste (itens fora da área composta no teste das ações; o topo do item a 102% cortado pela borda da lista no primeiro passo) e uma de verdade, o cancelamento (ver "Primeiro item visível").
-- **iOS (simulador): pendente do Push 1.** O controlador preenche a linha abaixo com o resultado do job `ios` (decisão 2). Se o arraste injetado falhar no simulador, `INJECTS_DRAG` vira `false` em `designsystem/src/iosTest/.../TestPlatform.kt`, os testes de arraste ficam só no Android, o produto não muda (ações de acessibilidade e menu nas duas plataformas) e a falha ganha nota datada na spec.
+- **iOS (simulador): aprovado (Push 1, 2026-10-30).** O job `ios` do CI (run 41082118225, nas duas tentativas) rodou o `ReorderTest` inteiro no simulador com `INJECTS_DRAG = true`, junto com o resto do `:designsystem`: 363 testes, 0 falhas. `INJECTS_DRAG` fica `true` no `iosTest`. O cancelamento do gesto (`cancelledGestureRestoresAndWritesNothing`) continua só no Android, porque o simulador não injeta o cancelamento de toque (`INJECTS_TOUCH_CANCEL = false`).
 - **Sem biblioteca** (D15): só `foundation` (`detectDragGesturesAfterLongPress`, `LazyListState.requestScrollToItem`, `dispatchRawDelta`, `LocalPinnableContainer`). Nenhum `expect/actual` novo.
 
 ## Critérios da S2
 
 | Critério | Android (emulador) | iOS (simulador) | Prova |
 |---|---|---|---|
-| Reordena sem saltos, com itens de alturas diferentes (56, 96 e 144 dp) | aprovado | pendente do Push 1 | `dragAcrossItemsOfDifferentHeightsReordersWithoutJumps`: o topo do item arrastado anda exatamente o passo do dedo (±1,5 px) em cada um dos 20 passos; uma troca por posição cruzada, sem ida e volta (dois `StepperStep`) |
-| A rolagem da lista não briga com o gesto | aprovado | pendente do Push 1 | `aFlingOnTheHandleScrollsWithoutLifting` (um arraste rápido na alça rola a lista e não ergue nada); `autoScrollsNearTheEdges` (perto das bordas a lista rola junto, para baixo e para cima, e o item vai junto) |
-| Grava uma vez | aprovado | pendente do Push 1 | `dropWritesOnceWithTheNewOrder`, `nothingIsWrittenWhileDragging`, `droppedOrderWaitsForTheKeys`; cancelar não grava (`cancelledGestureRestoresAndWritesNothing`, só onde `INJECTS_TOUCH_CANCEL`, ou seja, não no iOS) |
-| Ações de acessibilidade nas duas plataformas | aprovado | pendente do Push 1 | `accessibilityActionsMoveAndAnnounce` (as quatro, só as possíveis, o anúncio na região viva) e `GallerySmokeTest.reorderPageOpens` |
-| Dentro de uma sheet | aprovado | pendente do Push 1 | `worksInsideABottomSheet`: pelo `MOverlayWindow`; a sheet não desce durante o arraste e não fecha |
-| Redimensionamento ao erguer (decisão 14) | aprovado | pendente do Push 1 | `itemsResizingOnLiftKeepTheDraggedItemUnderTheFinger`: todos os itens caem para 40 dp ao erguer; o item continua sob o dedo e nada se reordena sozinho |
-| A lista muda no meio do arraste | aprovado | pendente do Push 1 | `listChangeDuringDragDropsWithTheCurrentKeys` (um id sai e outro entra; o drop leva exatamente os ids atuais) e `draggedItemThatDisappearsEndsTheDragWithoutAWrite` |
-| Erguer: elevação e escala; háptico | aprovado | pendente do Push 1 | `liftHasElevationAndScaleAndReducedMotionKeepsOnlyElevation` (largura × 1,02 e `elevation.e3`; com movimento reduzido só a elevação), `liftIsVisibleInBothThemes` (sombra no claro, contorno no escuro) e `hapticOnLiftAndOnEachPositionCrossed` |
+| Reordena sem saltos, com itens de alturas diferentes (56, 96 e 144 dp) | aprovado | aprovado | `dragAcrossItemsOfDifferentHeightsReordersWithoutJumps`: o topo do item arrastado anda exatamente o passo do dedo (±1,5 px) em cada um dos 20 passos; uma troca por posição cruzada, sem ida e volta (dois `StepperStep`) |
+| A rolagem da lista não briga com o gesto | aprovado | aprovado | `aFlingOnTheHandleScrollsWithoutLifting` (um arraste rápido na alça rola a lista e não ergue nada); `autoScrollsNearTheEdges` (perto das bordas a lista rola junto, para baixo e para cima, e o item vai junto) |
+| Grava uma vez | aprovado | aprovado | `dropWritesOnceWithTheNewOrder`, `nothingIsWrittenWhileDragging`, `droppedOrderWaitsForTheKeys`; cancelar não grava (`cancelledGestureRestoresAndWritesNothing`, só onde `INJECTS_TOUCH_CANCEL`, ou seja, não no iOS) |
+| Ações de acessibilidade nas duas plataformas | aprovado | aprovado | `accessibilityActionsMoveAndAnnounce` (as quatro, só as possíveis, o anúncio na região viva) e `GallerySmokeTest.reorderPageOpens` |
+| Dentro de uma sheet | aprovado | aprovado | `worksInsideABottomSheet`: pelo `MOverlayWindow`; a sheet não desce durante o arraste e não fecha |
+| Redimensionamento ao erguer (decisão 14) | aprovado | aprovado | `itemsResizingOnLiftKeepTheDraggedItemUnderTheFinger`: todos os itens caem para 40 dp ao erguer; o item continua sob o dedo e nada se reordena sozinho |
+| A lista muda no meio do arraste | aprovado | aprovado | `listChangeDuringDragDropsWithTheCurrentKeys` (um id sai e outro entra; o drop leva exatamente os ids atuais) e `draggedItemThatDisappearsEndsTheDragWithoutAWrite` |
+| Erguer: elevação e escala; háptico | aprovado | aprovado | `liftHasElevationAndScaleAndReducedMotionKeepsOnlyElevation` (largura × 1,02 e `elevation.e3`; com movimento reduzido só a elevação), `liftIsVisibleInBothThemes` (sombra no claro, contorno no escuro) e `hapticOnLiftAndOnEachPositionCrossed` |
 
 ## Como funciona
 
@@ -39,6 +39,6 @@
 
 ## O que não foi verificado
 
-- iOS: tudo, até o Push 1.
+- iOS: o cancelamento do gesto (o simulador não o injeta).
 - Aparelho físico, TalkBack e VoiceOver de verdade (o anúncio foi provado pela região viva na árvore de semântica, não ouvido) e a fluidez a 120 Hz.
 - O desempenho do arraste com a base grande fica para a Task 19 (`gfxinfo`).
