@@ -91,6 +91,9 @@ private class Harness {
     lateinit var state: ReorderState<String>
     lateinit var list: LazyListState
 
+    /** The menus' moves ([reorderMover]) of each composed item, as of the last composition. */
+    val movers = mutableMapOf<String, (Int) -> Boolean>()
+
     fun heightFor(key: String): Dp = if (collapsed) 40.dp else heightOf(key)
 }
 
@@ -128,6 +131,7 @@ private fun ReorderList(h: Harness, height: Dp = LIST_HEIGHT, width: Dp? = null)
                         .testTag(key),
                 ) {
                     ReorderHandle(state, key, key, Modifier.testTag(handle(key)))
+                    h.movers[key] = reorderMover(state, key, key)
                     BasicText(key)
                 }
             }
@@ -382,6 +386,64 @@ class ReorderTest {
         assertAnnounced(1)
         assertEquals(4, h.drops.size)
         assertEquals(h.drops.last(), h.state.order)
+    }
+
+    /**
+     * The menus' moves ([reorderMover]) do what the screen reader's actions do: the new order is
+     * held while its write has not come back, the write is made once, the polite live region says
+     * where the item went, and a move to the index it has, out of range or during a drag is refused
+     * and writes nothing.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun reorderMoverHoldsTheOrderAndAnnouncesThroughTheLiveRegion() = runComposeUiTest {
+        val four = INITIAL.take(4)
+        val h = Harness().apply {
+            keys = four
+            // The write has not come back: only the held order shows the move.
+            applyDrops = false
+        }
+        withTheme { ProvideAppLocale("en") { ReorderList(h) } }
+        waitForIdle()
+        fun mover(key: String) = checkNotNull(h.movers[key]) { "no mover for $key" }
+
+        assertTrue(mover("item-0")(2), "a move to another place is made")
+        waitForIdle()
+        assertEquals(listOf("item-1", "item-2", "item-0", "item-3"), h.state.order, "the new order is held")
+        assertEquals(listOf(listOf("item-1", "item-2", "item-0", "item-3")), h.drops, "one write")
+        val announcer = onNodeWithTag(ReorderAnnouncerTag, useUnmergedTree = true)
+        announcer.assertContentDescriptionEquals(getString(Res.string.ds_reorder_moved, "item-0", 3, four.size))
+        assertEquals(LiveRegionMode.Polite, announcer.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
+
+        // Refused, with nothing written: the place it has, out of range both ways.
+        assertEquals(false, mover("item-0")(2))
+        assertEquals(false, mover("item-0")(-1))
+        assertEquals(false, mover("item-0")(four.size))
+        assertEquals(1, h.drops.size)
+        assertEquals(listOf("item-1", "item-2", "item-0", "item-3"), h.state.order)
+
+        // A second move goes from the held order, and is announced in its turn.
+        assertTrue(mover("item-3")(0))
+        waitForIdle()
+        assertEquals(listOf("item-3", "item-1", "item-2", "item-0"), h.state.order)
+        assertEquals(listOf("item-3", "item-1", "item-2", "item-0"), h.drops.last())
+        onNodeWithTag(ReorderAnnouncerTag, useUnmergedTree = true)
+            .assertContentDescriptionEquals(getString(Res.string.ds_reorder_moved, "item-3", 1, four.size))
+    }
+
+    /** While an item is being dragged, a menu's move is refused. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun reorderMoverRefusesWhileDragging() = runComposeUiTest {
+        if (!INJECTS_DRAG) return@runComposeUiTest
+        val h = Harness()
+        withTheme { ReorderList(h) }
+        waitForIdle()
+        lift("item-0")
+        assertTrue(h.state.dragging != null, "the item is lifted")
+        assertEquals(false, checkNotNull(h.movers["item-1"])(0))
+        assertEquals(emptyList(), h.drops)
+        release()
     }
 
     @OptIn(ExperimentalTestApi::class)

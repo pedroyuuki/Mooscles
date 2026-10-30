@@ -1,6 +1,14 @@
 package com.mooscles.designsystem.components
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Modifier
@@ -89,5 +97,40 @@ class MBottomSheetTest {
         assertTrue(action != null && action(results), "no text layout result")
         val density = results.first().layoutInput.density
         assertEquals(2f to 2f, density.density to density.fontScale)
+    }
+
+    /**
+     * `initialFocus` takes the focus once the sheet is open, and is asked once: when the focus then
+     * moves to another field, it is not pulled back (however many frames pass).
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun initialFocusIsRequestedOnceAndNeverAgain() = runComposeUiTest {
+        val first = FocusRequester()
+        val second = FocusRequester()
+        val firstGains = mutableIntStateOf(0)
+        withTheme {
+            MBottomSheet(onDismiss = {}, initialFocus = first) {
+                BasicTextField(
+                    value = "one",
+                    onValueChange = {},
+                    modifier = Modifier.testTag("first-field").focusRequester(first).onFocusChanged { if (it.isFocused) firstGains.intValue++ },
+                )
+                BasicTextField(value = "two", onValueChange = {}, modifier = Modifier.testTag("second-field").focusRequester(second))
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("first-field").assertIsFocused()
+        assertEquals(1, firstGains.intValue, "the field took the focus once")
+
+        runOnIdle { second.requestFocus() }
+        waitForIdle()
+        onNodeWithTag("second-field").assertIsFocused()
+        // Time passes, frames pass: nothing asks the first field again.
+        repeat(90) { mainClock.advanceTimeByFrame() }
+        waitForIdle()
+        onNodeWithTag("second-field").assertIsFocused()
+        onNodeWithTag("first-field").assertIsNotFocused()
+        assertEquals(1, firstGains.intValue, "the focus was not pulled back")
     }
 }

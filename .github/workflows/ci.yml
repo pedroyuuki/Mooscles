@@ -460,7 +460,9 @@ jobs:
           # Phase 4B task 11: SizesTimingElevationTest +1 (commonTest, mediaStripIsFiftySix). 364 + 1 = 365.
           # Phase 4B task 13 fix round 1: ExerciseCardTest +1 (headerWithoutToggleIsNotAButtonAndNamesItsMenu). 365 + 1 = 366.
           # Phase 4B task 12 fix round 1: MDialogTest +1 (uiTest, nullTextLeavesNoTextNodeAndNoGap). 366 + 1 = 367.
-          MIN_DS_IOS_TESTS: 367
+          # Phase 4B tasks 16-17 carries: MBottomSheetTest +1 (initialFocusIsRequestedOnceAndNeverAgain); ReorderTest +2
+          # (reorderMoverHoldsTheOrderAndAnnouncesThroughTheLiveRegion, reorderMoverRefusesWhileDragging). 367 + 3 = 370.
+          MIN_DS_IOS_TESTS: 370
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
