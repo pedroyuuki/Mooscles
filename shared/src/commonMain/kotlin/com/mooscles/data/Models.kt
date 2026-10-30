@@ -11,13 +11,23 @@ import com.mooscles.domain.currentTimeMillis
 enum class MuscleGroup(val label: String) {
     CHEST("Chest"), BACK("Back"), SHOULDERS("Shoulders"), BICEPS("Biceps"),
     TRICEPS("Triceps"), QUADRICEPS("Quadriceps"), HAMSTRINGS("Hamstrings"),
-    GLUTES("Glutes"), CALVES("Calves"), CORE("Core"), FOREARMS("Forearms"), FULL_BODY("Full body")
+    GLUTES("Glutes"), CALVES("Calves"), CORE("Core"), FOREARMS("Forearms"), FULL_BODY("Full body");
+
+    companion object {
+        /** The group whose [label] (what `ExerciseUi` carries) or enum name is [value]; null for anything else. */
+        fun fromLabelOrName(value: String): MuscleGroup? = entries.firstOrNull { it.label == value || it.name == value }
+    }
 }
 
 enum class Equipment(val label: String) {
     BARBELL("Barbell"), DUMBBELL("Dumbbell"), KETTLEBELL("Kettlebell"), CABLE("Cable"),
     BODYWEIGHT("Bodyweight"), SMITH_MACHINE("Smith machine"),
-    SELECTORIZED_MACHINE("Selectorized machine"), PLATE_LOADED_MACHINE("Plate-loaded machine"), OTHER("Other")
+    SELECTORIZED_MACHINE("Selectorized machine"), PLATE_LOADED_MACHINE("Plate-loaded machine"), OTHER("Other");
+
+    companion object {
+        /** The equipment whose [label] (what `ExerciseUi` carries) or enum name is [value]; null for anything else. */
+        fun fromLabelOrName(value: String): Equipment? = entries.firstOrNull { it.label == value || it.name == value }
+    }
 }
 
 /** Repetitions and load are always the numbers explicitly logged; no hidden multiplier. */

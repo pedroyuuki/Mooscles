@@ -344,7 +344,7 @@ internal fun CustomExerciseForm(
                             onSelect = { label ->
                                 equipment = label
                                 if (!conventionChosen) {
-                                    Equipment.entries.firstOrNull { it.label == label }?.let {
+                                    Equipment.fromLabelOrName(label)?.let {
                                         convention = CustomExerciseRules.defaultConvention(it).label
                                     }
                                 }

@@ -62,8 +62,8 @@ class ExerciseSearchIndex private constructor(
 
         // The labels come from the enums (ExerciseUi carries the label); enum names are accepted too.
         private fun portugueseMetadata(entry: SearchEntry): List<String> {
-            val muscle = MuscleGroup.entries.firstOrNull { it.label == entry.muscle || it.name == entry.muscle }
-            val equipment = Equipment.entries.firstOrNull { it.label == entry.equipment || it.name == entry.equipment }
+            val muscle = MuscleGroup.fromLabelOrName(entry.muscle)
+            val equipment = Equipment.fromLabelOrName(entry.equipment)
             return muscle?.let(SearchTerms::muscle).orEmpty() + equipment?.let(SearchTerms::equipment).orEmpty()
         }
     }

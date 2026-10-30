@@ -47,13 +47,13 @@ object ExerciseAnatomy {
 
     /**
      * The catalog entry when [id] is a catalog id the table knows; otherwise the region of the
-     * muscle group whose label is [muscleLabel], or null for full body and unknown labels.
+     * muscle group whose label (or enum name) is [muscleLabel], or null for full body and unknown labels.
      */
     fun forExercise(id: String, muscleLabel: String): Anatomy? {
         if (id.startsWith(ExerciseCatalog.ID_PREFIX)) {
             catalog[id.removePrefix(ExerciseCatalog.ID_PREFIX)]?.let { return it }
         }
-        val group = MuscleGroup.entries.firstOrNull { it.label == muscleLabel } ?: return null
+        val group = MuscleGroup.fromLabelOrName(muscleLabel) ?: return null
         return forMuscleGroup(group)
     }
 }

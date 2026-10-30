@@ -102,6 +102,29 @@ class ExerciseAnatomyTest {
         assertEquals(expected, MuscleGroup.entries.associateWith { ExerciseAnatomy.forExercise("custom_1", it.label) })
     }
 
+    /** Final review, item 9: the group is read as the rest of the app reads it, by label or enum name. */
+    @Test
+    fun customAcceptsTheEnumNameToo() {
+        assertEquals(Anatomy(listOf(CHEST), emptyList()), ExerciseAnatomy.forExercise("custom_1", "CHEST"))
+        assertEquals(Anatomy(listOf(MuscleRegion.ABDOMINALS), emptyList()), ExerciseAnatomy.forExercise("custom_1", "CORE"))
+        assertNull(ExerciseAnatomy.forExercise("custom_1", "FULL_BODY"))
+    }
+
+    /** The one label-or-name parser of the muscle groups and the equipment (final review, item 9). */
+    @Test
+    fun groupsAndEquipmentParseByLabelOrName() {
+        for (group in MuscleGroup.entries) {
+            assertEquals(group, MuscleGroup.fromLabelOrName(group.label))
+            assertEquals(group, MuscleGroup.fromLabelOrName(group.name))
+        }
+        for (equipment in Equipment.entries) {
+            assertEquals(equipment, Equipment.fromLabelOrName(equipment.label))
+            assertEquals(equipment, Equipment.fromLabelOrName(equipment.name))
+        }
+        assertNull(MuscleGroup.fromLabelOrName("chest"))
+        assertNull(Equipment.fromLabelOrName(""))
+    }
+
     @Test
     fun prefixedIdOutsideTheCatalogFallsBackToTheGroup() {
         assertEquals(Anatomy(listOf(TRICEPS), emptyList()), ExerciseAnatomy.forExercise("catalog_not_a_real_exercise", "Triceps"))

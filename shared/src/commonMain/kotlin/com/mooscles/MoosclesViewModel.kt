@@ -159,8 +159,8 @@ abstract class MoosclesViewModel(
             repo.saveExercise(existing.copy(name = name, muscle = m, equipment = e, convention = c))
         }
     }
-    private fun muscleOf(label: String) = MuscleGroup.entries.firstOrNull { it.label == label || it.name == label } ?: MuscleGroup.FULL_BODY
-    private fun equipmentOf(label: String) = Equipment.entries.firstOrNull { it.label == label || it.name == label } ?: Equipment.OTHER
+    private fun muscleOf(label: String) = MuscleGroup.fromLabelOrName(label) ?: MuscleGroup.FULL_BODY
+    private fun equipmentOf(label: String) = Equipment.fromLabelOrName(label) ?: Equipment.OTHER
     private fun conventionOf(label: String) =
         LoadConvention.entries.firstOrNull { it.label == label || it.name == label } ?: LoadConvention.TOTAL_LOAD
     override fun startWorkout(routineId: String?) {
