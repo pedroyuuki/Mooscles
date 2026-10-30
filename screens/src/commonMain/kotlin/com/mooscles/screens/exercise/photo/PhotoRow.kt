@@ -43,13 +43,14 @@ internal object PhotoRowTags {
 /**
  * The content of the form's "Photo" section (decision 12): the square preview of the photo (the
  * equipment's [icon] while there is none) and, beside it, "Choose from gallery", "Take photo" (only with
- * [cameraAvailable]) and, with a photo, "Remove photo". The buttons wrap under the preview with large text.
+ * [cameraAvailable]) and, when [canRemove], "Remove photo". The buttons wrap under the preview with large text.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PhotoRow(
     preview: ImageBitmap?,
     icon: ImageVector,
+    canRemove: Boolean,
     cameraAvailable: Boolean,
     onGallery: () -> Unit,
     onCamera: () -> Unit,
@@ -86,7 +87,7 @@ internal fun PhotoRow(
                     variant = MButtonVariant.Secondary,
                 )
             }
-            if (preview != null) {
+            if (canRemove) {
                 MButton(
                     stringResource(Res.string.exercise_form_photo_remove),
                     onClick = onRemove,

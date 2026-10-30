@@ -458,7 +458,7 @@ class ExercisePickerSheetTest {
         // The language is the system's here (no override survives the restoration), so only the count is read.
         onNodeWithTag(ExercisePickerAddTag).assertIsEnabled().assert(
             SemanticsMatcher("the text says 2 exercises") { node ->
-                node.config[SemanticsProperties.Text].joinToString("") { it.text }.contains("2")
+                node.config[SemanticsProperties.Text].joinToString("") { it.text }.contains(Regex("\\b2\\b"))
             },
         )
         // A filter that hides one of them.

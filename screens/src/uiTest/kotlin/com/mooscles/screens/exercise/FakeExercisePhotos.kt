@@ -7,6 +7,7 @@ import com.mooscles.photos.PhotoFile
 import com.mooscles.screens.exercise.photo.ExercisePhotos
 import com.mooscles.screens.exercise.photo.LocalExercisePhotos
 import com.mooscles.screens.exercise.photo.PhotoCapture
+import kotlin.concurrent.Volatile
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.flow.MutableStateFlow

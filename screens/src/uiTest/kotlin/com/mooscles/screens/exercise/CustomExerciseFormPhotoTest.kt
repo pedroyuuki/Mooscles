@@ -23,6 +23,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -60,7 +62,6 @@ class CustomExerciseFormPhotoTest {
     private class Outcome(val actions: RecordingActions, val photos: FakeExercisePhotos, val state: MutableState<UiState>) {
         val saved = mutableListOf<String>()
         var cancelled = 0
-        var photoFailed = 0
         val creations: List<String> get() = actions.calls.filter { it.startsWith("createCustomExercise:") }
         val id: String get() = creations.last().removePrefix("createCustomExercise:").substringBefore(",")
     }
@@ -90,7 +91,6 @@ class CustomExerciseFormPhotoTest {
                     },
                     onCancel = { outcome.cancelled++ },
                     pageSize = size,
-                    onPhotoFailed = { outcome.photoFailed++ },
                 )
             }
             if (provide) photos.Provide(form) else form()
@@ -116,7 +116,7 @@ class CustomExerciseFormPhotoTest {
 
     private fun ComposeUiTest.pick() {
         tap(PhotoRowTags.GALLERY)
-        waitUntil(timeoutMillis = 5_000) { exists(PhotoRowTags.PREVIEW) }
+        waitUntilAtLeastOneExists(hasTestTag(PhotoRowTags.PREVIEW), timeoutMillis = 5_000)
     }
 
     private val busy = SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription)
@@ -274,9 +274,9 @@ class CustomExerciseFormPhotoTest {
         fillAndSave()
         ExerciseUi(outcome.id, "Remada articulada", "Back", "Plate-loaded machine", custom = true).arrived(outcome.state)
         waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
-        // The exercise is kept (the form reports it saved) and the host is told the photo did not make it.
+        // The exercise is kept (the form reports it saved) and the failure is noted for the detail to show.
         assertEquals(listOf(outcome.id), outcome.saved)
-        assertEquals(1, outcome.photoFailed)
+        assertEquals(setOf(outcome.id), photos.photos.failedCommits.value)
         assertTrue(!photos.store.hasPhoto(outcome.id))
     }
 
@@ -381,6 +381,116 @@ class CustomExerciseFormPhotoTest {
         onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
         waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
         assertEquals(listOf("commit:${mine.id}:${mine.id}", "saved:${mine.id}"), photos.store.log.filter { it.startsWith("commit:") || it.startsWith("saved:") })
+    }
+
+    private fun ComposeUiTest.editName(text: String) {
+        onNodeWithTag(CustomExerciseFormTags.NAME).performTextReplacement(text)
+        waitForIdle()
+    }
+
+    private fun ExerciseUi.edited(name: String) = copy(name = name)
+
+    @Test
+    fun editStaysBusyUntilTheStateShowsTheNewValues() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.givePhoto(mine.id) }
+        val outcome = showForm(initial = mine, photos = photos)
+        waitUntilAtLeastOneExists(hasTestTag(PhotoRowTags.PREVIEW), timeoutMillis = 5_000)
+        editName("Supino articulado do Zé II")
+        tap(PhotoRowTags.REMOVE)
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        assertEquals(1, outcome.actions.calls.count { it.startsWith("saveCustomExercise:") })
+        assertBusy(true)
+        assertEquals(emptyList(), outcome.saved)
+        // Nothing is removed before the echo.
+        assertTrue(photos.store.log.none { it.startsWith("remove:") })
+        // A state that still has the old name is no echo.
+        outcome.state.value = outcome.state.value.copy(history = emptyList())
+        waitForIdle()
+        assertEquals(emptyList(), outcome.saved)
+        outcome.state.value = outcome.state.value.copy(exercises = listOf(mine.edited("Supino articulado do Zé II")))
+        waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
+        assertEquals(listOf("remove:${mine.id}", "saved:${mine.id}"), photos.store.log.filter { it.startsWith("remove:") || it.startsWith("saved:") })
+    }
+
+    @Test
+    fun failedEditKeepsTheFormAndThePhoto() = runComposeUiTest {
+        val photos = FakeExercisePhotos().also { it.store.givePhoto(mine.id) }
+        val outcome = showForm(initial = mine, photos = photos)
+        waitUntilAtLeastOneExists(hasTestTag(PhotoRowTags.PREVIEW), timeoutMillis = 5_000)
+        pick()
+        editName("Supino articulado do Zé II")
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        assertBusy(true)
+        outcome.state.value = outcome.state.value.copy(
+            error = "raw", errorCode = UiError.SAVE_FAILED, errorSubject = mine.id, subjectFailures = mapOf(mine.id to 1),
+        )
+        waitForIdle()
+        // The form stays, free, with the draft and the saved photo untouched.
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
+        assertBusy(false)
+        assertEquals(emptyList(), outcome.saved)
+        assertTrue(exists(PhotoRowTags.PREVIEW))
+        assertTrue(photos.store.hasPhoto(mine.id) && photos.store.log.none { it.startsWith("commit:") || it.startsWith("remove:") })
+        // Saved again, and this time echoed: the draft is committed, then the host hears.
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitForIdle()
+        outcome.state.value = outcome.state.value.copy(exercises = listOf(mine.edited("Supino articulado do Zé II")))
+        waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
+        assertEquals(listOf("commit:${mine.id}:${mine.id}", "saved:${mine.id}"), photos.store.log.filter { it.startsWith("commit:") || it.startsWith("saved:") })
+    }
+
+    @Test
+    fun lostCommandFreesTheFormAfterTheCapWithItsToast() = runComposeUiTest {
+        val outcome = showForm()
+        fillAndSave()
+        assertBusy(true)
+        mainClock.advanceTimeBy(MoosclesTiming().saveEchoWait + 100)
+        waitForIdle()
+        assertBusy(false)
+        assertEquals(emptyList(), outcome.saved)
+        onNode(hasText("Não foi possível salvar a última mudança. Seus dados continuam no aparelho.") and hasAnyAncestor(hasTestTag("toast")), useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun cancelWhileSavingDoesNothing() = runComposeUiTest {
+        val outcome = showForm()
+        pick()
+        fillAndSave()
+        assertBusy(true)
+        onNodeWithTag(CustomExerciseFormTags.CANCEL).performClick()
+        onNodeWithTag(CustomExerciseFormTags.ROOT).performKeyInput { pressKey(Key.Escape) }
+        waitForIdle()
+        assertEquals(0, outcome.cancelled)
+        assertTrue(outcome.photos.store.log.none { it.startsWith("discard:") })
+        // The echo still commits the photo.
+        ExerciseUi(outcome.id, "Remada articulada", "Back", "Plate-loaded machine", custom = true).arrived(outcome.state)
+        waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
+        assertTrue(outcome.photos.store.hasPhoto(outcome.id))
+        assertEquals(0, outcome.cancelled)
+    }
+
+    @Test
+    fun resaveAfterTheEchoSendsNothing() = runComposeUiTest {
+        val restoration = screenRestoration()
+        val outcome = showForm(locale = null, restoration = restoration)
+        pick()
+        fillAndSave()
+        val id = outcome.id
+        // Recreated while waiting: the wait is dropped, and the echo arrives meanwhile.
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true).arrived(outcome.state)
+        waitForIdle()
+        assertBusy(false)
+        onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
+        waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
+        // One creation only, the photo under the id, and no error for a duplicate.
+        assertEquals(1, outcome.creations.size)
+        assertEquals(listOf(id), outcome.saved)
+        assertTrue(outcome.photos.store.hasPhoto(id))
     }
 
     @Test

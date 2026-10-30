@@ -25,6 +25,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.runtime.collectAsState
 import com.mooscles.screens.exercise.photo.rememberStoredPhoto
 import com.mooscles.screens.exercise.photo.PhotoSource
 import com.mooscles.screens.exercise.photo.LocalExercisePhotos
@@ -220,6 +222,13 @@ fun ExerciseInfoRoute(
     // routine or the workout asked for ends its wait; any other error leaves the waits alone (pre-flight F10).
     // While the edit form is open it shows the error of its own save, and this one waits for it to close.
     ScreenErrorToast(state.errorCode.takeIf { !editing }, actions, host)
+    // The photo of this exercise that its save could not keep (the form noted it just before it closed): shown here, on
+    // the screen the person lands on after a creation and stays on after an edit.
+    val photos = LocalExercisePhotos.current
+    val photoFailures by remember(photos) { photos?.failedCommits ?: MutableStateFlow(emptySet()) }.collectAsState()
+    LaunchedEffect(photoFailures, exerciseId) {
+        if (photos?.takeCommitFailure(exerciseId) == true) scope.launch { host.show(photoFailedText, MToastKind.Error) }
+    }
     LaunchedEffect(state.subjectFailures) {
         pendingRoutine?.let { if ((state.subjectFailures[it.targetId] ?: 0) > it.failures) pendingRoutine = null }
         pendingWorkout?.let { if ((state.subjectFailures[it.targetId] ?: 0) > it.failures) pendingWorkout = null }
@@ -340,7 +349,6 @@ fun ExerciseInfoRoute(
             actions = actions,
             onSaved = { editing = false },
             onCancel = { editing = false },
-            onPhotoFailed = { scope.launch { host.show(photoFailedText, MToastKind.Error) } },
         )
     }
 }

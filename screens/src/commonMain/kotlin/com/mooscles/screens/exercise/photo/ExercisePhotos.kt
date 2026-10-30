@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
@@ -46,6 +47,24 @@ interface PhotoCapture {
 class ExercisePhotos(val store: ExercisePhotoStore, val capture: PhotoCapture?) {
     internal val cache = PhotoCache<ImageBitmap>()
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * The ids of exercises whose photo could not be kept after their save (a failed `commit`). The form notes one just
+     * before it reports the save, and the detail of that exercise takes it and shows "Couldn't save the photo.": the form
+     * (and, after a creation, the library under it) is gone by then, so nothing there could show it.
+     */
+    internal val failedCommits = MutableStateFlow<Set<String>>(emptySet())
+
+    internal fun noteCommitFailed(exerciseId: String) = failedCommits.update { it + exerciseId }
+
+    internal fun clearCommitFailure(exerciseId: String) = failedCommits.update { it - exerciseId }
+
+    /** True once for each noted failure of [exerciseId]. */
+    internal fun takeCommitFailure(exerciseId: String): Boolean {
+        var found = false
+        failedCommits.update { found = exerciseId in it; it - exerciseId }
+        return found
+    }
 
     /** Drops the draft [key] without waiting: the form that asked for it is already leaving, so its own scope would end first. */
     internal fun discardInBackground(key: String) {

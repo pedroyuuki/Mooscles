@@ -365,6 +365,8 @@ Regra: um teste cujo alvo continua no código fica; um cujo alvo sai é portado 
 - [ ] **Step 4:** O comando do Step 2 verde, mais `CustomExerciseFormTest`, `ExercisePickerSheetTest` e `ActiveWorkoutScreenTest`; `StringsParityTest` verde; `check-design-tokens` limpo.
 - [ ] **Step 5:** Subir `MIN_SCREENS_IOS_TESTS`. Commit `screens: custom exercise photo and a form that waits for the save`.
 
+**Notas datadas da Task 10 (2026-10-30):** (1) F17: a decisão 19 e a linha 600 ("as barras cinzas … continuam estacionadas") ficam substituídas pelo gancho `LocalOverlayWindowSetup`, sem novo `expect/actual`. (2) `PendingAdd` do detalhe não é mais salvo, porque a contagem de falhas restaurada nunca liberaria a espera. (3) Editar espera o eco como criar. (4) Cancelar e Voltar são ignorados com o formulário ocupado. (5) O aviso de foto não salva aparece no detalhe (`ExercisePhotos.failedCommits`). (6) Token `saveEchoWait` = 15 000 ms. As decisões e o texto completo estão nas notas datadas da 4B da spec.
+
 ### Task 11: Aba Treinar
 
 **Revisão:** Opus completa (tela nova com comportamento).

@@ -615,6 +615,20 @@ class ExerciseInfoScreenTest {
     }
 
     @Test
+    fun photoThatTheSaveCouldNotKeepIsToastedOnce() = runComposeUiTest {
+        val photos = FakeExercisePhotos()
+        photos.photos.noteCommitFailed(mine.id)
+        show(mine, photos = photos)
+        waitForIdle()
+        toastWith("Não foi possível salvar a foto.").assertIsDisplayed()
+        // Taken, not repeated: a failure noted for another exercise is not shown here.
+        assertEquals(emptySet(), photos.photos.failedCommits.value)
+        photos.photos.noteCommitFailed("other")
+        waitForIdle()
+        assertEquals(setOf("other"), photos.photos.failedCommits.value)
+    }
+
+    @Test
     fun customWithoutAPhotoKeepsTheEquipmentIcon() = runComposeUiTest {
         show(mine, photos = FakeExercisePhotos())
         waitForIdle()

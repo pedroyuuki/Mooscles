@@ -277,7 +277,8 @@ class CustomExerciseFormTest {
 
     @Test
     fun editPrefillsAndSaves() = runComposeUiTest {
-        val outcome = showForm(initial = mine)
+        val holder = mutableStateOf(UiState(loading = false, exercises = exercises))
+        val outcome = showForm(initial = mine, holder = holder)
         onNodeWithTag(CustomExerciseFormTags.TITLE).assertTextEquals("Editar exercício")
         assertEquals("Supino articulado do Zé", nameText())
         onNodeWithTag(CustomExerciseFormTags.muscle(MuscleGroup.CHEST.label)).performScrollTo().assertIsSelected()
@@ -291,8 +292,12 @@ class CustomExerciseFormTest {
         tap(CustomExerciseFormTags.equipment(Equipment.DUMBBELL.label))
         conventionNode(LoadConvention.TOTAL_LOAD).assertIsSelected()
         save()
-        assertEquals(listOf(mine.id), outcome.saved)
         assertEquals("saveCustomExercise:custom-ze,Supino articulado do Zé II,Shoulders,Dumbbell,Total load", outcome.calls.last())
+        // An edit waits for the state to show the saved fields, as a creation waits for the exercise.
+        assertEquals(emptyList(), outcome.saved)
+        holder.value = holder.value.copy(exercises = listOf(bench, mine.copy(name = "Supino articulado do Zé II", muscle = "Shoulders", equipment = "Dumbbell")))
+        waitForIdle()
+        assertEquals(listOf(mine.id), outcome.saved)
         assertEquals(emptyList(), creations(outcome.calls))
     }
 

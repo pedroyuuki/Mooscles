@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -42,7 +41,6 @@ import com.mooscles.designsystem.components.MSearchField
 import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.components.MToastHost
 import com.mooscles.designsystem.components.MToastHostState
-import com.mooscles.designsystem.components.MToastKind
 import com.mooscles.designsystem.components.SectionHeader
 import com.mooscles.designsystem.components.TopBar
 import com.mooscles.designsystem.format.pluralCount
@@ -60,7 +58,6 @@ import com.mooscles.screens.resources.library_catalog_empty
 import com.mooscles.screens.resources.library_catalog_empty_body
 import com.mooscles.screens.resources.library_clear_filters
 import com.mooscles.screens.resources.library_count
-import com.mooscles.screens.resources.exercise_photo_failed
 import com.mooscles.screens.resources.library_create
 import com.mooscles.screens.resources.library_create_named
 import com.mooscles.screens.resources.library_empty
@@ -74,7 +71,6 @@ import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.UiState
 import com.mooscles.ui.WorkoutUi
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /** The tag of the library route's root. */
@@ -185,8 +181,6 @@ internal fun LibraryRoute(
     // The name the open form started with; null while it is closed.
     var form by rememberSaveable { mutableStateOf<String?>(null) }
     val host = remember { MToastHostState() }
-    val toastScope = rememberCoroutineScope()
-    val photoFailedText = stringResource(Res.string.exercise_photo_failed)
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
     var focusReturns by remember { mutableIntStateOf(0) }
@@ -279,7 +273,6 @@ internal fun LibraryRoute(
                 open(id)
             },
             onCancel = { form = null },
-            onPhotoFailed = { toastScope.launch { host.show(photoFailedText, MToastKind.Error) } },
         )
     }
     if (equipmentOpen) {

@@ -115,9 +115,18 @@ import com.mooscles.ui.UiError
 import com.mooscles.ui.UiState
 import com.mooscles.screens.workout.EquipmentIcons
 import com.mooscles.screens.workout.uiErrorText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+
+/** What a save in flight is waiting for: the failure count of the id when it was sent, and the fields it sent. */
+private data class SaveWait(val baseline: Int, val fields: SavedFields)
+
+private data class SavedFields(val name: String, val muscle: String, val equipment: String, val convention: String)
+
+private fun ExerciseUi.hasFields(fields: SavedFields) =
+    name == fields.name && muscle == fields.muscle && equipment == fields.equipment && convention == fields.convention
 
 /** The test tags of [CustomExerciseForm]. */
 internal object CustomExerciseFormTags {
@@ -160,20 +169,22 @@ internal object CustomExerciseFormTags {
  *
  * "Save" clears any earlier error ([MoosclesActions.clearError], so the host only sees this save's) and calls
  * [MoosclesActions.createCustomExercise] with the form's id, or [MoosclesActions.saveCustomExercise] for [initial].
- * A creation keeps the form open and busy (the button spins, further taps do nothing) until the state brings the
- * exercise, then reports its id to [onSaved]; a failure of that command (`UiState.subjectFailures` of the id grows
- * past its count when the command was sent) frees the form again, with the error shown over it and handed back
- * through `clearError()`, and an error about anything else changes nothing (pre-flight F10). A wait also ends after
- * `timing.saveEchoWait`. The wait is not saved: after a recreation the form is open and not busy, with its draft.
- * An edit reports [onSaved] once the command is sent. "Cancel" and Back call [onCancel] (and drop the photo draft)
- * and nothing else. The draft (name, choices, id and the photo's state) is kept with `rememberSaveable`, in the
- * host's composition, so it survives recreation.
+ * A save keeps the form open and busy (the button spins; further taps, "Cancel", Back and Escape do nothing) until
+ * the state shows it: the new exercise, or the edited one with the saved fields. Then the photo is applied and the id
+ * is reported to [onSaved]. A failure of that command (`UiState.subjectFailures` of the id grows past its count when
+ * the command was sent) frees the form again, with its draft and photo and the error shown over it (and handed back
+ * through `clearError()` when it is this id's), and an error about anything else changes nothing (pre-flight F10).
+ * The wait also ends after `timing.saveEchoWait`, with the same error. The wait is not saved: after a recreation
+ * the form is open and not busy, with its draft; a Save for a new exercise that is already in the state sends
+ * nothing and just finishes. "Cancel" and Back, when not busy, call [onCancel] (and drop the photo draft) and nothing
+ * else. The draft (name, choices, id and the photo's state) is kept with `rememberSaveable`, in the host's
+ * composition, so it survives recreation.
  *
  * With [com.mooscles.screens.exercise.photo.LocalExercisePhotos] provided (and a capture), a "Photo" section follows
  * the name: the preview, "Choose from gallery", "Take photo" (only with a camera) and, with a photo, "Remove
- * photo". A picked photo is a draft in the store under the form's id; after the creation is echoed it is committed
- * under that id before [onSaved] (an edit commits it, or removes the saved photo, when it is saved). A photo that
- * cannot be kept is [onPhotoFailed], and the exercise stays.
+ * photo". A picked photo is a draft in the store under the form's id; after the echo it is committed under that id
+ * (or the saved photo is removed, if it was removed) before [onSaved]. A photo that cannot be kept is noted in
+ * `ExercisePhotos.failedCommits` and the exercise stays: the detail shows "Couldn't save the photo.".
  *
  * [pageSize] is for tests: the page that size, at the window's top start, as on a phone that size
  * (the window itself always takes the whole screen, whatever size the host is given).
@@ -188,7 +199,6 @@ internal fun CustomExerciseForm(
     onSaved: (exerciseId: String) -> Unit,
     onCancel: () -> Unit,
     pageSize: DpSize? = null,
-    onPhotoFailed: () -> Unit = {},
 ) {
     val id = rememberSaveable { initial?.id ?: newId() }
     var name by rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -203,11 +213,11 @@ internal fun CustomExerciseForm(
     // The photo: a draft in the store under the form's id, and (editing) whether the saved photo goes on save.
     var hasDraft by rememberSaveable { mutableStateOf(false) }
     var removeOnSave by rememberSaveable { mutableStateOf(false) }
-    // The wait for the echo of a creation: the failure count of [id] when the command was sent. Never saved (preflight
-    // F10): after process death the view model starts with an empty map and the queued command is lost, so a restored
-    // wait would never end; the form comes back open and not busy, with its draft.
-    var wait by remember { mutableStateOf<Int?>(null) }
-    // The save was echoed (or is an edit) and the photo is being applied; nothing else can be sent meanwhile.
+    // The wait for the echo of a save (create or edit): the failure count of [id] when the command was sent, and the
+    // fields it sent. Never saved (preflight F10): after process death the view model starts with an empty map and the
+    // queued command is lost, so a restored wait would never end; the form comes back open and not busy, with its draft.
+    var wait by remember { mutableStateOf<SaveWait?>(null) }
+    // The save was echoed and the photo is being applied; nothing else can be sent meanwhile.
     var finishing by remember { mutableStateOf(false) }
     val busy = wait != null || finishing
     val scope = rememberCoroutineScope()
@@ -262,16 +272,24 @@ internal fun CustomExerciseForm(
         }
     }
 
-    // Applies the photo to [id]: a creation has just been echoed (the exercise exists, so the draft can move under its
-    // id), an edit has just been sent. A removal only happens here, on save. A photo that cannot be kept is the host's
-    // toast; the exercise stays.
+    // Applies the photo to [id] once the save is echoed (the exercise exists, so the draft can move under its id). A
+    // removal only happens here, on save. A photo that cannot be kept is noted in [ExercisePhotos.failedCommits], where
+    // the detail the person lands on (or stays on) shows it; the exercise stays.
     suspend fun applyPhoto() {
         val store = photos?.store ?: return
-        if (removeOnSave && initial != null) {
-            store.remove(id)
-        } else if (hasDraft && !store.commit(id, id)) {
-            onPhotoFailed()
+        val failed = try {
+            if (removeOnSave && initial != null) {
+                store.remove(id)
+                false
+            } else {
+                hasDraft && !store.commit(id, id)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            true
         }
+        if (failed) photos.noteCommitFailed(id)
     }
 
     fun finish() {
@@ -292,48 +310,57 @@ internal fun CustomExerciseForm(
             return
         }
         val trimmed = name.text.trim()
+        photos?.clearCommitFailure(id)
+        if (initial == null && state.exercises.any { it.id == id }) {
+            // Created already (the echo came while the wait was dropped, after a recreation or the time cap): sending the
+            // creation again would be refused and shown as a failure of a save that worked.
+            finish()
+            return
+        }
         actions.clearError()
+        // The baseline is the failure count of [id] now. A reused id (the same form saved again after a recreation)
+        // may already have failures counted before this send, so a failure of an older send can release this wait early.
+        wait = SaveWait(state.subjectFailures[id] ?: 0, SavedFields(trimmed, chosenMuscle, chosenEquipment, convention))
         if (initial == null) {
-            // The baseline is the failure count of [id] now. A reused id (the same form saved again after a recreation)
-            // may already have failures counted before this send, so a failure of an older send can release this wait early.
-            wait = state.subjectFailures[id] ?: 0
             actions.createCustomExercise(id, trimmed, chosenMuscle, chosenEquipment, convention)
         } else {
             actions.saveCustomExercise(id, trimmed, chosenMuscle, chosenEquipment, convention)
-            finish()
         }
     }
 
     fun cancel() {
-        if (finishing) return
+        // A save is on its way and will be echoed: closing now would drop the draft and keep the exercise without it.
+        if (busy) return
         if (hasDraft) photos?.discardInBackground(id)
         onCancel()
     }
 
-    // The creation's echo: the exercise comes in the state (the form closes through [onSaved], after the photo is
-    // committed under the new id), or the count of failures about [id] grows past the baseline (an unrelated error
-    // changes neither, and a second error cannot hide the first as it would [UiState.errorCode]): the form stays,
-    // the error shows over it, and Save is free again.
-    val failedText = uiErrorText(state.errorCode ?: UiError.SAVE_FAILED)
+    // The save's echo: the exercise comes in the state (a creation: it exists; an edit: it has the saved fields); the
+    // photo is then applied and the form closes through [onSaved]. Or the count of failures about [id] grows past the
+    // baseline (an unrelated error changes neither, and a second error cannot hide the first as it would
+    // [UiState.errorCode]): the form stays, with its draft and photo, the error shows over it, and Save is free again.
+    val ownError = state.errorSubject == id
+    val failedText = uiErrorText(if (ownError) state.errorCode ?: UiError.SAVE_FAILED else UiError.SAVE_FAILED)
     LaunchedEffect(wait, state.exercises, state.subjectFailures) {
-        val baseline = wait ?: return@LaunchedEffect
+        val pending = wait ?: return@LaunchedEffect
         if (finishing) return@LaunchedEffect
-        if (state.exercises.any { it.id == id }) {
+        val echoed = state.exercises.firstOrNull { it.id == id }
+        if (echoed != null && (initial == null || echoed.hasFields(pending.fields))) {
             finish()
-        } else if ((state.subjectFailures[id] ?: 0) > baseline) {
+        } else if ((state.subjectFailures[id] ?: 0) > pending.baseline) {
             wait = null
-            actions.clearError()
+            if (ownError) actions.clearError()
             scope.launch { toast.show(failedText, MToastKind.Error) }
         }
     }
-    // A command that was lost must not hold the form for good.
+    // A command that was lost must not hold the form for good. The toast outlives this effect (it ends with the wait).
     val echoWait = MTheme.timing.saveEchoWait
     LaunchedEffect(wait) {
         if (wait == null) return@LaunchedEffect
         delay(echoWait)
         if (!finishing && wait != null) {
             wait = null
-            toast.show(failedText, MToastKind.Error)
+            scope.launch { toast.show(failedText, MToastKind.Error) }
         }
     }
 
@@ -435,6 +462,7 @@ internal fun CustomExerciseForm(
                             PhotoRow(
                                 preview = preview,
                                 icon = EquipmentIcons.forEquipment(equipment ?: ""),
+                                canRemove = hasDraft || (initial != null && !removeOnSave && preview != null),
                                 cameraAvailable = pickCamera != null,
                                 onGallery = { if (!busy) pickGallery() },
                                 onCamera = { if (!busy) pickCamera?.invoke() },

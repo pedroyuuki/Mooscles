@@ -514,7 +514,11 @@ jobs:
           # Phase 4B task 9: ExercisePickerSheetTest +8 (uiTest, multiple mode). 452 + 8 = 460.
           # Phase 4B task 10: PhotoCacheTest 4 (commonTest); CustomExerciseFormPhotoTest 16, LibraryScreenTest +3,
           # ExerciseInfoScreenTest +3, ExercisePickerSheetTest +1 (uiTest). 460 + 27 = 487.
-          MIN_SCREENS_IOS_TESTS: 487
+          # Phase 4B task 10 fix round 1: CustomExerciseFormPhotoTest +5 (editStaysBusyUntilTheStateShowsTheNewValues,
+          # failedEditKeepsTheFormAndThePhoto, lostCommandFreesTheFormAfterTheCapWithItsToast, cancelWhileSavingDoesNothing,
+          # resaveAfterTheEchoSendsNothing), ExerciseInfoScreenTest +1 (photoThatTheSaveCouldNotKeepIsToastedOnce);
+          # LibraryScreenTest's photo-toast test was replaced by the navigation one (net 0). Device XML: 21 + 22 + 26 tests. 487 + 6 = 493.
+          MIN_SCREENS_IOS_TESTS: 493
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

@@ -58,6 +58,7 @@ import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.assertShownWhole
 import com.mooscles.screens.assertTextNotCut
 import com.mooscles.screens.exercise.CustomExerciseFormTags
+import com.mooscles.screens.exercise.ExerciseInfoRoute
 import com.mooscles.screens.exercise.FakeExercisePhotos
 import com.mooscles.screens.exercise.photo.PhotoRowTags
 import com.mooscles.screens.screenRestoration
@@ -697,23 +698,41 @@ class LibraryScreenTest {
         onNode(hasTestTag(ExerciseMediaPlaceholderTag) and inSquat, useUnmergedTree = true).assertDoesNotExist()
     }
 
+    /**
+     * The real navigation path: the library gives way to the detail as the form closes, so the toast of a photo that
+     * could not be kept has to come from the detail.
+     */
     @Test
-    fun photoThatCannotBeKeptToastsAfterTheFormClosed() = runComposeUiTest {
+    fun photoThatCannotBeKeptToastsOnTheDetailAfterTheNavigation() = runComposeUiTest {
         val photos = FakeExercisePhotos().also { it.store.commitWorks = false }
         val state = stateOf()
         val fake = Fake(state)
-        val requests = show(state = state, fake = fake, photos = photos)
+        val opened = mutableStateOf<String?>(null)
+        val seams = LibrarySeams(cache = LibraryModelCache(), build = { list, portuguese -> LibraryModel.build(list, portuguese) })
+        withScreen(locale = "pt-BR") {
+            photos.Provide {
+                val id = opened.value
+                if (id == null) {
+                    LibraryRoute(state.value, fake, onOpenExercise = { opened.value = it }, onOpenSettings = {}, modifier = Modifier, seams = seams)
+                } else {
+                    ExerciseInfoRoute(id, state.value, fake, onBack = {}, onOpenHistory = {}, onOpenRoutine = {}, onOpenWorkout = {}, modifier = Modifier)
+                }
+            }
+        }
+        waitForIdle()
         onNodeWithTag(LibraryTags.CREATE).performClick()
         waitForIdle()
         onNodeWithTag(PhotoRowTags.GALLERY).performScrollTo().performClick()
         waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag(PhotoRowTags.PREVIEW, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         val id = createInTheForm(fake, "Remada articulada")
         runOnIdle { state.value = state.value.copy(exercises = exercises + ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true)) }
-        waitUntil(timeoutMillis = 5_000) { requests.opened.isNotEmpty() }
+        waitUntil(timeoutMillis = 5_000) { opened.value != null }
         waitForIdle()
-        // The exercise is kept and opens; the photo is what failed.
-        assertEquals(listOf(id), requests.opened)
+        // The library is gone; the detail of the new exercise shows the toast.
+        assertEquals(id, opened.value)
+        onNodeWithTag(LibraryScreenTag).assertDoesNotExist()
         onNode(hasText("Não foi possível salvar a foto.") and hasAnyAncestor(hasTestTag(TOAST)), useUnmergedTree = true).assertIsDisplayed()
+        assertEquals(emptySet(), photos.photos.failedCommits.value)
     }
 
     @Test
