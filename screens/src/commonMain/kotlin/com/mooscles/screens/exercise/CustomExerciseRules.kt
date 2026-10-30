@@ -16,15 +16,6 @@ internal object CustomExerciseRules {
         else -> LoadConvention.TOTAL_LOAD
     }
 
-    /**
-     * The first of [exercises] (other than [exceptId], the one being edited) that already has the
-     * name [name], compared folded ([SearchFolding]: case, accents and punctuation aside): its
-     * stored name, its English catalog name or its Brazilian Portuguese one. Null when none has it,
-     * and for a blank name.
-     */
-    fun duplicateOf(name: String, exercises: List<ExerciseUi>, exceptId: String?): ExerciseUi? =
-        NameIndex(exercises).duplicateOf(name, exceptId)
-
     /** The folded names of [exercises], folded once, for [duplicateOf] on every keystroke. */
     class NameIndex(exercises: List<ExerciseUi>) {
         private val entries: List<Pair<ExerciseUi, Set<String>>> = exercises.map { exercise ->
@@ -35,7 +26,12 @@ internal object CustomExerciseRules {
             ).mapTo(HashSet()) { SearchFolding.fold(it) }
         }
 
-        /** As [CustomExerciseRules.duplicateOf], over the exercises this index was built from. */
+        /**
+         * The first of the exercises (other than [exceptId], the one being edited) that already has
+         * the name [name], compared folded ([SearchFolding]: case, accents and punctuation aside):
+         * its stored name, its English catalog name or its Brazilian Portuguese one. Null when none
+         * has it, and for a blank name.
+         */
         fun duplicateOf(name: String, exceptId: String?): ExerciseUi? {
             val folded = SearchFolding.fold(name)
             if (folded.isEmpty()) return null

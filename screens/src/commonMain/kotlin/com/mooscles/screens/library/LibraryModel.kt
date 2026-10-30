@@ -99,20 +99,15 @@ internal class LibraryModelCache {
 }
 
 /**
- * The [LibraryModel] of [exercises] in the screen's catalog language: `null` until the first build,
- * which runs on [Dispatchers.Default]; at once when the process cache already holds this list and
- * language. When the list or the language changes, the previous model stays until the new one is
- * ready, so the list never falls back to the skeleton; but a model of the other language is dropped
- * at once (the skeleton shows until the new one is built), so a name is never shown in a language
- * the screen around it is not in.
- */
-@Composable
-fun rememberLibraryModel(exercises: List<ExerciseUi>): LibraryModel? =
-    rememberLibraryModel(exercises, catalogInPortuguese())
-
-/**
- * [rememberLibraryModel] with its seams (pre-flight F19): tests pass their own [cache] and a [build]
- * they can hold, so "before the index is ready" is a state they set, not a race.
+ * The [LibraryModel] of [exercises] in the catalog language [portuguese] (the screen's,
+ * `catalogInPortuguese()`): `null` until the first build, which runs on [Dispatchers.Default]; at
+ * once when the process cache already holds this list and language. When the list or the language
+ * changes, the previous model stays until the new one is ready, so the list never falls back to the
+ * skeleton; but a model of the other language is dropped at once (the skeleton shows until the new
+ * one is built), so a name is never shown in a language the screen around it is not in.
+ *
+ * Its seams (pre-flight F19): tests pass their own [cache] and a [build] they can hold, so "before
+ * the index is ready" is a state they set, not a race.
  */
 @Composable
 internal fun rememberLibraryModel(

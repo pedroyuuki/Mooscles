@@ -38,21 +38,21 @@ class CustomExerciseRulesTest {
     @Test
     fun duplicateMatchesStoredEnglishAndPortugueseNames() {
         // The catalog's English name, its pt-BR name, folded (case, accents, spacing and punctuation).
-        assertEquals(bench, CustomExerciseRules.duplicateOf("barbell bench press", exercises, exceptId = null))
-        assertEquals(bench, CustomExerciseRules.duplicateOf("  SUPINO reto com barra ", exercises, exceptId = null))
+        assertEquals(bench, CustomExerciseRules.NameIndex(exercises).duplicateOf("barbell bench press", exceptId = null))
+        assertEquals(bench, CustomExerciseRules.NameIndex(exercises).duplicateOf("  SUPINO reto com barra ", exceptId = null))
         // A stored name the catalog no longer gives (an older build's) counts too.
         val renamed = bench.copy(name = "Flat bench (old)")
-        assertEquals(renamed, CustomExerciseRules.duplicateOf("flat bench old", listOf(renamed), exceptId = null))
+        assertEquals(renamed, CustomExerciseRules.NameIndex(listOf(renamed)).duplicateOf("flat bench old", exceptId = null))
         // A custom one by its typed name, accents folded.
-        assertEquals(mine, CustomExerciseRules.duplicateOf("supino articulado do ze", exercises, exceptId = null))
-        assertNull(CustomExerciseRules.duplicateOf("supino articulado", exercises, exceptId = null))
-        assertNull(CustomExerciseRules.duplicateOf("   ", exercises, exceptId = null))
+        assertEquals(mine, CustomExerciseRules.NameIndex(exercises).duplicateOf("supino articulado do ze", exceptId = null))
+        assertNull(CustomExerciseRules.NameIndex(exercises).duplicateOf("supino articulado", exceptId = null))
+        assertNull(CustomExerciseRules.NameIndex(exercises).duplicateOf("   ", exceptId = null))
     }
 
     @Test
     fun duplicateIgnoresTheExerciseBeingEdited() {
-        assertNull(CustomExerciseRules.duplicateOf("Supino articulado do Zé", exercises, exceptId = mine.id))
-        assertEquals(bench, CustomExerciseRules.duplicateOf("Supino reto com barra", exercises, exceptId = mine.id))
+        assertNull(CustomExerciseRules.NameIndex(exercises).duplicateOf("Supino articulado do Zé", exceptId = mine.id))
+        assertEquals(bench, CustomExerciseRules.NameIndex(exercises).duplicateOf("Supino reto com barra", exceptId = mine.id))
     }
 
     @Test
