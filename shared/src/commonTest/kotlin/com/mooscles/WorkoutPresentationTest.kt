@@ -579,14 +579,23 @@ class WorkoutPresentationTest {
         assertEquals(2500L, next.routines[0].lastFinishedAt)
         assertEquals(4000L, next.routines[1].lastFinishedAt)
         // A target edit in routine-a keeps routine-b, and routine-a's untouched entries.
-        val edited = presenter.present(finishedB.copy(routineSets = finishedB.routineSets.map {
+        val editedData = finishedB.copy(routineSets = finishedB.routineSets.map {
             if (it.id == "target-b") it.copy(targetReps = 9) else it
-        }), PreferencesUi())
+        })
+        val edited = presenter.present(editedData, PreferencesUi())
         assertSame(next.routines[1], edited.routines[1])
         assertNotSame(next.routines[0], edited.routines[0])
         assertSame(next.routines[0].exercises[0], edited.routines[0].exercises[0])
         assertSame(next.routines[0].exercises[1], edited.routines[0].exercises[1])
         assertEquals(9, edited.routines[0].exercises[2].setTargets.single().reps)
+        // The active workout's entries whose target did not change stay the same objects.
+        assertSame(next.active!!.exercises[0], edited.active!!.exercises[0])
+        assertSame(next.active!!.exercises[1], edited.active!!.exercises[1])
+        // Renaming routine-b, which is not the active workout's source, keeps the whole active workout.
+        val renamed = presenter.present(editedData.copy(routines = editedData.routines.map {
+            if (it.id == "routine-b") it.copy(name = "Renamed") else it
+        }), PreferencesUi())
+        assertSame(edited.active, renamed.active)
     }
 
     @Test fun warmupFlowsToRoutineSetUi() {
