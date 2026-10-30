@@ -453,8 +453,9 @@ jobs:
           # Phase 4A task 15 (uiTest): LibraryScreenTest 17, LibraryFiltersUiTest 6. 317 + 23 = 340.
           # Phase 4A task 16: CustomExerciseRulesTest 4 (commonTest); CustomExerciseFormTest 13,
           # LibraryScreenTest +2 (uiTest). 340 + 19 = 359.
+          # Task 16 fix round 1: CustomExerciseFormTest +2 (uiTest). 359 + 2 = 361.
           # Raise it in every task that adds screen tests to commonTest, iosTest or uiTest.
-          MIN_SCREENS_IOS_TESTS: 359
+          MIN_SCREENS_IOS_TESTS: 361
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

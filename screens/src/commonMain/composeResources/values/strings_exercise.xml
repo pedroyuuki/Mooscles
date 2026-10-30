@@ -15,4 +15,5 @@
     <string name="exercise_form_name_long">Use 120 characters or fewer.</string>
     <string name="exercise_form_muscle_required">Choose a muscle group.</string>
     <string name="exercise_form_equipment_required">Choose the equipment.</string>
+    <string name="exercise_form_required_hint">Choose a muscle group and the equipment.</string>
 </resources>

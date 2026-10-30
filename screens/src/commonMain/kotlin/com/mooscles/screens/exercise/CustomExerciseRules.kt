@@ -22,23 +22,30 @@ internal object CustomExerciseRules {
      * stored name, its English catalog name or its Brazilian Portuguese one. Null when none has it,
      * and for a blank name.
      */
-    fun duplicateOf(name: String, exercises: List<ExerciseUi>, exceptId: String?): ExerciseUi? {
-        val folded = SearchFolding.fold(name)
-        if (folded.isEmpty()) return null
-        return exercises.firstOrNull { exercise ->
-            exercise.id != exceptId && namesOf(exercise).any { SearchFolding.fold(it) == folded }
+    fun duplicateOf(name: String, exercises: List<ExerciseUi>, exceptId: String?): ExerciseUi? =
+        NameIndex(exercises).duplicateOf(name, exceptId)
+
+    /** The folded names of [exercises], folded once, for [duplicateOf] on every keystroke. */
+    class NameIndex(exercises: List<ExerciseUi>) {
+        private val entries: List<Pair<ExerciseUi, Set<String>>> = exercises.map { exercise ->
+            exercise to listOf(
+                exercise.name,
+                ExerciseNames.display(exercise.id, exercise.name, exercise.custom, portuguese = false),
+                ExerciseNames.display(exercise.id, exercise.name, exercise.custom, portuguese = true),
+            ).mapTo(HashSet()) { SearchFolding.fold(it) }
+        }
+
+        /** As [CustomExerciseRules.duplicateOf], over the exercises this index was built from. */
+        fun duplicateOf(name: String, exceptId: String?): ExerciseUi? {
+            val folded = SearchFolding.fold(name)
+            if (folded.isEmpty()) return null
+            return entries.firstOrNull { (exercise, names) -> exercise.id != exceptId && folded in names }?.first
         }
     }
 
-    private fun namesOf(exercise: ExerciseUi): List<String> = listOf(
-        exercise.name,
-        ExerciseNames.display(exercise.id, exercise.name, exercise.custom, portuguese = false),
-        ExerciseNames.display(exercise.id, exercise.name, exercise.custom, portuguese = true),
-    )
-
     /** True when a completed set of [exerciseId] is in [history] or in the [active] workout. */
-    fun hasLoggedSets(exerciseId: String, history: List<WorkoutUi>, active: WorkoutUi?): Boolean =
-        (history + listOfNotNull(active)).any { workout ->
-            workout.exercises.any { entry -> entry.exercise.id == exerciseId && entry.sets.any { it.completed } }
-        }
+    fun hasLoggedSets(exerciseId: String, history: List<WorkoutUi>, active: WorkoutUi?): Boolean {
+        fun WorkoutUi.logged() = exercises.any { entry -> entry.exercise.id == exerciseId && entry.sets.any { it.completed } }
+        return history.any { it.logged() } || active?.logged() == true
+    }
 }

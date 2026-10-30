@@ -7,9 +7,12 @@ internal object EditRules {
     const val MAX_ROUTINE_SETS = 50
     const val MAX_WORKOUT_SETS = 100
 
-    fun name(value: String): String = value.trim().also {
-        dataRequire(it.isNotEmpty(), DataError.INVALID_VALUE) { "Enter a name." }
-        dataRequire(it.length <= NameRule.MAX_LENGTH, DataError.INVALID_VALUE) { "Names must be 120 characters or fewer." }
+    /** [NameRule], throwing: the same trim and limits, so the two cannot drift apart. */
+    fun name(value: String): String {
+        val problem = NameRule.problem(value)
+        dataRequire(problem != NameRule.Problem.BLANK, DataError.INVALID_VALUE) { "Enter a name." }
+        dataRequire(problem != NameRule.Problem.TOO_LONG, DataError.INVALID_VALUE) { "Names must be 120 characters or fewer." }
+        return value.trim()
     }
 
     fun target(reps: Int, weightKg: Double?) {
@@ -44,7 +47,7 @@ internal object EditRules {
 
 /**
  * The name rule, for screens that check a name before saving it (they show their own text):
- * [EditRules.name] enforces the same rule when the name is saved, and throws.
+ * [EditRules.name] applies this rule when the name is saved, and throws.
  */
 object NameRule {
     /** The most characters a name has, once trimmed. */

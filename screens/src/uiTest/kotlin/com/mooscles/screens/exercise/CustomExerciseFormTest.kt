@@ -10,7 +10,12 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
@@ -88,6 +93,8 @@ class CustomExerciseFormTest {
                     actions = outcome.actions,
                     onSaved = { outcome.saved += it },
                     onCancel = { outcome.cancelled++ },
+                    // The form's window takes the whole screen: the page itself gets the phone's size.
+                    pageSize = size,
                 )
             }
         }
@@ -350,6 +357,46 @@ class CustomExerciseFormTest {
         for (equipment in Equipment.entries) onNodeWithTag(CustomExerciseFormTags.equipment(equipment.label)).assertIsNotSelected()
         hasTextInForm("Peito").assertExists()
         hasTextInForm("Máquina de anilhas").assertExists()
+        // What is required is said before any save.
+        onNodeWithTag(CustomExerciseFormTags.REQUIRED_HINT).assertTextEquals("Escolha um grupo muscular e o equipamento.")
+    }
+
+    @Test
+    fun refusedSaveBringsTheFirstProblemIntoView() = runComposeUiTest {
+        // A small phone with large text: most of the form is below the fold.
+        val outcome = showForm(fontScale = LINEAR_TWO_X_FONT_SCALE, size = DpSize(320.dp, 640.dp))
+        val polite = SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+        type("Remada articulada")
+        // No muscle group: its error comes into view, announced, without scrolling by hand.
+        save()
+        onNodeWithTag(CustomExerciseFormTags.MUSCLE_ERROR).assertIsDisplayed().assert(polite)
+        // With the muscle chosen and the page back at the top, the equipment error comes into view.
+        tap(CustomExerciseFormTags.muscle(MuscleGroup.BACK.label))
+        onNodeWithTag(CustomExerciseFormTags.TITLE).performScrollTo()
+        waitForIdle()
+        save()
+        onNodeWithTag(CustomExerciseFormTags.EQUIPMENT_ERROR).assertIsDisplayed().assert(polite)
+        onNodeWithTag(CustomExerciseFormTags.MUSCLE_ERROR).assertDoesNotExist()
+        // An invalid name, with the page scrolled to its end: the name field comes back into view, focused.
+        tap(CustomExerciseFormTags.equipment(Equipment.CABLE.label))
+        conventionNode(LoadConvention.ASSISTANCE)
+        type("")
+        save()
+        name().assertIsFocused().assertIsDisplayed()
+        assertEquals(emptyList(), creations(outcome.calls))
+    }
+
+    @Test
+    fun escapeCancelsAndTheWindowHasItsTitle() = runComposeUiTest {
+        val outcome = showForm()
+        onNodeWithTag(CustomExerciseFormTags.ROOT)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, "Novo exercício"))
+        type("Remada articulada")
+        // The key goes to the focused field; the window sees it first.
+        name().assertIsFocused().performKeyInput { pressKey(Key.Escape) }
+        waitForIdle()
+        assertEquals(1, outcome.cancelled)
+        assertEquals(emptyList(), outcome.calls)
     }
 
     @Test
@@ -379,6 +426,8 @@ class CustomExerciseFormTest {
                     val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action ?: continue
                     if (!action(results) || results.isEmpty()) continue
                     val text = node.config[SemanticsProperties.Text].joinToString("") { it.text }
+                    // The test's font scale reaches the form's own window.
+                    assertEquals(scale, results.first().layoutInput.density.fontScale, "\"$text\"")
                     assertTextNotCut(results.first(), "\"$text\" at $scale")
                     checked++
                 }
