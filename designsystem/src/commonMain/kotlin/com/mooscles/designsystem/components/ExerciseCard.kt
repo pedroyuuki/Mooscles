@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import com.mooscles.designsystem.format.pluralCount
 import com.mooscles.designsystem.icons.MIcon
@@ -74,6 +76,7 @@ const val ExerciseHeaderToggleTag = "exercise-header-toggle"
 const val ExerciseCardDoneTag = "card-done"
 const val ExerciseCardProgressTag = "card-progress"
 const val ExerciseCardCaptionTag = "card-caption"
+const val ExerciseCardSublineTag = "card-subline"
 
 /**
  * Test-facing: the shape a piece of the segmented exercise card draws its surface with. The header
@@ -129,6 +132,7 @@ fun ExerciseCard(
         CardHeader(
             name, meta, media, equipmentIcon, onMenu, collapsed,
             onToggle = null, modifier = Modifier, progress = null, done = false, caption = null, support = null, columns = null,
+            handle = null, subline = null,
         )
         if (!collapsed) {
             ExerciseCardSegment {
@@ -147,6 +151,10 @@ fun ExerciseCard(
  * previous date) and the [columns] header of the set rows. Tapping the header (not the menu) calls
  * [onToggle]. [collapsed], it is the whole card: rounded all round, with [progress] ("3 of 3
  * sets", see [setsDoneOf]) under [meta] and, with [done], a check before it.
+ *
+ * Phase 4B: [handle] (a [com.mooscles.designsystem.interaction.ReorderHandle]) comes before the
+ * thumbnail, outside the toggle, so holding it never opens or closes the card; [subline] is a styled
+ * line under [meta], open or collapsed (the routine target, "Target 3×8 · 80 kg").
  */
 @Composable
 fun ExerciseCardHeader(
@@ -163,7 +171,9 @@ fun ExerciseCardHeader(
     caption: String? = null,
     support: (@Composable RowScope.() -> Unit)? = null,
     columns: (@Composable () -> Unit)? = null,
-) = CardHeader(name, meta, media, equipmentIcon, onMenu, collapsed, onToggle, modifier, progress, done, caption, support, columns)
+    handle: (@Composable () -> Unit)? = null,
+    subline: AnnotatedString? = null,
+) = CardHeader(name, meta, media, equipmentIcon, onMenu, collapsed, onToggle, modifier, progress, done, caption, support, columns, handle, subline)
 
 /** The middle of a segmented exercise card, one set row for a lazy list: the card's sides, no corners. */
 @Composable
@@ -219,6 +229,8 @@ private fun CardHeader(
     caption: String?,
     support: (@Composable RowScope.() -> Unit)?,
     columns: (@Composable () -> Unit)?,
+    handle: (@Composable () -> Unit)?,
+    subline: AnnotatedString?,
 ) {
     val colors = MTheme.colors
     val space = MTheme.space
@@ -244,7 +256,7 @@ private fun CardHeader(
         } else {
             Modifier
         }
-        Row(toggle, horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically) {
+        val main: @Composable RowScope.() -> Unit = {
             ExerciseThumbnail(media, equipmentIcon, MTheme.sizes.media)
             Column(Modifier.weight(1f)) {
                 MText(name, MTheme.type.titleMd, modifier = Modifier.semantics { heading() })
@@ -253,6 +265,13 @@ private fun CardHeader(
                         MIcon(equipmentIcon, null, Modifier.testTag(ExerciseEquipmentIconTag), size = MTheme.sizes.icon16, tint = colors.textTertiary)
                     }
                     MText(meta, MTheme.type.bodyMd, color = colors.textSecondary)
+                }
+                if (subline != null) {
+                    BasicText(
+                        subline,
+                        Modifier.testTag(ExerciseCardSublineTag),
+                        style = MTheme.type.bodyMd.copy(color = colors.textSecondary),
+                    )
                 }
                 if (media == ExerciseMedia.Offline) {
                     MText(
@@ -280,6 +299,19 @@ private fun CardHeader(
                 }
             }
             MIconButton(MIcons.EllipsisVertical, stringResource(Res.string.ds_exercise_menu), onMenu, Modifier.testTag(ExerciseMenuTag))
+        }
+        if (handle == null) {
+            Row(toggle, horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically, content = main)
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                handle()
+                Row(
+                    Modifier.weight(1f).then(toggle),
+                    horizontalArrangement = Arrangement.spacedBy(space.s3),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = main,
+                )
+            }
         }
         if (!collapsed) {
             if (support != null) {

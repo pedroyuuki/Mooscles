@@ -64,6 +64,18 @@ class SizesTimingElevationTest {
         assertEquals(32.dp, s.infoChipHeight)
     }
 
+    /**
+     * Phase 4B (spec D15, plan Task 4): a drag scrolls the list while the finger is within 64 dp of
+     * an edge, 12 dp a frame; a dropped order is shown for up to 2 s while the list waits for its keys.
+     */
+    @Test
+    fun reorderTokens() {
+        val s = MoosclesSizes()
+        assertEquals(64.dp, s.reorderEdgeZone)
+        assertEquals(12.dp, s.reorderScrollStep)
+        assertEquals(2_000L, MoosclesTiming().reorderEchoHold)
+    }
+
     @Test
     fun timerAnnounceHoldIsOneAndAHalfSeconds() {
         assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)

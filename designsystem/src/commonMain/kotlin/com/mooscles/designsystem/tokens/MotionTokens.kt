@@ -31,6 +31,8 @@ data class MoosclesMotion(
     val setCheckFrom: Float = 0.92f,
     val prFrom: Float = 0.9f,
     val prRise: Dp = 8.dp,
+    /** Phase 4B (spec D15): the scale of an item lifted to be reordered (none with reduced motion). */
+    val dragLiftScale: Float = 1.02f,
 ) {
     val easeOut: CubicBezierEasing get() = easeOutPoints.easing()
     val easeInOut: CubicBezierEasing get() = easeInOutPoints.easing()
@@ -45,11 +47,19 @@ data class MoosclesTiming(
     val toastAction: Long = 6_000,
     val prToast: Long = 4_000,
     val timerDoneHold: Long = 3_000,
-    /** How long the timer's live region keeps its text after an announcement; empty after, so it is not a screen-reader stop. */
+    /**
+     * How long a live region keeps its text after an announcement (the timer's, and the reordering's
+     * "moved to position"); empty after, so it is not a screen-reader stop.
+     */
     val timerAnnounceHold: Long = 1_500,
     val skeletonPulse: Long = 1_200,
     val illustrationFrame: Long = 900,
     val hapticDoubleGap: Long = 80,
     /** Phase 3 (D9): after the last pending set of an exercise is checked, the wait before its card collapses and the next opens. */
     val cardAdvance: Long = 300,
+    /**
+     * Phase 4B (plan Task 4): how long a list keeps showing the order just dropped while it waits for
+     * its keys to change (the write's echo). A write that never echoes (it failed) gives the keys back.
+     */
+    val reorderEchoHold: Long = 2_000,
 )
