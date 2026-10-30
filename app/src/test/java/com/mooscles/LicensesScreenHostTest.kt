@@ -38,8 +38,9 @@ class LicensesScreenHostTest {
         assertEquals(2, compose.onAllNodes(preamble).fetchSemanticsNodes().size)
         compose.onNode(hasText("Permission to use, copy, modify, and/or distribute this software for any purpose", substring = true))
             .assertExists()
-        // Two rules in each OFL file and one in the Lucide file.
-        assertEquals(5, compose.onAllNodesWithTag(LicenseRuleTag).fetchSemanticsNodes().size)
+        // Two rules in each OFL file, one in the Lucide file, two in the MuscleMap file (after its
+        // preface and inside the source LICENSE) and one in the CC0 file (after its preface).
+        assertEquals(8, compose.onAllNodesWithTag(LicenseRuleTag).fetchSemanticsNodes().size)
         // No text keeps a rule's dashes.
         assertEquals(0, compose.onAllNodes(hasText("---", substring = true)).fetchSemanticsNodes().size)
     }

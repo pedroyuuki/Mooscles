@@ -95,4 +95,7 @@
     <string name="ds_figure_label">Ilustração de início e fim: %1$s</string>
     <string name="ds_figure_show_start">Mostrar o início do movimento</string>
     <string name="ds_figure_show_end">Mostrar o fim do movimento</string>
+    <string name="ds_body_map_primary">Principais</string>
+    <string name="ds_body_map_secondary">Secundários</string>
+    <string name="ds_licenses_mooscles_media">Ilustrações, dicas de execução e nomes do Mooscles</string>
 </resources>

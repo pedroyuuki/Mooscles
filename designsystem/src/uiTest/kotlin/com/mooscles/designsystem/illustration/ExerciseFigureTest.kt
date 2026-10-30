@@ -12,10 +12,13 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -106,6 +109,8 @@ class ExerciseFigureTest {
         withTheme { AnimatedExerciseFigure(start, end, highlights, "Curl", Modifier.size(160.dp)) }
         waitForIdle()
         onNodeWithTag(AnimatedFigureTag).assert(!hasClickAction())
+        // Spec "Acessibilidade": the figure is an image with a label.
+        onNodeWithTag(AnimatedFigureTag).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Image))
         assertEquals("end", frame())
     }
 
