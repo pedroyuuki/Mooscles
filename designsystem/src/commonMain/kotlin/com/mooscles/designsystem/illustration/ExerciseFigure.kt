@@ -119,8 +119,15 @@ fun ExerciseFigure(
  * end frame, whole, with reduced motion, while not [foreground] and while the figure is scrolled
  * out of view, and starts again when that ends. With reduced motion a tap switches the frames
  * (the action says which one comes); while it alternates there is no tap action. The label names
- * [exerciseName]. Only the alternation and its frame layer recompose, once per frame change; the
- * cross-fade itself is read in the draw phase. Give it a size with [modifier].
+ * [exerciseName]: the figure is an image with that label ([Role.Image]), or a button with it while
+ * a tap switches the frames. Only the alternation and its frame layer recompose, once per frame
+ * change; the cross-fade itself is read in the draw phase. Give it a size with [modifier].
+ *
+ * In tests: the alternation is an infinite transition, which the test clock cancels for good while
+ * it advances on its own (`mainClock.autoAdvance = true`, the default). Such a test sees the figure
+ * still on the end frame, as with reduced motion. A test that needs the alternation sets
+ * `mainClock.autoAdvance = false` before the figure first composes and advances the clock by hand;
+ * stopping the clock after the figure is shown does not bring the alternation back.
  */
 @Composable
 fun AnimatedExerciseFigure(
@@ -155,7 +162,11 @@ fun AnimatedExerciseFigure(
             // Clipped away by a scrolling parent, the bounds in the root are empty.
             .onGloballyPositioned { onScreen = !it.boundsInRoot().isEmpty }
             .then(toggle)
-            .semantics(mergeDescendants = true) { contentDescription = label },
+            .semantics(mergeDescendants = true) {
+                contentDescription = label
+                // With reduced motion the tap already makes it a button.
+                if (!reducedMotion) role = Role.Image
+            },
     ) {
         if (alternating) {
             AlternatingFrames(start, end, highlights)

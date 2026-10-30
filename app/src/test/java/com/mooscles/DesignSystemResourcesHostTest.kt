@@ -69,5 +69,10 @@ class DesignSystemResourcesHostTest {
         assertTrue("lucide_isc.txt is empty", lucide.isNotBlank())
         assertTrue("inter_ofl.txt is not the OFL", "SIL OPEN FONT LICENSE" in inter)
         assertTrue("barlow_condensed_ofl.txt is not the OFL", "SIL OPEN FONT LICENSE" in barlow)
+        // Phase 4A: the body map (MIT) and the own media (CC0).
+        val muscleMap = Res.readBytes("files/licenses/musclemap_mit.txt").decodeToString()
+        val media = Res.readBytes("files/licenses/media-CC0.md").decodeToString()
+        assertTrue("musclemap_mit.txt is not MuscleMap's MIT License", "MIT License" in muscleMap && "Jsplice / MuscleMap" in muscleMap)
+        assertTrue("media-CC0.md is not CC0 1.0", "CC0 1.0 Universal" in media && "Statement of Purpose" in media)
     }
 }

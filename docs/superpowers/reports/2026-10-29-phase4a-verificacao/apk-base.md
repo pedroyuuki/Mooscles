@@ -14,3 +14,11 @@ Decisão 18 do [plano da 4A](../../plans/2026-10-29-phase4a-library.md) e achado
 O run de `739a800` estava verde, então a alternativa do F22 (`4f41792`, run `40966539081`) não foi usada.
 
 **O que se compara é o tamanho, não a assinatura.** A base foi assinada no runner do CI; um APK montado no Mac é assinado por outra chave debug. A diferença de tamanho entre as duas assinaturas é pequena, mas existe: o número que vale para o orçamento é o do APK do CI. Checagens locais (Tasks 6, 19 e 22) são indicativas.
+
+## Medições locais
+
+| Task | Commit medido | APK debug local (`:app:clean :app:assembleDebug`, Mac) | Crescimento sobre a base do CI | Parte da task |
+| --- | --- | ---: | ---: | ---: |
+| 6 (mapa corporal e licenças) | `lane/phase4a-t6` sobre `d4c77c7` | 23.821.426 bytes | 169.083 (limite 629.146, `check-apk-budget.ps1` ok) | +86.995 bytes sobre `d4c77c7` medido do mesmo jeito (23.734.431) |
+
+Indicativo: assinatura local, não a do CI (ver acima).
