@@ -137,7 +137,9 @@ class AppViewModelRoutinesHostTest {
         assertEquals(mapOf(routineId to 1), model.contentUi.value.subjectFailures)
         assertEquals(1, snapshot().routines.size)
 
+        // clearError publishes asynchronously: wait for it, or the first error still reads as the second.
         model.clearError()
+        awaitUi(model) { it.errorCode == null }
         model.deleteRoutineFolder(RoutineFolder.DEFAULT_ID)
         awaitUi(model) { it.errorCode != null }
         assertEquals(RoutineFolder.DEFAULT_ID, model.contentUi.value.errorSubject)
@@ -156,6 +158,7 @@ class AppViewModelRoutinesHostTest {
 
         // A command without a subject fails with none.
         model.clearError()
+        awaitUi(model) { it.errorCode == null }
         model.renameRoutine("missing-routine", "Name")
         awaitUi(model) { it.errorCode != null }
         assertNull(model.contentUi.value.errorSubject)
