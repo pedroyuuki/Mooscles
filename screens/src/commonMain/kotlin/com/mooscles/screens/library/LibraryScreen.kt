@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -153,7 +154,8 @@ internal class LibrarySeams(
  * pre-flight F10), and then the detail opens ([onOpenExercise]) with the form still over the library, which leaves
  * with the library (or after `timing.formHandoff`), so no library frame shows between them; a failed save keeps the
  * form open, with the error shown over it. The open form and its draft are
- * kept with `rememberSaveable` too; the wait is not (the form comes back not busy).
+ * kept with `rememberSaveable` too, each opening in a saved state of its own that ends with it (a saved or cancelled
+ * form never comes back in the next one); the wait is not saved (the form comes back not busy).
  *
  * Opening the library also reads ahead, off the main thread, what the exercise detail draws first:
  * the body map's paths ([prepareBodyMap]) and the cues of the screen's language.
@@ -182,6 +184,11 @@ internal fun LibraryRoute(
     var equipmentOpen by rememberSaveable { mutableStateOf(false) }
     // The name the open form started with; null while it is closed.
     var form by rememberSaveable { mutableStateOf<String?>(null) }
+    // Each opening of the form is a session with a saved state of its own, dropped when the session ends (saved or
+    // cancelled): a form handed over to the detail is still composed when the library leaves, and its draft and id
+    // would otherwise be saved with the library and come back in the next form.
+    var formSession by rememberSaveable { mutableIntStateOf(0) }
+    val formStates = rememberSaveableStateHolder()
     val host = remember { MToastHostState() }
     val listState = rememberLazyListState()
     val equipmentFocus = remember { FocusRequester() }
@@ -195,7 +202,12 @@ internal fun LibraryRoute(
     val open: (String) -> Unit = remember {
         { id -> if (currentExercises.any { it.id == id }) openExercise(id) }
     }
-    val create: (String) -> Unit = remember { { prefill -> form = prefill } }
+    val create: (String) -> Unit = remember {
+        { prefill ->
+            formSession++
+            form = prefill
+        }
+    }
 
     // The detail's body map and cues, read ahead off the main thread: the first map of a fresh
     // process would otherwise draw empty for about 0.1 s, and the cues would arrive a frame late.
@@ -275,19 +287,27 @@ internal fun LibraryRoute(
         }
     }
     (form ?: handingOver)?.let { prefill ->
-        CustomExerciseForm(
-            initial = null,
-            prefillName = prefill,
-            state = state,
-            actions = actions,
-            // The form closes once the state has the new exercise (it waits for it), so the detail can open at once.
-            onSaved = { id ->
-                handingOver = prefill
-                form = null
-                open(id)
-            },
-            onCancel = { form = null },
-        )
+        val session = formSession
+        formStates.SaveableStateProvider(session) {
+            CustomExerciseForm(
+                initial = null,
+                prefillName = prefill,
+                state = state,
+                actions = actions,
+                // The form closes once the state has the new exercise (it waits for it), so the detail can open at once.
+                // The session ends here: the handed-over form stays composed, but nothing of it is saved any more.
+                onSaved = { id ->
+                    formStates.removeState(session)
+                    handingOver = prefill
+                    form = null
+                    open(id)
+                },
+                onCancel = {
+                    formStates.removeState(session)
+                    form = null
+                },
+            )
+        }
     }
     if (equipmentOpen) {
         EquipmentFilterSheet(

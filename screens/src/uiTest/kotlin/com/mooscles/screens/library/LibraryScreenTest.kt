@@ -1,8 +1,12 @@
 package com.mooscles.screens.library
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -673,6 +677,77 @@ class LibraryScreenTest {
         onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
         assertEquals(listOf(id), requests.opened)
         mainClock.autoAdvance = true
+    }
+
+    /**
+     * The handed-over form leaves with the library, as a NavHost takes the library out of composition (each entry's
+     * saved state in a [rememberSaveableStateHolder], under the entry's key) while the form is still shown. What the
+     * form had saved is not brought back by the next "Create": that form starts with its own prefill and a new id, and
+     * the previous exercise's photo is left alone (final review C1).
+     */
+    @Test
+    fun nextFormAfterTheHandOverStartsAfresh() = runComposeUiTest {
+        val photos = FakeExercisePhotos()
+        val state = stateOf()
+        val fake = Fake(state)
+        val onLibrary = mutableStateOf(true)
+        val opened = mutableListOf<String>()
+        val seams = LibrarySeams(cache = LibraryModelCache(), build = { list, portuguese -> LibraryModel.build(list, portuguese) })
+        withScreen(locale = "pt-BR") {
+            photos.Provide {
+                val holder = rememberSaveableStateHolder()
+                val entry = if (onLibrary.value) "library" else "detail"
+                holder.SaveableStateProvider(entry) {
+                    if (entry == "library") {
+                        LibraryRoute(
+                            state.value, fake,
+                            onOpenExercise = {
+                                opened += it
+                                onLibrary.value = false
+                            },
+                            onOpenSettings = {}, modifier = Modifier, seams = seams,
+                        )
+                    } else {
+                        Box(Modifier.fillMaxSize().testTag("detail"))
+                    }
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        onNodeWithTag(PhotoRowTags.GALLERY).performScrollTo().performClick()
+        waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag(PhotoRowTags.PREVIEW, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        val first = createInTheForm(fake, "Remada articulada")
+        runOnIdle { state.value = state.value.copy(exercises = exercises + ExerciseUi(first, "Remada articulada", "Back", "Plate-loaded machine", custom = true)) }
+        waitUntil(timeoutMillis = 5_000) { opened.isNotEmpty() }
+        waitForIdle()
+        onNodeWithTag("detail").assertExists()
+        onNodeWithTag(LibraryScreenTag).assertDoesNotExist()
+        assertTrue(photos.store.hasPhoto(first))
+
+        // Back on the library, a second exercise from the search.
+        runOnIdle { onLibrary.value = true }
+        waitForIdle()
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
+        search("puxada do zé")
+        onNode(hasText("Criar “puxada do zé”") and hasAnyAncestor(hasTestTag(LibraryTags.EMPTY))).performClick()
+        waitForIdle()
+        assertEquals("puxada do zé", formName())
+        onNodeWithTag(PhotoRowTags.EMPTY, useUnmergedTree = true).assertExists()
+        val creations = fake.calls.count { it.startsWith("createCustomExercise:") }
+        val second = createInTheForm(fake, "Puxada do Zé")
+        assertEquals(creations + 1, fake.calls.count { it.startsWith("createCustomExercise:") })
+        assertTrue(second != first, "a new id")
+        runOnIdle {
+            state.value = state.value.copy(exercises = state.value.exercises + ExerciseUi(second, "Puxada do Zé", "Back", "Plate-loaded machine", custom = true))
+        }
+        waitUntil(timeoutMillis = 5_000) { opened.size == 2 }
+        waitForIdle()
+        assertEquals(listOf(first, second), opened)
+        assertEquals(1, photos.store.log.count { it == "commit:$first:$first" })
+        assertTrue(photos.store.log.none { it.startsWith("commit:$second") }, photos.store.log.toString())
+        assertEquals(emptySet(), photos.photos.failedCommits.value)
     }
 
     @Test

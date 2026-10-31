@@ -572,7 +572,8 @@ jobs:
           # were strengthened in place (+0). 619 + 18 = 637.
           # Phase 4B task 19 (critique): TrainScreenTest.nameSheetStandsAboveTheKeyboard, LibraryScreenTest.savedFormStaysUntilTheDetailTakesOver,
           # RoutineEditorScreenTest.loadsAndRepsLineUpWithAndWithoutTheRecordIcon (uiTest). 637 + 3 = 640.
-          MIN_SCREENS_IOS_TESTS: 640
+          # Phase 4B final review C1: LibraryScreenTest.nextFormAfterTheHandOverStartsAfresh (uiTest). 640 + 1 = 641.
+          MIN_SCREENS_IOS_TESTS: 641
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
