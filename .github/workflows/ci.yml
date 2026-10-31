@@ -271,7 +271,8 @@ jobs:
           # copyToAllRefusesAMissingSourceAndAWarmup); AppViewModelRoutinesHostTest +2 (:app:
           # copyRoutineSetToAllAndItsUndoGoThroughTheLoop, copyAndRestoreFailuresCountUnderTheEntry). 1104 + 7 = 1111.
           # Copy review fix round 1: RoutineCommandsPersistenceTest.copyToAllWithNoOtherWorkingSetWritesNoSet +1 (:app). 1111 + 1 = 1112.
-          MIN_HOST_TESTS: 1112
+          # Phase 5A task 2: EstimatedOneRepMaxTest 5 (:shared commonTest), TrendTest 8 (:screens commonTest). 1112 + 13 = 1125.
+          MIN_HOST_TESTS: 1125
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -403,7 +404,8 @@ jobs:
           # Phase 4A final review fixes: ExerciseAnatomyTest +2. 257 + 2 = 259.
           # Phase 4B task 1: BackupCodecTest +3, ImportPlannerTest +1 (commonTest), IosDatabaseTest +1 (iosTest). 259 + 5 = 264.
           # Phase 4B task 3: WorkoutPresentationTest +10, UiErrorsTest +1 (commonTest). 264 + 11 = 275.
-          MIN_IOS_TESTS: 275
+          # Phase 5A task 2: EstimatedOneRepMaxTest 5 (commonTest). 275 + 5 = 280.
+          MIN_IOS_TESTS: 280
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -615,7 +617,8 @@ jobs:
           # Copy review fix round 1: RoutineEditorSetsTest +3 (uiTest: copyUndoIsWithdrawnOnceACopiedSetIsEdited,
           # aDoubleTapOnCopyCopiesOnceAndKeepsTheSnapshot, undoCopyAfterASetIsAddedOrBecomesAWarmupSaysNotRestored);
           # undoCopyAfterTheExerciseIsReplacedSaysNotRestored became copyUndoIsWithdrawnWhenTheExerciseIsReplaced (+0). 663 + 3 = 666.
-          MIN_SCREENS_IOS_TESTS: 666
+          # Phase 5A task 2: TrendTest 8 (commonTest). 666 + 8 = 674.
+          MIN_SCREENS_IOS_TESTS: 674
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
