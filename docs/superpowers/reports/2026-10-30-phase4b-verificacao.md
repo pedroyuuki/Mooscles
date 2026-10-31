@@ -1,7 +1,7 @@
 # Fase 4B: verificação das rotinas
 
 - **Data:** 2026-10-30
-- **Branch:** `feat/phase4b-routines`, a partir da `main` do fork. Último commit de código verificado: `41a727a` (merge do equipamento em cobre). Este relatório e os documentos vêm no commit `docs: phase 4B routines verified`
+- **Branch:** `feat/phase4b-routines`, a partir da `main` do fork. Último commit de código verificado: `a855a9e` (a correção do formulário achada na revisão final; antes, `41a727a`, o merge do equipamento em cobre). Este relatório e os documentos vêm no commit `docs: phase 4B routines verified`
 - **Spec:** [fase 4](../specs/2026-10-29-phase4-library-routines-design.md), com as [notas de implementação](../specs/2026-10-29-phase4-library-routines-design.md#notas-de-implementação) · **Plano:** [fase 4B](../plans/2026-10-30-phase4b-routines.md), com as [notas](../plans/2026-10-30-phase4b-routines.md#notas) · **Spikes:** [S2, arrastar e soltar](2026-10-30-phase4b-spike-reordenar.md) e [S4, foto no Android](2026-10-30-phase4b-spike-foto.md) · **Crítica:** [crítica de tela](#crítica-de-tela-task-19) (a preencher)
 - **Evidências:** [2026-10-30-phase4b-verificacao/](2026-10-30-phase4b-verificacao/): [suítes de aparelho](2026-10-30-phase4b-verificacao/device-suites.md), [atualização por cima](2026-10-30-phase4b-verificacao/upgrade.md), [sem rede](2026-10-30-phase4b-verificacao/offline.md), [desempenho](2026-10-30-phase4b-verificacao/performance.md), [tamanho do APK](2026-10-30-phase4b-verificacao/apk.md), [diff de dependências](2026-10-30-phase4b-verificacao/deps-diff.txt), [toques de hoje](2026-10-30-phase4b-verificacao/tap-baseline-4b.md) e [figura na pausa](2026-10-30-phase4b-verificacao/figure-hold.md)
 
@@ -27,8 +27,8 @@
 
 | Conjunto | Onde | Resultado |
 | --- | --- | --- |
-| Host dos quatro módulos | CI, run [41157443080](https://github.com/pedroyuuki/Mooscles/actions/runs/41157443080), `41a727a` | **1085** testes, 0 falhas (mínimo 1085) |
-| `:shared`, `:designsystem` e `:screens` no simulador iOS | o mesmo run | **275**, **374** e **637**, 0 falhas (mínimos 275, 374 e 637); entre os 275, os **7** testes de entrada do iOS que o `ci.yml` confere pelo nome |
+| Host dos quatro módulos | CI, run [41169992244](https://github.com/pedroyuuki/Mooscles/actions/runs/41169992244), `a855a9e` | **1086** testes, 0 falhas (mínimo 1086) |
+| `:shared`, `:designsystem` e `:screens` no simulador iOS | o mesmo run | **275**, **375** e **641**, 0 falhas (mínimos 275, 375 e 641); entre os 275, os **7** testes de entrada do iOS que o `ci.yml` confere pelo nome |
 | `release-script` | o mesmo run | verde |
 | `:designsystem:connectedAndroidDeviceTest` | emulador, `4694edc` | 373 testes (64 classes), 0 falhas |
 | `:screens:connectedAndroidDeviceTest` | emulador, `4694edc` | 640 testes (66 classes), 1 falha de harness, corrigida e provada (ver abaixo), 1 pulado (a captura opt-in da folha do piloto) |
@@ -130,5 +130,5 @@ Relatório completo: [crítica das rotinas](2026-10-30-phase4b-critica-rotinas.m
 - **A notificação do descanso em segundo plano** depois da troca de APK, e a rotina "Upgrade record" no editor depois da atualização (só a "Upgrade custom" foi aberta).
 - **O `present()` completo da base grande depois da 4B:** as amostras de `present()` são de uma série ou de uma ordem, não do histórico inteiro; o limite do `WorkoutPresentationTimingTest` não foi reexecutado na Task 18.
 - **A qualidade das figuras, dicas e nomes para quem treina,** além da revisão por conteúdo. O G1 foi aprovado pelo dono sobre a folha do piloto (20 exercícios); o resto das figuras depende dos lotes.
-- **As suítes de aparelho depois de `4694edc`:** o merge `95ca601` (a correção do arraste no iOS) e o merge do cobre (`41a727a`) vieram depois das rodadas completas; o `ExerciseFigureTest` com o cobre (10/0) e as classes de arraste (80/80) foram rodados à parte, mas as três suítes inteiras não foram refeitas.
+- **As suítes de aparelho depois de `4694edc`:** o merge `95ca601` (a correção do arraste no iOS) e o merge do cobre (`41a727a`) vieram depois das rodadas completas; o `ExerciseFigureTest` com o cobre (10/0) e as classes de arraste (80/80) foram rodados à parte, mas as três suítes inteiras não foram refeitas. Depois da Task 19 rodaram as 14 classes de telas tocadas (254/255, e a classe corrigida 23/23) e, depois da correção da revisão final, as cinco classes do formulário e da biblioteca (91/91).
 - **A release com a chave original de assinatura.**

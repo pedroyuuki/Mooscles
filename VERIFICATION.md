@@ -6,7 +6,7 @@ Branch `feat/phase4b-routines` in the fork, not in a published release. It adds 
 
 Verified:
 
-- Host tests: 1085 on CI (run 41157443080, `41a727a`), 0 failures; on the iOS simulator `:shared` 275 (including the 7 entry-point tests and the real v5 to v6 migration on the bundled SQLite driver), `:designsystem` 374 and `:screens` 637, all passing, including the routines end-to-end flow test. The first attempt of the host job hit the 45-minute job limit inside `:app:testDebugUnitTest` with no failure logged; the rerun passed in about 6 minutes. If it recurs, take a thread dump before guessing.
+- Host tests: 1086 on CI (run 41169992244, `a855a9e`), 0 failures; on the iOS simulator `:shared` 275 (including the 7 entry-point tests and the real v5 to v6 migration on the bundled SQLite driver), `:designsystem` 375 and `:screens` 641, all passing, including the routines end-to-end flow test. On run 41157443080 (`41a727a`) the first attempt of the host job hit the 45-minute job limit inside `:app:testDebugUnitTest` with no failure logged; the rerun passed in about 6 minutes. If it recurs, take a thread dump before guessing.
 - Android 15 emulator, full suites once (`4694edc`): `:designsystem` 373, `:screens` 640 and `:app` 25. One harness-timing failure in the photo form tests and one race in `UiFlowTest` were fixed in test code only and rerun (8 consecutive green runs of the photo class, against 1 failure in 4 before); evidence, not certainty. Two merges landed after these runs (the iOS drag fix and the copper equipment color); only the affected classes were rerun (drag classes 80 of 80, figure test 10 of 10).
 - Touch budget (emulator, real view model and database): build a 5-exercise routine 9 taps (13 on the old screens), move the 5th exercise to the top 2 (4), add a set like the one above 1 (1), mark a planned set as warm-up 2 (new), start a workout from a routine 1 (1).
 - Upgrade in place on the emulator from the fork's main (`2359ab6`, database v5) with network off: `user_version` 6, none of the 21 planned sets became a warm-up, byte-identical preferences file (same MD5), the running rest kept its deadline, and the export after matched the export before except `exportedAt` and the new `"warmup": false`. Gallery and camera photo both worked without any permission prompt.
@@ -26,7 +26,8 @@ Not verified:
 - The rest notification in the background after the upgrade, and the "Upgrade record" routine in the editor after the upgrade (only "Upgrade custom" was opened).
 - The `present()` timing of the whole large history after this phase (the samples are one set or one order), and the full device suites after the last two merges.
 - The release path from a published APK signed with the original key: the key is not on this Mac, and v1.5.0 is not published.
-- The screen critique and the performance re-run (Task 19) are filled in by the controller in the Portuguese report.
+- Screen critique (Task 19): one high finding (the name sheet hid behind the keyboard) and three medium ones fixed, each with a test that failed first; device run of the 14 touched `:screens` classes 254/255, then the fixed class 23/23. Deferred: the editor list jumping about 40 dp when the first card is lifted (needs a real finger) and the grey system bars of sheets and dialogs in the light theme (their icons are right).
+- The final whole-branch review found that the custom exercise form could reopen with the previous exercise after the save hand-over (the new exercise was then never created). Reproduced by `LibraryScreenTest.nextFormAfterTheHandOverStartsAfresh` (red before the fix) and fixed in `a855a9e`; the five touched classes passed 91/91 on the emulator.
 
 ## Phase 4A exercise library (unreleased, fork branch) — 2026-10-30
 
