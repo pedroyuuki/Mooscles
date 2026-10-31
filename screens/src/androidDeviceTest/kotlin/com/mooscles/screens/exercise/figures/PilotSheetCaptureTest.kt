@@ -50,15 +50,18 @@ import kotlin.test.assertTrue
 import org.junit.Assume.assumeTrue
 
 /**
- * The pilot sheet of gate G1 (spec D4, plan Task 9): the 20 pilot exercises by their pt-BR name,
+ * The pilot sheet of gate G1 (spec D4, plan Task 9), and the sheet of each lot after it (plan
+ * Task L): the 20 pilot exercises, or the lot's, by their pt-BR name,
  * frame A (start) and frame B (end, the one lists show), in both themes, once as list tiles at
  * `sizes.media` (64 dp) and once at the detail size (the useful width of a 412 dp phone, capped at
- * 360 dp). Four PNGs, `pilot-{light,dark}-{64,detail}.png`, written with `Bitmap.compress` into the
+ * 360 dp). Four PNGs, `pilot-{light,dark}-{64,detail}.png` (`<lot>-…` for a lot), written with `Bitmap.compress` into the
  * test app's `captures` folder and copied by the shell to `/sdcard/Download/mooscles-pilot`, which
  * survives the uninstall at the end of the run (`adb pull` it afterwards).
  *
  * Opt-in, like the phase 3 fixtures: it only runs with `-e pilotSheet true`
  * (`-Pandroid.testInstrumentationRunnerArguments.pilotSheet=true`) and is skipped in a full run.
+ * `-e lot <family>` (`…Arguments.lot=barbell`) captures a lot instead: the figures of that family
+ * table of [ExerciseFigures.families] that are not in the pilot, in the table's order.
  *
  * A window holds only part of a sheet, so each sheet is composed page by page in one composition
  * and the pages are stacked into one bitmap. The 64 dp sheet uses the emulator's density, where
@@ -79,12 +82,21 @@ class PilotSheetCaptureTest {
             "Pass -e pilotSheet true to capture the G1 pilot sheet",
             InstrumentationRegistry.getArguments().getString("pilotSheet") == "true",
         )
+        val lot = InstrumentationRegistry.getArguments().getString("lot")
+        val ids = if (lot == null) {
+            ExerciseFigures.PILOT
+        } else {
+            val family = checkNotNull(ExerciseFigures.families[lot]) { "No figure family $lot" }
+            family.keys.filter { it !in ExerciseFigures.PILOT }
+        }
+        assertTrue(ids.isNotEmpty(), "The ${lot ?: "pilot"} sheet has no figures")
+        val prefix = lot ?: "pilot"
         val dir = checkNotNull(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir("captures"))
         val written = mutableListOf<File>()
         for (dark in listOf(false, true)) {
             val theme = if (dark) "dark" else "light"
-            written += File(dir, "pilot-$theme-64.png").also { sheet(dark, tiles = true, it) }
-            written += File(dir, "pilot-$theme-detail.png").also { sheet(dark, tiles = false, it) }
+            written += File(dir, "$prefix-$theme-64.png").also { sheet(ids, dark, tiles = true, it) }
+            written += File(dir, "$prefix-$theme-detail.png").also { sheet(ids, dark, tiles = false, it) }
         }
         for (file in written) assertTrue(file.length() > 0, "${file.name} was not written")
         // Out of the test app's folder, which the uninstall at the end of the run deletes.
@@ -94,9 +106,9 @@ class PilotSheetCaptureTest {
         for (file in written) assertTrue(file.name in listed, "${file.name} is not in $EXPORT: $listed")
     }
 
-    /** One sheet, page by page, stacked into [out]. */
-    private fun sheet(dark: Boolean, tiles: Boolean, out: File) {
-        val pages = ExerciseFigures.PILOT.chunked(if (tiles) TILE_PAGE else DETAIL_PAGE)
+    /** One sheet of [ids], page by page, stacked into [out]. */
+    private fun sheet(ids: List<String>, dark: Boolean, tiles: Boolean, out: File) {
+        val pages = ids.chunked(if (tiles) TILE_PAGE else DETAIL_PAGE)
         val shots = mutableListOf<Bitmap>()
         runComposeUiTest {
             var page by mutableIntStateOf(0)
