@@ -1,5 +1,6 @@
 package com.mooscles.screens.exercise.figures
 
+import com.mooscles.data.Equipment
 import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.illustration.FigureJoint
@@ -45,6 +46,25 @@ class ExerciseFiguresTest {
         for (id in d4) assertNotNull(ExerciseFigures.forExercise("catalog_$id"), "$id has a figure")
         assertTrue(ExerciseFigures.stableIds.containsAll(d4))
     }
+
+    /**
+     * Plan Task L: every exercise of a lot has a figure, in its family's table. [members] are the
+     * lot's `stableId`s, read from the catalog by equipment.
+     */
+    private fun familyIsComplete(family: String, members: List<String>) {
+        val table = assertNotNull(ExerciseFigures.families[family], "no $family table")
+        assertTrue(members.isNotEmpty(), "the $family lot is empty")
+        val missing = members.filter { it !in table }
+        assertTrue(missing.isEmpty(), "$family lacks ${missing.size} figures: $missing")
+    }
+
+    /** The barbell lot (spec D4): every barbell entry of the catalog, EZ bar included, and the trap-bar deadlift. */
+    @Test
+    fun barbellFamilyIsComplete() = familyIsComplete(
+        "barbell",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.BARBELL }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) } +
+            "trap_bar_deadlift",
+    )
 
     /** F34: the margin token is a fraction of the box, so it is compared in box units. */
     @Test

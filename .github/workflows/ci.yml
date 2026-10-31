@@ -252,7 +252,8 @@ jobs:
           # G1 equipment color: ComponentColorsTest.figureEquipmentIsCopperAndStandsOut +1 (commonTest). 1084 + 1 = 1085.
           # Phase 4B task 19 (critique): SizesTimingElevationTest.formHandoffIsOneAndAHalfSeconds +1 (:designsystem commonTest);
           # the other new tests are uiTest. 1085 + 1 = 1086.
-          MIN_HOST_TESTS: 1086
+          # Phase 4 figures, barbell lot: ExerciseFiguresTest.barbellFamilyIsComplete +1 (:screens commonTest). 1086 + 1 = 1087.
+          MIN_HOST_TESTS: 1087
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -573,7 +574,8 @@ jobs:
           # Phase 4B task 19 (critique): TrainScreenTest.nameSheetStandsAboveTheKeyboard, LibraryScreenTest.savedFormStaysUntilTheDetailTakesOver,
           # RoutineEditorScreenTest.loadsAndRepsLineUpWithAndWithoutTheRecordIcon (uiTest). 637 + 3 = 640.
           # Phase 4B final review C1: LibraryScreenTest.nextFormAfterTheHandOverStartsAfresh (uiTest). 640 + 1 = 641.
-          MIN_SCREENS_IOS_TESTS: 641
+          # Phase 4 figures, barbell lot: ExerciseFiguresTest.barbellFamilyIsComplete (commonTest). 641 + 1 = 642.
+          MIN_SCREENS_IOS_TESTS: 642
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
