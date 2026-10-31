@@ -274,7 +274,8 @@ jobs:
           # Phase 5A task 2: EstimatedOneRepMaxTest 5 (:shared commonTest), TrendTest 8 (:screens commonTest). 1112 + 13 = 1125.
           # Phase 5A task 2 review minors (:screens commonTest): TrendTest +3 (no span, not finite, sizes differ). 1125 + 3 = 1128.
           # Phase 5A task 3: WeekStartTest 6 (:screens commonTest), WeekStartJvmEquivalenceTest 1 (:screens androidHostTest). 1128 + 7 = 1135.
-          MIN_HOST_TESTS: 1135
+          # Phase 5A task 4: ProgressIndexTest 25 (:screens commonTest). 1135 + 25 = 1160.
+          MIN_HOST_TESTS: 1160
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -622,7 +623,8 @@ jobs:
           # Phase 5A task 2: TrendTest 8 (commonTest). 666 + 8 = 674.
           # Phase 5A task 2 review minors: TrendTest +3. 674 + 3 = 677.
           # Phase 5A task 3: WeekStartTest 6 (commonTest). 677 + 6 = 683.
-          MIN_SCREENS_IOS_TESTS: 683
+          # Phase 5A task 4: ProgressIndexTest 25 (commonTest). 683 + 25 = 708.
+          MIN_SCREENS_IOS_TESTS: 708
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
