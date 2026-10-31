@@ -58,3 +58,47 @@ Das 3 solturas do segundo grupo e das 5 edições seguintes, só as de cima gera
 - Todo número é do emulador, no Mac sob carga; nada de aparelho físico.
 - **Não provados** nesta rodada: jank ≤ 5% do arrastar, jank da rolagem do treino sem piora contra a fase 3, e a estabilidade da rolagem da aba Treinar (duas execuções limpas apenas).
 - **Para refazer limpo:** repetir "Treinar com 30 rotinas", "arrastar 10 × 5" e "rolagem dos cards do treino" com o Mac ocioso (sem GeForceNOW nem o emulador zumbi `5554`), conferindo antes que a Biblioteca volte a 0,5 a 1,5%.
+
+## Nova rodada (2026-10-31, Task 19)
+
+Refeita na Task 19 com o mesmo método da rodada acima, para tentar provar o que ficou "não provado". **O ambiente continuou contaminado, e os números continuam não provados.** O controle (a rolagem da Biblioteca, que a 4A mediu em 0,5 a 1,5% e que a 4B não mudou) deu 34 a 52%, muito acima do limite de 3% que separa uma medida limpa de uma contaminada. Por isso nada abaixo aprova nem reprova a 4B: os números ficam registrados com o controle ao lado, e não fui atrás da causa.
+
+**Condições (registradas a cada execução, nos arquivos):**
+
+- `emulator-5556` (AVD `Mooscles_Pixel8_API35`, Android 15, 1080 × 2400 a 60 Hz, GPU do host), Mac M4 com 16 GiB;
+- Wi-Fi e dados desligados durante a medida, animações na escala 1, inglês, libras e tema escuro (as preferências do arquivo);
+- carga média de 3,3 a 6,2, o GeForce NOW do dono aberto, com 35 a 70% de uma CPU, o WindowServer em torno de 40% e o decodificador de vídeo em torno de 11%;
+- **swap de 15,2 GB usados de 16 GB**, o que indica pressão de memória forte no Mac. Este dado não estava na rodada de 2026-10-30;
+- nenhum processo do emulador zumbi `5554` aparecia com CPU: o `crashpad_handler` dele estava parado, e não havia `qemu` da 5554 na lista de processos.
+
+**Build e dados:** `:app:assemblePerformance` de `41a727a` (`app-performance.apk`, 3.325.957 bytes, R8, não depurável, `profileable`). Instalação limpa, `cmd package compile -m speed -f`, e importação de `local/perf-fixture.json` pela tela de Configurações ("Imported 208 workouts, 34 routines and 302 custom exercises"). Arquivos `gfxinfo` em [`perf/rerun-2026-10-31/`](perf/rerun-2026-10-31/).
+
+### Controle: rolagem da Biblioteca
+
+30 arrastos rápidos para baixo e 30 para cima, de y = 1900 a 400 em 100 ms, com 0,35 s entre eles (o método da 4A). As execuções 1 a 5 vieram antes das medidas da 4B. A execução 6 veio depois, já com o treino "Drag 10x5" ativo.
+
+| Execução | Quadros | Janky | p50 / p95 / p99 |
+| --- | ---: | ---: | --- |
+| 1 | 376 | 169 (44,95%) | 46 / 125 / 200 ms |
+| 2 | 571 | 196 (34,33%) | 36 / 105 / 150 ms |
+| 3 | 545 | 194 (35,60%) | 40 / 105 / 150 ms |
+| 4 | 550 | 197 (35,82%) | 40 / 101 / 129 ms |
+| 5 | 551 | 195 (35,39%) | 34 / 109 / 150 ms |
+| 6 (depois) | 307 | 161 (52,44%) | 48 / 133 / 150 ms |
+
+Na 4A, a mesma rolagem deu 1.771 a 1.799 quadros e 0,50 a 1,47% de janky. Aqui deu de 300 a 570 quadros, ou seja, o emulador desenhou um terço dos quadros, ou menos.
+
+### Os três orçamentos, contaminados
+
+| Medida (5 execuções) | Limite | Janky medido | Quadros | p50 |
+| --- | --- | --- | ---: | --- |
+| Rolagem da aba Treinar, 30 rotinas: 12 arrastos para baixo e 12 para cima, y 1700 → 500 em 100 ms | ≤ 5% | 40,82%, 56,90%, 52,86%, 35,22%, 35,69% | 174 a 389 | 38 a 57 ms |
+| Arrastar no editor, "Drag 10x5" (10 × 5): `input draganddrop` da alça do primeiro card até y = 1600 em 2 s | ≤ 5% | 54,35%, 45,16%, 27,50%, 28,79%, 38,98%, 54,76% | 42 a 80 | 38 a 77 ms |
+| Rolagem dos cards do treino ativo, "Drag 10x5": 4 arrastos para baixo e 4 para cima, y 1700 → 500 em 120 ms | sem piora contra a fase 3 (2,3 a 3,9%) | 35,48%, 35,51%, 31,76%, 44,79%, 46,75% | 77 a 170 | 34 a 46 ms |
+
+- **Arrastar:** foram 6 execuções. A 1ª e da 4ª à 6ª trocaram a ordem, o que confirmei pelo primeiro card visto depois. Na 3ª, o primeiro card não mudou, então não posso afirmar que o arrasto aconteceu. Quatro tentativas anteriores erraram a alça, porque a lista estava rolada, e viraram uma rolagem lenta. Elas foram separadas em `perf/rerun-2026-10-31/invalid/` (não copiadas) e não entram na tabela. Antes de cada execução, a lista voltava ao topo, fora da janela medida.
+- **Treinar:** a pasta "Perf 30" estava selecionada, e a tela foi conferida antes e depois (a "Perf routine 00" no topo).
+
+### Conclusão
+
+Os três orçamentos continuam **não provados**, pelo mesmo motivo de 2026-10-30: o controle está entre 34 e 52%, e não perto de 1%. As medidas da 4B ficaram na mesma faixa do controle (31 a 57%), e isso é compatível com um emulador que desenha um terço dos quadros em qualquer tela. Mesmo assim, não é prova de que a 4B não piorou nada. Para refazer de forma limpa, é preciso o Mac ocioso e com memória livre: sem o GeForce NOW, com o swap baixo e conferindo antes que a Biblioteca volte a 0,5 a 1,5%. A outra saída é medir num aparelho físico com o build `performance`.
