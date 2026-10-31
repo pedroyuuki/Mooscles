@@ -521,10 +521,10 @@ class RoutineEditorScreenTest {
         // The chip and the target line are in the same header: working sets only, the warm-up counted apart.
         onNode(hasTestTag(RoutineEditorTags.rest("e1")) and hasAnyAncestor(header), useUnmergedTree = true).assertExists()
         onNode(hasTestTag("card-subline") and hasAnyAncestor(header), useUnmergedTree = true)
-            .assertTextContains("Alvo 2×8 · 80 kg + 1 aquec.")
+            .assertTextContains("Alvo 2×8 · 80 kg + 1 aquec.")
         // The row's inherited sets: a warm-up too, and the working ones at 10 × 60.
         onNode(hasTestTag("card-subline") and hasAnyAncestor(hasTestTag(RoutineEditorTags.header("e2"))), useUnmergedTree = true)
-            .assertTextContains("Alvo 2×10 · 60 kg + 1 aquec.")
+            .assertTextContains("Alvo 2×10 · 60 kg + 1 aquec.")
     }
 
     // --- Dragging and moving -------------------------------------------------------------------

@@ -323,7 +323,7 @@ class RoutinesFlowTest {
             fontScale = 1f,
             query = "supino",
             newName = "Nova rotina",
-            warmupLine = "+ 1 aquec.",
+            warmupLine = "+\u00A01\u00A0aquec.",
         )
 
         val ENGLISH = Run(
@@ -333,7 +333,7 @@ class RoutinesFlowTest {
             fontScale = LINEAR_TWO_X_FONT_SCALE,
             query = "bench",
             newName = "New routine",
-            warmupLine = "+ 1 warm-up",
+            warmupLine = "+\u00A01\u00A0warm-up",
         )
     }
 }

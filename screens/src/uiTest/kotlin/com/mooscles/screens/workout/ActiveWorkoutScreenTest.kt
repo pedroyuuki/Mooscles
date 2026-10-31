@@ -982,7 +982,7 @@ class ActiveWorkoutScreenTest {
                 show(Fake(stateOf(targeted(target))), size = DpSize(320.dp, 800.dp), fontScale = scale, density = density)
                 val layout = layoutOf(ExerciseCardSublineTag)
                 val nb = "\u00A0"
-                assertEquals("Alvo 3 séries · 6–10 reps · 70–80${nb}kg + 2 aquec.", layout.layoutInput.text.text, "at $scale")
+                assertEquals("Alvo 3 séries · 6–10 reps · 70–80${nb}kg +${nb}2${nb}aquec.", layout.layoutInput.text.text, "at $scale")
                 assertFalse(layout.hasVisualOverflow, "at $scale the target line is cut: ${layout.size}")
                 assertTrue(layout.multiParagraph.height <= layout.size.height + 0.5f, "at $scale the target line is clipped")
                 val header = onNodeWithTag(exerciseHeaderTag("e1")).getBoundsInRoot()

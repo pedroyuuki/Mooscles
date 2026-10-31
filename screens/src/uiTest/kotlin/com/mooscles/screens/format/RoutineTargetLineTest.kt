@@ -24,10 +24,10 @@ class RoutineTargetLineTest {
         val mixed = RoutineTargetUi(listOf(TargetSetUi(10, 70.0), TargetSetUi(6, 80.0)), warmups = 1)
         val equal = RoutineTargetUi(List(3) { TargetSetUi(8, 80.0) }, warmups = 2)
         val cases = listOf(
-            Triple("en", mixed, "Target 2 sets · 6–10 reps · 70–80${nb}kg + 1 warm-up"),
-            Triple("en", equal, "Target 3×8 · 80${nb}kg + 2 warm-up"),
-            Triple("pt-BR", mixed, "Alvo 2 séries · 6–10 reps · 70–80${nb}kg + 1 aquec."),
-            Triple("pt-BR", equal, "Alvo 3×8 · 80${nb}kg + 2 aquec."),
+            Triple("en", mixed, "Target 2 sets · 6–10 reps · 70–80${nb}kg +${nb}1${nb}warm-up"),
+            Triple("en", equal, "Target 3×8 · 80${nb}kg +${nb}2${nb}warm-up"),
+            Triple("pt-BR", mixed, "Alvo 2 séries · 6–10 reps · 70–80${nb}kg +${nb}1${nb}aquec."),
+            Triple("pt-BR", equal, "Alvo 3×8 · 80${nb}kg +${nb}2${nb}aquec."),
         )
         for ((locale, target, expected) in cases) {
             runComposeUiTest {

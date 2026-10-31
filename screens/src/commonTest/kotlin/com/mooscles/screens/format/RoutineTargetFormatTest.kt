@@ -84,13 +84,13 @@ class RoutineTargetFormatTest {
 
     @Test
     fun warmupsSuffix() {
-        assertEquals("Alvo 3×8 · 80${nb}kg + 2 aquec.", line(sets(8 to 80.0, 8 to 80.0, 8 to 80.0), warmups = 2))
-        assertEquals("Target 3×8 + 1 warm-up", line(sets(8 to null, 8 to null, 8 to null), warmups = 1, texts = en, locale = NumberLocale.EN))
+        assertEquals("Alvo 3×8 · 80${nb}kg +${nb}2${nb}aquec.", line(sets(8 to 80.0, 8 to 80.0, 8 to 80.0), warmups = 2))
+        assertEquals("Target 3×8 +${nb}1${nb}warm-up", line(sets(8 to null, 8 to null, 8 to null), warmups = 1, texts = en, locale = NumberLocale.EN))
     }
 
     @Test
     fun warmupsOnly() {
-        assertEquals("Alvo + 2 aquec.", line(emptyList(), warmups = 2))
+        assertEquals("Alvo +${nb}2${nb}aquec.", line(emptyList(), warmups = 2))
     }
 
     @Test
@@ -116,6 +116,6 @@ class RoutineTargetFormatTest {
         val parts = RoutineTargetFormat.parts(RoutineTargetUi(sets(8 to 70.0, 8 to 80.0, 8 to 80.0), 2), false, NumberLocale.EN, en)!!
         assertEquals(listOf("3×8", "70–80", "2"), parts.filter { it.number }.map { it.text })
         assertTrue(parts.filter { !it.number }.none { part -> part.text.any { it.isDigit() } })
-        assertEquals("Target 3×8 · 70–80${nb}kg + 2 warm-up", parts.joinToString("") { it.text })
+        assertEquals("Target 3×8 · 70–80${nb}kg +${nb}2${nb}warm-up", parts.joinToString("") { it.text })
     }
 }

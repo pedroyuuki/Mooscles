@@ -3,6 +3,7 @@ package com.mooscles.screens.format
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -35,7 +36,7 @@ internal data class TargetPart(val text: String, val number: Boolean)
 
 /**
  * The target line of a routine entry (spec D16): "Target 3×8 · 80 kg", "Target 3×8 · 70–80 kg",
- * "Target 3 sets · 6–10 reps · 70–80 kg", with " + 2 warm-up" after it. Only working sets count; a set
+ * "Target 3 sets · 6–10 reps · 70–80 kg", with " + 2 warm-up" after it (kept whole on one line). Only working sets count; a set
  * with 0 reps or no load is blank and stays out of the ranges, and a blank part is left out of the line.
  */
 internal object RoutineTargetFormat {
@@ -60,7 +61,8 @@ internal object RoutineTargetFormat {
         val line = buildList {
             add(texts.prefix)
             if (body.isNotEmpty()) add(body.joinToString(" · "))
-            if (target.warmups > 0) add(texts.warmups(target.warmups))
+            // "+ 2 warm-up" is one piece: a narrow line breaks before the "+", never between the count and its word.
+            if (target.warmups > 0) add(texts.warmups(target.warmups).replace(" ", NO_BREAK_SPACE))
         }.joinToString(" ")
         return split(line)
     }
@@ -102,8 +104,11 @@ internal fun targetLine(target: RoutineTargetUi?, pounds: Boolean): AnnotatedStr
         RoutineTargetFormat.parts(target, pounds, locale, texts)?.let { parts ->
             val wordStyle = SpanStyle(fontFamily = words.fontFamily, fontSize = words.fontSize, fontWeight = words.fontWeight, letterSpacing = words.letterSpacing)
             val numberStyle = SpanStyle(fontFamily = numbers.fontFamily, fontSize = numbers.fontSize, fontWeight = numbers.fontWeight, letterSpacing = numbers.letterSpacing, fontFeatureSettings = numbers.fontFeatureSettings)
+            // Every line takes the numbers' leading, so a wrapped line of words sits as far below as one with digits.
             buildAnnotatedString {
-                for (part in parts) withStyle(if (part.number) numberStyle else wordStyle) { append(part.text) }
+                withStyle(ParagraphStyle(lineHeight = numbers.lineHeight)) {
+                    for (part in parts) withStyle(if (part.number) numberStyle else wordStyle) { append(part.text) }
+                }
             }
         }
     }
