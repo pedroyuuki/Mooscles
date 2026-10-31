@@ -636,6 +636,8 @@ class LibraryScreenTest {
         waitUntil(timeoutMillis = 5_000) { requests.opened.isNotEmpty() }
         waitForIdle()
         assertEquals(listOf(id), requests.opened)
+        // This host stays on the library: the handed-over form goes after the cap.
+        mainClock.advanceTimeBy(MoosclesTiming().formHandoff + 100)
         onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
         // Once: later states do not open it again.
         runOnIdle { state.value = state.value.copy(exercises = exercises + created.copy(name = "Remada articulada II")) }
