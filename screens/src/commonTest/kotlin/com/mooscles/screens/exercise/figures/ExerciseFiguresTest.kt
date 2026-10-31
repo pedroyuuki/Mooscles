@@ -54,7 +54,7 @@ class ExerciseFiguresTest {
     private fun familyIsComplete(family: String, members: List<String>) {
         val table = assertNotNull(ExerciseFigures.families[family], "no $family table")
         assertTrue(members.isNotEmpty(), "the $family lot is empty")
-        val missing = members.filter { it !in table }
+        val missing = members.filter { it !in table && it !in ExerciseFigures.NO_FIGURE }
         assertTrue(missing.isEmpty(), "$family lacks ${missing.size} figures: $missing")
     }
 
@@ -79,6 +79,18 @@ class ExerciseFiguresTest {
         "cable",
         ExerciseCatalog.exercises.filter { it.equipment == Equipment.CABLE }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
     )
+
+    /** The exclusion list cannot go stale: each id is in the catalog and has no figure in any family. */
+    @Test
+    fun noFigureIdsAreCatalogExercisesWithoutAFigure() {
+        val catalog = ExerciseCatalog.exercises.mapTo(HashSet()) { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) }
+        assertTrue(ExerciseFigures.NO_FIGURE.isNotEmpty())
+        for (id in ExerciseFigures.NO_FIGURE) {
+            assertTrue(id in catalog, "$id is not in the catalog")
+            assertTrue(id !in ExerciseFigures.stableIds, "$id is excluded but has a figure")
+            assertEquals(null, ExerciseFigures.forExercise(ExerciseCatalog.ID_PREFIX + id), "$id shows a figure")
+        }
+    }
 
     /** F34: the margin token is a fraction of the box, so it is compared in box units. */
     @Test

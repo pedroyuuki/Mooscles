@@ -2,7 +2,7 @@
 
 Data: 2026-10-31. Plano: [fase 4A, Task L](../plans/2026-10-29-phase4a-library.md#task-l-condicional-só-com-o-g1-aprovado-um-lote-de-figuras). Spec: [D3, D4, D5 e D21](../specs/2026-10-29-phase4-library-routines-design.md#mídia-do-exercício). Piloto aprovado no G1, com o equipamento em cobre: [folha do piloto](2026-10-30-phase4a-folha-piloto.md). Lotes anteriores: [barra](2026-10-31-phase4-figuras-barra.md) e [halter](2026-10-31-phase4-figuras-halter.md).
 
-Este é o terceiro lote depois do piloto. Ele desenha todos os exercícios de polia do catálogo que ainda não tinham figura: 43 exercícios novos. Com os 3 de polia do piloto (puxada aberta, remada baixa no triângulo e tríceps com corda), a família da polia fica completa, com 46 figuras.
+Este é o terceiro lote depois do piloto. Ele desenha os exercícios de polia do catálogo que ainda não tinham figura: 42 exercícios novos. Com os 3 de polia do piloto (puxada aberta, remada baixa no triângulo e tríceps com corda), a família da polia fica com 45 figuras. O 46º, o Pallof press, fica sem figura de propósito e continua com o ícone do equipamento (ver A2).
 
 ## O que você está vendo
 
@@ -24,11 +24,11 @@ Há quatro imagens, capturadas no emulador (Pixel 8, Android 15) pelo `PilotShee
 
 ![Miniaturas a 64 dp, tema escuro](2026-10-31-phase4-figuras-polia/cable-dark-64.png)
 
-As folhas do detalhe são compridas (86 quadros cada). Abra pelos links da tabela.
+As folhas do detalhe são compridas (84 quadros cada). Abra pelos links da tabela.
 
 Como as imagens foram feitas: as miniaturas usam a densidade do emulador (2,625×); a folha do detalhe usa 1,35×, para caberem dois quadros de 360 dp lado a lado, como nas folhas anteriores. Os PNGs estão sem compressão de paleta (não há `pngquant` nesta máquina).
 
-## Os 43 exercícios
+## Os 42 exercícios
 
 | # | Nome no app | `stableId` |
 | --- | --- | --- |
@@ -74,13 +74,12 @@ Como as imagens foram feitas: as miniaturas usam a densidade do emulador (2,625�
 | 40 | Abdominal em pé na polia | `cable_crunch_standing` |
 | 41 | Lenhador de cima para baixo | `cable_woodchop_high_low` |
 | 42 | Lenhador de baixo para cima | `cable_woodchop_low_high` |
-| 43 | Pallof press na polia | `cable_pallof_press` |
 
 ## Escolhas de desenho
 
 Com as primitivas que o piloto já tinha, sem nenhuma nova:
 
-- **A polia fica onde o exercício a põe** e não se mexe entre os quadros (o `bothFramesHaveTheSameEquipment` confere): alta (y 8 a 10) nas puxadas, nos tríceps de cima, no crossover alto, no abdominal e no lenhador de cima; na altura do ombro, do peito ou da cabeça no crossover médio, no supino em pé, no crucifixo inverso, no face pull e no Pallof; baixa (y 82 a 86) no crossover baixo, nos crucifixos no banco, no desenvolvimento, nas roscas, nas elevações, na remada alta, no pull-through, no glúteo, na abdução, na adução e na flexora.
+- **A polia fica onde o exercício a põe** e não se mexe entre os quadros (o `bothFramesHaveTheSameEquipment` confere): alta (y 8 a 10) nas puxadas, nos tríceps de cima, no crossover alto, no abdominal e no lenhador de cima; na altura do ombro, do peito ou da cabeça no crossover médio, no supino em pé, no crucifixo inverso e no face pull; baixa (y 82 a 86) no crossover baixo, nos crucifixos no banco, no desenvolvimento, nas roscas, nas elevações, na remada alta, no pull-through, no glúteo, na abdução, na adução e na flexora.
 - **Polia ao lado do corpo, vista de lado:** as duas polias de um crossover ficam uma de cada lado da pessoa; de lado elas se sobrepõem, e a figura as mostra atrás do corpo, de onde o cabo puxa. Quem fica de frente para a polia (roscas, tríceps, remada alta, flexora, glúteo, face pull, crucifixo inverso) tem a polia à frente; quem fica de costas (elevação frontal, rosca bayesiana, tríceps francês, pull-through, abdominal em pé), atrás.
 - **Vista de frente** (a exceção da Task 8, já usada na elevação lateral do piloto e no lote do halter): a elevação lateral, a rotação externa, a rosca na polia alta, o tríceps cruzado, a abdução, a adução e os dois lenhadores. Os oito acontecem no plano frontal, e de lado não se veriam. A rosca na polia alta tem dois cabos, um para cada mão, das duas polias.
 - **A coluna da máquina:** quando a dica manda a mão livre segurar a máquina (elevação lateral, glúteo, abdução e flexora), a coluna é uma caixa estreita e alta, com a polia no pé dela, como o poste da panturrilha do lote do halter. Nos outros exercícios a polia fica sozinha, como no piloto.
@@ -99,7 +98,7 @@ Fiz a crítica de tela nas quatro folhas com as três perguntas do piloto: o mov
 
 ### Achados altos
 
-- **A2. Pallof press: lê como o supino em pé.** O Pallof é um exercício anti-rotação: a polia fica ao lado, e a pessoa empurra a alça para a frente sem deixar o cabo girar o tronco. De lado, o cabo que puxa para o lado vai na direção de quem olha e não aparece; de frente, o empurrão para a frente é que não aparece (o esqueleto não encurta osso). A figura mostra a pegada no peito e os braços esticados, de pé com os pés paralelos e os joelhos soltos, e o abdômen em verde, mas o cabo vem de trás, como no supino em pé. **Não corrigido:** mostrar a puxada lateral pede algo que o renderizador não tem (uma vista de cima, ou um cabo que venha na direção de quem olha, por exemplo com a polia desenhada sobre o corpo). Fica como decisão do controlador. Até lá, o nome e o destaque separam os dois exercícios.
+- **A2. Pallof press: lia como o supino em pé. Resolvido pela exclusão.** O Pallof é um exercício anti-rotação: a polia fica ao lado, e a pessoa empurra a alça para a frente sem deixar o cabo girar o tronco. De lado, o cabo que puxa para o lado vai na direção de quem olha e não aparece; de frente, o empurrão para a frente é que não aparece (o esqueleto não encurta osso). A primeira versão mostrava a pegada no peito e os braços esticados, com o cabo vindo de trás, igual ao supino em pé. **Decisão do controlador (2026-10-31):** uma figura que engana é pior que o ícone do equipamento, que o app já mostra quando um exercício não tem figura. As poses saíram, e `cable_pallof_press` entrou em `ExerciseFigures.NO_FIGURE`, a lista nomeada de exercícios sem figura de propósito, com o motivo no KDoc ("a vista de lado não mostra uma puxada anti-rotação; o ícone do equipamento é mais claro"). O `cableFamilyIsComplete` pula essa lista, o `everyCatalogExerciseHasAFigure` do último lote vai usar a mesma, e o `noFigureIdsAreCatalogExercisesWithoutAFigure` confere que cada id da lista existe no catálogo e não tem figura, para a lista não envelhecer. A folha foi capturada de novo, sem o Pallof.
 
 Nenhum exercício de polia é um encolhimento, então o A1 dos lotes anteriores (sem elevação de ombro) não aparece aqui.
 
@@ -125,7 +124,7 @@ Nenhum achado é de cor, toque ou texto: a folha não é uma tela do app.
 
 ### Revisão de conteúdo (D21a): pose contra as dicas e a anatomia
 
-Conferi cada pose com as quatro dicas do exercício (`files/exercise_cues/en.json`) e com a `ExerciseAnatomyTable`. O destaque sai da anatomia, pela tabela da decisão 9 (por exemplo: frente do tronco nos crossovers, no supino em pé, nos abdominais, nos lenhadores e no Pallof; ombro no face pull, no crucifixo inverso, nas elevações, na remada alta e na rotação externa; quadril no pull-through, no glúteo e na abdução; frente da coxa na adução, pelos adutores; trás da coxa na flexora).
+Conferi cada pose com as quatro dicas do exercício (`files/exercise_cues/en.json`) e com a `ExerciseAnatomyTable`. O destaque sai da anatomia, pela tabela da decisão 9 (por exemplo: frente do tronco nos crossovers, no supino em pé, nos abdominais e nos lenhadores; ombro no face pull, no crucifixo inverso, nas elevações, na remada alta e na rotação externa; quadril no pull-through, no glúteo e na abdução; frente da coxa na adução, pelos adutores; trás da coxa na flexora).
 
 Corrigidos:
 
@@ -134,18 +133,18 @@ Corrigidos:
 
 Conferidos sem mudança, lado a lado com a dica: a elevação lateral pega a alça com a mão de longe, a outra na máquina, e sobe até a altura do ombro; a rotação externa e o tríceps cruzado usam a mão de longe, com o cabo cruzando à frente do corpo; a abdução prende a correia no tornozelo de longe e a adução, no de perto, que começa puxado para fora e termina cruzando à frente da perna de apoio; o glúteo e a flexora ficam de frente para a máquina, segurando a coluna; a flexora mantém a coxa parada e leva o calcanhar ao glúteo; o pull-through fica de costas para a polia com a corda entre as pernas e leva o quadril para trás com as costas retas; a elevação frontal fica de costas para a polia e para na altura do ombro; a rosca bayesiana começa com o braço um pouco atrás do corpo e mantém o cotovelo atrás; a rosca na polia alta mantém os braços na altura do ombro e leva as mãos às orelhas; a rosca Scott mantém o braço no apoio; o tríceps francês fica de costas para a polia, um pé à frente, com o cotovelo à frente e junto à cabeça; o face pull começa com os braços esticados à frente na altura da cabeça; o pulldown de braço esticado dobra um pouco o quadril e varre da altura da cabeça até as coxas; a puxada unilateral leva o cotovelo para o quadril; a remada unilateral apoia a mão livre na coxa; o desenvolvimento sentado tem o encosto e o antebraço vertical no início; o supino em pé tem um pé à frente e os cotovelos a uns 45°; o crossover alto termina com as mãos à frente do quadril e o baixo, à frente do alto do peito; os lenhadores ficam de lado para a polia, pés mais abertos que os ombros, e cruzam o corpo na diagonal (do alto ao joelho de lá, e do joelho de perto ao alto do ombro de lá).
 
-Fica com o motivo: A2 (a vista não mostra a puxada lateral) e os médios M1, M3, M4 e M5, limites do esqueleto ou da vista de lado (braço sem encurtamento de perspectiva, tronco de um segmento só).
+O Pallof press ficou sem figura (A2): a dica "empurre a alça para a frente e segure sem girar" não tem desenho fiel numa vista de lado nem de frente. Ficam com o motivo os médios M1, M3, M4 e M5, limites do esqueleto ou da vista de lado (braço sem encurtamento de perspectiva, tronco de um segmento só).
 
 ## Tamanho
 
 APK debug (`./gradlew :app:clean :app:assembleDebug`, `tools/check-apk-budget.ps1`). Para separar o lote, montei o APK duas vezes nesta branch: uma com o `CableFigures.kt` da base (`27531e0`, o lote do halter) e outra com o deste lote.
 
 - Base (lote do halter): 24.419.940 bytes, crescimento de 767.597 sobre a base do orçamento, 280.979 bytes livres no orçamento de 1 MiB da fase 4.
-- Este lote: **24.419.940 bytes, o mesmo tamanho. Delta do APK: 0 bytes.** O APK debug cresce em saltos (o empacotador deixa folga entre as entradas), e o lote coube na folga. Medido nos `.dex` de dentro do APK: +8.663 bytes comprimidos (+33.780 sem compressão) para 43 exercícios (86 poses), cerca de 100 bytes comprimidos por pose.
+- Este lote: **24.419.940 bytes, o mesmo tamanho. Delta do APK: 0 bytes.** O APK debug cresce em saltos (o empacotador deixa folga entre as entradas), e o lote coube na folga. Medido nos `.dex` de dentro do APK: +8.663 bytes comprimidos (+33.780 sem compressão) para 43 exercícios (86 poses), cerca de 100 bytes comprimidos por pose. A medida é de antes de o Pallof sair; tirar 2 poses só diminui o número, e não refiz o APK.
 - Pelo script, ficam **280.979 bytes** livres. Contando os 8.663 bytes que o lote já ocupa da folga, a conta conservadora é **272.316 bytes** livres: o próximo salto do APK vai aparecer num lote seguinte.
-- O maior método da tabela (`CableFigures.<clinit>`, 46 figuras) tem 8.681 unidades de código no dex (17.362 bytes), abaixo dos 32 KB da regra da Task 8. A tabela continua na DSL.
+- O maior método da tabela (`CableFigures.<clinit>`, então com 46 figuras; hoje 45) tem 8.681 unidades de código no dex (17.362 bytes), abaixo dos 32 KB da regra da Task 8. A tabela continua na DSL.
 
-Os lotes que faltam (131 exercícios) devem custar perto de 26 KB de dex comprimido pela mesma conta.
+Os lotes que faltam (131 exercícios, menos os que entrarem em `NO_FIGURE`) devem custar perto de 26 KB de dex comprimido pela mesma conta.
 
 ## O que não foi provado
 

@@ -841,22 +841,5 @@ internal object CableFigures {
                 cable(14f, 84f, HAND_NEAR)
             }
         }
-        figure("cable_pallof_press") {
-            // The pulley at chest height, knees soft: the handle held at the chest, then pressed straight out and held.
-            start {
-                place(ANKLE_NEAR, 46f, 85f); trunk(0f)
-                arms(196f, 78f)
-                legs(176f, 184f, 90f)
-                floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
-                cable(14f, 42f, HAND_NEAR)
-            }
-            end {
-                place(ANKLE_NEAR, 46f, 85f); trunk(0f)
-                arms(92f, 90f)
-                legs(176f, 184f, 90f)
-                floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
-                cable(14f, 42f, HAND_NEAR)
-            }
-        }
     }
 }
