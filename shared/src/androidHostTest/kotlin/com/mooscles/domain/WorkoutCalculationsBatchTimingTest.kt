@@ -42,22 +42,20 @@ class WorkoutCalculationsBatchTimingTest {
         val expected = oracle.linearRepsPrsForWorkout(data, active.id)
         assertTrue(expected.isNotEmpty())
         assertEquals(expected, WorkoutCalculations.repsPrsForWorkout(data, active.id))
-        // The best of seven, measured against the flat scan it replaced on the same machine: an absolute bound
-        // (30 ms) passed locally at ~10 ms but failed on CI runners at 31-44 ms while other Gradle forks ran.
-        // Locally the flat scan takes 8 to 15 times as long once warm; a third of it is the bar (a return to the flat scan is ~1).
-        val timesMs = List(7) {
+        // The best of seven of each, measured against the flat scan it replaced on the same machine. An absolute bound
+        // (30 ms) failed on CI runners while other Gradle forks ran, and a bound of a third failed once the flat scan's
+        // third run got JIT-compiled on CI (194, 173, then 60 ms against a best of 24 ms). Both sides now take seven
+        // warm runs; two thirds is the bar (CI measured about 1:2.3 warm, locally 1:7), and a return to the flat scan reads about 1.
+        fun bestOfSeven(block: () -> Unit): List<Long> = List(7) {
             val started = System.nanoTime()
-            WorkoutCalculations.repsPrsForWorkout(data, active.id)
+            block()
             (System.nanoTime() - started) / 1_000_000
         }
+        val timesMs = bestOfSeven { WorkoutCalculations.repsPrsForWorkout(data, active.id) }
         println("active reps=${timesMs}ms")
-        val oracleMs = List(3) {
-            val started = System.nanoTime()
-            oracle.linearRepsPrsForWorkout(data, active.id)
-            (System.nanoTime() - started) / 1_000_000
-        }
+        val oracleMs = bestOfSeven { oracle.linearRepsPrsForWorkout(data, active.id) }
         println("flat scan=${oracleMs}ms")
-        assertTrue(timesMs.min() * 3 < oracleMs.min(), "active reps took ${timesMs}ms, the flat scan ${oracleMs}ms")
+        assertTrue(timesMs.min() * 3 < oracleMs.min() * 2, "active reps took ${timesMs}ms, the flat scan ${oracleMs}ms")
     }
 
     @Test fun batchOnLargeHistoryIsFast() {
