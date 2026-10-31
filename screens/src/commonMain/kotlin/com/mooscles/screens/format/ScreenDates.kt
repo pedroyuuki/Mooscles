@@ -31,6 +31,7 @@ import com.mooscles.ui.WorkoutUi
 import kotlin.time.Instant
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
@@ -44,6 +45,9 @@ object ScreenDates {
     /** The wall-clock date and time of [epochMillis] in [zone], daylight saving included. */
     fun localDateTime(epochMillis: Long, zone: TimeZone): LocalDateTime =
         Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone)
+
+    /** The calendar date of [epochMillis] in [zone]. */
+    fun localDate(epochMillis: Long, zone: TimeZone): LocalDate = localDateTime(epochMillis, zone).date
 
     /**
      * Finished workouts whose end falls on one of the last 28 calendar days of [zone], today
