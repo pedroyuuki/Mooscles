@@ -273,7 +273,21 @@ jobs:
           # Copy review fix round 1: RoutineCommandsPersistenceTest.copyToAllWithNoOtherWorkingSetWritesNoSet +1 (:app). 1111 + 1 = 1112.
           # Phase 5A task 1 (:designsystem commonTest): ChartScaleTest 7, ChartGeometryTest 3, SizesTimingElevationTest.chartTokens +1,
           # ComponentColorsTest +2 (chartSelectionRingOnSurface, chartLineOnRaised). 1112 + 13 = 1125.
-          MIN_HOST_TESTS: 1125
+          # Phase 5A task 2: EstimatedOneRepMaxTest 5 (:shared commonTest), TrendTest 8 (:screens commonTest). 1112 + 13 = 1125.
+          # Phase 5A task 2 review minors (:screens commonTest): TrendTest +3 (no span, not finite, sizes differ). 1125 + 3 = 1128.
+          # Phase 5A task 3: WeekStartTest 6 (:screens commonTest), WeekStartJvmEquivalenceTest 1 (:screens androidHostTest). 1128 + 7 = 1135.
+          # Phase 5A task 4: ProgressIndexTest 25 (:screens commonTest). 1135 + 25 = 1160.
+          # Phase 5A task 4 fix round 1 (:screens commonTest): ProgressIndexTest +5 (marks on the record set only, reps tie,
+          # events of workouts ending together). 1160 + 5 = 1165.
+          # Phase 5A task 5: ExerciseChartsTest 16 (:screens commonTest). 1165 + 16 = 1181.
+          # Phase 5A task 5 fix round 1 (:screens commonTest): ExerciseChartsTest +4 (weeklyTieOnTheBestValueTakesTheMarkedSession,
+          # weeklyAssistanceTieOnLoadTakesTheSessionWithMoreReps, weeklyRepsAndVolumeKeepTheBestSessionNotTheSum,
+          # sessionsDatedAfterTodayAreKept); the weekly mark test was renamed (+0). 1181 + 4 = 1185.
+          # Phase 5A task 6: RecordTimelinesTest 9 (:screens commonTest). 1185 + 9 = 1194.
+          # Phase 5A task 6 fix round 1: RecordTimelinesTest +5 (search order, fallback order, current-only search, deleted workout,
+          # two years). 1194 + 5 = 1199.
+          # Merged with phase 5A task 1 (+13 above, on the same 1112 base): 1199 + 13 = 1212.
+          MIN_HOST_TESTS: 1212
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -405,7 +419,8 @@ jobs:
           # Phase 4A final review fixes: ExerciseAnatomyTest +2. 257 + 2 = 259.
           # Phase 4B task 1: BackupCodecTest +3, ImportPlannerTest +1 (commonTest), IosDatabaseTest +1 (iosTest). 259 + 5 = 264.
           # Phase 4B task 3: WorkoutPresentationTest +10, UiErrorsTest +1 (commonTest). 264 + 11 = 275.
-          MIN_IOS_TESTS: 275
+          # Phase 5A task 2: EstimatedOneRepMaxTest 5 (commonTest). 275 + 5 = 280.
+          MIN_IOS_TESTS: 280
         run: |
           $files = @(Get-ChildItem -Path 'shared/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @(); $platform = @()
@@ -619,7 +634,16 @@ jobs:
           # Copy review fix round 1: RoutineEditorSetsTest +3 (uiTest: copyUndoIsWithdrawnOnceACopiedSetIsEdited,
           # aDoubleTapOnCopyCopiesOnceAndKeepsTheSnapshot, undoCopyAfterASetIsAddedOrBecomesAWarmupSaysNotRestored);
           # undoCopyAfterTheExerciseIsReplacedSaysNotRestored became copyUndoIsWithdrawnWhenTheExerciseIsReplaced (+0). 663 + 3 = 666.
-          MIN_SCREENS_IOS_TESTS: 666
+          # Phase 5A task 2: TrendTest 8 (commonTest). 666 + 8 = 674.
+          # Phase 5A task 2 review minors: TrendTest +3. 674 + 3 = 677.
+          # Phase 5A task 3: WeekStartTest 6 (commonTest). 677 + 6 = 683.
+          # Phase 5A task 4: ProgressIndexTest 25 (commonTest). 683 + 25 = 708.
+          # Phase 5A task 4 fix round 1: ProgressIndexTest +5 (commonTest). 708 + 5 = 713.
+          # Phase 5A task 5: ExerciseChartsTest 16 (commonTest). 713 + 16 = 729.
+          # Phase 5A task 5 fix round 1: ExerciseChartsTest +4 (commonTest). 729 + 4 = 733.
+          # Phase 5A task 6: RecordTimelinesTest 9 (commonTest). 733 + 9 = 742.
+          # Phase 5A task 6 fix round 1: RecordTimelinesTest +5 (commonTest). 742 + 5 = 747.
+          MIN_SCREENS_IOS_TESTS: 747
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
