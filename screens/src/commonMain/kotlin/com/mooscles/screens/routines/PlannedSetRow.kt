@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -176,7 +178,9 @@ internal fun PlannedSetRow(
     val resize = if (MTheme.reducedMotion) snap<IntSize>() else tween(motion.base, easing = motion.easeOut)
 
     val label: @Composable () -> Unit = { SetLabel(set, number, onMenu) }
-    val record: @Composable () -> Unit = {
+    // On one line the icon's place is kept on every row, so the load and reps of a card's sets stand in one column
+    // whether a set follows the record or not (a warm-up never does).
+    val record: @Composable (keepPlace: Boolean) -> Unit = { keepPlace ->
         if (set.inherited && !set.warmup) {
             MIcon(
                 MIcons.PlateRecord,
@@ -185,6 +189,8 @@ internal fun PlannedSetRow(
                 tint = MTheme.colors.accentText,
                 modifier = Modifier.testTag(RoutineEditorTags.setRecord(set.id)),
             )
+        } else if (keepPlace) {
+            Spacer(Modifier.size(MTheme.sizes.icon20))
         }
     }
     val loadField: @Composable () -> Unit = {
@@ -246,7 +252,7 @@ internal fun PlannedSetRow(
             // Large text: the label on top, load and reps below, each whole.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
                 label()
-                record()
+                record(false)
             }
             FlowRow(
                 Modifier.fillMaxWidth(),
@@ -266,7 +272,7 @@ internal fun PlannedSetRow(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(MTheme.space.s1), verticalAlignment = Alignment.CenterVertically) {
                     label()
-                    record()
+                    record(true)
                 }
                 loadField()
                 repsField()

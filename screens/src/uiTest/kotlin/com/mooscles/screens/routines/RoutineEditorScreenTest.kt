@@ -471,6 +471,19 @@ class RoutineEditorScreenTest {
         onNode(hasText("2") and hasAnyAncestor(hasTestTag(RoutineEditorTags.set("e1b"))), useUnmergedTree = true).assertExists()
     }
 
+    /** A card's loads and reps stand in one column, whether a set follows the record (its icon) or not (a warm-up). */
+    @Test
+    fun loadsAndRepsLineUpWithAndWithoutTheRecordIcon() = runComposeUiTest {
+        val fake = Fake(stateOf())
+        show(state = fake.state, fake = fake)
+        onNodeWithTag(RoutineEditorTags.setRecord("e2a"), useUnmergedTree = true).assertExists()
+        for (field in listOf(RoutineEditorTags::setLoad, RoutineEditorTags::setReps)) {
+            val lefts = listOf("e2w", "e2a", "e2b").map { onNodeWithTag(field(it)).fetchSemanticsNode().boundsInRoot.left }
+            assertEquals(lefts.first(), lefts.max(), 0.5f, "lefts $lefts")
+            assertEquals(lefts.first(), lefts.min(), 0.5f, "lefts $lefts")
+        }
+    }
+
     @Test
     fun restChipOpensTheRestSheetAndSavesOnlyThatEntry() = runComposeUiTest {
         val fake = Fake(stateOf())
