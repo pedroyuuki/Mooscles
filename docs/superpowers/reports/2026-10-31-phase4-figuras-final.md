@@ -229,3 +229,29 @@ APK debug (`./gradlew :app:clean :app:assembleDebug`, `tools/check-apk-budget.ps
 - **A leitura por quem treina.** Só o agente que desenhou olhou as figuras, como no piloto e nos lotes anteriores.
 - **Celular físico.** Só o emulador.
 - **Referências.** Nenhuma imagem de referência foi aberta ou decalcada. As poses vêm de conhecimento geral de execução e das dicas do próprio app, e foram conferidas só nas capturas do nosso renderizador. Não há nenhum asset gerado por IA.
+
+## Elevação do ombro nos encolhimentos (2026-10-31)
+
+Continuação do achado A1 do [lote da barra](2026-10-31-phase4-figuras-barra.md), pela decisão do controlador: uma elevação de ombro opcional na pose, padrão 0, sem mudar as proporções da D3 (nota datada na [spec](../specs/2026-10-29-phase4-library-routines-design.md), em "Esqueleto").
+
+- **Modelo.** A `FigurePose` ganhou `shoulderLift`, em unidades da caixa. A cinemática calcula o topo do tronco como antes e sobe só a junta do ombro, onde os braços nascem, ao longo da linha do tronco, na direção do pescoço. O quadril, o topo do tronco, o pescoço, a cabeça e o comprimento de cada osso não mudam. O valor é limitado a `FigureSkeleton.SHOULDER_LIFT_MAX` = 3, o comprimento do pescoço (cerca de um sexto do tronco): o ombro chega à base da cabeça e não passa dela. O valor está fixado no `IllustrationTokensTest`.
+- **DSL.** `shoulderLift(x)` dentro de um quadro. Os três encolhimentos (`barbell_shrug`, `dumbbell_shrug`, `smith_shrug`) usam no quadro B o `SHRUG_LIFT`, que é o máximo (3). O braço fica esticado e com o mesmo ângulo do quadro A (176°, ou 176,6° no Smith), então a barra ou os halteres sobem 3 unidades em linha reta junto com as mãos. No Smith, a barra continua no trilho (`smithBarRunsOnTheRail`). Antes, os quadros B tinham um leve balanço do braço (182° no lugar de 176°, ou 179,6°/173,6° no Smith), que deixou de ser necessário.
+- **Na tela.** São 3 unidades: cerca de 5 px numa miniatura de 64 dp com a densidade do emulador (2,625×) e 10,8 dp no detalhe de 360 dp. A 64 dp a diferença é pequena, mas aparece lado a lado: o braço começa encostado na cabeça e a anilha fica mais alta. No detalhe ela é clara.
+- **Nenhuma outra figura mudou.** Com 0, o ombro é o próprio topo do tronco, sem nenhuma conta a mais. Um despejo temporário dos bits de cada junta das 570 poses (285 figuras × 2 quadros), feito antes e depois da mudança, diferiu só nos três quadros B dos encolhimentos. O teste fica no design system: o `noShoulderLiftLeavesEveryJointBitIdentical` compara, bit a bit, a cinemática nova com uma cópia da antiga em 204 poses. No `:screens`, o `onlyTheShrugsLiftTheShoulders` garante que só esses três quadros usam a elevação.
+
+Capturas no emulador (Pixel 8, Android 15) pelo `PilotSheetCaptureTest` com `-e lot shrugs`, um filtro novo que junta os três encolhimentos das famílias. Rodou uma vez antes da mudança e outra depois. Em cada folha, o quadro A fica à esquerda e o B à direita.
+
+| | Antes | Depois |
+|---|---|---|
+| **64 dp, claro** | [shrugs-before-light-64.png](2026-10-31-phase4-figuras-final/shrugs-before-light-64.png) | [shrugs-after-light-64.png](2026-10-31-phase4-figuras-final/shrugs-after-light-64.png) |
+| **64 dp, escuro** | [shrugs-before-dark-64.png](2026-10-31-phase4-figuras-final/shrugs-before-dark-64.png) | [shrugs-after-dark-64.png](2026-10-31-phase4-figuras-final/shrugs-after-dark-64.png) |
+| **360 dp, claro** | [shrugs-before-light-detail.png](2026-10-31-phase4-figuras-final/shrugs-before-light-detail.png) | [shrugs-after-light-detail.png](2026-10-31-phase4-figuras-final/shrugs-after-light-detail.png) |
+| **360 dp, escuro** | [shrugs-before-dark-detail.png](2026-10-31-phase4-figuras-final/shrugs-before-dark-detail.png) | [shrugs-after-dark-detail.png](2026-10-31-phase4-figuras-final/shrugs-after-dark-detail.png) |
+
+![Encolhimentos a 64 dp, antes](2026-10-31-phase4-figuras-final/shrugs-before-light-64.png)
+
+![Encolhimentos a 64 dp, depois](2026-10-31-phase4-figuras-final/shrugs-after-light-64.png)
+
+Testes novos: 3 no `FigureGeometryTest` do design system (`noShoulderLiftLeavesEveryJointBitIdentical`, `aShoulderLiftRaisesTheShoulderAlongTheTrunk`, que confere a subida exata ao longo do tronco, os braços com o mesmo comprimento e o resto parado, e `theShoulderLiftIsClamped`) e 2 no `ExerciseFiguresTest` (`shrugsRaiseTheShouldersInFrameB`, que pede pelo menos 2 unidades de subida do ombro e da mão, a cabeça parada e o braço esticado, e `onlyTheShrugsLiftTheShoulders`). Os mínimos do CI subiram: `MIN_HOST_TESTS` 1099 → 1104, `MIN_DS_IOS_TESTS` 377 → 380 e `MIN_SCREENS_IOS_TESTS` 652 → 654.
+
+O que não foi provado: o iPhone (só a compilação local; os testes de iOS rodam no CI), um celular físico e a leitura por quem treina. Só o agente que fez a mudança olhou as capturas.

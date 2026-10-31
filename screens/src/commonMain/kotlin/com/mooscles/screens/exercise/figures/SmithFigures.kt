@@ -146,7 +146,7 @@ internal object SmithFigures {
             }
         }
         figure("smith_shrug") {
-            // Standing tall, arms straight, the bar in front of the thighs; then the shoulders up toward the ears. The skeleton has no shoulder girdle, so the frames differ only by the arms' small swing (barbell lot, A1).
+            // Standing tall, arms straight, the bar in front of the thighs; then the shoulders up toward the ears (the shoulder lift, barbell lot A1): the straight arms carry the bar straight up the rail.
             start {
                 place(ANKLE_NEAR, 44f, 85f); trunk(0f)
                 arms(176.6f, 176.6f)
@@ -156,8 +156,8 @@ internal object SmithFigures {
                 barbell(HAND_NEAR)
             }
             end {
-                place(ANKLE_NEAR, 44f, 85f); trunk(0f)
-                nearArm(179.6f, 173.6f); farArm(179.6f, 173.6f)
+                place(ANKLE_NEAR, 44f, 85f); trunk(0f); shoulderLift(SHRUG_LIFT)
+                arms(176.6f, 176.6f)
                 legs(180f, 180f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 rail(45.5f, 6f, 90f)

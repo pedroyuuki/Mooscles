@@ -5,6 +5,7 @@ import com.mooscles.designsystem.illustration.FigureJoint
 import com.mooscles.designsystem.illustration.FigureKinematics
 import com.mooscles.designsystem.illustration.FigurePose
 import com.mooscles.designsystem.illustration.FigureProp
+import com.mooscles.designsystem.illustration.FigureSkeleton
 import com.mooscles.designsystem.tokens.MoosclesIllustration
 import kotlin.math.PI
 import kotlin.math.cos
@@ -86,6 +87,7 @@ internal class PoseBuilder {
     private var footFar = 0f
     private var floorY: Float? = null
     private var frontView = false
+    private var shoulderLift = 0f
     private val props = ArrayList<PropSpec>()
     var onFloor: Set<FigureJoint> = emptySet()
         private set
@@ -116,6 +118,14 @@ internal class PoseBuilder {
     fun trunk(angle: Float, head: Float = angle) {
         trunk = angle
         this.head = head
+    }
+
+    /**
+     * Raises the shoulders [lift] box units up the trunk, toward the neck (a shrug), at most
+     * `FigureSkeleton.SHOULDER_LIFT_MAX`. The arms start that much higher; nothing else moves.
+     */
+    fun shoulderLift(lift: Float) {
+        shoulderLift = lift
     }
 
     fun nearArm(upper: Float, forearm: Float) {
@@ -217,7 +227,7 @@ internal class PoseBuilder {
     fun pose(): FigurePose {
         var pose = FigurePose(
             hipX, hipY, trunk, head, upperArmNear, forearmNear, upperArmFar, forearmFar,
-            thighNear, shinNear, footNear, thighFar, shinFar, footFar, floorY, frontView = frontView,
+            thighNear, shinNear, footNear, thighFar, shinFar, footFar, floorY, frontView = frontView, shoulderLift = shoulderLift,
         )
         val joint = placed
         if (joint != null) {
@@ -260,6 +270,12 @@ internal val CONTACT_GAP: Float = MoosclesIllustration().let { (it.figureStroke 
 
 /** The side of the pose box, in pose units. */
 internal const val BOX = 100f
+
+/**
+ * The B frame of the three shrugs: the shoulders all the way up the trunk, to the base of the head
+ * (`FigureSkeleton.SHOULDER_LIFT_MAX`), the most the skeleton allows, so the lift reads at 64 dp.
+ */
+internal const val SHRUG_LIFT = FigureSkeleton.SHOULDER_LIFT_MAX
 
 /** The unit vector of a pose angle: 0 up, positive clockwise, y down (the renderer's convention). */
 private fun direction(degrees: Float): Offset {

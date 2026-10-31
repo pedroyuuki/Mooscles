@@ -18,7 +18,9 @@ data class FigureGeometry(val joints: Map<FigureJoint, Offset>, val bounds: Rect
 
 /**
  * Forward kinematics: from the hip outward, each joint is its parent plus the bone length of
- * [FigureSkeleton] in the bone's absolute direction (plan decision 6).
+ * [FigureSkeleton] in the bone's absolute direction (plan decision 6). The neck starts at the top of
+ * the trunk; the arms start at the shoulder, which a pose's `shoulderLift` raises further up the
+ * trunk line (see [FigurePose]).
  */
 object FigureKinematics {
     fun solve(pose: FigurePose): FigureGeometry {
@@ -78,11 +80,20 @@ object FigureKinematics {
         return Offset(sin(radians).toFloat(), -cos(radians).toFloat())
     }
 
+    /** The pose's shoulder lift, clamped to `0..`[FigureSkeleton.SHOULDER_LIFT_MAX] (a NaN is no lift). */
+    internal fun shoulderLift(pose: FigurePose): Float {
+        val lift = pose.shoulderLift
+        return if (lift > 0f) min(lift, FigureSkeleton.SHOULDER_LIFT_MAX) else 0f
+    }
+
     private fun joints(pose: FigurePose): Map<FigureJoint, Offset> {
         fun bone(from: Offset, angle: Float, length: Float) = from + direction(angle) * length
         val hip = Offset(pose.hipX, pose.hipY)
-        val shoulder = bone(hip, pose.trunk, FigureSkeleton.TRUNK)
-        val neck = bone(shoulder, pose.head, FigureSkeleton.NECK)
+        val trunkTop = bone(hip, pose.trunk, FigureSkeleton.TRUNK)
+        // Without a lift the shoulder is the top of the trunk itself, bit for bit.
+        val lift = shoulderLift(pose)
+        val shoulder = if (lift > 0f) bone(trunkTop, pose.trunk, lift) else trunkTop
+        val neck = bone(trunkTop, pose.head, FigureSkeleton.NECK)
         val head = bone(neck, pose.head, FigureSkeleton.HEAD_RADIUS)
         val elbowNear = bone(shoulder, pose.upperArmNear, FigureSkeleton.UPPER_ARM)
         val handNear = bone(elbowNear, pose.forearmNear, FigureSkeleton.FOREARM)

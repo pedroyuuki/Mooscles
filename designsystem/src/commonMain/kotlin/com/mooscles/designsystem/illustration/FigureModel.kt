@@ -35,6 +35,12 @@ enum class FigureSegment {
  * [frontView] draws the figure seen from the front, for a movement in the frontal plane that a side
  * view cannot show (a lateral raise): "near" is then the figure's left side, on the right of the
  * image, and "far" its right side; both are drawn as body and both take the limb highlights.
+ *
+ * [shoulderLift] raises the shoulders (a shrug): the shoulder joint, where the arms start, slides up
+ * the trunk line toward the neck by that many box units, clamped to `0..`[FigureSkeleton.SHOULDER_LIFT_MAX].
+ * The hip, the top of the trunk, the neck, the head and the bone lengths stay as they are: the
+ * proportions of [FigureSkeleton] do not change, the arms only start higher. 0, the default, is the
+ * shoulder at the top of the trunk.
  */
 @Immutable
 data class FigurePose(
@@ -55,6 +61,7 @@ data class FigurePose(
     val floorY: Float? = null,
     val props: List<FigureProp> = emptyList(),
     val frontView: Boolean = false,
+    val shoulderLift: Float = 0f,
 )
 
 /**
@@ -70,6 +77,12 @@ object FigureSkeleton {
     const val THIGH = 16f
     const val SHIN = 16f
     const val FOOT = 5.5f
+
+    /**
+     * The most a pose's `shoulderLift` raises the shoulder up the trunk: the neck's length (about a
+     * sixth of the trunk), so a shrugged shoulder reaches the base of the head and never passes it.
+     */
+    const val SHOULDER_LIFT_MAX = 3f
 
     /** A barbell seen from the side: its plate, facing the viewer, centered on the hand. */
     const val PLATE_RADIUS = 8f

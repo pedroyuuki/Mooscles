@@ -46,6 +46,10 @@ class IllustrationTokensTest {
                 FigureSkeleton.FOREARM, FigureSkeleton.THIGH, FigureSkeleton.SHIN, FigureSkeleton.FOOT,
             ),
         )
+        // The shoulder lift's maximum (barbell lot, A1, 2026-10-31): the neck's length, about a sixth
+        // of the trunk, so a shrug raises the arms without changing the proportions above.
+        assertEquals(3f, FigureSkeleton.SHOULDER_LIFT_MAX)
+        assertTrue(FigureSkeleton.SHOULDER_LIFT_MAX <= FigureSkeleton.NECK, "a shrugged shoulder stays below the head")
         // The equipment: plate, dumbbell, kettlebell, pulley, bench legs (a bench about knee high) and floor overhang.
         assertEquals(
             listOf(8f, 4f, 2.5f, 5f, 2.5f, 16f, 6f),

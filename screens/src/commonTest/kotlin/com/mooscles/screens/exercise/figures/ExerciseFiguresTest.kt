@@ -31,6 +31,15 @@ class ExerciseFiguresTest {
 
     private val tolerance = 0.5f
 
+    /** The three shrugs of the catalog (final report, "Encolhimentos"). */
+    private val SHRUGS = listOf("barbell_shrug", "dumbbell_shrug", "smith_shrug")
+
+    /**
+     * The least the shoulders of a shrug rise from frame A to frame B, in box units: 2, about 3.4 px
+     * on a 64 dp tile at the emulator's 2.625 density.
+     */
+    private val MIN_SHRUG_RISE = 2f
+
     private fun eachFrame(check: (id: String, frame: String, pose: FigurePose, onFloor: Set<FigureJoint>) -> Unit) {
         for (id in ExerciseFigures.stableIds) {
             val frames = assertNotNull(ExerciseFigures.forExercise("catalog_$id"), id)
@@ -239,6 +248,42 @@ class ExerciseFiguresTest {
                 frames.end.copy(props = emptyList(), floorY = null),
                 "$id: the body moves between the frames",
             )
+        }
+    }
+
+    /**
+     * Shoulder lift (barbell lot, A1): in frame B of each shrug the shoulders sit at least
+     * [MIN_SHRUG_RISE] higher than in frame A, and the weight goes up with them on straight arms
+     * (upper arm and forearm in line), so the frames read apart at 64 dp.
+     */
+    @Test
+    fun shrugsRaiseTheShouldersInFrameB() {
+        for (id in SHRUGS) {
+            val frames = assertNotNull(ExerciseFigures.forExercise("catalog_$id"), id)
+            val start = FigureKinematics.solve(frames.start).joints
+            val end = FigureKinematics.solve(frames.end).joints
+            val rise = start.getValue(FigureJoint.SHOULDER).y - end.getValue(FigureJoint.SHOULDER).y
+            assertTrue(rise >= MIN_SHRUG_RISE, "$id: the shoulders rise $rise, at least $MIN_SHRUG_RISE")
+            val handRise = start.getValue(FigureJoint.HAND_NEAR).y - end.getValue(FigureJoint.HAND_NEAR).y
+            assertTrue(handRise >= MIN_SHRUG_RISE, "$id: the weight rises $handRise with the shoulders")
+            assertEquals(start.getValue(FigureJoint.HEAD).y, end.getValue(FigureJoint.HEAD).y, tolerance, "$id: the head stays")
+            for (pose in listOf(frames.start, frames.end)) {
+                assertEquals(pose.upperArmNear, pose.forearmNear, "$id: the near arm hangs straight")
+                assertEquals(pose.upperArmFar, pose.forearmFar, "$id: the far arm hangs straight")
+            }
+        }
+    }
+
+    /**
+     * Only frame B of the three shrugs lifts the shoulders: every other frame keeps the default 0,
+     * which the design system's `noShoulderLiftLeavesEveryJointBitIdentical` holds to the fixed skeleton.
+     */
+    @Test
+    fun onlyTheShrugsLiftTheShoulders() {
+        assertEquals(SHRUGS.toSet(), ExerciseFigures.stableIds.filterTo(HashSet()) { it.endsWith("_shrug") }, "the catalog's shrugs")
+        eachFrame { id, frame, pose, _ ->
+            val expected = if (id in SHRUGS && frame == "end") SHRUG_LIFT else 0f
+            assertEquals(expected, pose.shoulderLift, "$id $frame shoulder lift")
         }
     }
 
