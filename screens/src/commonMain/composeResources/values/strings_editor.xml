@@ -42,4 +42,10 @@
     <string name="editor_editing_warmup_load">Editing load of warm-up %1$d</string>
     <string name="editor_editing_warmup_reps">Editing reps of warm-up %1$d</string>
     <string name="editor_warmup_removed">Warm-up %1$d removed</string>
+    <!-- (2026-10-31, owner's request) A set's load and reps on every other working set of the exercise, with undo. -->
+    <string name="editor_set_copy_all">Copy to all sets</string>
+    <plurals name="editor_set_copied">
+        <item quantity="one">Copied to %1$d set</item>
+        <item quantity="other">Copied to %1$d sets</item>
+    </plurals>
 </resources>

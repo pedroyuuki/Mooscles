@@ -265,7 +265,13 @@ jobs:
           # Phase 4 figures, shoulder lift (shrugs): FigureGeometryTest +3 (:designsystem commonTest: noShoulderLiftLeavesEveryJointBitIdentical,
           # aShoulderLiftRaisesTheShoulderAlongTheTrunk, theShoulderLiftIsClamped); ExerciseFiguresTest +2 (:screens commonTest:
           # shrugsRaiseTheShouldersInFrameB, onlyTheShrugsLiftTheShoulders). 1099 + 5 = 1104.
-          MIN_HOST_TESTS: 1104
+          # Copy a planned set to all working sets (2026-10-31): RoutineCommandsPersistenceTest +5 (:app:
+          # copyToAllWritesTheOtherWorkingSetsOnlyAndMakesThemManual, copyToAllFromAnInheritedSourceCopiesTheValuesItShows,
+          # restoreRoutineSetTargetsPutsBackRepsLoadAndMode, restoreRoutineSetTargetsRefusesAChangedEntry,
+          # copyToAllRefusesAMissingSourceAndAWarmup); AppViewModelRoutinesHostTest +2 (:app:
+          # copyRoutineSetToAllAndItsUndoGoThroughTheLoop, copyAndRestoreFailuresCountUnderTheEntry). 1104 + 7 = 1111.
+          # Copy review fix round 1: RoutineCommandsPersistenceTest.copyToAllWithNoOtherWorkingSetWritesNoSet +1 (:app). 1111 + 1 = 1112.
+          MIN_HOST_TESTS: 1112
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -600,7 +606,16 @@ jobs:
           # everyCatalogExerciseHasAFigure, kettlebellFiguresHoldAKettlebell, smithBarRunsOnTheRail). 647 + 5 = 652.
           # Phase 4 figures, shoulder lift (shrugs): ExerciseFiguresTest +2 (commonTest: shrugsRaiseTheShouldersInFrameB,
           # onlyTheShrugsLiftTheShoulders). 652 + 2 = 654.
-          MIN_SCREENS_IOS_TESTS: 654
+          # Copy a planned set to all working sets (2026-10-31): RoutineEditorSetsTest +9 (uiTest:
+          # copyToAllIsOfferedOnAWorkingSetWithOtherWorkingSets, copyToAllIsHiddenOnAWarmupAndOnTheOnlyWorkingSet,
+          # copyToAllSendsOneActionAndSaysHowManySets, copyToastIsSingularForOneSet, copyToastInEnglish,
+          # undoCopySendsTheRestoreWithThePreviousSets, copyDropsATargetsDraftAndUndoKeepsItsPendingWrite,
+          # undoCopyAfterTheSetsChangedSaysNotRestored, undoCopyAfterTheExerciseIsReplacedSaysNotRestored).
+          # No :shared test changed, so MIN_IOS_TESTS stays 275. 654 + 9 = 663.
+          # Copy review fix round 1: RoutineEditorSetsTest +3 (uiTest: copyUndoIsWithdrawnOnceACopiedSetIsEdited,
+          # aDoubleTapOnCopyCopiesOnceAndKeepsTheSnapshot, undoCopyAfterASetIsAddedOrBecomesAWarmupSaysNotRestored);
+          # undoCopyAfterTheExerciseIsReplacedSaysNotRestored became copyUndoIsWithdrawnWhenTheExerciseIsReplaced (+0). 663 + 3 = 666.
+          MIN_SCREENS_IOS_TESTS: 666
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

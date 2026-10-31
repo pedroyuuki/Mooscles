@@ -8,7 +8,7 @@ import com.mooscles.ui.SetUi
  * A [MoosclesActions] that only records: every call adds `"<method>:<arg1>,<arg2>,…"` to [calls],
  * each argument written with its `toString()` (`"updateSet:s2,8,82.5,true,false,false"`), and
  * `"<method>:"` for a method without arguments (`"skipTimer:"`). A list argument is its items joined
- * by `|` (`"addRoutineExercises:r1,bench|row"`); a restored set is the whole set, as `toString()`
+ * by `|` (`"addRoutineExercises:r1,bench|row"`); a restored set (or each set of a restored copy) is the whole set, as `toString()`
  * writes it, so a test checks the snapshot and not only the id.
  */
 class RecordingActions : MoosclesActions {
@@ -63,6 +63,9 @@ class RecordingActions : MoosclesActions {
     override fun inheritRoutineSet(setId: String) = record("inheritRoutineSet", setId)
     override fun setRoutineSetWarmup(setId: String, warmup: Boolean) = record("setRoutineSetWarmup", setId, warmup)
     override fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi) = record("restoreRoutineSet", entryId, position, set)
+    override fun copyRoutineSetToAll(entryId: String, sourceSetId: String) = record("copyRoutineSetToAll", entryId, sourceSetId)
+    override fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>) =
+        record("restoreRoutineSetTargets", entryId, exerciseId, previous)
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = record("updateRoutineExerciseRest", entryId, seconds)
     override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) =
         record("createCustomExercise", id, name, muscle, equipment, convention)

@@ -186,6 +186,14 @@ abstract class MoosclesViewModel(
         repo.restoreRoutineSet(entryId, position, RoutineSet(id = set.id, routineExerciseId = entryId, position = position,
             targetReps = set.reps, targetWeightKg = set.weightKg, inheritPr = set.inherited, warmup = set.warmup))
     }
+    override fun copyRoutineSetToAll(entryId: String, sourceSetId: String) = act(entryId) { repo.copyRoutineSetToAll(sourceSetId) }
+    override fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>) = act(entryId) {
+        // The sets keep their places: the position is not part of what the copy changed.
+        repo.restoreRoutineSetTargets(entryId, exerciseId, previous.map { set ->
+            RoutineSet(id = set.id, routineExerciseId = entryId, targetReps = set.reps, targetWeightKg = set.weightKg,
+                inheritPr = set.inherited, warmup = set.warmup)
+        })
+    }
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = act { repo.updateRoutineExerciseRest(entryId, seconds) }
     override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) = act(id) {
         repo.createCustomExercise(name, muscleOf(muscle), equipmentOf(equipment), conventionOf(convention), id)

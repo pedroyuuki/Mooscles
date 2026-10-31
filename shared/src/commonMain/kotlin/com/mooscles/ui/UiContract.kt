@@ -186,6 +186,17 @@ interface MoosclesActions : UpdateActions, DataActions {
     fun setRoutineSetWarmup(setId: String, warmup: Boolean)
     /** Undoes [removeRoutineSet]: puts [set] back in [entryId] at [position], with its id, values, warm-up and mode. */
     fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi)
+    /**
+     * Copies the reps and load of the working set [sourceSetId] (as it shows them, also when it follows the record)
+     * to every other working set of [entryId], which become manual; warm-ups are left alone. One write, all or none.
+     */
+    fun copyRoutineSetToAll(entryId: String, sourceSetId: String)
+    /**
+     * Undoes [copyRoutineSetToAll]: puts back the reps, load and mode of each set of [previous] (the sets the copy
+     * changed, as they stood), all or none. Refused ([UiError.SET_NOT_RESTORED]) when a set is no longer a working
+     * set of [entryId], the entry is gone or it no longer holds the exercise [exerciseId] (it was replaced).
+     */
+    fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>)
     fun updateRoutineExerciseRest(entryId: String, seconds: Int)
     /** Creates a custom exercise under [id], chosen by the screen; an id already in use is refused, never overwritten. */
     fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String)

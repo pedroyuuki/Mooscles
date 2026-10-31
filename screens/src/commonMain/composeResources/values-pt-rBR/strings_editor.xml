@@ -42,4 +42,10 @@
     <string name="editor_editing_warmup_load">Editando carga do aquecimento %1$d</string>
     <string name="editor_editing_warmup_reps">Editando repetições do aquecimento %1$d</string>
     <string name="editor_warmup_removed">Aquecimento %1$d removido</string>
+    <!-- (2026-10-31, pedido do dono) A carga e as repetições de uma série em todas as outras séries de trabalho do exercício, com desfazer. -->
+    <string name="editor_set_copy_all">Copiar para todas as séries</string>
+    <plurals name="editor_set_copied">
+        <item quantity="one">Copiado para %1$d série</item>
+        <item quantity="other">Copiado para %1$d séries</item>
+    </plurals>
 </resources>

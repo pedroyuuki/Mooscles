@@ -78,6 +78,7 @@ import com.mooscles.screens.resources.editor_replace
 import com.mooscles.screens.resources.editor_replace_body
 import com.mooscles.screens.resources.editor_replace_confirm
 import com.mooscles.screens.resources.editor_replace_title
+import com.mooscles.screens.resources.editor_set_copied
 import com.mooscles.screens.resources.editor_set_limit
 import com.mooscles.screens.resources.editor_warmup_removed
 import com.mooscles.screens.resources.editor_start
@@ -322,6 +323,15 @@ fun RoutineEditorRoute(
     // The entry and exercise the pending undo belongs to: once the entry holds another exercise (a replacement keeps
     // the entry and set ids), the set would come back into a different movement, so the offer is withdrawn.
     var undoFor by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // The sets a pending copy changed: once one of them is edited or follows the record again, the copy's undo would
+    // wipe that out, so the offer is withdrawn (the toast closes).
+    var copyTargets by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val withdrawCopyUndo: (String) -> Unit = { setId ->
+        if (setId in copyTargets) {
+            undoJob?.cancel()
+            copyTargets = emptySet()
+        }
+    }
     LaunchedEffect(entries) {
         val (entryId, exerciseId) = undoFor ?: return@LaunchedEffect
         val entry = entries.firstOrNull { it.id == entryId }
@@ -346,7 +356,10 @@ fun RoutineEditorRoute(
             onAddSet = { currentActions.addRoutineSet(it.id) },
             drafts = drafts,
             editing = editing,
-            onWrite = { currentActions.updateRoutineSet(it.setId, it.reps, it.weightKg) },
+            onWrite = {
+                withdrawCopyUndo(it.setId)
+                currentActions.updateRoutineSet(it.setId, it.reps, it.weightKg)
+            },
             onSetMenu = { _, setId ->
                 editing.end()
                 setMenuFor = setId
@@ -361,11 +374,53 @@ fun RoutineEditorRoute(
         if (editing.isEditing(set.id)) editing.end()
         currentActions.removeRoutineSet(set.id)
         undoJob?.cancel()
+        copyTargets = emptySet()
         undoFor = entry.id to entry.exercise.id
         val template = if (set.warmup) warmupRemovedTemplate else removedTemplate
         undoJob = toastScope.launch {
             val shown = host.show(template.replace(SET_NUMBER_TOKEN, number.toString()), MToastKind.Info, undoText)
             if (shown == MToastResult.ActionPerformed) currentActions.restoreRoutineSet(entry.id, index, snapshot)
+        }
+    }
+    // "Copied to 2 sets" with "Undo" (2026-10-31, owner's request): the source's load and reps on the exercise's other
+    // working sets, in one command, and the undo puts each back as it stood, in one command too. The toast comes from
+    // the screen's own scope and takes the place of a removal's (and the other way round).
+    val currentEntries by rememberUpdatedState(entries)
+    val currentDrafts by rememberUpdatedState(drafts)
+    val notRestoredText = uiErrorText(UiError.SET_NOT_RESTORED)
+    val copySet: (PlannedExerciseUi, RoutineSetUi, String) -> Unit = { entry, source, copiedText ->
+        val targets = entry.setTargets.filter { !it.warmup && it.id != source.id }
+        // What "Undo" puts back: each set as the database holds it when the copy runs, the writes in flight included.
+        val previous = targets.map(drafts::snapshot)
+        // Nothing typed for a target is written after the copy or shown in place of it.
+        targets.forEach { drafts.drop(it.id) }
+        editing.setId?.let { id -> if (targets.any { it.id == id }) editing.end() }
+        currentActions.copyRoutineSetToAll(entry.id, source.id)
+        // The entry as the copy found it: the undo is only for the same sets of the same exercise.
+        val shape = entry.setTargets.map { it.id to it.warmup }
+        val exerciseId = entry.exercise.id
+        undoJob?.cancel()
+        // A replaced exercise withdraws the offer, as for a removal ([undoFor]); an edit of a copied set does too.
+        undoFor = entry.id to exerciseId
+        val changed: Set<String> = targets.mapTo(HashSet()) { it.id }
+        copyTargets = changed
+        undoJob = toastScope.launch {
+            val chosen = try {
+                host.show(copiedText, MToastKind.Info, undoText)
+            } finally {
+                // Only this copy's: a newer one may already have put its own sets here before this job ends.
+                if (copyTargets === changed) copyTargets = emptySet()
+            }
+            if (chosen == MToastResult.ActionPerformed) {
+                val now = currentEntries.firstOrNull { it.id == entry.id }
+                if (now != null && now.exercise.id == exerciseId && now.setTargets.map { it.id to it.warmup } == shape) {
+                    // A safety belt: an edit of a target withdrew the offer, so no draft of one should be left here.
+                    previous.forEach { currentDrafts.drop(it.id) }
+                    currentActions.restoreRoutineSetTargets(entry.id, exerciseId, previous)
+                } else {
+                    host.show(notRestoredText, MToastKind.Error)
+                }
+            }
         }
     }
     val space = MTheme.space
@@ -554,6 +609,8 @@ fun RoutineEditorRoute(
         } else {
             val index = entry.setTargets.indexOf(set)
             val number = entry.setTargets.take(index + 1).count { it.warmup == set.warmup }
+            val others = entry.setTargets.count { !it.warmup && it.id != set.id }
+            val copiedText = pluralCount(Res.plurals.editor_set_copied, others)
             PlannedSetMenuSheet(
                 set = set,
                 number = number,
@@ -568,9 +625,18 @@ fun RoutineEditorRoute(
                 },
                 onFollowRecord = {
                     setMenuFor = null
+                    withdrawCopyUndo(set.id)
                     // The person's own edits of this set give way to the record, and a late echo of them must not bring them back.
                     drafts.drop(set.id)
                     actions.inheritRoutineSet(set.id)
+                },
+                copyToAll = others > 0,
+                onCopyToAll = copy@{
+                    // A second tap before the sheet leaves would copy again and take the undo's snapshot anew,
+                    // without the writes in flight the first one dropped.
+                    if (setMenuFor != id) return@copy
+                    setMenuFor = null
+                    copySet(entry, set, copiedText)
                 },
                 onRemove = {
                     setMenuFor = null
