@@ -8,12 +8,16 @@ object Trends {
     /**
      * Least-squares slope of [ys] over [xs] (days, so uneven spacing counts), projected over the
      * span of [xs] and compared with the mean: beyond 5% of it up or down, otherwise flat.
-     * Null with fewer than 3 points, no span, or a mean that is not positive.
+     * Null with fewer than 3 points, lists of different sizes, a value that is not finite, no span
+     * (every x the same), or a mean that is not positive.
      */
     fun of(xs: List<Double>, ys: List<Double>): Trend? {
         val n = xs.size
         if (n != ys.size || n < MIN_POINTS) return null
         if (xs.any { !it.isFinite() } || ys.any { !it.isFinite() }) return null
+        val span = xs.max() - xs.min()
+        // Equal large xs can leave a rounding residue in the centred sum: no span is no trend.
+        if (span == 0.0) return null
         val meanX = xs.sum() / n
         val meanY = ys.sum() / n
         if (meanY <= 0.0) return null
@@ -25,7 +29,7 @@ object Trends {
             sxy += dx * (ys[i] - meanY)
         }
         if (sxx == 0.0) return null
-        val projected = sxy / sxx * (xs.max() - xs.min())
+        val projected = sxy / sxx * span
         // |projected| > 5% of the mean, written as a multiplication by 20 to stay exact at the edge.
         return when {
             projected * 20 > meanY -> Trend.UP

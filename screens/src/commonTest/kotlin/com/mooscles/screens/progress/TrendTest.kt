@@ -35,6 +35,18 @@ class TrendTest {
     fun zeroMeanHasNoTrend() = assertNull(Trends.of(listOf(0.0, 1.0, 2.0), listOf(-1.0, 0.0, 1.0)))
 
     @Test
+    fun noSpanHasNoTrend() = assertNull(Trends.of(listOf(20391.3, 20391.3, 20391.3), listOf(90.0, 100.0, 110.0)))
+
+    @Test
+    fun aValueThatIsNotFiniteHasNoTrend() {
+        assertNull(Trends.of(listOf(0.0, 1.0, 2.0), listOf(90.0, Double.NaN, 110.0)))
+        assertNull(Trends.of(listOf(0.0, Double.POSITIVE_INFINITY, 2.0), listOf(90.0, 100.0, 110.0)))
+    }
+
+    @Test
+    fun listsOfDifferentSizesHaveNoTrend() = assertNull(Trends.of(listOf(0.0, 1.0, 2.0), listOf(90.0, 100.0)))
+
+    @Test
     fun unevenSpacingUsesTheRealDays() {
         val ys = listOf(100.0, 100.0, 100.0, 108.0)
         // Evenly spaced, the last jump is 7% of the mean; spread over the real days it is 3%.
