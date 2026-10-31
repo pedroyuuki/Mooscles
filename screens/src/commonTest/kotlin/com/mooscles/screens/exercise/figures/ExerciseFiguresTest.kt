@@ -80,6 +80,13 @@ class ExerciseFiguresTest {
         ExerciseCatalog.exercises.filter { it.equipment == Equipment.CABLE }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
     )
 
+    /** The bodyweight lot (spec D4): every bodyweight entry of the catalog, those on a bar, rings, a bench or a box included. */
+    @Test
+    fun bodyweightFamilyIsComplete() = familyIsComplete(
+        "bodyweight",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.BODYWEIGHT }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
     /** The exclusion list cannot go stale: each id is in the catalog and has no figure in any family. */
     @Test
     fun noFigureIdsAreCatalogExercisesWithoutAFigure() {
