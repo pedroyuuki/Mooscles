@@ -87,7 +87,7 @@ Histórico e recordes são as duas abas que ainda abrem telas antigas do `:app`,
 
 | Entrega | Onde |
 | --- | --- |
-| Gráficos por exercício (carga, 1RM estimado, volume) | tela "Progresso do exercício" (rota `exercise/{id}`, o mesmo texto de rota de hoje), aberta pela linha do tempo de recordes, pelo detalhe do exercício (4A), pelo menu do card do treino ativo, pelo detalhe do treino e por "Mais feitos" |
+| Gráficos por exercício (carga, 1RM estimado, volume) | tela "Progresso do exercício" (rota base `exercise/{id}`, a de hoje, com `?metric=` opcional), aberta pela linha do tempo de recordes, pelo detalhe do exercício (4A), pelo menu do card do treino ativo, pelo detalhe do treino e por "Mais feitos" |
 | Gráficos gerais (treinos por semana, volume por semana, músculos) | aba Histórico, segmento **Progresso** |
 | Calendário | aba Histórico, segmento **Treinos**, no topo da lista |
 | Linha do tempo de recordes | aba Recordes |
@@ -98,7 +98,8 @@ Histórico e recordes são as duas abas que ainda abrem telas antigas do `:app`,
 *Por quê:* uma quinta aba é o que mais quebra a 200% (#2 da fase 2); renomear Recordes para "Progresso" e pôr os recordes num segmento custaria um toque a mais para achar um recorde, contra a regra do orçamento de toques ("nenhum fluxo novo passa do de hoje"). Os gráficos gerais são novos (não têm contagem de hoje), então o toque no segmento não estoura nada. "O que eu fiz" (lista, calendário) e "como isso evolui" (gráficos do período) ficam na mesma aba.
 
 - **Segmentos do Histórico:** dois `MChip` de `MChipKind.Segmented` ("Treinos", "Progresso"), em largura igual, sob o topo; padrão "Treinos". A escolha fica em `rememberSaveable` (sobrevive a ir ao detalhe e voltar, à troca de aba com `restoreState` e à recriação), não é gravada.
-- O texto da rota `exercise/{id}` e as chaves das abas (`ShellTabs`) não mudam: os testes de navegação e as tags `tab-*` continuam.
+- **Rota do progresso (controlador, 2026-10-31):** a rota base não muda; ganha `?metric=` opcional: `exercise/{id}?metric={metric}`, com `metric` ∈ `load|reps|e1rm|volume` e padrão `load`. `load` abre a métrica de carga da convenção (Carga, Carga adicional ou Assistência); uma métrica que a convenção não tem (por exemplo, `e1rm` em Carga adicional) abre a primeira da convenção (D6). A convenção **não** é argumento de rota: o gráfico usa a convenção atual do exercício (ou, sem exercício atual, a mais recente do histórico). Um recorde de uma convenção antiga (um personalizado cuja convenção mudou) abre o gráfico da convenção atual com uma nota de uma linha ("Este recorde foi registrado como Por mão; o gráfico mostra os treinos como Carga total."); não há um segundo caminho de dados. O `ShellNavigationHostTest` ganha casos com o argumento opcional (com e sem `metric`, e um valor desconhecido caindo no padrão).
+- As chaves das abas (`ShellTabs`) não mudam: os testes de navegação e as tags `tab-*` continuam.
 - O menu do card do treino ativo troca "Histórico do exercício" por "Progresso do exercício" (mesma rota). O menu e o card do detalhe do exercício trocam "Ver histórico completo" por "Ver progresso".
 
 ## Gráficos
@@ -154,14 +155,14 @@ Tudo em kg exatos; a unidade só entra na exibição (D7). As regras vivem em fu
 | Convenção | Métricas, nesta ordem (a primeira é a padrão) |
 | --- | --- |
 | Carga total, Por mão, Um lado | **Carga** (a série de trabalho mais pesada da sessão, escolhida pela regra do domínio: a mais pesada, empate pelas mais repetições, depois a primeira na ordem do treino), **1RM estimado** (D5), **Volume** |
-| Carga adicional | **Repetições** (o máximo numa série da sessão), **Carga adicional** (só se alguma sessão tiver carga maior que zero), **Volume** (só se houver carga) |
+| Carga adicional | **Repetições** (o máximo de repetições numa série de trabalho da sessão), **Carga adicional** (só se alguma sessão tiver carga maior que zero), **Volume** (só se houver carga) |
 | Assistência | **Repetições** e **Assistência** (a menor assistência registrada na sessão; a legenda diz "menos assistência, menos ajuda da máquina") |
 
 - **Volume** é o de hoje (`WorkoutCalculations.volume`: carga registrada × repetições das séries concluídas e válidas, aquecimento incluído, assistência e convenção Assistência fora). É o número do resumo e do cartão; o gráfico não inventa outro.
-- **Marcas de recorde:** só no gráfico de **Carga** e no de **Repetições**, e só quando a série que deu o ponto da sessão carrega o recorde batido do mesmo tipo (`SetUi.record`, que o `WorkoutPresentation` já preenche também nos treinos do histórico: carga para `WEIGHT`, repetições para `REPS`; primeiro registro não marca). Assim a marca fica exatamente na série que o histórico chama de recorde. Um recorde de repetições numa carga mais leve que a do ponto não marca o gráfico de Repetições; ele aparece na lista "Recordes deste exercício" e na linha do tempo. 1RM e volume não marcam recorde, porque o domínio não tem recorde dessas medidas e um selo que o histórico desmente é anti-objetivo.
-- **Identidade da série:** exercício (`exerciseId`) + convenção, a mesma chave dos recordes. Um personalizado cuja convenção mudou tem duas séries; a tela mostra chips de convenção quando há mais de uma no histórico, com a convenção atual do exercício como padrão (ou a mais recente, se a atual não tiver histórico).
+- **Marcas de recorde (controlador, 2026-10-31):** vêm das listas de recordes do `UiState`, nunca de `SetUi.record`, e o `UiContract` e o `present()` não mudam. Um ponto ganha marca quando existe um recorde batido (não primeiro registro) do tipo da métrica para aquele exercício, grupo de convenção e sessão: recordes de carga (`WEIGHT`) no gráfico de **Carga** e no de **Carga adicional** (a convenção `BODYWEIGHT` conta como gráfico de carga para as marcas), recordes de repetições (`REPS`) no gráfico de **Repetições**. O `UiState.records` só traz o recorde vigente de cada chave; os recordes batidos de sessões passadas são os `RecordUi` de `WorkoutUi.records` de cada treino em `UiState.history`, também do `UiState` e com o mesmo formato, e o vigente marca a etiqueta "Atual". **Repetições** ("máximo de repetições numa série") conta só séries de trabalho: aquecimento fora; séries assistidas seguem os grupos de recorde que o `WorkoutCalculations` já usa (exercício, convenção e modo de assistência), então o ponto e a marca saem sempre do mesmo grupo (numa convenção que não é Assistência, o ponto de Repetições usa as séries não assistidas; na Assistência, as assistidas). 1RM e volume não marcam recorde, porque o domínio não tem recorde dessas medidas e um selo que o histórico desmente é anti-objetivo.
+- **Identidade da série:** exercício (`exerciseId`) + convenção, a mesma chave dos recordes. **(controlador, 2026-10-31)** O gráfico mostra só a convenção atual do exercício (ou a mais recente do histórico, se o exercício não existe mais); sem chips de convenção. Um personalizado cuja convenção mudou mostra a linha "Os treinos registrados como Por mão não entram neste gráfico." sob o gráfico; as sessões antigas continuam na lista de sessões.
 - O treino ativo nunca entra nos gráficos (o `UiState.history` só tem treinos finalizados).
-- Testes de equivalência em `commonTest`: o volume de cada sessão do índice é igual à soma dos volumes por exercício do `WorkoutUi`; a soma da semana é a soma dos `WorkoutUi.volumeKg`; toda marca de recorde corresponde a um `SetUi.record` do histórico na série do ponto, e toda série do ponto com `SetUi.record` do tipo da métrica tem marca.
+- Testes de equivalência em `commonTest`: o volume de cada sessão do índice é igual à soma dos volumes por exercício do `WorkoutUi`; a soma da semana é a soma dos `WorkoutUi.volumeKg`; **(controlador)** as marcas são comparadas com os recordes do `UiState` (`UiState.records` e os `WorkoutUi.records` de `UiState.history`): toda marca corresponde a um recorde batido do mesmo tipo, exercício, grupo de convenção e sessão, e todo recorde assim tem marca no ponto da sessão.
 
 **D7 (minha). Períodos e baldes.**
 
@@ -200,7 +201,8 @@ Pacotes novos no `:screens`: `progress` (modelo, índice e a tela do exercício)
 De cima para baixo, numa `LazyColumn`:
 
 - **Topo:** voltar e o menu ("Sobre o exercício", que abre `exerciseInfo/{id}`; se a tela de baixo na pilha já é esse detalhe, volta para ela em vez de empilhar outro). Primeira linha do conteúdo: o nome no idioma da tela (`title.md`, inteiro em qualquer tamanho, como a nota da Task 17 da 4A) e "Peito · Barra".
-- **Convenção:** chips só quando o histórico tem mais de uma (D6).
+- **Convenção:** sem chips; a convenção atual, com a nota de convenção antiga quando houver (D6 e D2).
+- **Métrica inicial:** a do argumento `metric` da rota (D2), senão a primeira da convenção.
 - **Métrica:** chips `Segmented` com as métricas da convenção (D6), padrão a primeira.
 - **Destaque:** o último valor em `num.lg` com a métrica ("92,5 kg · 1RM estimado") e a diferença desde o início do período, como fato: "+12,5 kg desde 3 jun" ou "−5 kg desde 3 jun" (sem cor de perigo, sem seta vermelha).
 - **Período:** os chips do D7.
@@ -215,7 +217,7 @@ De cima para baixo, numa `LazyColumn`:
 - **Busca:** `MSearchField` "Buscar exercício" (nomes nos dois idiomas, pelo mesmo dobramento da biblioteca), fixa sob o topo.
 - **Chips:** "Só atuais" (mostra só os recordes que ainda valem, inclusive os que são primeiros registros nunca batidos, o equivalente da tela de hoje; ignora o outro chip) e "Primeiros registros" (inclui os primeiros registros na linha do tempo, desligado por padrão).
 - **Com texto na busca**, os recordes atuais dos exercícios achados aparecem sempre, mesmo os que são primeiros registros; assim "supino" mostra o recorde vigente do supino no topo sem precisar de chip.
-- **Linha do tempo** (D11): agrupada por mês com cabeçalho fixo ("outubro de 2026 · 5 recordes"); cada linha com o `PrBadge` (ou o selo suave do primeiro registro), o nome do exercício, o tipo ("Carga" ou "Repetições"), "87,5 kg × 6 · antes 85 kg" ou "80 kg × 8 · antes 6 repetições", a data curta e a etiqueta "Atual" quando é o recorde vigente. Tocar abre o progresso do exercício na métrica do recorde (Carga ou Repetições); a ação de acessibilidade "Abrir treino" abre o detalhe do treino.
+- **Linha do tempo** (D11): agrupada por mês com cabeçalho fixo ("outubro de 2026 · 5 recordes"); cada linha com o `PrBadge` (ou o selo suave do primeiro registro), o nome do exercício, o tipo ("Carga" ou "Repetições"), "87,5 kg × 6 · antes 85 kg" ou "80 kg × 8 · antes 6 repetições", a data curta e a etiqueta "Atual" quando é o recorde vigente. Tocar abre o progresso do exercício na métrica do recorde (`exercise/{id}?metric=load` ou `?metric=reps`, D2); a ação de acessibilidade "Abrir treino" abre o detalhe do treino.
 - **Estados:** carregando (`Skeleton`); sem recorde: `EmptyState` "Seu primeiro recorde aparece aqui" com "Conclua séries de trabalho para registrar recordes de carga e de repetições."; busca sem resultado: "Nenhum recorde encontrado".
 
 **D11 (minha). A linha do tempo mostra os recordes batidos, do mais recente; o recorde atual tem etiqueta; primeiros registros só com o chip.** *Por quê:* um histórico de 208 treinos começa com dezenas de "primeiros registros", que não são progresso; o recorde atual, que é o que a tela de hoje mostra, continua a um toque ("Só atuais") e marcado na linha do tempo.
@@ -227,7 +229,7 @@ De cima para baixo, numa `LazyColumn`:
 ### Card "Seu histórico" do detalhe do exercício (4A)
 
 - Ganha, com 2 sessões ou mais, uma `MSparkline` da primeira métrica da convenção nas últimas 12 sessões, ao lado do texto que já existe (que é a alternativa; a sparkline é decorativa).
-- "Ver histórico completo" vira "Ver progresso" (botão do card e item do menu), para a rota `exercise/{id}`.
+- "Ver histórico completo" vira "Ver progresso" (botão do card e item do menu), para a rota `exercise/{id}` (sem `metric`, o padrão).
 
 ## Telas da 5B
 
@@ -282,7 +284,7 @@ Pacotes novos no `:screens`: `history` (aba, calendário, filtros, lista, segmen
 **Modo de edição:**
 
 - Entrar pede a confirmação de hoje, traduzida: `MDialog` "Editar treino salvo?" com "As mudanças são salvas na hora e os recordes deste exercício são recalculados em todo o histórico." e "Editar treino". O topo passa a "Editando" com "Concluir"; o voltar do sistema, no modo de edição, só sai do modo (as mudanças já estão salvas).
-- **Paridade com o antigo** (o plano lista cada item e um teste prova cada um): editar carga e repetições (toque põe a linha em edição com o `Stepper`, segundo toque abre o teclado, como o D12 da fase 3), concluir e desfazer a conclusão pelo check, mudar o tipo (Normal, Aquecimento, Assistida, pela sheet de tipo da fase 3), adicionar série (copia a última, o `addSet` de hoje), remover série, mover o exercício para cima e para baixo, trocar e remover o exercício, adicionar exercício (o seletor da 4A, seleção única) e renomear. O descanso não aparece (não existe num treino finalizado).
+- **Paridade com o antigo** (o plano lista cada item e um teste prova cada um): editar carga e repetições (toque põe a linha em edição com o `Stepper`, segundo toque abre o teclado, como o D12 da fase 3), concluir e desfazer a conclusão pelo check, mudar o tipo (Normal, Aquecimento, Assistida, pela sheet de tipo da fase 3), adicionar série (copia a última, o `addSet` de hoje), remover série, mover o exercício para cima e para baixo, trocar e remover o exercício, adicionar exercício (o seletor da 4A, seleção única), renomear e **editar o descanso do exercício**. **(controlador, 2026-10-31)** O detalhe antigo edita o descanso hoje (`HistoryScreens.kt` → `WorkoutExerciseCard` → `WorkoutRestDialog` → `updateWorkoutExerciseRest`), então, por paridade, no modo de edição cada exercício ganha o chip de descanso que abre a `RestSheet` da fase 3 e grava por `updateWorkoutExerciseRest`. Fora do modo de edição o descanso não aparece, e nenhum timer é iniciado.
 - **Remover série sem desfazer, com confirmação:** `MDialog` "Remover a série 3? Os recordes deste exercício são recalculados." *Por quê:* o `restoreSet` exige treino ativo (fase 3); estender o desfazer ao histórico mudaria o repositório (`data/`) por um caso raro. Remover exercício também confirma, como no treino.
 - **Nada do treino ativo:** sem timer (o `updateSet` só inicia o descanso com o treino `ACTIVE`, regra que ganha um teste com o modo de edição), sem sugestão, sem aviso de recorde nem háptico de recorde (o selo aparece ou some na série conforme o domínio recalcula).
 - Erros pelo `UiError` localizado, como o treino ativo (`ScreenErrorToast`); um treino bloqueado por instalação de atualização mostra o texto de hoje.
@@ -363,7 +365,7 @@ Amostras (voz da fase 2):
 
 - Room continua na **v6**; nenhum JSON novo em `shared/schemas`; nenhuma migração.
 - Nenhuma chave nova ou renomeada em `AppPreferences` nem no `RestTimerPersistence`; `local_preferences.preferences_pb` com o mesmo MD5 depois da atualização.
-- A edição do treino salvo usa as ações e o repositório de hoje (`updateSet`, `addSet`, `removeSet`, `addWorkoutExercise`, `replaceWorkoutExercise`, `removeWorkoutExercise`, `moveWorkoutExercise`, `renameWorkout`, `deleteWorkout`), sem mudança no `data/`.
+- A edição do treino salvo usa as ações e o repositório de hoje (`updateSet`, `addSet`, `removeSet`, `addWorkoutExercise`, `replaceWorkoutExercise`, `removeWorkoutExercise`, `moveWorkoutExercise`, `updateWorkoutExerciseRest`, `renameWorkout`, `deleteWorkout`), sem mudança no `data/`.
 - O backup não muda (nem o formato, nem o conteúdo).
 - Nenhuma permissão, `<queries>` ou caminho de `FileProvider` novo; `applicationId`, assinatura, `versionCode`, `update.json` e `ReleaseUrls.REPOSITORY` não mudam.
 - **`compat-reviewer`:** só é obrigatório se a etapa tocar um dos caminhos da regra (`data/`, `timer/`, `shared/src/androidMain`, `updates/`, `AppPreferences.kt`, `shared/build.gradle.kts`, `app/build.gradle.kts`). O esperado é não tocar nenhum (o `EstimatedOneRepMax` e uma eventual `workingSet` pública ficam em `domain/`, fora da lista); o relatório de verificação de cada etapa mostra o `git diff --stat main -- <esses caminhos>` vazio. Se algum entrar, roda o revisor.
@@ -434,7 +436,7 @@ A cadência é a pedida pelo dono para a fase 5 (2026-10-31).
 - as marcas "redondas" do eixo em kg e lb e a forma curta dos números;
 - o tempo do índice e das consultas com a base grande (`androidHostTest`, folga larga);
 - `StringsParityTest` dos dois módulos e os tokens novos fixados;
-- **`uiTest`** (emulador e simulador): os componentes de gráfico e o calendário (semântica, tabela, seleção, recomposição: a seleção não recompõe a lista, por `RecompositionProbe`), o progresso do exercício (métricas, convenção, períodos, uma sessão, sem 1RM, sem sessão), Recordes (busca, chips, "Atual", "Como contamos recordes"), Histórico (calendário, dia com um e com dois treinos, filtros, vazio), o segmento Progresso, o detalhe (leitura, cada ação de edição do D13, confirmação de remover, excluir, treino que sumiu, o timer nunca inicia ao concluir uma série no modo de edição), a prévia (estados e destinos); o estado de tela de cada rota nova (segmento, período, métrica, filtros, mês, "Ver dados") sobrevive à recriação pelo `ScreenRestoration`, nas duas plataformas; a varredura de acessibilidade com as telas novas; o `TapBudgetTest` com os fluxos da tabela;
+- **`uiTest`** (emulador e simulador): os componentes de gráfico e o calendário (semântica, tabela, seleção, recomposição: a seleção não recompõe a lista, por `RecompositionProbe`), o progresso do exercício (métricas, convenção, períodos, uma sessão, sem 1RM, sem sessão), Recordes (busca, chips, "Atual", "Como contamos recordes"), Histórico (calendário, dia com um e com dois treinos, filtros, vazio), o segmento Progresso, o detalhe (leitura, cada ação de edição do D13, inclusive o descanso, confirmação de remover, excluir, treino que sumiu, o timer nunca inicia ao concluir uma série no modo de edição), a prévia (estados e destinos); o estado de tela de cada rota nova (segmento, período, métrica, filtros, mês, "Ver dados") sobrevive à recriação pelo `ScreenRestoration`, nas duas plataformas; a varredura de acessibilidade com as telas novas; o `TapBudgetTest` com os fluxos da tabela;
 - **ponta a ponta no simulador** (como o `LibraryFlowTest`): `ProgressFlowTest` na 5A (histórico semeado no Room real; Recordes, buscar em pt-BR, abrir o exercício, trocar para 1RM, "Ver dados") e `HistoryFlowTest` na 5B (calendário, dia, detalhe, editar uma série e ver o recorde recalculado na linha do tempo, segmento Progresso, compartilhar até a prévia), sobre o `MoosclesViewModel`, o Room e o DataStore reais, com capturas no artefato do job `ios`;
 - **host do `:app`:** a navegação nova (aba, detalhe, edição, voltar; Recordes até o exercício e até o treino; dia com um treino abre o detalhe; "Ver detalhes" do resumo abre o detalhe novo; o progresso aberto do treino ativo volta a ele) e a prévia (`WorkoutSharePreviewHostTest` portado).
 
@@ -485,10 +487,10 @@ O `WorkoutCardRenderer` (exportação dos PNG) e o `WorkoutShareIntent` ficam.
 | Teste do `:app` | Destino |
 | --- | --- |
 | `HistoryRecordsHostTest` (5 testes, as seções de recorde do detalhe antigo) | **portado**: as regras de contagem (exercício contado uma vez, primeiros registros à parte, os 4 cenários) viram testes em `commonTest` da função que monta as seções e um teste de UI do detalhe novo; o host test sai (5B) |
-| `InlineRestEditorHostTest` (2) | **aposentado** na 5B: cobre o editor de descanso inline do card antigo, que nenhuma tela usa (o detalhe antigo não o liga; o descanso é a `RestSheet` da fase 3, coberta pelo `RestSheetTest`) |
+| `InlineRestEditorHostTest` (2) | **portado** na 5B **(controlador)**: o detalhe antigo edita o descanso; os dois cenários (editar só o descanso do seu exercício, e cancelar mantém o valor salvo; o teto de 5:00) passam a valer para o chip de descanso do modo de edição do detalhe novo |
 | `WorkoutInputHostTest` (3, o `RestDurationField`) | aposentado na 5B se o componente ficar sem chamador; senão fica |
 | `WorkoutSharePreviewHostTest` (5) | **portado** para a prévia nova (5B), com as mesmas tags e os mesmos cenários |
-| `ShellNavigationHostTest` | `summaryTrueOpensTheNewSummaryAndFalseTheOldDetail` passa a esperar o detalhe novo (5B); `exerciseHistoryFromTheWorkoutReturnsToIt` fica (a rota é a mesma) e passa a esperar a tela nova (5A) |
+| `ShellNavigationHostTest` | `summaryTrueOpensTheNewSummaryAndFalseTheOldDetail` passa a esperar o detalhe novo (5B); `exerciseHistoryFromTheWorkoutReturnsToIt` fica (a rota base é a mesma) e passa a esperar a tela nova (5A); **(controlador)** ganha os casos do `?metric=` opcional (D2) |
 | `UiFlowHostTest` | o passo do Histórico usa a lista nova (a tag `history-list` continua) |
 | `AppViewModelRecordsHostTest` e os do ViewModel | não mudam |
 
