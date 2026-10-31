@@ -84,7 +84,7 @@ private inline fun ProbeComposition(scope: String) {
  * One still frame of an exercise: [pose] drawn with forward kinematics in a square that fits the
  * component (give it a size with [modifier]), on a transparent background. The figure is
  * `text.secondary`, the far limbs behind it [MoosclesFigureColors.farLimb], the equipment
- * `text.tertiary` and the [highlights] `accent.solid`, all with round caps. The geometry is rebuilt
+ * [MoosclesFigureColors.equipment] (copper) and the [highlights] `accent.solid`, all with round caps. The geometry is rebuilt
  * only when the size or the pose changes; nothing is drawn to a bitmap. The figure composites in an
  * offscreen layer of its own, so the gaps that set the head and the arms in front of what lies
  * behind them clear to the background, whatever it is (Task 9). [contentDescription] null makes it
@@ -264,14 +264,14 @@ private fun FrameLayer(
 internal data class FigurePalette(val body: Color, val far: Color, val equipment: Color, val highlight: Color)
 
 /**
- * Spec D3: the figure in `text.secondary`, the equipment in `text.tertiary`, the highlight in
+ * Spec D3: the figure in `text.secondary`, the equipment in [MoosclesFigureColors.equipment] (copper, G1), the highlight in
  * `accent.solid`; the far limbs in [MoosclesFigureColors.farLimb], the fainter tone S1 chose
  * (Task 8 fix round 1), apart from both the body and the equipment.
  */
 internal fun figurePalette(colors: MoosclesColors, figure: MoosclesFigureColors) = FigurePalette(
     body = colors.textSecondary,
     far = figure.farLimb,
-    equipment = colors.textTertiary,
+    equipment = figure.equipment,
     highlight = colors.accentSolid,
 )
 

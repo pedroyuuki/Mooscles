@@ -15,6 +15,8 @@ class PrimitiveColorsTest {
         Triple("brasa.68", 0xFFED695E, Primitives.brasa68),
         Triple("brasa.74", 0xFFF98478, Primitives.brasa74),
         Triple("brasa.94", 0xFFFFE4E0, Primitives.brasa94),
+        Triple("cobre.47", 0xFFB4531A, Primitives.cobre47),
+        Triple("cobre.64", 0xFFE8813E, Primitives.cobre64),
         Triple("ferro.16", 0xFF0A0E0C, Primitives.ferro16),
         Triple("ferro.19", 0xFF111513, Primitives.ferro19),
         Triple("ferro.21", 0xFF151917, Primitives.ferro21),
@@ -54,7 +56,7 @@ class PrimitiveColorsTest {
 
     @Test
     fun hexValuesMatchTheSpecTable() {
-        assertEquals(43, table.size)
+        assertEquals(45, table.size)
         for ((name, hex, actual) in table) assertEquals(Color(hex), actual, name)
     }
 }

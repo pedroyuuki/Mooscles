@@ -249,7 +249,8 @@ jobs:
           # Phase 4B task 14 fix round 1: (:screens commonTest) PlannedSetDraftsTest +2 (foldedEchoesDoNotLeaveTheLastWritePending,
           # forgottenWritesLetTheSavedValuesBackAndTheNextEditWriteAgain). 1082 + 2 = 1084.
           # Phase 4B tasks 16-17: only uiTest classes changed (they do not run on the host), so MIN_HOST_TESTS stays 1084.
-          MIN_HOST_TESTS: 1084
+          # G1 equipment color: ComponentColorsTest.figureEquipmentIsCopperAndStandsOut +1 (commonTest). 1084 + 1 = 1085.
+          MIN_HOST_TESTS: 1085
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -465,7 +466,8 @@ jobs:
           # (reorderMoverHoldsTheOrderAndAnnouncesThroughTheLiveRegion, reorderMoverRefusesWhileDragging). 367 + 3 = 370.
           # Phase 4B reorder 2x investigation: ReorderTest +1 (aSlotTheScrollCannotBringBackFollowsTheFingerOnceItMoves). 370 + 1 = 371.
           # Reorder fix round 1: ReorderTest +2 (aTremblingFingerDoesNotPullAFarSlotToIt, aSlotLeftAboveTheFingerGoesToWhereTheItemIsDrawnOneSwapAtATime). 371 + 2 = 373.
-          MIN_DS_IOS_TESTS: 373
+          # G1 equipment color: ComponentColorsTest.figureEquipmentIsCopperAndStandsOut +1 (commonTest). 373 + 1 = 374.
+          MIN_DS_IOS_TESTS: 374
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
