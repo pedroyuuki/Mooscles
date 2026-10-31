@@ -67,4 +67,10 @@ data class MoosclesTiming(
      * milliseconds; this only frees a form whose command was lost (a queue that stopped), so it is well past a slow write.
      */
     val saveEchoWait: Long = 15_000,
+    /**
+     * Phase 4B (Task 19): the longest a saved form stays over the screen that opened it while the next one (the new
+     * exercise's detail) comes in. The screen normally leaves first, taking the form with it; this frees a host that
+     * does not move on.
+     */
+    val formHandoff: Long = 1_500,
 )

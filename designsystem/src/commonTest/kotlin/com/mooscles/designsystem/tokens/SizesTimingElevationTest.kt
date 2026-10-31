@@ -88,6 +88,12 @@ class SizesTimingElevationTest {
         assertEquals(15_000L, MoosclesTiming().saveEchoWait)
     }
 
+    /** Phase 4B (Task 19): a saved form stays at most 1.5 s over the library while the detail comes in. */
+    @Test
+    fun formHandoffIsOneAndAHalfSeconds() {
+        assertEquals(1_500L, MoosclesTiming().formHandoff)
+    }
+
     @Test
     fun timerAnnounceHoldIsOneAndAHalfSeconds() {
         assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)

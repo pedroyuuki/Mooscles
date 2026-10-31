@@ -71,6 +71,7 @@ import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
 import com.mooscles.ui.UiState
 import com.mooscles.ui.WorkoutUi
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 /** The tag of the library route's root. */
@@ -149,8 +150,9 @@ internal class LibrarySeams(
  *
  * "Create exercise", and "Create “…”" with the search as the name, open [CustomExerciseForm] over
  * the library. The form stays open and busy until the state brings the new exercise (plan decision 13,
- * pre-flight F10), and then closes and the detail opens ([onOpenExercise]) with no library frame between
- * them; a failed save keeps the form open, with the error shown over it. The open form and its draft are
+ * pre-flight F10), and then the detail opens ([onOpenExercise]) with the form still over the library, which leaves
+ * with the library (or after `timing.formHandoff`), so no library frame shows between them; a failed save keeps the
+ * form open, with the error shown over it. The open form and its draft are
  * kept with `rememberSaveable` too; the wait is not (the form comes back not busy).
  *
  * Opening the library also reads ahead, off the main thread, what the exercise detail draws first:
@@ -261,7 +263,18 @@ internal fun LibraryRoute(
         ScreenErrorToast(state.errorCode.takeIf { form == null }, actions, host)
         MToastHost(host, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)))
     }
-    form?.let { prefill ->
+    // A saved form is handed over to the detail: it stays over the library (busy, as it was) while the host moves to the
+    // detail, and leaves with the library, so the library is never seen between them. Not saved: a recreation drops it.
+    // The cap frees a host that stays.
+    var handingOver by remember { mutableStateOf<String?>(null) }
+    val handoff = MTheme.timing.formHandoff
+    LaunchedEffect(handingOver) {
+        if (handingOver != null) {
+            delay(handoff)
+            handingOver = null
+        }
+    }
+    (form ?: handingOver)?.let { prefill ->
         CustomExerciseForm(
             initial = null,
             prefillName = prefill,
@@ -269,6 +282,7 @@ internal fun LibraryRoute(
             actions = actions,
             // The form closes once the state has the new exercise (it waits for it), so the detail can open at once.
             onSaved = { id ->
+                handingOver = prefill
                 form = null
                 open(id)
             },

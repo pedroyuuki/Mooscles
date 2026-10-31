@@ -48,6 +48,7 @@ import com.mooscles.designsystem.components.ExerciseMedia
 import com.mooscles.designsystem.components.ExerciseMediaFigureTag
 import com.mooscles.designsystem.components.ExerciseMediaPlaceholderTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
+import com.mooscles.designsystem.tokens.MoosclesTiming
 import com.mooscles.designsystem.illustration.FigureJoint
 import com.mooscles.designsystem.illustration.FigurePose
 import com.mooscles.designsystem.illustration.FigureProp
@@ -641,6 +642,35 @@ class LibraryScreenTest {
         waitForIdle()
         assertEquals(listOf(id), requests.opened)
         assertEquals(1, fake.calls.count { it.startsWith("createCustomExercise:") })
+    }
+
+    /** The saved form is handed over: the detail opens with the form still over the library, which leaves with it. */
+    @Test
+    fun savedFormStaysUntilTheDetailTakesOver() = runComposeUiTest {
+        val state = stateOf()
+        val fake = Fake(state)
+        val requests = show(state = state, fake = fake)
+        onNodeWithTag(LibraryTags.CREATE).performClick()
+        waitForIdle()
+        val id = createInTheForm(fake, "Remada articulada")
+        mainClock.autoAdvance = false
+        val created = ExerciseUi(id, "Remada articulada", "Back", "Plate-loaded machine", custom = true)
+        runOnIdle { state.value = state.value.copy(exercises = exercises + created) }
+        var frames = 0
+        while (requests.opened.isEmpty() && frames < 120) {
+            mainClock.advanceTimeByFrame()
+            frames++
+        }
+        assertEquals(listOf(id), requests.opened)
+        // The host is moving to the detail (a few frames): the form still covers the library, so the library is not seen
+        // between them.
+        repeat(3) { mainClock.advanceTimeByFrame() }
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
+        // A host that stays on the library gets it back after the hand-over's cap.
+        mainClock.advanceTimeBy(MoosclesTiming().formHandoff + 100)
+        onNodeWithTag(CustomExerciseFormTags.ROOT).assertDoesNotExist()
+        assertEquals(listOf(id), requests.opened)
+        mainClock.autoAdvance = true
     }
 
     @Test
