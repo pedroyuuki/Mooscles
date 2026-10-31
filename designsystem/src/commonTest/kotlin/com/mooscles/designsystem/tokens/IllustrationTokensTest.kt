@@ -29,6 +29,9 @@ class IllustrationTokensTest {
         // The far limbs' tone (Task 8 fix round 1): iron 57 in both themes.
         assertEquals(Primitives.ferro57, MoosclesFigureColors.Light.farLimb)
         assertEquals(Primitives.ferro57, MoosclesFigureColors.Dark.farLimb)
+        // The equipment is copper (G1, 2026-10-30): 47 in the light theme, 64 in the dark one.
+        assertEquals(Primitives.cobre47, MoosclesFigureColors.Light.equipment)
+        assertEquals(Primitives.cobre64, MoosclesFigureColors.Dark.equipment)
         // A pose that keeps its joints `figureMargin` inside the box keeps its whole stroke inside too.
         assertTrue(i.figureMargin >= i.figureStroke / 2, "the margin holds half a limb stroke")
         assertTrue(i.figureMargin >= i.figureTrunkStroke / 2, "and half the trunk's")

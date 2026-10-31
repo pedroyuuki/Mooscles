@@ -16,6 +16,8 @@ object Primitives {
     val brasa68 = Color(0xFFED695E)
     val brasa74 = Color(0xFFF98478)
     val brasa94 = Color(0xFFFFE4E0)
+    val cobre47 = Color(0xFFB4531A)
+    val cobre64 = Color(0xFFE8813E)
     val ferro16 = Color(0xFF0A0E0C)
     val ferro19 = Color(0xFF111513)
     val ferro21 = Color(0xFF151917)

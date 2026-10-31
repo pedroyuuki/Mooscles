@@ -32,14 +32,21 @@ data class MoosclesIllustration(
  * Phase 4A: the theme colors of an exercise figure beyond the semantic tokens. [farLimb] is the
  * far arm and leg (spec "Esqueleto": the far side "num token mais apagado, escolhido no S1"): a
  * body tone, fainter than the near limbs (`text.secondary`) and apart from the equipment
- * (`text.tertiary`), so a far leg on a bench does not read as part of the bench. Iron 57 in both
+ * ([equipment]), so a far leg on a bench does not read as part of the bench. Iron 57 in both
  * themes: lighter than the equipment in the light theme, darker in the dark one, and 3:1 on the
  * tile and the pages in both (`ComponentColorsTest`).
+ *
+ * G1 (2026-10-30): [equipment] is copper, an orange, so the equipment (barbell, plates, machines,
+ * benches, cables) stands out from the grey body and the green muscle. Copper 47 in the light theme
+ * and copper 64 in the dark one. Measured on the four page and tile backgrounds, the light value is
+ * at least 4.09:1 and the dark value at least 5.8:1, and under deuteranopia simulation it keeps a
+ * delta E of about 38 to 39 from the green highlight. Brass is out because it already means a
+ * personal record, and ember because it means danger.
  */
 @Immutable
-data class MoosclesFigureColors(val farLimb: Color) {
+data class MoosclesFigureColors(val farLimb: Color, val equipment: Color) {
     companion object {
-        val Light = MoosclesFigureColors(farLimb = Primitives.ferro57)
-        val Dark = MoosclesFigureColors(farLimb = Primitives.ferro57)
+        val Light = MoosclesFigureColors(farLimb = Primitives.ferro57, equipment = Primitives.cobre47)
+        val Dark = MoosclesFigureColors(farLimb = Primitives.ferro57, equipment = Primitives.cobre64)
     }
 }

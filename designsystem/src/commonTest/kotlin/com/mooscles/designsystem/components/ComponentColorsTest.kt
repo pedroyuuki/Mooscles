@@ -7,6 +7,7 @@ import com.mooscles.designsystem.tokens.MoosclesColors
 import com.mooscles.designsystem.tokens.MoosclesElevation
 import com.mooscles.designsystem.interaction.reorderLiftLook
 import com.mooscles.designsystem.tokens.MoosclesFigureColors
+import com.mooscles.designsystem.tokens.Primitives
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -70,6 +71,26 @@ class ComponentColorsTest {
                 atLeast(3.0, palette.far, bg, "$name far limbs on $surface")
                 atLeast(3.0, palette.equipment, bg, "$name equipment on $surface")
                 atLeast(3.0, palette.highlight, bg, "$name highlight on $surface")
+            }
+        }
+    }
+
+    /**
+     * G1 (2026-10-30): the equipment is copper, not `text.tertiary`, and an orange of its own against
+     * the body, the far limbs and the highlight, 3:1 on every page and tile the figure is drawn on.
+     */
+    @Test
+    fun figureEquipmentIsCopperAndStandsOut() {
+        for ((name, colors) in themes) {
+            val figure = if (name == "dark") MoosclesFigureColors.Dark else MoosclesFigureColors.Light
+            val palette = figurePalette(colors, figure)
+            assertEquals(figure.equipment, palette.equipment, "$name equipment comes from the figure colors")
+            assertEquals(if (name == "dark") Primitives.cobre64 else Primitives.cobre47, palette.equipment, name)
+            assertNotEquals(colors.textTertiary, palette.equipment, "$name equipment is no longer text.tertiary")
+            assertNotEquals(palette.body, palette.equipment, name)
+            assertNotEquals(palette.highlight, palette.equipment, name)
+            for ((surface, bg) in listOf("inset" to colors.bgInset, "surface" to colors.bgSurface, "base" to colors.bgBase, "raised" to colors.bgRaised)) {
+                atLeast(3.0, palette.equipment, bg, "$name copper equipment on $surface")
             }
         }
     }
