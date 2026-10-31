@@ -219,6 +219,47 @@ class AppViewModelRoutinesHostTest {
         assertEquals(plan.setTargets.size, snapshot().plannedSets(plan.id).size)
     }
 
+    // (2026-10-31, owner's request) "Copy to all sets" and its undo go through the command loop, behind the edits
+    // queued before them.
+    @Test fun copyRoutineSetToAllAndItsUndoGoThroughTheLoop() {
+        val routineId = seedRoutine(1)
+        val model = ready()
+        val plan = model.contentUi.value.routines.single { it.id == routineId }.exercises.single()
+        val (first, second) = plan.setTargets
+        assertTrue(second.inherited)
+
+        // The edit queued just before is the value copied.
+        model.updateRoutineSet(first.id, 8, 60.0)
+        model.copyRoutineSetToAll(plan.id, first.id)
+        awaitUi(model) { entry(it, routineId).setTargets[1] == second.copy(reps = 8, weightKg = 60.0, inherited = false) }
+        assertNull(model.contentUi.value.errorCode)
+
+        model.restoreRoutineSetTargets(plan.id, listOf(second))
+        awaitUi(model) { entry(it, routineId).setTargets[1] == second }
+        assertEquals(first.copy(reps = 8, weightKg = 60.0, inherited = false), entry(model.contentUi.value, routineId).setTargets[0])
+        assertNull(model.contentUi.value.errorCode)
+    }
+
+    @Test fun copyAndRestoreFailuresCountUnderTheEntry() {
+        val routineId = seedRoutine(1)
+        val model = ready()
+        val plan = model.contentUi.value.routines.single { it.id == routineId }.exercises.single()
+
+        model.copyRoutineSetToAll(plan.id, "missing-set")
+        awaitUi(model) { it.subjectFailures[plan.id] == 1 }
+        assertEquals(plan.id, model.contentUi.value.errorSubject)
+
+        model.clearError()
+        awaitUi(model) { it.errorCode == null }
+        model.restoreRoutineSetTargets(plan.id, listOf(plan.setTargets[1].copy(id = "missing-set")))
+        awaitUi(model) { it.subjectFailures[plan.id] == 2 }
+        assertEquals(UiError.SET_NOT_RESTORED, model.contentUi.value.errorCode)
+        assertEquals(plan.id, model.contentUi.value.errorSubject)
+        assertEquals(plan.setTargets, entry(model.contentUi.value, routineId).setTargets)
+    }
+
+    private fun entry(state: UiState, routineId: String) = state.routines.single { it.id == routineId }.exercises.single()
+
     private fun seedFolder(name: String): String = runBlocking(Dispatchers.IO) {
         app.repository.initialize()
         app.repository.createRoutineFolder(name)

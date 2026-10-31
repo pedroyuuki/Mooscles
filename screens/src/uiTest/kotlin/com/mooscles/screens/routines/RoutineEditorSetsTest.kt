@@ -98,6 +98,21 @@ class RoutineEditorSetsTest {
     /** Nobody planned anything, and the exercise is logged with the body's weight. */
     private val e4 = PlannedExerciseUi("e4", pullUp, sets = 1, setTargets = listOf(set("e4a", 0, null, inherited = false)))
 
+    /** A warm-up, a manual 8 x 80, a 10 x 60 that follows the record and a manual 6 x 90: three working sets. */
+    private val e5 = PlannedExerciseUi(
+        "e5", fly, sets = 4,
+        setTargets = listOf(
+            set("e5w", 12, 20.0, warmup = true), set("e5a", 8, 80.0, inherited = false),
+            set("e5b", 10, 60.0), set("e5c", 6, 90.0, inherited = false),
+        ),
+    )
+
+    /** A warm-up and a single working set. */
+    private val e6 = PlannedExerciseUi(
+        "e6", pullUp, sets = 2,
+        setTargets = listOf(set("e6w", 10, null, warmup = true), set("e6a", 6, 10.0, inherited = false)),
+    )
+
     private fun routineOf(vararg entries: PlannedExerciseUi) = RoutineUi("r", "Treino A", entries.toList(), folderId = "default")
 
     private fun stateOf(vararg entries: PlannedExerciseUi, pounds: Boolean = false) = mutableStateOf(
@@ -163,6 +178,25 @@ class RoutineEditorSetsTest {
         override fun removeRoutineSet(setId: String) {
             recording.removeRoutineSet(setId)
             if (applyRemove) editEntries { list -> list.map { e -> e.copy(setTargets = e.setTargets.filter { it.id != setId }) } }
+        }
+
+        override fun copyRoutineSetToAll(entryId: String, sourceSetId: String) {
+            recording.copyRoutineSetToAll(entryId, sourceSetId)
+            if (!echo) return
+            editEntries { list ->
+                list.map { e ->
+                    val source = e.setTargets.firstOrNull { it.id == sourceSetId }
+                    if (e.id != entryId || source == null) e else e.copy(setTargets = e.setTargets.map {
+                        if (it.warmup || it.id == sourceSetId) it else it.copy(reps = source.reps, weightKg = source.weightKg, inherited = false)
+                    })
+                }
+            }
+        }
+
+        override fun restoreRoutineSetTargets(entryId: String, previous: List<RoutineSetUi>) {
+            recording.restoreRoutineSetTargets(entryId, previous)
+            val byId = previous.associateBy { it.id }
+            editEntries { list -> list.map { e -> if (e.id != entryId) e else e.copy(setTargets = e.setTargets.map { byId[it.id] ?: it }) } }
         }
 
         override fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi) {
@@ -612,6 +646,7 @@ class RoutineEditorSetsTest {
         onNodeWithTag(PlannedSetMenuTags.WARMUP).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected))
         onNodeWithTag(PlannedSetMenuTags.FOLLOW).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
         onNodeWithTag(PlannedSetMenuTags.REMOVE).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+        onNodeWithTag(PlannedSetMenuTags.COPY_ALL).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
     }
 
     @Test
@@ -687,5 +722,154 @@ class RoutineEditorSetsTest {
         reps("e1a").performTextReplacement("11")
         waitForIdle()
         assertEquals(2, fake.writes().size)
+    }
+
+    // (2026-10-31, owner's request) "Copy to all sets".
+    private fun Fake.copies() = calls.filter { it.startsWith("copyRoutineSetToAll:") }
+    private fun Fake.targetRestores() = calls.filter { it.startsWith("restoreRoutineSetTargets:") }
+
+    @Test
+    fun copyToAllIsOfferedOnAWorkingSetWithOtherWorkingSets() = runComposeUiTest {
+        show(stateOf(e1, e5))
+        // A manual working set and one that follows the record, each with others in its exercise.
+        openMenu("e1a")
+        onNodeWithTag(PlannedSetMenuTags.COPY_ALL).assertIsDisplayed()
+        onNode(hasText("Copiar para todas as séries") and hasAnyAncestor(hasTestTag(PlannedSetMenuTags.COPY_ALL)), useUnmergedTree = true).assertExists()
+        pick(PlannedSetMenuTags.NORMAL)
+        openMenu("e5b")
+        onNodeWithTag(PlannedSetMenuTags.COPY_ALL).assertIsDisplayed()
+    }
+
+    @Test
+    fun copyToAllIsHiddenOnAWarmupAndOnTheOnlyWorkingSet() = runComposeUiTest {
+        val fake = Fake(stateOf(e1, e3, e6))
+        show(fake.state, fake)
+        openMenu("e1w")
+        onAllNodesWithTag(PlannedSetMenuTags.COPY_ALL).assertCountEquals(0)
+        pick(PlannedSetMenuTags.WARMUP)
+        // The only set of its exercise, and the only working set beside a warm-up.
+        openMenu("e3a")
+        onAllNodesWithTag(PlannedSetMenuTags.COPY_ALL).assertCountEquals(0)
+        pick(PlannedSetMenuTags.NORMAL)
+        openMenu("e6a")
+        onAllNodesWithTag(PlannedSetMenuTags.COPY_ALL).assertCountEquals(0)
+        pick(PlannedSetMenuTags.NORMAL)
+        assertTrue(fake.copies().isEmpty(), fake.calls.toString())
+    }
+
+    @Test
+    fun copyToAllSendsOneActionAndSaysHowManySets() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        assertEquals(listOf("copyRoutineSetToAll:e5,e5a"), fake.copies())
+        assertTrue(fake.writes().isEmpty(), fake.calls.toString())
+        onAllNodesWithTag(PlannedSetMenuTags.LIST).assertCountEquals(0)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        // The echo: the working sets show the copy, the warm-up keeps its own.
+        assertEquals("80", load("e5b").editableText())
+        assertEquals("8", reps("e5c").editableText())
+        assertEquals("12", reps("e5w").editableText())
+        assertEquals(1, fake.copies().size)
+    }
+
+    @Test
+    fun copyToastIsSingularForOneSet() = runComposeUiTest {
+        val fake = Fake(stateOf(e1))
+        show(fake.state, fake)
+        openMenu("e1b")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        assertEquals(listOf("copyRoutineSetToAll:e1,e1b"), fake.copies())
+        toastWith("Copiado para 1 série").assertIsDisplayed()
+    }
+
+    @Test
+    fun copyToastInEnglish() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake, locale = "en")
+        openMenu("e5c")
+        onNode(hasText("Copy to all sets") and hasAnyAncestor(hasTestTag(PlannedSetMenuTags.COPY_ALL)), useUnmergedTree = true).assertExists()
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copied to 2 sets").assertIsDisplayed()
+        onNodeWithText("Undo").assertIsDisplayed()
+    }
+
+    @Test
+    fun undoCopySendsTheRestoreWithThePreviousSets() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        // One action with every changed set as it stood: the inherited 10 x 60 and the manual 6 x 90.
+        assertEquals(
+            listOf("restoreRoutineSetTargets:e5,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 6, 90.0, inherited = false)}"),
+            fake.targetRestores(),
+        )
+        assertEquals("10", reps("e5b").editableText())
+        assertEquals("90", load("e5c").editableText())
+    }
+
+    @Test
+    fun copyDropsATargetsDraftAndUndoKeepsItsPendingWrite() = runComposeUiTest {
+        val fake = Fake(stateOf(e5)).apply { echo = false }
+        show(fake.state, fake)
+        // A write of e5c is in flight (no echo): 15 reps.
+        reps("e5c").performTextReplacement("15")
+        waitForIdle()
+        assertEquals("15", reps("e5c").editableText())
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        // The draft is gone: the row shows what the state holds, and the copy's echo replaces it.
+        assertEquals("6", reps("e5c").editableText())
+        fake.editEntries { list ->
+            list.map { e -> e.copy(setTargets = e.setTargets.map { if (it.id == "e5b" || it.id == "e5c") it.copy(reps = 8, weightKg = 80.0, inherited = false) else it }) }
+        }
+        waitForIdle()
+        assertEquals("8", reps("e5c").editableText())
+        assertEquals("80", load("e5c").editableText())
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        // The undo puts back what the database held before the copy: the written 15, manual.
+        assertEquals(
+            listOf("restoreRoutineSetTargets:e5,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 15, 90.0, inherited = false)}"),
+            fake.targetRestores(),
+        )
+        assertEquals(1, fake.writes().size)
+    }
+
+    @Test
+    fun undoCopyAfterTheSetsChangedSaysNotRestored() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        // A set leaves the exercise (removed elsewhere) while the toast is up.
+        fake.editEntries { list -> list.map { e -> e.copy(setTargets = e.setTargets.filter { it.id != "e5c" }) } }
+        waitForIdle()
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
+        toastWith("A série não pôde voltar.").assertIsDisplayed()
+    }
+
+    @Test
+    fun undoCopyAfterTheExerciseIsReplacedSaysNotRestored() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        // The entry keeps its id and its sets' ids but holds another exercise now.
+        fake.editEntries { list -> list.map { if (it.id == "e5") it.copy(exercise = row) else it } }
+        waitForIdle()
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
+        toastWith("A série não pôde voltar.").assertIsDisplayed()
     }
 }

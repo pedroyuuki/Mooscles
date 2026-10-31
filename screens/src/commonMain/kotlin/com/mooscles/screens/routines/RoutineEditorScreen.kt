@@ -78,6 +78,7 @@ import com.mooscles.screens.resources.editor_replace
 import com.mooscles.screens.resources.editor_replace_body
 import com.mooscles.screens.resources.editor_replace_confirm
 import com.mooscles.screens.resources.editor_replace_title
+import com.mooscles.screens.resources.editor_set_copied
 import com.mooscles.screens.resources.editor_set_limit
 import com.mooscles.screens.resources.editor_warmup_removed
 import com.mooscles.screens.resources.editor_start
@@ -368,6 +369,38 @@ fun RoutineEditorRoute(
             if (shown == MToastResult.ActionPerformed) currentActions.restoreRoutineSet(entry.id, index, snapshot)
         }
     }
+    // "Copied to 2 sets" with "Undo" (2026-10-31, owner's request): the source's load and reps on the exercise's other
+    // working sets, in one command, and the undo puts each back as it stood, in one command too. The toast comes from
+    // the screen's own scope and takes the place of a removal's (and the other way round).
+    val currentEntries by rememberUpdatedState(entries)
+    val currentDrafts by rememberUpdatedState(drafts)
+    val notRestoredText = uiErrorText(UiError.SET_NOT_RESTORED)
+    val copySet: (PlannedExerciseUi, RoutineSetUi, String) -> Unit = { entry, source, copiedText ->
+        val targets = entry.setTargets.filter { !it.warmup && it.id != source.id }
+        // What "Undo" puts back: each set as the database holds it when the copy runs, the writes in flight included.
+        val previous = targets.map(drafts::snapshot)
+        // Nothing typed for a target is written after the copy or shown in place of it.
+        targets.forEach { drafts.drop(it.id) }
+        editing.setId?.let { id -> if (targets.any { it.id == id }) editing.end() }
+        currentActions.copyRoutineSetToAll(entry.id, source.id)
+        // The entry as the copy found it: the undo is only for the same sets of the same exercise.
+        val shape = entry.setTargets.map { it.id to it.warmup }
+        val exerciseId = entry.exercise.id
+        undoJob?.cancel()
+        undoFor = null
+        undoJob = toastScope.launch {
+            if (host.show(copiedText, MToastKind.Info, undoText) == MToastResult.ActionPerformed) {
+                val now = currentEntries.firstOrNull { it.id == entry.id }
+                if (now != null && now.exercise.id == exerciseId && now.setTargets.map { it.id to it.warmup } == shape) {
+                    // Edits made since give way to the undo, as they would to the record.
+                    previous.forEach { currentDrafts.drop(it.id) }
+                    currentActions.restoreRoutineSetTargets(entry.id, previous)
+                } else {
+                    host.show(notRestoredText, MToastKind.Error)
+                }
+            }
+        }
+    }
     val space = MTheme.space
     Box(modifier.fillMaxSize().background(MTheme.colors.bgBase).endsPlannedEditingOnOutsideTap(editing)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -554,6 +587,8 @@ fun RoutineEditorRoute(
         } else {
             val index = entry.setTargets.indexOf(set)
             val number = entry.setTargets.take(index + 1).count { it.warmup == set.warmup }
+            val others = entry.setTargets.count { !it.warmup && it.id != set.id }
+            val copiedText = pluralCount(Res.plurals.editor_set_copied, others)
             PlannedSetMenuSheet(
                 set = set,
                 number = number,
@@ -571,6 +606,11 @@ fun RoutineEditorRoute(
                     // The person's own edits of this set give way to the record, and a late echo of them must not bring them back.
                     drafts.drop(set.id)
                     actions.inheritRoutineSet(set.id)
+                },
+                copyToAll = others > 0,
+                onCopyToAll = {
+                    setMenuFor = null
+                    copySet(entry, set, copiedText)
                 },
                 onRemove = {
                     setMenuFor = null

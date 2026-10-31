@@ -17,6 +17,7 @@ import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.icons.MIcons
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.resources.Res
+import com.mooscles.screens.resources.editor_set_copy_all
 import com.mooscles.screens.resources.editor_set_follow_record
 import com.mooscles.screens.resources.editor_set_label
 import com.mooscles.screens.resources.editor_set_last
@@ -35,6 +36,7 @@ internal object PlannedSetMenuTags {
     const val NORMAL = "routine-set-menu-normal"
     const val WARMUP = "routine-set-menu-warmup"
     const val FOLLOW = "routine-set-menu-follow"
+    const val COPY_ALL = "routine-set-menu-copy-all"
     const val REMOVE = "routine-set-menu-remove"
     const val LAST_REASON = "routine-set-menu-last"
 }
@@ -42,7 +44,8 @@ internal object PlannedSetMenuTags {
 /**
  * The menu of a planned set, a bottom sheet under its name ("Set 3", "Warm-up set"). "Set type" lists Normal and
  * Warm-up as items of their own with the current one marked, so marking a warm-up is the label and one more tap.
- * "Follow the record" is only for a working set that is manual ([RoutineSetUi.inherited] false). "Remove set" is
+ * "Follow the record" is only for a working set that is manual ([RoutineSetUi.inherited] false). "Copy to all sets"
+ * is only for a working set whose exercise has another working set ([copyToAll]). "Remove set" is
  * destructive and last; off for the only set of the exercise ([last]), with the reason under it. The items scroll under
  * the title when the sheet is shorter than they are (large text, landscape). Each closes the menu and then does its part.
  */
@@ -54,6 +57,8 @@ internal fun PlannedSetMenuSheet(
     onNormal: () -> Unit,
     onWarmup: () -> Unit,
     onFollowRecord: () -> Unit,
+    copyToAll: Boolean,
+    onCopyToAll: () -> Unit,
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -70,6 +75,9 @@ internal fun PlannedSetMenuSheet(
             MenuItem(MIcons.Timer, stringResource(Res.string.editor_set_warmup), PlannedSetMenuTags.WARMUP, selected = set.warmup, onClick = onWarmup)
             if (!set.warmup && !set.inherited) {
                 MenuItem(MIcons.PlateRecord, stringResource(Res.string.editor_set_follow_record), PlannedSetMenuTags.FOLLOW, onClick = onFollowRecord)
+            }
+            if (!set.warmup && copyToAll) {
+                MenuItem(MIcons.Copy, stringResource(Res.string.editor_set_copy_all), PlannedSetMenuTags.COPY_ALL, onClick = onCopyToAll)
             }
             MenuItem(
                 MIcons.Trash2, stringResource(Res.string.editor_set_remove), PlannedSetMenuTags.REMOVE,
