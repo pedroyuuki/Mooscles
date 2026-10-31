@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import com.mooscles.data.ExerciseCatalog
+import com.mooscles.screens.exercise.figures.ExerciseFigures
 import com.mooscles.data.NameRule
 import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
 import com.mooscles.designsystem.components.PrBadgeTag
@@ -242,9 +243,12 @@ class ExerciseInfoScreenTest {
 
     @Test
     fun exerciseWithoutAFigureShowsTheEquipmentPlaceholder() {
-        for (exercise in listOf(frontSquat, mine)) {
+        // The figure batches keep drawing catalog exercises: take one that has none yet, and the custom one always.
+        val figureless = ExerciseCatalog.exercises.firstOrNull { ExerciseFigures.forExercise(it.id) == null }
+            ?.let { catalog(it.id.removePrefix("catalog_")) }
+        for (exercise in listOfNotNull(figureless, mine)) {
             runComposeUiTest {
-                show(exercise)
+                show(exercise, state = mutableStateOf(stateOf().value.let { it.copy(exercises = it.exercises + exercise) }))
                 onNode(hasTestTag(ExerciseEquipmentIconTag) and hasAnyAncestor(hasTestTag(ExerciseInfoTags.MEDIA)), useUnmergedTree = true)
                     .assertIsDisplayed()
                 onNodeWithTag(AnimatedFigureTag).assertDoesNotExist()
