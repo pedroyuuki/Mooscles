@@ -6,6 +6,7 @@ import com.mooscles.ui.RecordKind
 import com.mooscles.ui.RecordUi
 import com.mooscles.ui.WorkoutUi
 import kotlin.math.abs
+import kotlin.math.nextDown
 import kotlin.math.nextUp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -198,17 +199,22 @@ class ProgressIndexTest {
         val exercises = listOf(bench, pullUp, assistedDip)
 
         fun group(convention: String) = convention == "Assistance"
-        fun beaten(kind: RecordKind, key: SeriesKey, workoutId: String) = all.any {
-            it.kind == kind && !it.firstRecord && it.exercise.id == key.exerciseId &&
-                it.exercise.convention == key.convention && it.workoutId == workoutId &&
-                (kind == RecordKind.WEIGHT || it.assistance == group(key.convention))
+        // A mark needs a beaten record of the kind, series, group and session whose set is the plotted one.
+        fun beaten(kind: RecordKind, key: SeriesKey, point: SessionPoint): Boolean {
+            val plotted = (if (kind == RecordKind.WEIGHT) point.load else point.reps) ?: return false
+            return all.any {
+                it.kind == kind && !it.firstRecord && it.exercise.id == key.exerciseId &&
+                    it.exercise.convention == key.convention && it.workoutId == point.workoutId &&
+                    (kind == RecordKind.WEIGHT || it.assistance == group(key.convention)) &&
+                    it.weightKg == plotted.weightKg && it.reps == plotted.reps
+            }
         }
         var marks = 0
         exercises.forEach { exercise ->
             val key = keyOf(exercise)
             index.sessions(key).forEach { point ->
-                assertEquals(beaten(RecordKind.WEIGHT, key, point.workoutId), point.weightRecord, "${exercise.id} ${point.workoutId}")
-                assertEquals(beaten(RecordKind.REPS, key, point.workoutId), point.repsRecord, "${exercise.id} ${point.workoutId}")
+                assertEquals(beaten(RecordKind.WEIGHT, key, point), point.weightRecord, "${exercise.id} ${point.workoutId}")
+                assertEquals(beaten(RecordKind.REPS, key, point), point.repsRecord, "${exercise.id} ${point.workoutId}")
                 assertEquals(point.weightRecord && !group(key.convention),
                     ProgressMetrics.marked(point, ProgressMetric.LOAD, key.convention))
                 assertEquals(point.repsRecord, ProgressMetrics.marked(point, ProgressMetric.REPS, key.convention))
@@ -216,7 +222,8 @@ class ProgressIndexTest {
                 if (point.repsRecord) marks++
             }
         }
-        // Every beaten record of a chart's group marks its session: count them the other way around.
+        // Here every beaten record of a chart's group is its session's plotted set, so each marks it: count them
+        // the other way around. The record tests below cover a record set that is not the plotted one.
         val beatenRecords = all.filter { !it.firstRecord }.filter {
             it.kind == RecordKind.WEIGHT || it.assistance == group(it.exercise.convention)
         }.map { Triple(it.kind, it.exercise.id, it.workoutId) }.distinct()
@@ -228,6 +235,84 @@ class ProgressIndexTest {
         }
         // The assisted bench reps record of w4 is beaten, but not in the bench reps chart's group.
         assertFalse(index.sessions(keyOf(bench)).single { it.workoutId == "w4" }.repsRecord)
+    }
+
+    @Test
+    fun assistanceRepsRecordAtAnotherLoadLeavesThePointUnmarked() {
+        // The review's case: 30 × 8 is the session's most reps, but the record is 20 × 7 (beating 20 × 6).
+        val earlier = workout("earlier", DAY, entry(assistedDip, set(30.0, 12), set(20.0, 6)))
+        val session = workout("session", 3 * DAY, entry(assistedDip, set(30.0, 8), set(20.0, 7)))
+        val record = repsRecord(assistedDip, 20.0, 7, 6, session, assistance = true)
+        val point = index(earlier, session.copy(records = listOf(record)), records = listOf(currentOf(record)))
+            .sessions(keyOf(assistedDip)).last()
+
+        assertEquals(SetValue(8.0, 30.0, 8), point.reps)
+        assertFalse(point.repsRecord, "30 × 8 is not the record set")
+        assertFalse(ProgressMetrics.marked(point, ProgressMetric.REPS, assistedDip.convention))
+        assertFalse(ProgressMetrics.marked(point, ProgressMetric.LOAD, assistedDip.convention))
+    }
+
+    @Test
+    fun loadPointDrawnByTheWeightRecordIsMarked() {
+        val earlier = workout("earlier", DAY, entry(bench, set(100.0, 5)))
+        val session = workout("session", 3 * DAY, entry(bench, set(80.0, 10), set(105.0, 3)))
+        val point = index(earlier, session.copy(records = listOf(weightRecord(bench, 105.0, 3, 100.0, session))))
+            .sessions(keyOf(bench)).last()
+
+        assertEquals(SetValue(105.0, 105.0, 3), point.load)
+        assertTrue(point.weightRecord)
+        assertTrue(ProgressMetrics.marked(point, ProgressMetric.LOAD, bench.convention))
+
+        // Unit noise: the load point is the noisy ×8 (BestSets), the domain's record the exact ×3; no mark.
+        val noisy = 100.0.nextDown().nextDown()
+        val other = workout("other", 3 * DAY, entry(bench, set(100.0, 3), set(noisy, 8)))
+        val noisyPoint = index(workout("first", DAY, entry(bench, set(95.0, 5))),
+            other.copy(records = listOf(weightRecord(bench, 100.0, 3, 95.0, other)))).sessions(keyOf(bench)).last()
+        assertEquals(SetValue(noisy, noisy, 8), noisyPoint.load)
+        assertFalse(noisyPoint.weightRecord, "the plotted set is not the record's")
+    }
+
+    @Test
+    fun repsRecordAtALighterLoadLeavesTheRepsPointUnmarked() {
+        val earlier = workout("earlier", DAY, entry(bench, set(100.0, 12), set(80.0, 6)))
+        val session = workout("session", 3 * DAY, entry(bench, set(100.0, 10), set(80.0, 8)))
+        val point = index(earlier, session.copy(records = listOf(repsRecord(bench, 80.0, 8, 6, session))))
+            .sessions(keyOf(bench)).last()
+
+        assertEquals(SetValue(10.0, 100.0, 10), point.reps)
+        assertFalse(point.repsRecord)
+        assertFalse(ProgressMetrics.marked(point, ProgressMetric.REPS, bench.convention))
+    }
+
+    @Test
+    fun repsTieTakesTheRecordSet() {
+        val earlier = workout("earlier", DAY, entry(bench, set(100.0, 9), set(80.0, 6)))
+        val session = workout("session", 3 * DAY, entry(bench, set(100.0, 8), set(80.0, 8)))
+        val point = index(earlier, session.copy(records = listOf(repsRecord(bench, 80.0, 8, 6, session))))
+            .sessions(keyOf(bench)).last()
+
+        assertEquals(SetValue(8.0, 80.0, 8), point.reps, "the same 8 reps, read on the record set")
+        assertTrue(point.repsRecord)
+    }
+
+    @Test
+    fun workoutsEndingTogetherKeepTheirEventsApart() {
+        // Same end, different starts; then the same start too, by id. The history's order is ignored.
+        val a = workout("a", 2 * DAY, entry(bench, set(100.0, 5))).copy(endedAt = 4 * DAY)
+        val b = workout("b", 3 * DAY, entry(bench, set(100.0, 5)), entry(customRow, set(50.0, 10))).copy(endedAt = 4 * DAY)
+        val c = workout("c", 3 * DAY, entry(customRow, set(50.0, 10))).copy(endedAt = 4 * DAY)
+        val aRecords = listOf(weightRecord(bench, 100.0, 5, null, a))
+        val bRecords = listOf(weightRecord(customRow, 50.0, 10, null, b), weightRecord(bench, 100.0, 5, 95.0, b))
+        val cRecords = listOf(weightRecord(customRow, 50.0, 10, null, c))
+        val history = listOf(a.copy(records = aRecords), b.copy(records = bRecords), c.copy(records = cRecords))
+        val expected = listOf("c", "b", "b", "a")
+
+        listOf(history, history.reversed()).forEach { order ->
+            val index = ProgressIndex.build(order, records = listOf(currentOf(bRecords[1]), currentOf(bRecords[1])))
+            assertEquals(expected, index.events.map { it.record.workoutId })
+            assertEquals(listOf(bench.id, customRow.id), index.events.filter { it.record.workoutId == "b" }.map { it.record.exercise.id })
+            assertSame(index.events[1], index.currentRecords.single(), "two current records of one event are one")
+        }
     }
 
     @Test

@@ -50,9 +50,10 @@ object ProgressMetrics {
     }
 
     /**
-     * Whether [point] carries a record mark on [metric]'s chart: a beaten weight record on the load chart (added
-     * weight included, never assistance), a beaten reps record of the chart's group on the reps chart, nothing on
-     * the 1RM and volume charts, which have no record in the domain.
+     * Whether [point] carries a record mark on [metric]'s chart: on the load chart (added weight included, never
+     * assistance) when the load's set is a beaten weight record, on the reps chart when the reps' set is a beaten
+     * reps record of the chart's group, and never on the 1RM and volume charts, which have no record in the domain
+     * (D6). A record set at another load in the session is not the plotted set, so it marks nothing here.
      */
     fun marked(point: SessionPoint, metric: ProgressMetric, convention: String): Boolean = when (metric) {
         ProgressMetric.LOAD -> point.weightRecord && WorkingSets.convention(convention) != LoadConvention.ASSISTANCE
