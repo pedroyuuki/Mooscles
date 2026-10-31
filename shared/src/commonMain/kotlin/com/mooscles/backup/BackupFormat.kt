@@ -66,6 +66,8 @@ data class RoutineExerciseRow(
 data class RoutineSetRow(
     val id: String, val routineExerciseId: String, val position: Int, val targetReps: Int,
     val targetWeightKg: Double?, val inheritPr: Boolean,
+    /** Optional (schema 6): files without it are working sets, and older apps skip it. */
+    val warmup: Boolean = false,
 )
 
 @Serializable

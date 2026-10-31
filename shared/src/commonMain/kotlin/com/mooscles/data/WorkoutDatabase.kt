@@ -96,6 +96,7 @@ interface WorkoutDao {
     @Insert suspend fun insertRoutineExercises(items: List<RoutineExercise>)
     @Insert suspend fun insertWorkouts(items: List<Workout>)
     @Insert suspend fun insertTargetCheckpoints(items: List<RoutineTargetCheckpoint>)
+    @Query("DELETE FROM routine_folders WHERE id = :id") suspend fun deleteRoutineFolder(id: String)
     @Query("DELETE FROM routines WHERE id = :id") suspend fun deleteRoutine(id: String)
     @Query("DELETE FROM routine_exercises WHERE id = :id") suspend fun deleteRoutineExercise(id: String)
     @Query("DELETE FROM routine_sets WHERE id = :id") suspend fun deleteRoutineSet(id: String)
@@ -106,7 +107,7 @@ interface WorkoutDao {
 }
 
 /** Additive migrations preserve routines and all independent workout snapshots. */
-@Database(entities = [Exercise::class, RoutineFolder::class, Routine::class, RoutineExercise::class, RoutineSet::class, Workout::class, WorkoutExercise::class, WorkoutSet::class, RoutineTargetCheckpoint::class], version = 5, exportSchema = true)
+@Database(entities = [Exercise::class, RoutineFolder::class, Routine::class, RoutineExercise::class, RoutineSet::class, Workout::class, WorkoutExercise::class, WorkoutSet::class, RoutineTargetCheckpoint::class], version = 6, exportSchema = true)
 @TypeConverters(EnumConverters::class)
 @ConstructedBy(WorkoutDatabaseConstructor::class)
 abstract class WorkoutDatabase : RoomDatabase() {
@@ -169,6 +170,17 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Planned warm-ups. Every existing planned set becomes a working set (0) without changing
+         * its ID, values or order. SQLite writes the column after `inheritPr`, before the table
+         * constraints, which is where Room's CREATE puts it on a new install.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE `routine_sets` ADD COLUMN `warmup` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         private class LegacyPlan(val id: String, val plannedSets: Int, val targetReps: Int, val targetWeightKg: Double?)
 
         internal fun createDefaultFolder(connection: SQLiteConnection) {
@@ -189,13 +201,14 @@ expect object WorkoutDatabaseConstructor : RoomDatabaseConstructor<WorkoutDataba
 }
 
 /**
- * Every platform opens the database through this: [driver], the four migrations and the creation
+ * Every platform opens the database through this: [driver], every migration and the creation
  * callback, as `WorkoutDatabase.open` applied them before the move. No query coroutine context is
  * set, so Android keeps Room's default executors.
  */
 fun RoomDatabase.Builder<WorkoutDatabase>.buildMooscles(driver: SQLiteDriver): WorkoutDatabase =
     setDriver(driver)
-        .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3, WorkoutDatabase.MIGRATION_3_4, WorkoutDatabase.MIGRATION_4_5)
+        .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3, WorkoutDatabase.MIGRATION_3_4,
+            WorkoutDatabase.MIGRATION_4_5, WorkoutDatabase.MIGRATION_5_6)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(connection: SQLiteConnection) = WorkoutDatabase.createDefaultFolder(connection)
         }).build()

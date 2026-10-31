@@ -163,9 +163,8 @@ class ShellNavigationHostTest {
         // "No workout in progress": its "Choose routine" goes to Train.
         compose.onNodeWithText("Choose routine").performClick()
         tab("routines").assertIsSelected()
-        compose.onNodeWithTag("routines-list").performScrollToNode(hasText("Pull day"))
-        compose.onNodeWithText("Pull day").performClick()
-        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag("routine-editor-start"))
+        compose.onNodeWithTag("routines-list").performScrollToNode(hasTestTag("routine-pull-card"))
+        compose.onNodeWithTag("routine-pull-card").performClick()
         compose.onNodeWithTag("routine-editor-start").performClick()
         compose.onNodeWithTag("workout-route").assertIsDisplayed()
         compose.onAllNodesWithTag("workout-skeleton-card", useUnmergedTree = true).assertCountEquals(2)
@@ -364,9 +363,10 @@ class ShellNavigationHostTest {
         // The workout shows its own words for the code and hands the error back.
         compose.onNodeWithText("Couldn't save the last change", substring = true).assertExists()
         compose.runOnIdle { assertEquals(1, calls.count { it == "clearError:" }) }
-        // On a tab route, the old screens still get the snackbar.
+        // On a tab route, the old screens still get the snackbar (Train is a new screen since plan 4B).
         compose.runOnIdle { state.value = state.value.copy(error = null, errorCode = null) }
         compose.onNodeWithTag("workout-minimize").performClick()
+        tab("history").performClick()
         compose.runOnIdle { state.value = state.value.copy(error = "Raw routine failure", errorCode = UiError.GENERIC) }
         compose.onNodeWithText("Raw routine failure").assertExists()
     }

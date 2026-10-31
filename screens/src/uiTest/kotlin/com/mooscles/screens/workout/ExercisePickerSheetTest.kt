@@ -2,6 +2,7 @@ package com.mooscles.screens.workout
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -10,6 +11,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -39,6 +42,7 @@ import com.mooscles.data.ExerciseCatalog
 import com.mooscles.designsystem.components.ExerciseEquipmentIconTag
 import com.mooscles.designsystem.components.ExerciseMediaFigureTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
+import com.mooscles.screens.LINEAR_TWO_X_FONT_SCALE
 import com.mooscles.screens.ScreenRestoration
 import com.mooscles.screens.library.LibraryModel
 import com.mooscles.screens.library.LibraryModelCache
@@ -82,6 +86,7 @@ class ExercisePickerSheetTest {
 
     private class Picks {
         val picked = mutableListOf<ExerciseUi>()
+        val many = mutableListOf<List<ExerciseUi>>()
         var dismissed = 0
     }
 
@@ -92,20 +97,27 @@ class ExercisePickerSheetTest {
         locale: String? = "pt-BR",
         restoration: ScreenRestoration? = null,
         exercises: List<ExerciseUi> = this@ExercisePickerSheetTest.exercises,
+        exercisesState: MutableState<List<ExerciseUi>> = mutableStateOf(exercises),
+        mode: PickerMode = PickerMode.Single,
+        keepOpen: Boolean = false,
+        fontScale: Float = 1f,
+        density: Float? = null,
     ): Picks {
         val picks = Picks()
         // A fresh cache, and the model built on the test's own dispatcher: ready when the picker is idle.
         val cache = LibraryModelCache()
-        withScreen(locale = locale, restoration = restoration) {
+        withScreen(locale = locale, restoration = restoration, fontScale = fontScale, density = density) {
             if (open.value) {
                 ExercisePickerSheet(
-                    exercises = exercises,
+                    exercises = exercisesState.value,
                     history = history.value,
                     onPick = { picks.picked += it },
                     onDismiss = {
                         picks.dismissed++
-                        open.value = false
+                        if (!keepOpen) open.value = false
                     },
+                    mode = mode,
+                    onPickMany = { picks.many += it },
                     cache = cache,
                     build = { list, portuguese -> LibraryModel.build(list, portuguese) },
                 )
@@ -369,8 +381,181 @@ class ExercisePickerSheetTest {
         onNodeWithText("Standing dumbbell curl", useUnmergedTree = true).assertDoesNotExist()
     }
 
+    private fun ComposeUiTest.tap(exercise: ExerciseUi) {
+        pickerRow(exercise).performClick()
+        waitForIdle()
+    }
+
+    private fun ComposeUiTest.add() = click(ExercisePickerAddTag)
+
+    @Test
+    fun multipleShowsCheckboxesAndACountedAddButton() {
+        runComposeUiTest { multipleCheckboxes() }
+        // The single-select picker has no checkboxes and no add button.
+        runComposeUiTest {
+            showPicker()
+            onNodeWithTag(ExercisePickerAddTag).assertDoesNotExist()
+            pickerRow(bench).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        }
+    }
+
+    private fun ComposeUiTest.multipleCheckboxes() {
+        val picks = showPicker(mode = PickerMode.Multiple)
+        // Nothing selected: "Adicionar 0 exercícios", off.
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 0 exercícios").assertIsNotEnabled()
+        val isCheckbox = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox)
+        pickerRow(bench).assert(isCheckbox).assertIsOff()
+        tap(bench)
+        pickerRow(bench).assertIsOn()
+        pickerRow(squat).assertIsOff()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 1 exercício").assertIsEnabled()
+        tap(squat)
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 2 exercícios")
+        // Tapping a row selects it; it neither picks nor closes.
+        assertEquals(emptyList(), picks.picked)
+        assertEquals(0, picks.dismissed)
+        // The state is the checkbox's own; the row adds no wording of its own to it.
+        pickerRow(bench).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
+    }
+
+    @Test
+    fun addKeepsTheTapOrder() = runComposeUiTest {
+        val picks = showPicker(mode = PickerMode.Multiple)
+        tap(fly)
+        tap(bench)
+        tap(curl)
+        add()
+        assertEquals(listOf(listOf(fly, bench, curl)), picks.many)
+        assertEquals(emptyList(), picks.picked)
+        assertEquals(1, picks.dismissed)
+        onNodeWithTag(ExercisePickerListTag).assertDoesNotExist()
+    }
+
+    @Test
+    fun untappingRemoves() = runComposeUiTest {
+        val picks = showPicker(mode = PickerMode.Multiple)
+        tap(fly)
+        tap(bench)
+        tap(curl)
+        tap(bench)
+        pickerRow(bench).assertIsOff()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 2 exercícios")
+        // Selected again, it goes to the end.
+        tap(bench)
+        add()
+        assertEquals(listOf(listOf(fly, curl, bench)), picks.many)
+    }
+
+    @Test
+    fun selectionSurvivesSearchFilterAndRecreation() = runComposeUiTest {
+        val restoration = screenRestoration()
+        val picks = showPicker(mode = PickerMode.Multiple, locale = null, restoration = restoration)
+        tap(bench)
+        search("agachamento")
+        tap(squat)
+        // A search that hides both keeps them.
+        search("rosca")
+        // The language is the system's here (no override survives the restoration), so only the count is read.
+        onNodeWithTag(ExercisePickerAddTag).assertIsEnabled().assert(
+            SemanticsMatcher("the text says 2 exercises") { node ->
+                node.config[SemanticsProperties.Text].joinToString("") { it.text }.contains(Regex("\\b2\\b"))
+            },
+        )
+        // A filter that hides one of them.
+        search("")
+        click(LibraryTags.muscleChip("Chest"))
+        assertEquals(setOf(bench.id, fly.id), allRows())
+        restoration.emulateSaveAndRestore()
+        waitForIdle()
+        pickerRow(bench).assertIsOn()
+        pickerRow(fly).assertIsOff()
+        click(LibraryTags.CLEAR_FILTERS)
+        pickerRow(squat).assertIsOn()
+        add()
+        assertEquals(listOf(listOf(bench, squat)), picks.many)
+    }
+
+    @Test
+    fun addTwiceCallsOnce() = runComposeUiTest {
+        // The caller keeps the sheet up for a moment after the add (an animation, a slow recomposition).
+        val picks = showPicker(mode = PickerMode.Multiple, keepOpen = true)
+        tap(bench)
+        tap(row)
+        add()
+        add()
+        assertEquals(listOf(listOf(bench, row)), picks.many)
+        assertEquals(1, picks.dismissed)
+    }
+
+    @Test
+    fun nothingSelectedDisablesAdd() = runComposeUiTest {
+        val picks = showPicker(mode = PickerMode.Multiple)
+        onNodeWithTag(ExercisePickerAddTag).assertIsNotEnabled().performClick()
+        waitForIdle()
+        assertEquals(emptyList(), picks.many)
+        assertEquals(0, picks.dismissed)
+        // Selecting and unselecting is nothing selected again.
+        tap(bench)
+        tap(bench)
+        onNodeWithTag(ExercisePickerAddTag).assertIsNotEnabled().performClick()
+        waitForIdle()
+        assertEquals(emptyList(), picks.many)
+    }
+
+    @Test
+    fun vanishedExerciseLeavesTheSelection() = runComposeUiTest {
+        val state = mutableStateOf(exercises)
+        val picks = showPicker(mode = PickerMode.Multiple, exercisesState = state)
+        tap(fly)
+        tap(bench)
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 2 exercícios")
+        runOnIdle { state.value = exercises - fly }
+        waitForIdle()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 1 exercício")
+        add()
+        assertEquals(listOf(listOf(bench)), picks.many)
+    }
+
+    @Test
+    fun returningExerciseShowsCheckedAgain() = runComposeUiTest {
+        val state = mutableStateOf(exercises)
+        val picks = showPicker(mode = PickerMode.Multiple, exercisesState = state)
+        tap(fly)
+        tap(bench)
+        runOnIdle { state.value = exercises - fly }
+        waitForIdle()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 1 exercício")
+        // The exercise comes back (a list rebuilt after a backup import, say): still selected, and counted again.
+        runOnIdle { state.value = exercises }
+        waitForIdle()
+        pickerRow(fly).assertIsOn()
+        onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 2 exercícios")
+        add()
+        assertEquals(listOf(listOf(fly, bench)), picks.many)
+    }
+
+    @Test
+    fun addButtonWholeAtTwoX() {
+        // 2.01 with density 1 is the text iOS draws at 200% (see LINEAR_TWO_X_FONT_SCALE).
+        for ((scale, density) in listOf(2f to null, LINEAR_TWO_X_FONT_SCALE to 1f)) {
+            runComposeUiTest {
+                showPicker(mode = PickerMode.Multiple, fontScale = scale, density = density)
+                for (e in exercises) tap(e)
+                val button = onNodeWithTag(ExercisePickerAddTag).assertTextEquals("Adicionar 5 exercícios").assertIsDisplayed()
+                val bounds = button.getUnclippedBoundsInRoot()
+                val sheet = onNodeWithTag(SHEET).getUnclippedBoundsInRoot()
+                assertTrue(
+                    bounds.left >= sheet.left && bounds.right <= sheet.right && bounds.bottom <= sheet.bottom,
+                    "the button is whole within the sheet: $bounds in $sheet",
+                )
+                button.assertHeightIsAtLeast(48.dp)
+            }
+        }
+    }
+
     private companion object {
         // The design system's internal tag of a sheet's scrim.
         const val SHEET_SCRIM = "sheet-scrim"
+        const val SHEET = "sheet"
     }
 }

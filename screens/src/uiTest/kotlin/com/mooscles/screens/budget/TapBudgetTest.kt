@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -21,11 +22,17 @@ import com.mooscles.screens.exercise.CustomExerciseFormTags
 import com.mooscles.screens.exercise.ExerciseInfoRoute
 import com.mooscles.screens.exercise.ExerciseInfoScreenTag
 import com.mooscles.screens.exercise.ExerciseInfoTags
+import com.mooscles.data.ExerciseCatalog
 import com.mooscles.screens.library.LibraryFilters
 import com.mooscles.screens.library.LibraryModel
 import com.mooscles.screens.library.LibraryRoute
 import com.mooscles.screens.library.LibraryScreenTag
 import com.mooscles.screens.library.LibraryTags
+import com.mooscles.screens.routines.PlannedSetMenuTags
+import com.mooscles.screens.routines.RoutineEditorTag
+import com.mooscles.screens.routines.RoutineEditorTags
+import com.mooscles.screens.routines.TrainScreenTag
+import com.mooscles.screens.routines.TrainTags
 import com.mooscles.screens.shell.AppShellBottom
 import com.mooscles.screens.shell.ShellTabs
 import androidx.compose.ui.geometry.Offset
@@ -58,6 +65,8 @@ import com.mooscles.designsystem.components.TimerSkipTag
 import com.mooscles.designsystem.i18n.LocalAppLocale
 import com.mooscles.domain.currentTimeMillis
 import com.mooscles.screens.flow.FlowApp
+import com.mooscles.screens.flow.RoutinesFlowApp
+import com.mooscles.screens.flow.RoutinesScreens
 import com.mooscles.screens.flow.FlowHarness
 import com.mooscles.screens.flow.FlowViewModel
 import com.mooscles.screens.flow.active
@@ -70,6 +79,10 @@ import com.mooscles.screens.flow.scrollToRow
 import com.mooscles.screens.flow.set
 import com.mooscles.screens.withScreen
 import com.mooscles.screens.workout.ActiveWorkoutTags
+import com.mooscles.screens.workout.ExercisePickerAddTag
+import com.mooscles.screens.workout.ExercisePickerListTag
+import com.mooscles.screens.workout.RenameSheetTags
+import com.mooscles.screens.workout.exercisePickerRowTag
 import com.mooscles.screens.workout.WorkoutHeaderTags
 import com.mooscles.screens.workout.exerciseColumnsTag
 import com.mooscles.screens.workout.exerciseFooterTag
@@ -99,6 +112,13 @@ import kotlin.time.Duration.Companion.minutes
  * and opening it, from another tab, and creating a custom exercise with a name, a muscle and an
  * equipment, from the library (the typed name does not count). Each is held to the spec's "Novo"
  * ([LibraryNew]) and to today's count on the old library ([LibraryToday]).
+ *
+ * And the phase 4B routines' five flows of its spec table (same document), over the same stack with the Train tab,
+ * the routine editor and the multiple picker hosted as the app does ([RoutinesFlowApp]): building a routine with five
+ * exercises from the Train tab, moving the fifth to the top by its menu, adding a planned set like the one above,
+ * marking a planned set as a warm-up, and starting a workout from a routine's card. Each is held to the spec's "Novo"
+ * ([RoutinesNew]) and to today's count on the old screens ([RoutinesToday]); typed text does not count (the default
+ * name is kept), and neither does scrolling to a control.
  */
 @OptIn(ExperimentalTestApi::class)
 class TapBudgetTest {
@@ -151,6 +171,27 @@ class TapBudgetTest {
     private object LibraryNew {
         const val FIND_BY_MUSCLE_AND_OPEN = 3
         const val CREATE_CUSTOM_EXERCISE = 4
+    }
+
+    /**
+     * Today's counts on the old routine screens (phase 4B Task 15, at `4736ec5`, before the Train tab and the editor
+     * were hosted): docs/superpowers/reports/2026-10-30-phase4b-verificacao/tap-baseline-4b.md. Marking a warm-up
+     * has no baseline there (the old editor had no planned sets), so it is held to "Novo" only.
+     */
+    private object RoutinesToday {
+        const val BUILD_WITH_FIVE_EXERCISES = 13
+        const val MOVE_FIFTH_TO_TOP = 4
+        const val ADD_PLANNED_SET = 1
+        const val START_FROM_ROUTINE = 1
+    }
+
+    /** The spec's "Novo" column (docs/superpowers/specs/2026-10-29-phase4-library-routines-design.md, "Orçamento de toques"). */
+    private object RoutinesNew {
+        const val BUILD_WITH_FIVE_EXERCISES = 9
+        const val MOVE_FIFTH_TO_TOP = 2
+        const val ADD_PLANNED_SET = 1
+        const val MARK_WARMUP = 2
+        const val START_FROM_ROUTINE = 1
     }
 
     /** The user's touches: a tap or a gesture counts 1. Each waits for the screen to settle. */
@@ -386,6 +427,101 @@ class TapBudgetTest {
         assertWithin("createCustomExerciseWithNameMuscleAndEquipment", taps, LibraryNew.CREATE_CUSTOM_EXERCISE, LibraryToday.CREATE_CUSTOM_EXERCISE)
     }
 
+    // --- The routines' flows (phase 4B) ----------------------------------------------------------
+
+    /**
+     * From the Train tab: "New routine" (the default name kept), "Create", "Add exercises", the five rows marked
+     * (scrolling to a row does not count) and "Add 5 exercises": 9 touches, against today's 13.
+     */
+    @Test
+    fun buildARoutineWithFiveExercises() = routinesBudget(RoutinesScreens.TRAIN) { vm, _, screen ->
+        val five = ExerciseCatalog.exercises.drop(7).take(5).map { it.id }
+        onNodeWithTag(TrainScreenTag).performScrollToNode(hasTestTag(TrainTags.NEW_ROUTINE))
+        waitForIdle()
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(TrainTags.NEW_ROUTINE))
+        await("the name sheet opens") { exists(hasTestTag(RenameSheetTags.FIELD)) }
+        taps.tap(onNodeWithTag(RenameSheetTags.SAVE))
+        await("the editor of the new routine opens") {
+            screen.value.startsWith("editor:") && exists(hasTestTag(RoutineEditorTags.EMPTY))
+        }
+        val created = screen.value.removePrefix("editor:")
+        taps.tap(onNodeWithTag(RoutineEditorTags.ADD))
+        for (id in five) taps.tap(pickerRow(id))
+        taps.tap(onNodeWithTag(ExercisePickerAddTag))
+        await("the routine holds the five") { vm.contentUi.value.routines.first { it.id == created }.exercises.map { it.exercise.id } == five }
+        assertWithin("buildARoutineWithFiveExercises", taps, RoutinesNew.BUILD_WITH_FIVE_EXERCISES, RoutinesToday.BUILD_WITH_FIVE_EXERCISES)
+    }
+
+    /** In the editor of a routine of five: the fifth's menu, "Move to top": 2 touches, against today's 4 (one place a tap). */
+    @Test
+    fun moveTheFifthExerciseToTheTop() = routinesBudget(editor = true) { vm, routineId, _ ->
+        val before = vm.contentUi.value.routines.first { it.id == routineId }.exercises.map { it.id }
+        assertEquals(5, before.size)
+        onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.menu(before[4])))
+        waitForIdle()
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(RoutineEditorTags.menu(before[4])))
+        taps.tap(onNodeWithTag(RoutineEditorTags.EXERCISE_TOP))
+        await("the fifth is first") { vm.contentUi.value.routines.first { it.id == routineId }.exercises.map { it.id } == listOf(before[4]) + before.take(4) }
+        assertWithin("moveTheFifthExerciseToTheTop", taps, RoutinesNew.MOVE_FIFTH_TO_TOP, RoutinesToday.MOVE_FIFTH_TO_TOP)
+    }
+
+    /** "Add set" under the first exercise: one touch, and the new set is the one above (same reps and load). */
+    @Test
+    fun addAPlannedSetLikeTheOneAbove() = routinesBudget(editor = true) { vm, routineId, _ ->
+        fun first() = vm.contentUi.value.routines.first { it.id == routineId }.exercises.first()
+        val before = first()
+        onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.addSet(before.id)))
+        waitForIdle()
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(RoutineEditorTags.addSet(before.id)))
+        await("the set is added") { first().setTargets.size == before.setTargets.size + 1 }
+        val sets = first().setTargets
+        assertEquals(sets[sets.size - 2].reps to sets[sets.size - 2].weightKg, sets.last().reps to sets.last().weightKg)
+        assertWithin("addAPlannedSetLikeTheOneAbove", taps, RoutinesNew.ADD_PLANNED_SET, RoutinesToday.ADD_PLANNED_SET)
+    }
+
+    /** The first set's label, then "Warm-up": 2 touches (the old editor had no planned sets). */
+    @Test
+    fun markAPlannedSetAsWarmup() = routinesBudget(editor = true) { vm, routineId, _ ->
+        val entry = vm.contentUi.value.routines.first { it.id == routineId }.exercises.first()
+        val set = entry.setTargets.first().id
+        onNodeWithTag(RoutineEditorTag).performScrollToNode(hasTestTag(RoutineEditorTags.setLabel(set)))
+        waitForIdle()
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(RoutineEditorTags.setLabel(set)))
+        taps.tap(onNodeWithTag(PlannedSetMenuTags.WARMUP))
+        await("the set is saved as a warm-up") {
+            vm.contentUi.value.routines.first { it.id == routineId }.exercises.first().setTargets.first().warmup
+        }
+        assertWithin("markAPlannedSetAsWarmup", taps, RoutinesNew.MARK_WARMUP)
+    }
+
+    /** "Start" on the card of the Train tab: one touch, and the workout is the routine's. */
+    @Test
+    fun startAWorkoutFromARoutine() = routinesBudget(RoutinesScreens.TRAIN) { vm, routineId, screen ->
+        onNodeWithTag(TrainScreenTag).performScrollToNode(hasTestTag(TrainTags.start(routineId)))
+        waitForIdle()
+        val taps = Taps(this)
+        taps.tap(onNodeWithTag(TrainTags.start(routineId)))
+        await("the workout starts and opens") { vm.contentUi.value.active != null && screen.value == RoutinesScreens.WORKOUT }
+        assertEquals(routineId, active(vm).sourceRoutineId)
+        assertWithin("startAWorkoutFromARoutine", taps, RoutinesNew.START_FROM_ROUTINE, RoutinesToday.START_FROM_ROUTINE)
+    }
+
+    /** The picker's "All" row of [id], once its list is built (off the main thread) and scrolled to; the scroll is not a touch. */
+    private fun ComposeUiTest.pickerRow(id: String): SemanticsNodeInteraction {
+        val tag = exercisePickerRowTag(id, recent = false)
+        await("the picker lists $id") {
+            if (!exists(hasTestTag(tag)) && exists(hasTestTag(ExercisePickerListTag))) {
+                runCatching { onNodeWithTag(ExercisePickerListTag).performScrollToNode(hasTestTag(tag)) }
+            }
+            exists(hasTestTag(tag))
+        }
+        return onNodeWithTag(tag)
+    }
+
     // --- The stack ------------------------------------------------------------------------------
 
     /**
@@ -409,6 +545,35 @@ class TapBudgetTest {
             assertEquals(2, ids.size)
             if (done < ids.size) scrollToRow(ids[done])
             flow(vm, ids)
+        } finally {
+            runOnUiThread { harness.close() }
+        }
+    }
+
+    /**
+     * The routines' stack: the catalog, a routine "Push day" and the app's screens ([RoutinesFlowApp]) in English at
+     * 1.0, on the Train tab ([start]) or, with [editor], on that routine's editor; the routine holds five exercises
+     * with [editor] (the first with a warm-up-able set), else only the bench. Runs [flow] with the view model, the
+     * routine's id and the screen.
+     */
+    private fun routinesBudget(
+        start: String = RoutinesScreens.TRAIN,
+        editor: Boolean = false,
+        flow: suspend ComposeUiTest.(vm: FlowViewModel, routineId: String, screen: MutableState<String>) -> Unit,
+    ) = runComposeUiTest(testTimeout = 3.minutes) {
+        val harness = FlowHarness()
+        try {
+            harness.repository.initialize()
+            val routineId = harness.repository.createRoutine("Push day")
+            val exercises = if (editor) ExerciseCatalog.exercises.drop(7).take(5).map { it.id } else listOf(BENCH)
+            for (id in exercises) harness.repository.addRoutineExercise(routineId, id)
+            val vm = harness.createViewModel()
+            val screen = mutableStateOf(if (editor) RoutinesScreens.editor(routineId) else start)
+            withScreen(locale = "en") { RoutinesFlowApp(vm, screen) }
+            waitForIdle()
+            await("the routine loads") { !vm.contentUi.value.loading && vm.contentUi.value.routines.any { it.id == routineId } }
+            waitForIdle()
+            flow(vm, routineId, screen)
         } finally {
             runOnUiThread { harness.close() }
         }

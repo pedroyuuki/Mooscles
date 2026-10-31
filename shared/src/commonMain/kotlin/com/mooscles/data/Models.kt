@@ -36,7 +36,12 @@ enum class LoadConvention(val label: String, val explanation: String) {
     PER_HAND("Per hand", "Log one dumbbell's load and reps. Volume is per hand; it is never doubled."),
     ONE_SIDE("One side", "Log total external load used while working one side and reps for that side. Volume is per side; it is never doubled."),
     BODYWEIGHT("Added weight", "Leave weight blank for bodyweight, or log added external weight. Bodyweight is excluded from weight moved."),
-    ASSISTANCE("Assistance", "Log assistance separately. Assistance does not earn external-weight PRs or contribute to weight moved.")
+    ASSISTANCE("Assistance", "Log assistance separately. Assistance does not earn external-weight PRs or contribute to weight moved.");
+
+    companion object {
+        /** The convention whose [label] (what `ExerciseUi` carries) or enum name is [value]; null for anything else. */
+        fun fromLabelOrName(value: String): LoadConvention? = entries.firstOrNull { it.label == value || it.name == value }
+    }
 }
 
 enum class WorkoutStatus { ACTIVE, FINISHED }
@@ -92,7 +97,10 @@ data class RoutineExercise(
     val restSeconds: Int? = null
 )
 
-/** One independently saved prescription. Null load and zero reps are explicitly blank values. */
+/**
+ * One independently saved prescription. Null load and zero reps are explicitly blank values.
+ * [warmup] (version 6) plans a warm-up set; rows saved before it read as working sets.
+ */
 @Entity(
     tableName = "routine_sets",
     foreignKeys = [ForeignKey(entity = RoutineExercise::class, parentColumns = ["id"],
@@ -105,7 +113,8 @@ data class RoutineSet(
     val position: Int = 0,
     val targetReps: Int = 0,
     val targetWeightKg: Double? = null,
-    val inheritPr: Boolean = true
+    val inheritPr: Boolean = true,
+    @ColumnInfo(defaultValue = "0") val warmup: Boolean = false
 )
 
 @Entity(tableName = "workouts")

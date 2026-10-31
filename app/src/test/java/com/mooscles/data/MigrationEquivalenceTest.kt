@@ -30,6 +30,10 @@ import org.robolectric.annotation.Config
  * `MOOSCLES_WRITE_MIGRATION_REFERENCE=<directory>` switch that wrote the dumps, and they were
  * committed with it. The switch was then removed: the references are the old behavior the driver
  * code is checked against and must never be regenerated from it.
+ *
+ * Version 6 (2026-10-30) only adds `routine_sets.warmup`. The references stay as they were: the
+ * comparison takes the version 6 additions out of the dump ([withoutVersionSixAdditions]), and
+ * [v6AdditionsAreOnlyTheWarmupColumnAtZero] proves that those additions are all there is.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -52,7 +56,7 @@ class MigrationEquivalenceTest {
         val drivers = (1..4).map { version ->
             createLegacyDatabase(version)
             val driver = openAndClose()
-            assertMatchesReference("from-v$version.txt", dump(generatedRoutineSetIds = version <= 2))
+            assertMatchesReference("from-v$version.txt", withoutVersionSixAdditions(dump(generatedRoutineSetIds = version <= 2)))
             SQLiteDatabase.deleteDatabase(file)
             driver
         }
@@ -61,9 +65,85 @@ class MigrationEquivalenceTest {
 
     @Test fun freshInstallProducesTheSameDatabaseAsBefore() {
         val driver = openAndClose()
-        assertMatchesReference("fresh-install.txt", dump(generatedRoutineSetIds = false))
+        assertMatchesReference("fresh-install.txt", withoutVersionSixAdditions(dump(generatedRoutineSetIds = false)))
         assertTrue("A fresh install must run on the SQLite driver", driver)
     }
+
+    /**
+     * The other direction, exactly: each reference with the version 6 additions put in is the whole
+     * dump. Nothing else changed, and every planned set that a real upgrade carries is a working set.
+     */
+    @Test fun v6AdditionsAreOnlyTheWarmupColumnAtZero() {
+        val cases = (1..4).map { "from-v$it.txt" to it } + ("fresh-install.txt" to null)
+        for ((name, version) in cases) {
+            if (version != null) createLegacyDatabase(version)
+            openAndClose()
+            val actual = dump(generatedRoutineSetIds = version != null && version <= 2)
+            assertEquals("$name with the version 6 additions", withVersionSixAdditions(reference(name)), actual)
+            SQLiteDatabase.deleteDatabase(file)
+        }
+    }
+
+    private val hashFive by lazy { exportedIdentityHash(5) }
+    private val hashSix by lazy { exportedIdentityHash(6) }
+
+    /** Reference -> version 6: user_version, Room's identity hash, the column definition and a zero in each planned set. */
+    private fun withVersionSixAdditions(reference: String): String = editDump(reference,
+        userVersion = "5" to "6", hash = hashFive to hashSix,
+        column = { it.replace(WITHOUT_WARMUP, WITH_WARMUP) },
+        plannedSet = { "$it$WARMUP_ZERO" })
+
+    /** Version 6 dump -> what the reference recorded. Only a planned set whose warmup is 0 loses it. */
+    private fun withoutVersionSixAdditions(dump: String): String = editDump(dump,
+        userVersion = "6" to "5", hash = hashSix to hashFive,
+        column = { it.replace(WITH_WARMUP, WITHOUT_WARMUP) },
+        plannedSet = { it.removeSuffix(WARMUP_ZERO) })
+
+    /**
+     * Applies each edit where it belongs and nowhere else, and fails if a place it expects is
+     * missing, so a dump of another shape cannot pass by being left untouched.
+     */
+    private fun editDump(
+        text: String, userVersion: Pair<String, String>, hash: Pair<String, String>,
+        column: (String) -> String, plannedSet: (String) -> String,
+    ): String {
+        val out = mutableListOf<String>()
+        // Planned set rows are collected and sorted again: a changed suffix can change their order.
+        val plannedSets = mutableListOf<String>()
+        var section = ""
+        var edits = listOf(0, 0, 0)
+        for (line in text.lines()) {
+            if (line.startsWith("== ")) {
+                out += plannedSets.sorted().also { plannedSets.clear() }
+                section = line.removePrefix("== ")
+                out += line
+                continue
+            }
+            when {
+                line == "user_version: ${userVersion.first}" -> {
+                    out += "user_version: ${userVersion.second}"
+                    edits = listOf(edits[0] + 1, edits[1], edits[2])
+                }
+                section == "sqlite_master" && line.startsWith("type=text:table | name=text:routine_sets |") -> {
+                    out += column(line).also { check(it != line) { "routine_sets definition not as expected: $line" } }
+                    edits = listOf(edits[0], edits[1] + 1, edits[2])
+                }
+                section == "room_master_table" && line == "id=integer:42 | identity_hash=text:${hash.first}" -> {
+                    out += "id=integer:42 | identity_hash=text:${hash.second}"
+                    edits = listOf(edits[0], edits[1], edits[2] + 1)
+                }
+                section == "routine_sets" && line.isNotEmpty() -> plannedSets += plannedSet(line)
+                else -> out += line
+            }
+        }
+        check(plannedSets.isEmpty()) { "routine_sets is not the last table of the dump" }
+        assertEquals("user_version, routine_sets definition and identity hash, edited once each", listOf(1, 1, 1), edits)
+        return out.joinToString("\n")
+    }
+
+    private fun reference(name: String): String =
+        javaClass.classLoader!!.getResourceAsStream("migration-equivalence/$name")
+            ?.bufferedReader()?.use { it.readText() } ?: error("Missing reference $name")
 
     /**
      * Opening runs the migrations or the creation callback; closing flushes WAL into the file.
@@ -81,8 +161,7 @@ class MigrationEquivalenceTest {
     }
 
     private fun assertMatchesReference(name: String, actual: String) {
-        val expected = javaClass.classLoader!!.getResourceAsStream("migration-equivalence/$name")
-            ?.bufferedReader()?.use { it.readText() } ?: error("Missing reference $name")
+        val expected = reference(name)
         assertEquals("Database produced by $name differs from the pre-driver reference", expected, actual)
     }
 
@@ -194,6 +273,12 @@ class MigrationEquivalenceTest {
             "INSERT INTO routine_target_checkpoints VALUES ('press', 'PER_HAND', 22.25, 6)",
         ) + edgeRows
         else -> error("No fixture for version $version")
+    }
+
+    private companion object {
+        const val WITHOUT_WARMUP = "`inheritPr` INTEGER NOT NULL, PRIMARY KEY(`id`)"
+        const val WITH_WARMUP = "`inheritPr` INTEGER NOT NULL, `warmup` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`)"
+        const val WARMUP_ZERO = " | warmup=integer:0"
     }
 
     /**

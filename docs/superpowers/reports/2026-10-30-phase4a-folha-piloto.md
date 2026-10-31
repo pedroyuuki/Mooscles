@@ -136,3 +136,7 @@ O custo seria encomendar e revisar 287 exercícios, com a etapa de download (4M)
 ## Pergunta do G1
 
 **Aprova a folha do piloto?** Com aprovação, os lotes seguem por equipamento até os 287; sem aprovação, as figuras saem do produto e fica o ícone do equipamento.
+
+## Refeita com o equipamento em cobre (2026-10-30, depois do G1)
+
+O dono aprovou o piloto com uma mudança: o equipamento (barra, anilhas, máquinas, bancos e cabos) passou de `text.tertiary` para cobre (`cobre47` no tema claro, `cobre64` no escuro; ver a nota do G1 na [spec](../specs/2026-10-29-phase4-library-routines-design.md)). A folha foi capturada de novo com o mesmo `PilotSheetCaptureTest`, no mesmo emulador, e os quatro PNGs de `2026-10-29-phase4a-verificacao/` foram trocados. As poses, as densidades e o resto não mudaram; só a cor do equipamento.

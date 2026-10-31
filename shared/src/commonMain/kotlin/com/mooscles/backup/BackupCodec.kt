@@ -12,7 +12,8 @@ object BackupCodec {
     const val FORMAT_VERSION = 1
 
     // Compact output: the contract is JSON, and a large archive is noticeably smaller without indentation.
-    private val json = Json {
+    // Internal so the tests read a new file exactly as an older app's codec, with this same configuration, would.
+    internal val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }

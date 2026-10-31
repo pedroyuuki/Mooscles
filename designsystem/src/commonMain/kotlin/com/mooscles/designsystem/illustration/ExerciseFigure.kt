@@ -1,10 +1,7 @@
 package com.mooscles.designsystem.illustration
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -13,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -34,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -50,6 +49,8 @@ import com.mooscles.designsystem.tokens.MoosclesColors
 import com.mooscles.designsystem.tokens.MoosclesFigureColors
 import com.mooscles.designsystem.tokens.MoosclesIllustration
 import kotlin.math.min
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 /** Test-facing: the frame an [AnimatedExerciseFigure] shows, `"start"` or `"end"`. */
@@ -83,7 +84,7 @@ private inline fun ProbeComposition(scope: String) {
  * One still frame of an exercise: [pose] drawn with forward kinematics in a square that fits the
  * component (give it a size with [modifier]), on a transparent background. The figure is
  * `text.secondary`, the far limbs behind it [MoosclesFigureColors.farLimb], the equipment
- * `text.tertiary` and the [highlights] `accent.solid`, all with round caps. The geometry is rebuilt
+ * [MoosclesFigureColors.equipment] (copper) and the [highlights] `accent.solid`, all with round caps. The geometry is rebuilt
  * only when the size or the pose changes; nothing is drawn to a bitmap. The figure composites in an
  * offscreen layer of its own, so the gaps that set the head and the arms in front of what lies
  * behind them clear to the background, whatever it is (Task 9). [contentDescription] null makes it
@@ -132,9 +133,9 @@ private val OffscreenLayer = Modifier.graphicsLayer { compositingStrategy = Comp
  * a tap switches the frames. Only the alternation and its frame layer recompose, once per frame
  * change; the cross-fade itself is read in the draw phase. Give it a size with [modifier].
  *
- * In tests: the alternation is an infinite transition, which the test clock cancels for good while
- * it advances on its own (`mainClock.autoAdvance = true`, the default). Such a test sees the figure
- * still on the end frame, as with reduced motion. A test that needs the alternation sets
+ * In tests: the alternation runs as an infinite animation, which the test clock cancels for good
+ * while it advances on its own (`mainClock.autoAdvance = true`, the default). Such a test sees the
+ * figure still on the end frame, as with reduced motion. A test that needs the alternation sets
  * `mainClock.autoAdvance = false` before the figure first composes and advances the clock by hand;
  * stopping the clock after the figure is shown does not bring the alternation back.
  */
@@ -187,31 +188,40 @@ fun AnimatedExerciseFigure(
 
 /**
  * The alternation: the start frame's opacity holds at 0 for a frame time, fades in, holds at 1,
- * fades out. An infinite transition, not a delay loop, so the test clock and its infinite animation
- * policy control it (with `autoAdvance` on, tests see it stopped on the end frame).
+ * fades out. Only the fades ask for frames: a hold is a plain wait, so the screen sleeps through
+ * it (4B Task 5: the infinite transition of 4A kept `Choreographer#doFrame` at 60 Hz through the
+ * holds, with nothing to draw). Not a bare delay loop, though: each wait and each fade is an
+ * infinite operation of the context's [InfiniteAnimationPolicy], as the infinite transition's
+ * frames were, so the test clock controls it the same way (with `autoAdvance` on, tests see it
+ * stopped on the end frame and go idle).
  */
 @Composable
 private fun AlternatingFrames(start: FigurePose, end: FigurePose, highlights: Set<FigureSegment>) {
     ProbeComposition(FigureScopeAlternation)
-    val hold = MTheme.timing.illustrationFrame.toInt()
+    val hold = MTheme.timing.illustrationFrame
     val fade = MTheme.motion.base
     val easing = MTheme.motion.easeInOut
-    val startAlpha = rememberInfiniteTransition(label = "figure").animateFloat(
-        initialValue = 0f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            keyframes {
-                durationMillis = 2 * (hold + fade)
-                0f at hold using easing
-                1f at hold + fade
-                1f at 2 * hold + fade using easing
-            },
-            RepeatMode.Restart,
-        ),
-        label = "figureStartAlpha",
-    )
-    val showingStart by remember(startAlpha) { derivedStateOf { startAlpha.value >= 0.5f } }
-    FrameLayer(start, end, highlights, showingStart, startAlpha)
+    val startAlpha = remember { Animatable(0f) }
+    LaunchedEffect(startAlpha, hold, fade, easing) {
+        val spec = tween<Float>(durationMillis = fade, easing = easing)
+        while (true) {
+            infiniteOperation { delay(hold) }
+            // In after the end frame's hold, out after the start frame's.
+            infiniteOperation { startAlpha.animateTo(1f - startAlpha.targetValue, spec) }
+        }
+    }
+    val alpha = startAlpha.asState()
+    val showingStart by remember(alpha) { derivedStateOf { alpha.value >= 0.5f } }
+    FrameLayer(start, end, highlights, showingStart, alpha)
+}
+
+/**
+ * Runs [block] as an infinite operation of the context's [InfiniteAnimationPolicy] (the test
+ * clock's cancels it while the clock advances on its own), or straight when there is none.
+ */
+private suspend fun infiniteOperation(block: suspend () -> Unit) {
+    val policy = currentCoroutineContext()[InfiniteAnimationPolicy]
+    if (policy == null) block() else policy.onInfiniteOperation { block() }
 }
 
 /**
@@ -254,14 +264,14 @@ private fun FrameLayer(
 internal data class FigurePalette(val body: Color, val far: Color, val equipment: Color, val highlight: Color)
 
 /**
- * Spec D3: the figure in `text.secondary`, the equipment in `text.tertiary`, the highlight in
+ * Spec D3: the figure in `text.secondary`, the equipment in [MoosclesFigureColors.equipment] (copper, G1), the highlight in
  * `accent.solid`; the far limbs in [MoosclesFigureColors.farLimb], the fainter tone S1 chose
  * (Task 8 fix round 1), apart from both the body and the equipment.
  */
 internal fun figurePalette(colors: MoosclesColors, figure: MoosclesFigureColors) = FigurePalette(
     body = colors.textSecondary,
     far = figure.farLimb,
-    equipment = colors.textTertiary,
+    equipment = figure.equipment,
     highlight = colors.accentSolid,
 )
 

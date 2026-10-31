@@ -98,4 +98,10 @@ data class MoosclesSizes(
     val mediaDetailMax: Dp = 360.dp,
     /** Phase 4A: the drawn height of a read-only chip (plan decision 12); it grows with the text. */
     val infoChipHeight: Dp = 32.dp,
+    /** Phase 4B (spec D15): a drag held this close to an edge of the list scrolls it. */
+    val reorderEdgeZone: Dp = 64.dp,
+    /** Phase 4B: how far that scroll goes each frame. */
+    val reorderScrollStep: Dp = 12.dp,
+    /** Phase 4B (plan Task 11, 2026-10-30): each thumbnail of a routine card's strip, the same 56 dp as a library row. */
+    val mediaStrip: Dp = mediaList,
 )

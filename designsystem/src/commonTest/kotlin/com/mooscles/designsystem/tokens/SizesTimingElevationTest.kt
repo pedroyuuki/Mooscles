@@ -64,6 +64,36 @@ class SizesTimingElevationTest {
         assertEquals(32.dp, s.infoChipHeight)
     }
 
+    /**
+     * Phase 4B (spec D15, plan Task 4): a drag scrolls the list while the finger is within 64 dp of
+     * an edge, 12 dp a frame; a dropped order is shown for up to 2 s while the list waits for its keys.
+     */
+    @Test
+    fun reorderTokens() {
+        val s = MoosclesSizes()
+        assertEquals(64.dp, s.reorderEdgeZone)
+        assertEquals(12.dp, s.reorderScrollStep)
+        assertEquals(2_000L, MoosclesTiming().reorderEchoHold)
+    }
+
+    /** Phase 4B (plan Task 11, decision D5 and pre-flight F21): the thumbnails of a routine card's strip are 56 dp. */
+    @Test
+    fun mediaStripIsFiftySix() {
+        assertEquals(56.dp, MoosclesSizes().mediaStrip)
+    }
+
+    /** Phase 4B (plan Task 10): a form waits at most 15 s for the echo of its save. */
+    @Test
+    fun saveEchoWaitIsFifteenSeconds() {
+        assertEquals(15_000L, MoosclesTiming().saveEchoWait)
+    }
+
+    /** Phase 4B (Task 19): a saved form stays at most 1.5 s over the library while the detail comes in. */
+    @Test
+    fun formHandoffIsOneAndAHalfSeconds() {
+        assertEquals(1_500L, MoosclesTiming().formHandoff)
+    }
+
     @Test
     fun timerAnnounceHoldIsOneAndAHalfSeconds() {
         assertEquals(1_500L, MoosclesTiming().timerAnnounceHold)

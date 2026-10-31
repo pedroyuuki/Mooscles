@@ -269,7 +269,9 @@ class RoutineSetPersistenceTest {
         val exercise = movement()
         val entry = plan(exercise)
         val initial = repo.snapshot().plannedSets(entry)
-        repo.updateRoutineSet(initial[1].id, 10, 17.0)
+        // The manual row comes first: a new row copies the last one (phase 4B), and only an inherited last row
+        // makes the new one inherit.
+        repo.updateRoutineSet(initial[0].id, 10, 17.0)
         finish(exercise, 20.0 to 8)
         val removed = finish(exercise, 30.0 to 5)
         assertEquals(30.0, database.dao().targetCheckpoints().single().weightKg!!, 0.0)
@@ -279,8 +281,8 @@ class RoutineSetPersistenceTest {
         // The last observed checkpoint is still 30 kg; 22 kg is a valid new PR in surviving history.
         val next = finish(exercise, 22.0 to 6)
         val rows = repo.snapshot().plannedSets(entry)
-        assertEquals(listOf(22.0 to 6, 17.0 to 10, 22.0 to 6), rows.map { it.targetWeightKg to it.targetReps })
-        assertEquals(listOf(true, false, true), rows.map { it.inheritPr })
+        assertEquals(listOf(17.0 to 10, 22.0 to 6, 22.0 to 6), rows.map { it.targetWeightKg to it.targetReps })
+        assertEquals(listOf(false, true, true), rows.map { it.inheritPr })
         assertEquals(22.0, database.dao().targetCheckpoints().single().weightKg!!, 0.0)
         val completed = repo.snapshot().exerciseSets(repo.snapshot().workoutItems(next).single().id)
         finish(exercise, 18.0 to 50)

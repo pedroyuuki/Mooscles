@@ -48,6 +48,13 @@ class DataSectionHostTest {
     }
 
     @Test
+    fun exportShowsThePhotosNote() {
+        show(BackupUi())
+        compose.onNodeWithText("Photos of custom exercises are not included in the file.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("data-export-photos-note").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun importDisabledDuringActiveWorkoutWithReason() {
         show(BackupUi(), workoutActive = true)
         compose.onNodeWithTag("data-import").performScrollTo().assertIsNotEnabled()

@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.mooscles.designsystem.components.MText
 import com.mooscles.designsystem.theme.MTheme
 import com.mooscles.screens.workout.RecompositionProbe
+import com.mooscles.ui.RoutineSetUi
 import com.mooscles.ui.SetUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,6 +39,25 @@ class ScreensHelpersTest {
                 "skipTimer:",
                 "startWorkout:null",
                 "restoreSet:e1,2,${SetUi("s3", reps = 5)}",
+            ),
+            actions.calls,
+        )
+    }
+
+    @Test
+    fun recordingActionsJoinsListsAndKeepsTheRestoredRoutineSet() {
+        val actions = RecordingActions()
+        actions.addRoutineExercises("r1", listOf("bench", "row"))
+        actions.reorderRoutineFolders(listOf("default", "f1"))
+        actions.createRoutine("Push", "f1", "r2")
+        val removed = RoutineSetUi("s1", reps = 10, weightKg = 40.0, inherited = false, warmup = true)
+        actions.restoreRoutineSet("e1", 0, removed)
+        assertEquals(
+            listOf(
+                "addRoutineExercises:r1,bench|row",
+                "reorderRoutineFolders:default|f1",
+                "createRoutine:Push,f1,r2",
+                "restoreRoutineSet:e1,0,RoutineSetUi(id=s1, reps=10, weightKg=40.0, inherited=false, warmup=true)",
             ),
             actions.calls,
         )

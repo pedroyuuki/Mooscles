@@ -54,6 +54,10 @@
     <string name="workout_picker_recent">Recentes</string>
     <string name="workout_picker_all">Todos</string>
     <string name="workout_picker_none">Nenhum exercício encontrado. Tente uma busca mais ampla.</string>
+    <plurals name="workout_picker_add_count">
+        <item quantity="one">Adicionar %1$d exercício</item>
+        <item quantity="other">Adicionar %1$d exercícios</item>
+    </plurals>
     <!-- The active workout screen: header, end of the list, finish, discard, rename, no workout. -->
     <string name="workout_minimize">Minimizar treino</string>
     <string name="workout_more_options">Mais opções</string>

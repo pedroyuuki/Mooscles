@@ -4,7 +4,10 @@ import com.mooscles.designsystem.illustration.bodyMapPalette
 import com.mooscles.designsystem.illustration.figurePalette
 import com.mooscles.designsystem.tokens.Contrast
 import com.mooscles.designsystem.tokens.MoosclesColors
+import com.mooscles.designsystem.tokens.MoosclesElevation
+import com.mooscles.designsystem.interaction.reorderLiftLook
 import com.mooscles.designsystem.tokens.MoosclesFigureColors
+import com.mooscles.designsystem.tokens.Primitives
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -73,6 +76,26 @@ class ComponentColorsTest {
     }
 
     /**
+     * G1 (2026-10-30): the equipment is copper, not `text.tertiary`, and an orange of its own against
+     * the body, the far limbs and the highlight, 3:1 on every page and tile the figure is drawn on.
+     */
+    @Test
+    fun figureEquipmentIsCopperAndStandsOut() {
+        for ((name, colors) in themes) {
+            val figure = if (name == "dark") MoosclesFigureColors.Dark else MoosclesFigureColors.Light
+            val palette = figurePalette(colors, figure)
+            assertEquals(figure.equipment, palette.equipment, "$name equipment comes from the figure colors")
+            assertEquals(if (name == "dark") Primitives.cobre64 else Primitives.cobre47, palette.equipment, name)
+            assertNotEquals(colors.textTertiary, palette.equipment, "$name equipment is no longer text.tertiary")
+            assertNotEquals(palette.body, palette.equipment, name)
+            assertNotEquals(palette.highlight, palette.equipment, name)
+            for ((surface, bg) in listOf("inset" to colors.bgInset, "surface" to colors.bgSurface, "base" to colors.bgBase, "raised" to colors.bgRaised)) {
+                atLeast(3.0, palette.equipment, bg, "$name copper equipment on $surface")
+            }
+        }
+    }
+
+    /**
      * Phase 4A (spec D6, WCAG 1.4.11): the primary and the secondary regions of the body map stand
      * out 3:1 against the neutral fill and against the pages the map sits on, in both themes. Primary
      * against secondary is not a 3:1 pair (no grey is 3:1 from both bg.inset and accent.solid in the
@@ -125,5 +148,25 @@ class ComponentColorsTest {
     @Test
     fun emptyValueIsAnEmDash() {
         assertEquals("—", EMPTY_VALUE)
+    }
+
+    /**
+     * Phase 4B review I2: a lifted item shows `elevation.e3` in both themes. Light: the e3 shadow.
+     * Dark (e3 has no shadow there): a `border.strong` outline, a 3:1 line on every surface an item
+     * is drawn on or over.
+     */
+    @Test
+    fun reorderLiftShowsInBothThemes() {
+        val elevation = MoosclesElevation()
+        val light = reorderLiftLook(MoosclesColors.Light, elevation, dark = false)
+        assertEquals(elevation.e3.shadowLight, light.shadow)
+        assertNull(light.outline)
+        val colors = MoosclesColors.Dark
+        val dark = reorderLiftLook(colors, elevation, dark = true)
+        assertNull(dark.shadow)
+        assertEquals(colors.borderStrong, dark.outline)
+        for ((what, surface) in listOf("base" to colors.bgBase, "surface" to colors.bgSurface, "overlay" to colors.bgOverlay)) {
+            atLeast(3.0, dark.outline!!, surface, "dark lift outline on $what")
+        }
     }
 }

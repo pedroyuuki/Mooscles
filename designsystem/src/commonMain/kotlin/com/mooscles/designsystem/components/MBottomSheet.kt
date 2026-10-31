@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -48,6 +49,9 @@ internal const val SheetScrimTag = "sheet-scrim"
 
 private enum class SheetValue { Hidden, Shown }
 
+/** How many frames [MBottomSheet] waits for its `initialFocus` to be attached. */
+private const val INITIAL_FOCUS_FRAMES = 60
+
 /**
  * A bottom sheet with a 32 x 4 handle, `radius.xl` top corners and a height of at most 90% of
  * the screen (`sizes.sheetMaxFraction`). It closes with Back/Escape, a tap on the scrim and by
@@ -59,12 +63,17 @@ private enum class SheetValue { Hidden, Shown }
  * `ease.drawer` and leaves with `motion.slowExit`; with reduced motion it fades instead of
  * sliding. The content is laid out in a plain column: a long list should scroll itself
  * (the drag listens on the whole sheet, so keep scrollable content out of the handle area).
+ *
+ * [initialFocus], a requester on a field of the content, takes the focus once the sheet is open, in place of the
+ * sheet itself (which has it until then, so Escape and Back reach the sheet): asked once, so a focus that moves
+ * away afterwards is never pulled back.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    initialFocus: FocusRequester? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MTheme.colors
@@ -126,7 +135,24 @@ fun MBottomSheet(
     }
     MOverlayWindow(onDismissRequest = { close() }) {
         // Inside the Dialog's own composition, so the requester is attached before it is used.
-        LaunchedEffect(Unit) { focus.requestFocus() }
+        LaunchedEffect(Unit) {
+            focus.requestFocus()
+            if (initialFocus != null) {
+                // The content is laid out in the box below, which composes it during layout: the field is not
+                // attached when this effect starts, so ask once per frame until it is, then never again.
+                var tries = 0
+                while (tries < INITIAL_FOCUS_FRAMES) {
+                    withFrameNanos { }
+                    val asked: Any = try {
+                        initialFocus.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        false
+                    }
+                    if (asked != false) break
+                    tries++
+                }
+            }
+        }
         BoxWithConstraints(
             Modifier.fillMaxSize().overlayKeys { close() }.focusRequester(focus).focusable(),
         ) {

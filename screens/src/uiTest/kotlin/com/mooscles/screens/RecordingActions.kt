@@ -1,12 +1,15 @@
 package com.mooscles.screens
 
 import com.mooscles.ui.MoosclesActions
+import com.mooscles.ui.RoutineSetUi
 import com.mooscles.ui.SetUi
 
 /**
  * A [MoosclesActions] that only records: every call adds `"<method>:<arg1>,<arg2>,…"` to [calls],
  * each argument written with its `toString()` (`"updateSet:s2,8,82.5,true,false,false"`), and
- * `"<method>:"` for a method without arguments (`"skipTimer:"`).
+ * `"<method>:"` for a method without arguments (`"skipTimer:"`). A list argument is its items joined
+ * by `|` (`"addRoutineExercises:r1,bench|row"`); a restored set is the whole set, as `toString()`
+ * writes it, so a test checks the snapshot and not only the id.
  */
 class RecordingActions : MoosclesActions {
     private val recorded = mutableListOf<String>()
@@ -15,7 +18,7 @@ class RecordingActions : MoosclesActions {
     val calls: List<String> get() = recorded.toList()
 
     private fun record(method: String, vararg args: Any?) {
-        recorded += "$method:" + args.joinToString(",")
+        recorded += "$method:" + args.joinToString(",") { if (it is List<*>) it.joinToString("|") else it.toString() }
     }
 
     // UpdateActions
@@ -37,24 +40,29 @@ class RecordingActions : MoosclesActions {
     // MoosclesActions
     override fun clearError() = record("clearError")
     override fun createRoutine(name: String) = record("createRoutine", name)
+    override fun createRoutine(name: String, folderId: String, id: String) = record("createRoutine", name, folderId, id)
     override fun renameRoutine(id: String, name: String) = record("renameRoutine", id, name)
     override fun duplicateRoutine(id: String) = record("duplicateRoutine", id)
+    override fun duplicateRoutine(id: String, copyName: String, newId: String) = record("duplicateRoutine", id, copyName, newId)
+    override fun reorderRoutines(folderId: String, ids: List<String>) = record("reorderRoutines", folderId, ids)
+    override fun reorderRoutineFolders(ids: List<String>) = record("reorderRoutineFolders", ids)
+    override fun deleteRoutineFolder(id: String) = record("deleteRoutineFolder", id)
     override fun deleteRoutine(id: String) = record("deleteRoutine", id)
-    override fun moveRoutine(id: String, direction: Int) = record("moveRoutine", id, direction)
     override fun createRoutineFolder(name: String) = record("createRoutineFolder", name)
     override fun renameRoutineFolder(id: String, name: String) = record("renameRoutineFolder", id, name)
     override fun selectRoutineFolder(id: String) = record("selectRoutineFolder", id)
     override fun moveRoutineToFolder(routineId: String, folderId: String) = record("moveRoutineToFolder", routineId, folderId)
     override fun addRoutineExercise(routineId: String, exerciseId: String) = record("addRoutineExercise", routineId, exerciseId)
+    override fun addRoutineExercises(routineId: String, exerciseIds: List<String>) = record("addRoutineExercises", routineId, exerciseIds)
+    override fun reorderRoutineExercises(routineId: String, ids: List<String>) = record("reorderRoutineExercises", routineId, ids)
     override fun replaceRoutineExercise(entryId: String, exerciseId: String) = record("replaceRoutineExercise", entryId, exerciseId)
     override fun removeRoutineExercise(entryId: String) = record("removeRoutineExercise", entryId)
-    override fun moveRoutineExercise(entryId: String, direction: Int) = record("moveRoutineExercise", entryId, direction)
-    override fun updateRoutineExercise(entryId: String, sets: Int, reps: Int, weightKg: Double?, restSeconds: Int) =
-        record("updateRoutineExercise", entryId, sets, reps, weightKg, restSeconds)
     override fun addRoutineSet(entryId: String) = record("addRoutineSet", entryId)
     override fun removeRoutineSet(setId: String) = record("removeRoutineSet", setId)
     override fun updateRoutineSet(setId: String, reps: Int, weightKg: Double?) = record("updateRoutineSet", setId, reps, weightKg)
     override fun inheritRoutineSet(setId: String) = record("inheritRoutineSet", setId)
+    override fun setRoutineSetWarmup(setId: String, warmup: Boolean) = record("setRoutineSetWarmup", setId, warmup)
+    override fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi) = record("restoreRoutineSet", entryId, position, set)
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = record("updateRoutineExerciseRest", entryId, seconds)
     override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) =
         record("createCustomExercise", id, name, muscle, equipment, convention)

@@ -12,6 +12,7 @@ import com.mooscles.designsystem.gallery.pages.FoundationsPage
 import com.mooscles.designsystem.gallery.pages.IconsPage
 import com.mooscles.designsystem.gallery.pages.OverlaysPage
 import com.mooscles.designsystem.gallery.pages.RecordsPage
+import com.mooscles.designsystem.gallery.pages.ReorderPage
 import com.mooscles.designsystem.gallery.pages.RowsPage
 import com.mooscles.designsystem.gallery.pages.SetRowPage
 import com.mooscles.designsystem.gallery.pages.ShellPage
@@ -27,6 +28,7 @@ import com.mooscles.designsystem.resources.gallery_page_foundations
 import com.mooscles.designsystem.resources.gallery_page_icons
 import com.mooscles.designsystem.resources.gallery_page_overlays
 import com.mooscles.designsystem.resources.gallery_page_records
+import com.mooscles.designsystem.resources.gallery_page_reorder
 import com.mooscles.designsystem.resources.gallery_page_rows
 import com.mooscles.designsystem.resources.gallery_page_set_row
 import com.mooscles.designsystem.resources.gallery_page_shell
@@ -51,11 +53,18 @@ enum class GalleryPage(val title: StringResource) {
     Records(Res.string.gallery_page_records),
     ExerciseCard(Res.string.gallery_page_exercise_card),
     Shell(Res.string.gallery_page_shell),
+    Reorder(Res.string.gallery_page_reorder),
 }
 
 fun galleryPageTag(page: GalleryPage): String = "gallery-page-${page.name}"
 
 fun galleryEntryTag(page: GalleryPage): String = "gallery-entry-${page.name}"
+
+/** The number of items on the reordering page. */
+const val GALLERY_REORDER_COUNT = 6
+
+/** The tag of the reordering page's item [index] (its key: the place it started in). */
+fun galleryReorderItemTag(index: Int): String = "gallery-reorder-$index"
 
 /**
  * A gallery page the design system does not own, given by its host (plan decision 5: the figure
@@ -87,6 +96,7 @@ fun GalleryPage.Content() {
             GalleryPage.Records -> RecordsPage()
             GalleryPage.ExerciseCard -> ExerciseCardPage()
             GalleryPage.Shell -> ShellPage()
+            GalleryPage.Reorder -> ReorderPage()
         }
     }
 }

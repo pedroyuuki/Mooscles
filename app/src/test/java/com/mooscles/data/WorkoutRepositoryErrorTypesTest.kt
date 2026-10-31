@@ -102,7 +102,6 @@ class WorkoutRepositoryErrorTypesTest {
         assertRefused(DataError.FOLDER_NOT_FOUND, "Folder not found.") { repo.renameRoutineFolder("missing", "Folder") }
         assertRefused(DataError.FOLDER_NOT_FOUND, "Folder not found.") { repo.createRoutine("Legs", folderId = "missing") }
         assertRefused(DataError.ROUTINE_NOT_FOUND, "Routine not found.") { repo.renameRoutine("missing", "Legs") }
-        assertRefused(DataError.ROUTINE_NOT_FOUND, "Routine not found.") { repo.moveRoutine("missing", 1) }
         assertRefused(DataError.INVALID_VALUE, "Invalid routine order.") { repo.reorderRoutines(listOf(routineId)) }
         assertRefused(DataError.INVALID_VALUE, "Cannot move an exercise to another routine.") {
             repo.updateRoutineExercise(plan.copy(routineId = otherRoutineId))

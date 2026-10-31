@@ -30,6 +30,12 @@ class MotionTokensTest {
         assertEquals(8.dp, motion.prRise)
     }
 
+    /** Phase 4B (spec D15): a lifted item grows to 102%. */
+    @Test
+    fun dragLiftScale() {
+        assertEquals(1.02f, motion.dragLiftScale)
+    }
+
     @Test
     fun exitIsShorterThanEntry() {
         assertTrue(motion.slowExit < motion.slow)

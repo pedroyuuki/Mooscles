@@ -2,9 +2,18 @@ package com.mooscles.designsystem.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+
+/**
+ * A hook the host can provide to set up the platform window of every [MOverlayWindow] as it opens. It runs
+ * inside the window's own composition, so the host reads the window from there (on Android, the view's
+ * `DialogWindowProvider`) and, say, gives the window's system bars the app theme's appearance, which the
+ * window would otherwise take from the system. The default does nothing.
+ */
+val LocalOverlayWindowSetup = staticCompositionLocalOf<@Composable () -> Unit> { {} }
 
 /**
  * The window every overlay opens ([MDialog], [MBottomSheet], and the screens' full-screen pages: the
@@ -19,10 +28,12 @@ import androidx.compose.ui.window.DialogProperties
 @Composable
 fun MOverlayWindow(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
     val hostDensity = LocalDensity.current
+    val setup = LocalOverlayWindowSetup.current
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
     ) {
+        setup()
         CompositionLocalProvider(LocalDensity provides hostDensity, content = content)
     }
 }
