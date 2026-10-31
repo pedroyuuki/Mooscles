@@ -1,8 +1,10 @@
 package com.mooscles.screens.records
 
+import com.mooscles.screens.format.BestSets
 import com.mooscles.screens.progress.HOUR
 import com.mooscles.screens.progress.ProgressIndex
 import com.mooscles.screens.progress.RecordEvent
+import com.mooscles.screens.progress.assistedDip
 import com.mooscles.screens.progress.bench
 import com.mooscles.screens.progress.currentOf
 import com.mooscles.screens.progress.customRow
@@ -126,7 +128,7 @@ class RecordTimelinesTest {
     }
 
     @Test
-    fun aCurrentRecordWhoseWorkoutIsGoneDoesNotAppear() {
+    fun aStrayCurrentRecordWhoseWorkoutIsGoneDoesNotAppear() {
         val b = base()
         val stray = currentOf(weightRecord(bench, 200.0, 1, 190.0, b.w3.copy(id = "gone")))
         val index = ProgressIndex.build(listOf(b.w3, b.w2, b.w1), b.index.currentRecords.map { it.record } + stray)
@@ -152,20 +154,81 @@ class RecordTimelinesTest {
 
     @Test
     fun keysAreUniqueAcrossTheTimeline() {
-        // Reps records at loads that a pound round trip makes equal (60 kg and its next ulp), in three workouts.
-        val loads = listOf(60.0, 60.0.let { it.nextUp() }, 27.2155)
-        val workouts = loads.mapIndexed { i, load ->
-            endingAt("k$i", "2026-0${i + 6}-10T10:00:00Z") { listOf(repsRecord(bench, load, 8 + i, 7 + i, it),
-                weightRecord(bench, load, 1, load - 5, it)) }
+        // 27.2155 kg and 27.22 kg both read "60 lb" but are not the same load: two reps records of one workout.
+        assertFalse(BestSets.sameLoad(27.2155, 27.22))
+        fun history(): List<WorkoutUi> {
+            val loads = endingAt("k0", "2026-06-10T10:00:00Z") {
+                listOf(repsRecord(bench, 27.2155, 8, 7, it), repsRecord(bench, 27.22, 10, 9, it),
+                    weightRecord(bench, 27.22, 1, 22.0, it))
+            }
+            // Same exercise, load and kind; only the assistance differs.
+            val assisted = endingAt("k1", "2026-07-10T10:00:00Z") {
+                listOf(repsRecord(assistedDip, 20.0, 8, 7, it, assistance = true),
+                    repsRecord(assistedDip, 20.0, 9, 8, it, assistance = false))
+            }
+            return listOf(assisted, loads)
         }
-        val index = ProgressIndex.build(workouts.reversed(), emptyList())
+        val timeline = query(ProgressIndex.build(history(), emptyList()), firstRecords = true)
 
-        val timeline = query(index, firstRecords = true)
         val keys = timeline.events().map(RecordTimelines::key)
-        assertEquals(6, keys.size)
+        assertEquals(5, keys.size)
         assertEquals(keys.size, keys.toSet().size)
-        assertEquals(keys, query(index, firstRecords = true).events().map(RecordTimelines::key), "stable across queries")
-        assertTrue(keys.all { it.isNotEmpty() })
+        // A rebuilt index from copied inputs gives the same keys, in the same order.
+        val rebuilt = ProgressIndex.build(history().map { it.copy() }, emptyList())
+        assertEquals(keys, query(rebuilt, firstRecords = true).events().map(RecordTimelines::key))
     }
 
+    @Test
+    fun searchKeepsTheIndexOrderInsideAWorkout() {
+        val w = endingAt("o", "2026-10-15T10:00:00Z") {
+            listOf(weightRecord(bench, 110.0, 2, 105.0, it), repsRecord(bench, 85.0, 4, null, it),
+                repsRecord(bench, 80.0, 6, 5, it))
+        }
+        // The weight record and the 85 kg first reps record are current; the 80 kg one is only beaten.
+        val index = ProgressIndex.build(listOf(w), listOf(w.records[0], w.records[1]).map(::currentOf))
+
+        val chip = query(index, firstRecords = true).events().map { it.record.weightKg }
+        assertEquals(listOf(110.0, 85.0, 80.0), chip)
+        assertEquals(chip, query(index, text = "bench").events().map { it.record.weightKg })
+        assertEquals(chip, query(index, text = "supino").events().map { it.record.weightKg })
+    }
+
+    @Test
+    fun aCurrentFallbackTakesItsPlaceByTheIndexOrder() {
+        // The current record has no event in its workout (no 90 kg reps event), so it comes from UiState.records.
+        val w = endingAt("f", "2026-10-15T10:00:00Z") {
+            listOf(weightRecord(bench, 110.0, 2, 105.0, it), repsRecord(bench, 80.0, 6, 5, it))
+        }
+        val fallback = currentOf(repsRecord(bench, 90.0, 3, null, w))
+        val index = ProgressIndex.build(listOf(w), listOf(fallback))
+
+        assertEquals(listOf(110.0, 90.0, 80.0), query(index, text = "bench").events().map { it.record.weightKg })
+    }
+
+    @Test
+    fun currentOnlyWithSearchListsTheCurrentRecordsOfTheMatches() {
+        val b = base()
+
+        assertEquals(listOf("w3W", "w3R"), query(b.index, text = "bench", currentOnly = true).ids())
+        assertEquals(listOf("w1W"), query(b.index, text = "cable row", currentOnly = true).ids())
+    }
+
+    @Test
+    fun aDeletedWorkoutLeavesTheTimelineAfterARebuild() {
+        val b = base()
+        val without = ProgressIndex.build(listOf(b.w2, b.w1), b.index.currentRecords.map { it.record })
+
+        assertFalse(query(without, firstRecords = true).events().any { it.record.workoutId == "w3" })
+        assertFalse(query(without, currentOnly = true).events().any { it.record.workoutId == "w3" })
+        assertFalse(query(without, text = "bench").events().any { it.record.workoutId == "w3" })
+    }
+
+    @Test
+    fun theSameMonthOfTwoYearsIsTwoMonths() {
+        val a = endingAt("a", "2025-10-15T10:00:00Z") { listOf(weightRecord(bench, 100.0, 1, 90.0, it)) }
+        val b = endingAt("b", "2026-10-15T10:00:00Z") { listOf(weightRecord(bench, 110.0, 1, 100.0, it)) }
+
+        val months = query(ProgressIndex.build(listOf(b, a), emptyList())).months
+        assertEquals(listOf(2026 to Month.OCTOBER, 2025 to Month.OCTOBER), months.map { it.year to it.month })
+    }
 }

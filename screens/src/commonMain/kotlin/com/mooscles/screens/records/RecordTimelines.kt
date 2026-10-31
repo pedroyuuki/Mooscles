@@ -33,21 +33,23 @@ object RecordTimelines {
         val matches = if (text.isEmpty()) null else index.searchRecords(text)
         fun found(event: RecordEvent) = matches == null || event.record.exercise.id in matches
 
-        val chosen: List<RecordEvent> = when {
-            query.currentOnly -> index.currentRecords.filter(::found)
-            else -> index.events.filter { found(it) && (query.firstRecords || !it.record.firstRecord) } +
-                // A search also lists the current records of what it found, even when they are first records.
-                (if (matches == null) emptyList() else index.currentRecords.filter(::found))
+        // One pass over the events in the index's order. A search also lists the current records of what it found,
+        // first records included, so those events pass even without the chip.
+        val chosen: List<RecordEvent> = if (query.currentOnly) {
+            index.currentRecords.filter(::found)
+        } else {
+            val inOrder = index.events.filter {
+                found(it) && (query.firstRecords || !it.record.firstRecord || (matches != null && it.current))
+            }
+            // A current record the events lack (its fallback) joins at its place by the index's own order.
+            val extras = if (matches == null) emptyList() else {
+                val seen = HashSet<RecordEvent>(inOrder)
+                index.currentRecords.filter { found(it) && it !in seen }
+            }
+            if (extras.isEmpty()) inOrder else (inOrder + extras).sortedWith(index.eventOrder)
         }
-        // One row per record: the current copy of an event is the event itself, and a repeated key is a repeat.
-        val unique = LinkedHashMap<String, RecordEvent>()
-        for (event in chosen) {
-            val key = key(event)
-            val seen = unique[key]
-            if (seen == null || (event.current && !seen.current)) unique[key] = event
-        }
-        // Newest first; the stable sort keeps the index's order for equal dates.
-        val events = unique.values.sortedByDescending { it.record.date }
+        // The current copy of an event is the event itself: identity dedupes it.
+        val events = chosen.distinct()
         val months = ArrayList<RecordMonth>()
         var year = 0
         var month: Month? = null

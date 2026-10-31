@@ -278,7 +278,9 @@ jobs:
           # Phase 5A task 4 fix round 1 (:screens commonTest): ProgressIndexTest +5 (marks on the record set only, reps tie,
           # events of workouts ending together). 1160 + 5 = 1165.
           # Phase 5A task 6: RecordTimelinesTest 9 (:screens commonTest). 1165 + 9 = 1174.
-          MIN_HOST_TESTS: 1174
+          # Phase 5A task 6 fix round 1: RecordTimelinesTest +5 (search order, fallback order, current-only search, deleted workout,
+          # two years). 1174 + 5 = 1179.
+          MIN_HOST_TESTS: 1179
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -629,7 +631,8 @@ jobs:
           # Phase 5A task 4: ProgressIndexTest 25 (commonTest). 683 + 25 = 708.
           # Phase 5A task 4 fix round 1: ProgressIndexTest +5 (commonTest). 708 + 5 = 713.
           # Phase 5A task 6: RecordTimelinesTest 9 (commonTest). 713 + 9 = 722.
-          MIN_SCREENS_IOS_TESTS: 722
+          # Phase 5A task 6 fix round 1: RecordTimelinesTest +5 (commonTest). 722 + 5 = 727.
+          MIN_SCREENS_IOS_TESTS: 727
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
