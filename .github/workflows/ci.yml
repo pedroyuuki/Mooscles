@@ -254,7 +254,8 @@ jobs:
           # the other new tests are uiTest. 1085 + 1 = 1086.
           # Phase 4 figures, barbell lot: ExerciseFiguresTest.barbellFamilyIsComplete +1 (:screens commonTest). 1086 + 1 = 1087.
           # Phase 4 figures, dumbbell lot: ExerciseFiguresTest.dumbbellFamilyIsComplete +1 (:screens commonTest). 1087 + 1 = 1088.
-          MIN_HOST_TESTS: 1088
+          # Phase 4 figures, cable lot: ExerciseFiguresTest.cableFamilyIsComplete +1 (:screens commonTest). 1088 + 1 = 1089.
+          MIN_HOST_TESTS: 1089
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -577,7 +578,8 @@ jobs:
           # Phase 4B final review C1: LibraryScreenTest.nextFormAfterTheHandOverStartsAfresh (uiTest). 640 + 1 = 641.
           # Phase 4 figures, barbell lot: ExerciseFiguresTest.barbellFamilyIsComplete (commonTest). 641 + 1 = 642.
           # Phase 4 figures, dumbbell lot: ExerciseFiguresTest.dumbbellFamilyIsComplete (commonTest). 642 + 1 = 643.
-          MIN_SCREENS_IOS_TESTS: 643
+          # Phase 4 figures, cable lot: ExerciseFiguresTest.cableFamilyIsComplete (commonTest). 643 + 1 = 644.
+          MIN_SCREENS_IOS_TESTS: 644
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

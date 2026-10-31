@@ -73,6 +73,13 @@ class ExerciseFiguresTest {
         ExerciseCatalog.exercises.filter { it.equipment == Equipment.DUMBBELL }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
     )
 
+    /** The cable lot (spec D4): every cable entry of the catalog. */
+    @Test
+    fun cableFamilyIsComplete() = familyIsComplete(
+        "cable",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.CABLE }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
     /** F34: the margin token is a fraction of the box, so it is compared in box units. */
     @Test
     fun everyPoseStaysInsideTheBoxWithMargin() {
