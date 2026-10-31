@@ -35,6 +35,12 @@ enum class FigureSegment {
  * [frontView] draws the figure seen from the front, for a movement in the frontal plane that a side
  * view cannot show (a lateral raise): "near" is then the figure's left side, on the right of the
  * image, and "far" its right side; both are drawn as body and both take the limb highlights.
+ *
+ * [shoulderLift] raises the shoulders (a shrug): the shoulder joint, where the arms start, slides up
+ * the trunk line toward the neck by that many box units, clamped to `0..`[FigureSkeleton.SHOULDER_LIFT_MAX].
+ * The hip, the top of the trunk, the neck, the head and the bone lengths stay as they are: the
+ * proportions of [FigureSkeleton] do not change, the arms only start higher. 0, the default, is the
+ * shoulder at the top of the trunk.
  */
 @Immutable
 data class FigurePose(
@@ -55,6 +61,7 @@ data class FigurePose(
     val floorY: Float? = null,
     val props: List<FigureProp> = emptyList(),
     val frontView: Boolean = false,
+    val shoulderLift: Float = 0f,
 )
 
 /**
@@ -70,6 +77,12 @@ object FigureSkeleton {
     const val THIGH = 16f
     const val SHIN = 16f
     const val FOOT = 5.5f
+
+    /**
+     * The most a pose's `shoulderLift` raises the shoulder up the trunk: the neck's length (about a
+     * sixth of the trunk), so a shrugged shoulder reaches the base of the head and never passes it.
+     */
+    const val SHOULDER_LIFT_MAX = 3f
 
     /** A barbell seen from the side: its plate, facing the viewer, centered on the hand. */
     const val PLATE_RADIUS = 8f
@@ -103,7 +116,11 @@ sealed interface FigureProp {
     /** A dumbbell held at [at]: a small disc around the hand. */
     data class Dumbbell(val at: FigureJoint) : FigureProp
 
-    /** A kettlebell held at [at]: the handle around the hand, the bell hanging below. */
+    /**
+     * A kettlebell held at [at]: the handle around the hand, the bell hanging below. In the near
+     * hand it is drawn over the arm, where its bell rests on the outside of the forearm (rack,
+     * overhead), so the arm's gap does not erase it.
+     */
     data class Kettlebell(val at: FigureJoint) : FigureProp
 
     /** A bench pad from ([x], [y]) for [length] at [angle] (90 is flat; tilt it for incline or decline), legs down from both ends. */
@@ -126,6 +143,13 @@ sealed interface FigureProp {
 
     /** A foot platform (leg press) centered on the joint it is [at], [length] long at [angle]. */
     data class Platform(val at: FigureJoint, val length: Float, val angle: Float) : FigureProp
+
+    /**
+     * A Smith machine's guide rail, seen from the side: a vertical line at [x] from [top] down to
+     * [bottom]. The bar slides along it, so a Smith figure holds its [Barbell] on the rail's x in
+     * both frames; the rail itself stays put.
+     */
+    data class Rail(val x: Float, val top: Float, val bottom: Float) : FigureProp
 
     /** A floor line at height [y], under the whole figure and its equipment. */
     data class Floor(val y: Float) : FigureProp

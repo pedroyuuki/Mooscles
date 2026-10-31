@@ -61,7 +61,8 @@ import org.junit.Assume.assumeTrue
  * Opt-in, like the phase 3 fixtures: it only runs with `-e pilotSheet true`
  * (`-Pandroid.testInstrumentationRunnerArguments.pilotSheet=true`) and is skipped in a full run.
  * `-e lot <family>` (`…Arguments.lot=barbell`) captures a lot instead: the figures of that family
- * table of [ExerciseFigures.families] that are not in the pilot, in the table's order.
+ * table of [ExerciseFigures.families] that are not in the pilot, in the table's order. `-e lot shrugs`
+ * captures the three shrugs of every family (`shrugs-…`), the figures the shoulder lift is for.
  *
  * A window holds only part of a sheet, so each sheet is composed page by page in one composition
  * and the pages are stacked into one bitmap. The 64 dp sheet uses the emulator's density, where
@@ -85,6 +86,8 @@ class PilotSheetCaptureTest {
         val lot = InstrumentationRegistry.getArguments().getString("lot")
         val ids = if (lot == null) {
             ExerciseFigures.PILOT
+        } else if (lot == SHRUGS) {
+            ExerciseFigures.stableIds.filter { it.endsWith("_shrug") }
         } else {
             val family = checkNotNull(ExerciseFigures.families[lot]) { "No figure family $lot" }
             family.keys.filter { it !in ExerciseFigures.PILOT }
@@ -143,6 +146,9 @@ class PilotSheetCaptureTest {
 
     private companion object {
         const val EXPORT = "/sdcard/Download/mooscles-pilot"
+
+        /** The lot of every shrug, across the families (the shoulder lift's figures). */
+        const val SHRUGS = "shrugs"
 
         /** Exercises per window: two columns of tiles, or three exercises with both frames at the detail size. */
         const val TILE_PAGE = 10

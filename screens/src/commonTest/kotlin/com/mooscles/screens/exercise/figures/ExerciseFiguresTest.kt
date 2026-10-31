@@ -31,6 +31,15 @@ class ExerciseFiguresTest {
 
     private val tolerance = 0.5f
 
+    /** The three shrugs of the catalog (final report, "Encolhimentos"). */
+    private val SHRUGS = listOf("barbell_shrug", "dumbbell_shrug", "smith_shrug")
+
+    /**
+     * The least the shoulders of a shrug rise from frame A to frame B, in box units: 2, about 3.4 px
+     * on a 64 dp tile at the emulator's 2.625 density.
+     */
+    private val MIN_SHRUG_RISE = 2f
+
     private fun eachFrame(check: (id: String, frame: String, pose: FigurePose, onFloor: Set<FigureJoint>) -> Unit) {
         for (id in ExerciseFigures.stableIds) {
             val frames = assertNotNull(ExerciseFigures.forExercise("catalog_$id"), id)
@@ -96,6 +105,63 @@ class ExerciseFiguresTest {
             .map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
     )
 
+    /** The kettlebell lot (spec D4): every kettlebell entry of the catalog. */
+    @Test
+    fun kettlebellFamilyIsComplete() = familyIsComplete(
+        "kettlebell",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.KETTLEBELL }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
+    /** The Smith machine lot (spec D4): every Smith machine entry of the catalog. */
+    @Test
+    fun smithFamilyIsComplete() = familyIsComplete(
+        "smith",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.SMITH_MACHINE }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
+    /**
+     * Plan Task L, the last lot: every catalog exercise has a figure, in some family, except the
+     * ones left on the equipment icon on purpose ([ExerciseFigures.NO_FIGURE]).
+     */
+    @Test
+    fun everyCatalogExerciseHasAFigure() {
+        val missing = ExerciseCatalog.exercises
+            .map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) }
+            .filter { it !in ExerciseFigures.NO_FIGURE && ExerciseFigures.forExercise(ExerciseCatalog.ID_PREFIX + it) == null }
+        assertTrue(missing.isEmpty(), "${missing.size} catalog exercises have no figure: $missing")
+    }
+
+    /** A kettlebell figure holds a kettlebell in both frames, so it never reads as a dumbbell. */
+    @Test
+    fun kettlebellFiguresHoldAKettlebell() {
+        for ((id, frames) in assertNotNull(ExerciseFigures.families["kettlebell"])) {
+            for (pose in listOf(frames.start, frames.end)) {
+                val props = pose.props
+                assertTrue(props.any { it is FigureProp.Kettlebell }, "$id holds no kettlebell")
+                assertTrue(props.none { it is FigureProp.Dumbbell || it is FigureProp.Barbell }, "$id holds another weight")
+            }
+        }
+    }
+
+    /**
+     * A Smith machine's bar runs on vertical rails: every Smith figure draws one rail, and the bar
+     * sits on it in both frames, so the bar only moves up and down between them.
+     */
+    @Test
+    fun smithBarRunsOnTheRail() {
+        for ((id, frames) in assertNotNull(ExerciseFigures.families["smith"])) {
+            for ((frame, pose) in listOf("start" to frames.start, "end" to frames.end)) {
+                val rail = pose.props.filterIsInstance<FigureProp.Rail>().singleOrNull()
+                assertNotNull(rail, "$id $frame has no single rail")
+                val bar = pose.props.filterIsInstance<FigureProp.Barbell>().singleOrNull()
+                assertNotNull(bar, "$id $frame has no single bar")
+                val at = FigureKinematics.solve(pose).joints.getValue(bar.at)
+                assertTrue(abs(at.x - rail.x) <= tolerance, "$id $frame: the bar at x ${at.x}, the rail at ${rail.x}")
+                assertTrue(at.y in rail.top..rail.bottom, "$id $frame: the bar at y ${at.y} is off the rail")
+            }
+        }
+    }
+
     /** The exclusion list cannot go stale: each id is in the catalog and has no figure in any family. */
     @Test
     fun noFigureIdsAreCatalogExercisesWithoutAFigure() {
@@ -159,7 +225,8 @@ class ExerciseFiguresTest {
             for ((a, b) in start.zip(end)) {
                 when (a) {
                     // Fixed equipment does not move between frames; held weights and pads follow the body.
-                    is FigureProp.Bench, is FigureProp.Seat, is FigureProp.Bar, is FigureProp.Box, is FigureProp.Floor ->
+                    is FigureProp.Bench, is FigureProp.Seat, is FigureProp.Bar, is FigureProp.Box, is FigureProp.Floor,
+                    is FigureProp.Rail ->
                         assertEquals(a, b, "$id: $a stays put")
                     is FigureProp.Cable -> {
                         b as FigureProp.Cable
@@ -184,6 +251,42 @@ class ExerciseFiguresTest {
         }
     }
 
+    /**
+     * Shoulder lift (barbell lot, A1): in frame B of each shrug the shoulders sit at least
+     * [MIN_SHRUG_RISE] higher than in frame A, and the weight goes up with them on straight arms
+     * (upper arm and forearm in line), so the frames read apart at 64 dp.
+     */
+    @Test
+    fun shrugsRaiseTheShouldersInFrameB() {
+        for (id in SHRUGS) {
+            val frames = assertNotNull(ExerciseFigures.forExercise("catalog_$id"), id)
+            val start = FigureKinematics.solve(frames.start).joints
+            val end = FigureKinematics.solve(frames.end).joints
+            val rise = start.getValue(FigureJoint.SHOULDER).y - end.getValue(FigureJoint.SHOULDER).y
+            assertTrue(rise >= MIN_SHRUG_RISE, "$id: the shoulders rise $rise, at least $MIN_SHRUG_RISE")
+            val handRise = start.getValue(FigureJoint.HAND_NEAR).y - end.getValue(FigureJoint.HAND_NEAR).y
+            assertTrue(handRise >= MIN_SHRUG_RISE, "$id: the weight rises $handRise with the shoulders")
+            assertEquals(start.getValue(FigureJoint.HEAD).y, end.getValue(FigureJoint.HEAD).y, tolerance, "$id: the head stays")
+            for (pose in listOf(frames.start, frames.end)) {
+                assertEquals(pose.upperArmNear, pose.forearmNear, "$id: the near arm hangs straight")
+                assertEquals(pose.upperArmFar, pose.forearmFar, "$id: the far arm hangs straight")
+            }
+        }
+    }
+
+    /**
+     * Only frame B of the three shrugs lifts the shoulders: every other frame keeps the default 0,
+     * which the design system's `noShoulderLiftLeavesEveryJointBitIdentical` holds to the fixed skeleton.
+     */
+    @Test
+    fun onlyTheShrugsLiftTheShoulders() {
+        assertEquals(SHRUGS.toSet(), ExerciseFigures.stableIds.filterTo(HashSet()) { it.endsWith("_shrug") }, "the catalog's shrugs")
+        eachFrame { id, frame, pose, _ ->
+            val expected = if (id in SHRUGS && frame == "end") SHRUG_LIFT else 0f
+            assertEquals(expected, pose.shoulderLift, "$id $frame shoulder lift")
+        }
+    }
+
     @Test
     fun noOrphanKeys() {
         val catalog = ExerciseCatalog.exercises.mapTo(HashSet()) { it.id }
@@ -193,7 +296,10 @@ class ExerciseFiguresTest {
     /** Spec, size warning: the tables are split by family, each well under the JVM method limit. */
     @Test
     fun noFamilyTableIsTooLarge() {
-        assertEquals(setOf("barbell", "dumbbell", "cable", "bodyweight", "machine"), ExerciseFigures.families.keys)
+        assertEquals(
+            setOf("barbell", "dumbbell", "cable", "bodyweight", "machine", "kettlebell", "smith"),
+            ExerciseFigures.families.keys,
+        )
         for ((family, table) in ExerciseFigures.families) {
             assertTrue(table.size <= 60, "$family has ${table.size} figures")
         }

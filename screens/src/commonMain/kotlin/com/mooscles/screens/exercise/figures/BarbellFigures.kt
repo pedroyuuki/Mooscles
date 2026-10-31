@@ -353,8 +353,8 @@ internal object BarbellFigures {
             }
         }
         figure("barbell_shrug") {
-            // Standing tall, arms straight, then the shoulders up toward the ears. The skeleton has no shoulder
-            // girdle, so the frames differ only by the arms' small swing (lot report, finding A1).
+            // Standing tall, arms straight, then the shoulders up toward the ears (the shoulder lift, finding A1
+            // of the lot report): the straight arms and the bar rise with them.
             start {
                 place(ANKLE_NEAR, 44f, 85f); trunk(0f)
                 arms(176f, 176f)
@@ -363,8 +363,8 @@ internal object BarbellFigures {
                 barbell(HAND_NEAR)
             }
             end {
-                place(ANKLE_NEAR, 44f, 85f); trunk(0f)
-                arms(182f, 182f)
+                place(ANKLE_NEAR, 44f, 85f); trunk(0f); shoulderLift(SHRUG_LIFT)
+                arms(176f, 176f)
                 legs(180f, 180f, 90f)
                 floor(85f, ANKLE_NEAR, TOE_NEAR, ANKLE_FAR, TOE_FAR)
                 barbell(HAND_NEAR)

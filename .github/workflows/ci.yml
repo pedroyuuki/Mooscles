@@ -258,7 +258,14 @@ jobs:
           # Phase 4 figures, Pallof press exclusion: ExerciseFiguresTest.noFigureIdsAreCatalogExercisesWithoutAFigure +1 (:screens commonTest). 1089 + 1 = 1090.
           # Phase 4 figures, bodyweight lot: ExerciseFiguresTest.bodyweightFamilyIsComplete +1 (:screens commonTest). 1090 + 1 = 1091.
           # Phase 4 figures, machine lot: ExerciseFiguresTest.machineFamilyIsComplete +1 (:screens commonTest). 1091 + 1 = 1092.
-          MIN_HOST_TESTS: 1092
+          # Phase 4 figures, final lot (kettlebell and Smith): ExerciseFiguresTest +5 (:screens commonTest: kettlebellFamilyIsComplete,
+          # smithFamilyIsComplete, everyCatalogExerciseHasAFigure, kettlebellFiguresHoldAKettlebell, smithBarRunsOnTheRail);
+          # FigureGeometryTest.railIsAVerticalLineThatStaysPut +1 and FigureHighlightDrawingTest.aKettlebellInTheNearHandIsDrawnOverTheArm +1
+          # (:designsystem commonTest). 1092 + 7 = 1099.
+          # Phase 4 figures, shoulder lift (shrugs): FigureGeometryTest +3 (:designsystem commonTest: noShoulderLiftLeavesEveryJointBitIdentical,
+          # aShoulderLiftRaisesTheShoulderAlongTheTrunk, theShoulderLiftIsClamped); ExerciseFiguresTest +2 (:screens commonTest:
+          # shrugsRaiseTheShouldersInFrameB, onlyTheShrugsLiftTheShoulders). 1099 + 5 = 1104.
+          MIN_HOST_TESTS: 1104
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -476,7 +483,11 @@ jobs:
           # Reorder fix round 1: ReorderTest +2 (aTremblingFingerDoesNotPullAFarSlotToIt, aSlotLeftAboveTheFingerGoesToWhereTheItemIsDrawnOneSwapAtATime). 371 + 2 = 373.
           # G1 equipment color: ComponentColorsTest.figureEquipmentIsCopperAndStandsOut +1 (commonTest). 373 + 1 = 374.
           # Phase 4B task 19 (critique): SizesTimingElevationTest.formHandoffIsOneAndAHalfSeconds +1 (commonTest). 374 + 1 = 375.
-          MIN_DS_IOS_TESTS: 375
+          # Phase 4 figures, final lot: FigureGeometryTest.railIsAVerticalLineThatStaysPut +1,
+          # FigureHighlightDrawingTest.aKettlebellInTheNearHandIsDrawnOverTheArm +1 (commonTest). 375 + 2 = 377.
+          # Phase 4 figures, shoulder lift (shrugs): FigureGeometryTest +3 (commonTest: noShoulderLiftLeavesEveryJointBitIdentical,
+          # aShoulderLiftRaisesTheShoulderAlongTheTrunk, theShoulderLiftIsClamped). 377 + 3 = 380.
+          MIN_DS_IOS_TESTS: 380
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -585,7 +596,11 @@ jobs:
           # Phase 4 figures, Pallof press exclusion: ExerciseFiguresTest.noFigureIdsAreCatalogExercisesWithoutAFigure (commonTest). 644 + 1 = 645.
           # Phase 4 figures, bodyweight lot: ExerciseFiguresTest.bodyweightFamilyIsComplete (commonTest). 645 + 1 = 646.
           # Phase 4 figures, machine lot: ExerciseFiguresTest.machineFamilyIsComplete (commonTest). 646 + 1 = 647.
-          MIN_SCREENS_IOS_TESTS: 647
+          # Phase 4 figures, final lot: ExerciseFiguresTest +5 (commonTest: kettlebellFamilyIsComplete, smithFamilyIsComplete,
+          # everyCatalogExerciseHasAFigure, kettlebellFiguresHoldAKettlebell, smithBarRunsOnTheRail). 647 + 5 = 652.
+          # Phase 4 figures, shoulder lift (shrugs): ExerciseFiguresTest +2 (commonTest: shrugsRaiseTheShouldersInFrameB,
+          # onlyTheShrugsLiftTheShoulders). 652 + 2 = 654.
+          MIN_SCREENS_IOS_TESTS: 654
         run: |
           $files = @(Get-ChildItem -Path 'screens/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()

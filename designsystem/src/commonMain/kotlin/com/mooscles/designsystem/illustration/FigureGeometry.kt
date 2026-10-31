@@ -18,7 +18,9 @@ data class FigureGeometry(val joints: Map<FigureJoint, Offset>, val bounds: Rect
 
 /**
  * Forward kinematics: from the hip outward, each joint is its parent plus the bone length of
- * [FigureSkeleton] in the bone's absolute direction (plan decision 6).
+ * [FigureSkeleton] in the bone's absolute direction (plan decision 6). The neck starts at the top of
+ * the trunk; the arms start at the shoulder, which a pose's `shoulderLift` raises further up the
+ * trunk line (see [FigurePose]).
  */
 object FigureKinematics {
     fun solve(pose: FigurePose): FigureGeometry {
@@ -32,12 +34,35 @@ object FigureKinematics {
      * Every piece of equipment of [pose] as shapes, in the order of its props. A floor runs under
      * everything else, so it is measured last, against the body and the other equipment.
      */
-    internal fun equipment(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> {
+    internal fun equipment(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> = layer(pose, joints) { true }
+
+    /** The equipment drawn behind the body: all of it but what [inFrontOfTheArm] keeps for the front. */
+    internal fun equipmentBehind(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> =
+        layer(pose, joints) { !inFrontOfTheArm(it, pose.frontView) }
+
+    /** The equipment drawn last, over the near arm (see [inFrontOfTheArm]). */
+    internal fun equipmentInFront(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> =
+        layer(pose, joints) { inFrontOfTheArm(it, pose.frontView) }
+
+    /**
+     * A kettlebell in a hand the viewer sees in front (the near hand; from the front, either hand):
+     * its bell rests on the outside of the forearm in the rack and overhead, toward the viewer, and
+     * the arm's gap would otherwise erase it whenever the forearm points up.
+     */
+    internal fun inFrontOfTheArm(prop: FigureProp, frontView: Boolean): Boolean =
+        prop is FigureProp.Kettlebell &&
+            (prop.at == FigureJoint.HAND_NEAR || (frontView && prop.at == FigureJoint.HAND_FAR))
+
+    private inline fun layer(pose: FigurePose, joints: Map<FigureJoint, Offset>, keep: (FigureProp) -> Boolean): List<PropShape> {
         val shapes = pose.props.map { propShapes(it, joints) }
         var rest = bodyBounds(joints)
         for (list in shapes) for (shape in list) rest = rest.including(shape.bounds())
         return pose.props.flatMapIndexed { index, prop ->
-            if (prop is FigureProp.Floor) floorShapes(prop, rest) else shapes[index]
+            when {
+                !keep(prop) -> emptyList()
+                prop is FigureProp.Floor -> floorShapes(prop, rest)
+                else -> shapes[index]
+            }
         }
     }
 
@@ -55,11 +80,20 @@ object FigureKinematics {
         return Offset(sin(radians).toFloat(), -cos(radians).toFloat())
     }
 
+    /** The pose's shoulder lift, clamped to `0..`[FigureSkeleton.SHOULDER_LIFT_MAX] (a NaN is no lift). */
+    internal fun shoulderLift(pose: FigurePose): Float {
+        val lift = pose.shoulderLift
+        return if (lift > 0f) min(lift, FigureSkeleton.SHOULDER_LIFT_MAX) else 0f
+    }
+
     private fun joints(pose: FigurePose): Map<FigureJoint, Offset> {
         fun bone(from: Offset, angle: Float, length: Float) = from + direction(angle) * length
         val hip = Offset(pose.hipX, pose.hipY)
-        val shoulder = bone(hip, pose.trunk, FigureSkeleton.TRUNK)
-        val neck = bone(shoulder, pose.head, FigureSkeleton.NECK)
+        val trunkTop = bone(hip, pose.trunk, FigureSkeleton.TRUNK)
+        // Without a lift the shoulder is the top of the trunk itself, bit for bit.
+        val lift = shoulderLift(pose)
+        val shoulder = if (lift > 0f) bone(trunkTop, pose.trunk, lift) else trunkTop
+        val neck = bone(trunkTop, pose.head, FigureSkeleton.NECK)
         val head = bone(neck, pose.head, FigureSkeleton.HEAD_RADIUS)
         val elbowNear = bone(shoulder, pose.upperArmNear, FigureSkeleton.UPPER_ARM)
         val handNear = bone(elbowNear, pose.forearmNear, FigureSkeleton.FOREARM)
@@ -117,6 +151,7 @@ object FigureKinematics {
             val half = direction(prop.angle) * (prop.length / 2f)
             listOf(PropShape.Line(center - half, center + half))
         }
+        is FigureProp.Rail -> listOf(PropShape.Line(Offset(prop.x, prop.top), Offset(prop.x, prop.bottom)))
         is FigureProp.Floor -> emptyList()
     }
 

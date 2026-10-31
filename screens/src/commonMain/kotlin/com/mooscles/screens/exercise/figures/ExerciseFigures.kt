@@ -5,8 +5,10 @@ import com.mooscles.data.MuscleRegion
 import com.mooscles.designsystem.illustration.FigureSegment
 
 /**
- * The exercise figures (spec D3, D4): the five family tables joined, keyed by the catalog's
- * `stableId`. The pilot has 20; the lots after the G1 gate add the rest, family by family.
+ * The exercise figures (spec D3, D4): the seven family tables joined, keyed by the catalog's
+ * `stableId`. The pilot has 20; the lots after the G1 gate drew the rest, family by family, until
+ * every catalog exercise but [NO_FIGURE] had one. The catalog's "other" equipment holds only the
+ * trap-bar deadlift, which comes with the barbell lot (spec D4), so there is no family of its own.
  */
 internal object ExerciseFigures {
     /** The 20 pilot exercises of spec D4, in its order. */
@@ -21,7 +23,7 @@ internal object ExerciseFigures {
 
     /**
      * Catalog exercises left without a figure on purpose, which keep the equipment icon. The family
-     * checks of the lots skip them, and so will the last lot's check of the whole catalog.
+     * checks of the lots and the check of the whole catalog skip them.
      * - `cable_pallof_press`: the side view cannot show an anti-rotation pull; the equipment icon is clearer.
      * - `selectorized_torso_rotation`: the torso turns about its own axis, which neither the side nor
      *   the front view shows; both frames would be the same seated figure.
@@ -36,6 +38,8 @@ internal object ExerciseFigures {
             "cable" to CableFigures.frames,
             "bodyweight" to BodyweightFigures.frames,
             "machine" to MachineFigures.frames,
+            "kettlebell" to KettlebellFigures.frames,
+            "smith" to SmithFigures.frames,
         )
     }
 
