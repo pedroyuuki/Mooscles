@@ -28,6 +28,7 @@ import com.mooscles.designsystem.resources.gallery_controls_hide
 import com.mooscles.designsystem.resources.gallery_controls_show
 import com.mooscles.designsystem.resources.ds_load_by_reps_spoken
 import com.mooscles.designsystem.resources.gallery_section_buttons
+import com.mooscles.designsystem.resources.gallery_section_charts
 import com.mooscles.designsystem.resources.gallery_section_chip_kinds
 import com.mooscles.designsystem.resources.gallery_section_colors
 import com.mooscles.designsystem.resources.gallery_section_exercise_card
@@ -78,6 +79,7 @@ class GallerySmokeTest {
         GalleryPage.ExerciseCard to Res.string.gallery_section_exercise_card,
         GalleryPage.Shell to Res.string.gallery_section_shell,
         GalleryPage.Reorder to Res.string.gallery_section_reorder,
+        GalleryPage.Charts to Res.string.gallery_section_charts,
     )
 
     /** A failed language test must not leak Portuguese into the next test. */

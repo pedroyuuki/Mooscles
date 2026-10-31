@@ -111,4 +111,8 @@
     <string name="ds_reorder_bottom">Move to bottom</string>
     <!-- Announced after a move: the item's name, its new position and the count. -->
     <string name="ds_reorder_moved">%1$s moved to position %2$d of %3$d</string>
+    <!-- Charts (phase 5A, spec D4): the button that swaps a chart and its data table, and the record legend and table mark. -->
+    <string name="ds_chart_view_data">View data</string>
+    <string name="ds_chart_view_chart">View chart</string>
+    <string name="ds_chart_record">Record</string>
 </resources>

@@ -105,4 +105,8 @@
     <string name="ds_reorder_top">Mover para o topo</string>
     <string name="ds_reorder_bottom">Mover para o fim</string>
     <string name="ds_reorder_moved">%1$s agora na posição %2$d de %3$d</string>
+    <!-- Gráficos (fase 5A, spec D4): o botão que troca o gráfico pela tabela, e a legenda e a marca de recorde. -->
+    <string name="ds_chart_view_data">Ver dados</string>
+    <string name="ds_chart_view_chart">Ver gráfico</string>
+    <string name="ds_chart_record">Recorde</string>
 </resources>

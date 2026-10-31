@@ -271,7 +271,9 @@ jobs:
           # copyToAllRefusesAMissingSourceAndAWarmup); AppViewModelRoutinesHostTest +2 (:app:
           # copyRoutineSetToAllAndItsUndoGoThroughTheLoop, copyAndRestoreFailuresCountUnderTheEntry). 1104 + 7 = 1111.
           # Copy review fix round 1: RoutineCommandsPersistenceTest.copyToAllWithNoOtherWorkingSetWritesNoSet +1 (:app). 1111 + 1 = 1112.
-          MIN_HOST_TESTS: 1112
+          # Phase 5A task 1 (:designsystem commonTest): ChartScaleTest 7, ChartGeometryTest 3, SizesTimingElevationTest.chartTokens +1,
+          # ComponentColorsTest +2 (chartSelectionRingOnSurface, chartLineOnRaised). 1112 + 13 = 1125.
+          MIN_HOST_TESTS: 1125
         run: |
           $files = @(
               'app/build/test-results/testDebugUnitTest',
@@ -493,7 +495,9 @@ jobs:
           # FigureHighlightDrawingTest.aKettlebellInTheNearHandIsDrawnOverTheArm +1 (commonTest). 375 + 2 = 377.
           # Phase 4 figures, shoulder lift (shrugs): FigureGeometryTest +3 (commonTest: noShoulderLiftLeavesEveryJointBitIdentical,
           # aShoulderLiftRaisesTheShoulderAlongTheTrunk, theShoulderLiftIsClamped). 377 + 3 = 380.
-          MIN_DS_IOS_TESTS: 380
+          # Phase 5A task 1: ChartScaleTest 7, ChartGeometryTest 3, SizesTimingElevationTest +1, ComponentColorsTest +2 (commonTest);
+          # ChartsTest 11 (uiTest). 380 + 24 = 404.
+          MIN_DS_IOS_TESTS: 404
         run: |
           $files = @(Get-ChildItem -Path 'designsystem/build/test-results/iosSimulatorArm64Test' -Filter '*.xml' -ErrorAction SilentlyContinue)
           $tests = 0; $failures = 0; $errors = 0; $skipped = 0; $failed = @()
@@ -637,14 +641,17 @@ jobs:
           if ($files.Count -eq 0) { throw 'No screens iOS simulator test results were written.' }
           if ($tests -lt $minimum) { throw "Only $tests screens iOS simulator tests ran; at least $minimum are expected." }
 
-      # The PNGs ActiveWorkoutFlowTest writes on the simulator, one per state of each run (none when
-      # captureToImage is unsupported there). Uploaded whatever the outcome, to look at the iOS screens.
+      # The PNGs ActiveWorkoutFlowTest writes on the simulator, one per state of each run, and (phase 5A
+      # spike S1) the chart captures of the design system's ChartsTest (none when captureToImage is
+      # unsupported there). Uploaded whatever the outcome, to look at the iOS screens.
       - name: Upload iOS flow captures
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ios-flow-captures
-          path: screens/build/ios-captures/**
+          path: |
+            screens/build/ios-captures/**
+            designsystem/build/ios-captures/**
           if-no-files-found: ignore
           retention-days: 14
 
