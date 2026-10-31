@@ -1,6 +1,7 @@
 package com.mooscles.screens.routines
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredHeight
@@ -61,6 +62,7 @@ import com.mooscles.screens.screenRestoration
 import com.mooscles.screens.assertButtonTextsWhole
 import com.mooscles.screens.assertClickablesLabeledAndSized
 import com.mooscles.screens.withScreen
+import com.mooscles.screens.workout.RenameSheet
 import com.mooscles.screens.workout.RenameSheetTags
 import com.mooscles.ui.ExerciseUi
 import com.mooscles.ui.MoosclesActions
@@ -582,6 +584,21 @@ class TrainScreenTest {
         fake.deliver()
         waitForIdle()
         assertEquals(listOf(id), requests.routines)
+    }
+
+    /** The name sheet (new routine, rename, folders) stands on the keyboard: its field and button are never under it. */
+    @Test
+    fun nameSheetStandsAboveTheKeyboard() = runComposeUiTest {
+        val keyboard = 300.dp
+        withScreen {
+            RenameSheet("Nova rotina", onRename = {}, onDismiss = {}, selectAll = true, submitUnchanged = true, bottomInsets = WindowInsets(bottom = keyboard))
+        }
+        waitForIdle()
+        val sheet = onNode(hasTestTag("sheet"), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val save = onNodeWithTag(RenameSheetTags.SAVE).getUnclippedBoundsInRoot()
+        val field = onNodeWithTag(RenameSheetTags.FIELD).getUnclippedBoundsInRoot()
+        assertTrue(sheet.bottom - save.bottom >= keyboard, "the button ends ${sheet.bottom - save.bottom} above the sheet's bottom, under a $keyboard keyboard")
+        assertTrue(field.bottom < save.top, "the field is above the button")
     }
 
     @Test

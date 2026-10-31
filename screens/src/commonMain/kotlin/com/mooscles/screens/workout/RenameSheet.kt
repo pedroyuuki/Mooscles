@@ -1,7 +1,11 @@
 package com.mooscles.screens.workout
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -48,6 +52,9 @@ internal object RenameSheetTags {
  * needs, since its default name is the name to create. The button is off while the field is blank; the keyboard's Done
  * saves the same way. With [selectAll] the name starts selected and the field takes the focus once, when the sheet
  * is open (the keyboard opens), so typing replaces it. What is typed survives recreation.
+ *
+ * The sheet stands on [bottomInsets] (the keyboard, or what else covers the bottom of the window), so the field and
+ * the button stay above the keyboard the field opens; tests pass a fixed inset, as the iOS simulator has no keyboard.
  */
 @Composable
 internal fun RenameSheet(
@@ -59,6 +66,7 @@ internal fun RenameSheet(
     fieldLabel: String = stringResource(Res.string.workout_rename_field),
     selectAll: Boolean = false,
     submitUnchanged: Boolean = false,
+    bottomInsets: WindowInsets = WindowInsets.safeDrawing,
 ) {
     var value by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(name, selection = if (selectAll) TextRange(0, name.length) else TextRange(name.length)))
@@ -105,5 +113,6 @@ internal fun RenameSheet(
             size = MButtonSize.L,
             enabled = trimmed.isNotEmpty(),
         )
+        Spacer(Modifier.windowInsetsBottomHeight(bottomInsets))
     }
 }
