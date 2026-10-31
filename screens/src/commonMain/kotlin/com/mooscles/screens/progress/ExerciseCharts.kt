@@ -32,7 +32,7 @@ enum class EmptyReason { NO_SESSIONS, NO_ESTIMATE, NO_POINTS }
  * One plotted point, in kg (or reps). For a session it is the session's start and its set; for a weekly point
  * ([ExerciseChart.weekly]) [startedAt] is the start of the week (midnight local, P25), [workoutId] is null and
  * [set] is the set of the week's best session. [record] is true when the point's own set is a beaten record's
- * (any session of the week, for a weekly point); the 1RM and volume charts never have it (D6).
+ * (for a weekly point, the plotted session's: another session's record never marks it); the 1RM and volume charts never have it (D6).
  */
 @Immutable
 data class ChartPoint(
@@ -73,7 +73,8 @@ object ExerciseCharts {
             valueOf(session, query.metric)?.let { session to it }
         }
         if (sessions.isEmpty()) {
-            val noEstimate = query.metric == ProgressMetric.E1RM && inPeriod.isNotEmpty()
+            // A loaded working set without an estimate can only be over 10 reps; with no load there is no set to blame.
+            val noEstimate = query.metric == ProgressMetric.E1RM && inPeriod.any { it.load != null }
             return empty(if (noEstimate) EmptyReason.NO_ESTIMATE else EmptyReason.NO_POINTS)
         }
         val convention = query.key.convention
@@ -100,7 +101,7 @@ object ExerciseCharts {
     fun sparkline(index: ProgressIndex, key: SeriesKey, last: Int = 12): List<Double> {
         val sessions = index.sessions(key)
         val metric = ProgressMetrics.available(key.convention, sessions).first()
-        return sessions.takeLast(last).mapNotNull { valueOf(it, metric)?.value }
+        return sessions.mapNotNull { valueOf(it, metric)?.value }.takeLast(last)
     }
 
     private fun empty(reason: EmptyReason) = ExerciseChart(emptyList(), false, 0, null, null, null, null, reason)
@@ -121,12 +122,17 @@ object ExerciseCharts {
     private fun weekStartOf(date: LocalDate, first: DayOfWeek): LocalDate =
         date.minus((date.dayOfWeek.isoDayNumber - first.isoDayNumber + 7) % 7, DateTimeUnit.DAY)
 
-    /** One point per week, dated at the week's start: the best session (the lowest on Assistance), marked if any session is. */
-    private fun weeklyPoints(points: List<ChartPoint>, query: ExerciseChartQuery, lowerIsBetter: Boolean): List<ChartPoint> =
-        points.groupBy { weekStartOf(ScreenDates.localDate(it.startedAt, query.zone), query.weekStart) }
+    /**
+     * One point per week, dated at the week's start: the best session (the lowest assistance on Assistance's load). On
+     * equal values the marked session wins, then (on load) the one with more reps, then the first. The point carries
+     * that session's mark, never another session's.
+     */
+    private fun weeklyPoints(points: List<ChartPoint>, query: ExerciseChartQuery, lowerIsBetter: Boolean): List<ChartPoint> {
+        val order = compareBy<ChartPoint>({ if (lowerIsBetter) it.value else -it.value }, { !it.record }, { -(it.set?.reps ?: 0) })
+        return points.groupBy { weekStartOf(ScreenDates.localDate(it.startedAt, query.zone), query.weekStart) }
             .map { (week, inWeek) ->
-                val best = if (lowerIsBetter) inWeek.minBy(ChartPoint::value) else inWeek.maxBy(ChartPoint::value)
-                ChartPoint(week.atStartOfDayIn(query.zone).toEpochMilliseconds(), best.value, best.set,
-                    inWeek.any(ChartPoint::record), null)
+                val best = inWeek.sortedWith(order).first()
+                ChartPoint(week.atStartOfDayIn(query.zone).toEpochMilliseconds(), best.value, best.set, best.record, null)
             }.sortedBy(ChartPoint::startedAt)
+    }
 }

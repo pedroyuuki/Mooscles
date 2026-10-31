@@ -128,7 +128,7 @@ class ExerciseChartsTest {
         val ix = index(*daily { 50.0 + it }.toTypedArray())
         val chart = ExerciseCharts.query(ix, query(weekStart = DayOfWeek.MONDAY))
         assertTrue(chart.weekly)
-        assertTrue(chart.points.size in 15..17)
+        assertEquals(16, chart.points.size)
         assertTrue(chart.points.all { it.workoutId == null })
         chart.points.forEach { point ->
             val date = ScreenDates.localDate(point.startedAt, utc)
@@ -136,6 +136,7 @@ class ExerciseChartsTest {
             // Load rises every day, so the week's best is its last day inside the data.
             val lastDay = minOf(date.toEpochDays() + 6, today.toEpochDays())
             assertEquals(50.0 + (lastDay - day(2026, 7, 14).toEpochDays()), point.value)
+            assertEquals(SetValue(point.value, point.value, 5), point.set)
         }
         assertEquals(110, chart.sessionCount)
         val exactly104 = ExerciseCharts.query(index(*daily { 50.0 + it }.take(104).toTypedArray()), query())
@@ -187,26 +188,85 @@ class ExerciseChartsTest {
         assertNotEquals(starts[0], starts[1])
     }
 
-    @Test
-    fun weeklyPointIsMarkedWhenAnySessionOfTheWeekIs() {
+    private fun withRecordOn(index: Int, kg: Double, previousKg: Double = kg - 1.0): List<WorkoutUi> {
         val plain = daily { 50.0 + it }
-        // Day 10 is a beaten weight record at its own load; the week's best point is a later, unmarked day.
-        val rec = weightRecord(bench, 60.0, 5, previousKg = 59.0, workout = plain[10])
-        val marked = plain[10].copy(records = listOf(rec))
-        val ws = plain.toMutableList().also { it[10] = marked }
-        val chart = ExerciseCharts.query(index(*ws.toTypedArray(), records = listOf(currentOf(rec))), query())
-        val markedWeek = ScreenDates.localDate(marked.startedAt, utc).let { d ->
-            d.toEpochDays() - ((d.dayOfWeek.ordinal - DayOfWeek.MONDAY.ordinal + 7) % 7)
-        }
-        val flagged = chart.points.filter { it.record }
+        val rec = weightRecord(bench, kg, 5, previousKg = previousKg, workout = plain[index])
+        return plain.toMutableList().also { it[index] = plain[index].copy(records = listOf(rec)) }
+    }
+
+    @Test
+    fun weeklyPointIsMarkedOnlyWhenItsPlottedSessionIs() {
+        // Day 10 (Fri 24 Jul, 60 kg) is a beaten record, but its week's best is Sun 26 Jul (62 kg), which is not one.
+        val notBest = withRecordOn(10, 60.0)
+        val chartA = ExerciseCharts.query(index(*notBest.toTypedArray()), query())
+        assertTrue(chartA.weekly)
+        assertTrue(chartA.points.none { it.record })
+        // Day 12 (Sun 26 Jul, 62 kg) is the week's best and a beaten record: exactly that week's point is marked.
+        val best = withRecordOn(12, 62.0)
+        val chartB = ExerciseCharts.query(index(*best.toTypedArray()), query())
+        val flagged = chartB.points.filter { it.record }
         assertEquals(1, flagged.size)
-        assertEquals(markedWeek, ScreenDates.localDate(flagged.single().startedAt, utc).toEpochDays())
-        assertTrue(flagged.single().value > 60.0)
+        assertEquals(day(2026, 7, 20), ScreenDates.localDate(flagged.single().startedAt, utc))
+        assertEquals(SetValue(62.0, 62.0, 5), flagged.single().set)
         // Per session (a short period) the mark sits on that session only; E1RM never has one.
-        val perSession = ExerciseCharts.query(index(*ws.take(20).toTypedArray(), records = listOf(currentOf(rec))), query())
+        val perSession = ExerciseCharts.query(index(*notBest.take(20).toTypedArray()), query())
         assertEquals(listOf("d10"), perSession.points.filter { it.record }.map { it.workoutId })
-        val e1rm = ExerciseCharts.query(index(*ws.take(20).toTypedArray(), records = listOf(currentOf(rec))), query(metric = ProgressMetric.E1RM))
+        val e1rm = ExerciseCharts.query(index(*notBest.take(20).toTypedArray()), query(metric = ProgressMetric.E1RM))
         assertTrue(e1rm.points.none { it.record })
+    }
+
+    @Test
+    fun weeklyTieOnTheBestValueTakesTheMarkedSession() {
+        // Mon 20 and Sun 26 Jul both lift 70 kg; only the later one is a beaten record: the week plots and marks that one.
+        val plain = daily { if (it == 6 || it == 12) 70.0 else 50.0 }
+        val rec = weightRecord(bench, 70.0, 5, previousKg = 65.0, workout = plain[12])
+        val ws = plain.toMutableList().also { it[12] = plain[12].copy(records = listOf(rec)) }
+        val chart = ExerciseCharts.query(index(*ws.toTypedArray()), query())
+        val week = chart.points.single { ScreenDates.localDate(it.startedAt, utc) == day(2026, 7, 20) }
+        assertEquals(70.0, week.value)
+        assertTrue(week.record)
+    }
+
+    @Test
+    fun weeklyAssistanceTieOnLoadTakesTheSessionWithMoreReps() {
+        val ws = daily(assistedDip, assistance = true) { 40.0 }.mapIndexed { n, w ->
+            // Week of Mon 20 Jul (days 6..12): Monday 6 reps, Thursday 8 reps, same assistance.
+            if (n == 6 || n == 9) workout(w.id, w.startedAt, entry(assistedDip, set(20.0, if (n == 6) 6 else 8, assistance = true))) else w
+        }
+        val chart = ExerciseCharts.query(index(*ws.toTypedArray()), query(key = keyOf(assistedDip)))
+        val week = chart.points.single { ScreenDates.localDate(it.startedAt, utc) == day(2026, 7, 20) }
+        assertEquals(SetValue(20.0, 20.0, 8), week.set)
+    }
+
+    @Test
+    fun weeklyRepsAndVolumeKeepTheBestSessionNotTheSum() {
+        val ws = (0 until 110).map { n ->
+            val date = LocalDate.fromEpochDays(day(2026, 7, 14).toEpochDays() + n)
+            workout("r$n", ms(date), entry(assistedDip, set(30.0, 5 + n % 7, assistance = true), set(20.0, 5, assistance = true)))
+        }
+        val ix = index(*ws.toTypedArray())
+        val reps = ExerciseCharts.query(ix, query(metric = ProgressMetric.REPS, key = keyOf(assistedDip)))
+        // The first full week (Mon 20 Jul, days 6..12) reaches 11 reps on its last day: the max, not the last or the first.
+        assertEquals(11.0, reps.points.single { ScreenDates.localDate(it.startedAt, utc) == day(2026, 7, 20) }.value)
+        val volume = ExerciseCharts.query(
+            index(*(0 until 110).map { n ->
+                val date = LocalDate.fromEpochDays(day(2026, 7, 14).toEpochDays() + n)
+                workout("v$n", ms(date), entry(bench, set(100.0, 5 + n % 7)))
+            }.toTypedArray()),
+            query(metric = ProgressMetric.VOLUME),
+        )
+        assertTrue(volume.weekly)
+        // Week of Mon 20 Jul: reps 11 on the Sunday are the best session (1100 kg), not the sum of the week.
+        assertEquals(1100.0, volume.points.single { ScreenDates.localDate(it.startedAt, utc) == day(2026, 7, 20) }.value)
+    }
+
+    @Test
+    fun sessionsDatedAfterTodayAreKept() {
+        val future = session("future", ms(day(2026, 11, 1)), 90.0)
+        val now = session("now", ms(day(2026, 10, 1)), 80.0)
+        val ix = index(now, future)
+        assertEquals(2, ExerciseCharts.query(ix, query(period = ExercisePeriod.THREE_MONTHS)).points.size)
+        assertEquals(2, ExerciseCharts.query(ix, query()).points.size)
     }
 
     @Test
@@ -244,6 +304,9 @@ class ExerciseChartsTest {
         assertEquals(EmptyReason.NO_POINTS,
             ExerciseCharts.query(ix, query(metric = ProgressMetric.E1RM, today = day(2027, 10, 31), period = ExercisePeriod.THREE_MONTHS)).empty)
         assertEquals(EmptyReason.NO_SESSIONS, ExerciseCharts.query(ix, query(key = keyOf(dumbbellPress))).empty)
+        // No load at all (0 kg) is not a reps problem: no estimate cause, so NO_POINTS.
+        val bare = index(session("bare", ms(day(2026, 10, 1)), 0.0))
+        assertEquals(EmptyReason.NO_POINTS, ExerciseCharts.query(bare, query(metric = ProgressMetric.E1RM)).empty)
         val empty = ExerciseCharts.query(ix, query(metric = ProgressMetric.E1RM))
         assertTrue(empty.points.isEmpty())
         assertNull(empty.first)
@@ -267,6 +330,9 @@ class ExerciseChartsTest {
         assertEquals((3 until 15).map { 60.0 + it }, ExerciseCharts.sparkline(ix, keyOf(bench)))
         assertEquals(listOf(72.0, 73.0, 74.0), ExerciseCharts.sparkline(ix, keyOf(bench), last = 3))
         assertEquals(emptyList(), ExerciseCharts.sparkline(ix, keyOf(dumbbellPress)))
+        // The last twelve sessions that have the metric, even past a gap of sessions without one.
+        val gap = (0 until 14).map { session("g$it", ms(day(2026, 9, 1 + it)), if (it >= 12) 0.0 else 60.0 + it) }
+        assertEquals((0 until 12).map { 60.0 + it }, ExerciseCharts.sparkline(index(*gap.toTypedArray()), keyOf(bench)))
         // Added weight opens on reps.
         val pulls = index(workout("p", ms(day(2026, 9, 1)), entry(pullUp, set(0.0, 9))))
         assertEquals(listOf(9.0), ExerciseCharts.sparkline(pulls, keyOf(pullUp)))
