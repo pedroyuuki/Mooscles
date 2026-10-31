@@ -101,13 +101,22 @@ Estão como notas datadas na [spec](../specs/2026-10-29-phase4-library-routines-
 
 ## Crítica de tela (Task 19)
 
-A preencher pelo controlador: a crítica de tela (Treinar, pastas, editor, seletor múltiplo e formulário com foto, nos dois temas, em inglês e pt-BR e a 200%) e a nova rodada de desempenho (rolagem do Treinar com 30 rotinas, arrastar no editor com 10 exercícios × 5 séries e rolagem do treino), numa máquina mais quieta que a da Task 18.
+Relatório completo: [crítica das rotinas](2026-10-30-phase4b-critica-rotinas.md), com as capturas em [`2026-10-30-phase4b-verificacao/`](2026-10-30-phase4b-verificacao/) e a nova rodada em [`performance.md`](2026-10-30-phase4b-verificacao/performance.md).
+
+- **Corrigidos** (cada um com um teste que falhava antes):
+  - **Alta:** a sheet de nome (nova rotina, renomear, pastas, renomear treino) ficava atrás do teclado e "Criar" não aparecia; agora termina acima da área coberta pelo teclado (`TrainScreenTest.nameSheetStandsAboveTheKeyboard`).
+  - **Média:** a biblioteca aparecia por cerca de 800 ms entre o formulário salvo e o detalhe; o formulário fica até o detalhe assumir, com teto de 1,5 s (token `timing.formHandoff`).
+  - **Média:** carga e repetições das séries planejadas mudavam de coluna com ou sem o ícone de recorde; o lugar do ícone fica reservado.
+  - **Média:** a linha de alvo quebrava dentro de "+ 2 aquec." e as linhas ficavam com entrelinhas diferentes; o sufixo não quebra e a linha usa a entrelinha de `num.sm`.
+  - **Baixa:** os menus ganharam os ícones Copy, FolderInput, ArrowUpToLine e ArrowDownToLine (Lucide 1.63.0, gerados offline; os 54 ícones existentes saíram idênticos; `IconsTest` com 58 e o orçamento do APK passam).
+- **Adiados, com motivo no relatório:** ao erguer o primeiro card do editor, a lista pula uns 40 dp (não aparece com toque injetado; precisa de investigação com o dedo num aparelho); as barras do sistema das sheets e diálogos continuam cinzas no tema claro (os ícones já estão certos; resolver pede janela de diálogo de ponta a ponta, uma decisão de design system); e oito achados baixos de polimento.
+- **Desempenho, nova rodada: não provado.** O controle (rolagem da Biblioteca, 0,5–1,5% na 4A) deu 34,3–52,4%, com carga média de 3,3–6,2 e 15,2 GB de swap em uso: Treinar com 30 rotinas 35,2–56,9%, arrastar no editor 27,5–54,8%, rolagem do treino 31,8–46,8%. A gravação depois do arraste está provada (Task 18). Os orçamentos de quadros ficam para uma máquina livre ou um aparelho.
 
 ## Pendências que não bloqueiam o merge
 
 - **Desempenho não provado** (ver "O que não foi verificado" e a seção acima).
 - **Lacuna da decisão 11 da 4A:** o nome que o `MoosclesViewModel` grava no timer do descanso automático continua o gravado, em inglês, até as mensagens do ViewModel (fase 6).
-- **Ícones do menu da pasta:** a geração de ícones Lucide novos pede o pacote `lucide-static` do npm, que não está vendorizado; a Task 11 ficou com rótulos sem ícone novo, para a Task 19 ou a fase 6.
+- **Pulo da lista ao erguer o primeiro card do editor** e **barras cinzas das sheets no tema claro** (crítica, acima).
 - **Achados menores estacionados nas revisões** (fora do histórico publicado, em `.superpowers/sdd/2026-10-30-phase4b-routines/`): um erro que chega durante a animação de saída de uma sheet é limpo sem ser visto; durante o arraste o espaçamento do editor desloca um pouco o nome e o "Adicionar"; um erro sem relação mostra por um instante o valor salvo antigo numa linha com escrita em voo (sem perda de dados); o `ContrastTokensTest` encosta em 3:1 no par `borderStrong` em `bgOverlay`.
 - **Observação de CI:** o travamento único do `:app:testDebugUnitTest` até o limite de 45 minutos (acima).
 
