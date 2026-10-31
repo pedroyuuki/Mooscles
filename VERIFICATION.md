@@ -1,5 +1,33 @@
 # Verification — 2026-10-23
 
+## Phase 4B routines (unreleased, fork branch) — 2026-10-30
+
+Branch `feat/phase4b-routines` in the fork, not in a published release. It adds the new Train tab (folders, routine cards), the routine editor (drag and drop, planned sets with warm-ups, per-exercise rest), the target line on the active workout card, the custom exercise photo (gallery or camera, Android only) and the multi-select exercise picker, in the `:screens` module (English and Brazilian Portuguese), the reorder component in `:designsystem`, and the routine commands in `:shared`. The old Train and routine screens are gone. Room moved from version 5 to **6** (`routine_sets.warmup`, `INTEGER NOT NULL DEFAULT 0`, additive `MIGRATION_5_6`; `6.json` is KSP-generated); the backup gains an optional `warmup` field and keeps format version 1. versionCode 16 and versionName 1.4.5 are unchanged; no DataStore key, updater contract or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-30-phase4b-verificacao.md](docs/superpowers/reports/2026-10-30-phase4b-verificacao.md).
+
+Verified:
+
+- Host tests: 1085 on CI (run 41157443080, `41a727a`), 0 failures; on the iOS simulator `:shared` 275 (including the 7 entry-point tests and the real v5 to v6 migration on the bundled SQLite driver), `:designsystem` 374 and `:screens` 637, all passing, including the routines end-to-end flow test. The first attempt of the host job hit the 45-minute job limit inside `:app:testDebugUnitTest` with no failure logged; the rerun passed in about 6 minutes. If it recurs, take a thread dump before guessing.
+- Android 15 emulator, full suites once (`4694edc`): `:designsystem` 373, `:screens` 640 and `:app` 25. One harness-timing failure in the photo form tests and one race in `UiFlowTest` were fixed in test code only and rerun (8 consecutive green runs of the photo class, against 1 failure in 4 before); evidence, not certainty. Two merges landed after these runs (the iOS drag fix and the copper equipment color); only the affected classes were rerun (drag classes 80 of 80, figure test 10 of 10).
+- Touch budget (emulator, real view model and database): build a 5-exercise routine 9 taps (13 on the old screens), move the 5th exercise to the top 2 (4), add a set like the one above 1 (1), mark a planned set as warm-up 2 (new), start a workout from a routine 1 (1).
+- Upgrade in place on the emulator from the fork's main (`2359ab6`, database v5) with network off: `user_version` 6, none of the 21 planned sets became a warm-up, byte-identical preferences file (same MD5), the running rest kept its deadline, and the export after matched the export before except `exportedAt` and the new `"warmup": false`. Gallery and camera photo both worked without any permission prompt.
+- Offline: on a fresh install with the network off, folders, the editor, the multi-select picker, the target line and a custom exercise with a gallery photo worked; the branch adds no network call, and the manifest gains only a `<queries>` entry for the camera intent (no new permission).
+- Drag and drop (spike S2): the reorder component passed on the emulator and on the iOS simulator on CI, with the gesture cancellation covered on Android only. Photo pipeline (spike S4): upright, under 300 KB, about 16 MB native peak and no permission on emulators with API 26, 28 and 35.
+- Debug APK size (local build, CI base `739a800`): phases 4A and 4B together +734,829 bytes (limit 1,048,576; 4B alone +284,661). No new dependency (the dependency tree diff is empty).
+- Accessibility sweep in tests: labels, 48 dp targets, no clipped number or button text and the reorder actions on the handle, at font scales 1.0, 1.3, 2.0 and 2.01, at 320 and 412 dp, in both themes.
+- The detail figure no longer asks for frames while it holds a pose (about 0.3 frame callbacks per second during pauses, 60 before; emulator).
+
+Not verified:
+
+- Performance is **not proven**. The Task 18 measurements ran while the Mac was under heavy load (the Library, which this phase did not touch, went from 0.5-1.5% janky in phase 4A to 36-62%), so the jank of dragging in the editor and of scrolling the workout cards cannot approve or fail the phase. Two clean runs of the Train tab scroll with 30 routines gave 2.83% and 4.35% (budget 5%), which is not a stable repetition. A re-run on a quiet machine is pending; this entry stays as is until it is recorded in the Portuguese report.
+- Anything on an iPhone: VoiceOver, dragging with a finger, the figure, performance. The photo picker and camera do not exist on iOS.
+- Anything on a physical Android phone: a real TalkBack session for the reorder actions (the announcement was proved through the live region, not heard), the real camera, the One UI photo picker, photo orientation from other manufacturers, 120 Hz dragging, battery of the detail figure, Android 8 to 14.
+- A HEIC photo on Android 9 (API 28) can come out sideways, and on Android 8 (API 26) it does not decode (the app shows the photo failure message). Accepted risk, measured only on emulators.
+- Whether the figures, cues and names are good for people who train; the owner approved the 20 pilot figures (gate G1) on 2026-10-30, with the equipment drawn in copper, but the other figures depend on the batches that come next.
+- The rest notification in the background after the upgrade, and the "Upgrade record" routine in the editor after the upgrade (only "Upgrade custom" was opened).
+- The `present()` timing of the whole large history after this phase (the samples are one set or one order), and the full device suites after the last two merges.
+- The release path from a published APK signed with the original key: the key is not on this Mac, and v1.5.0 is not published.
+- The screen critique and the performance re-run (Task 19) are filled in by the controller in the Portuguese report.
+
 ## Phase 4A exercise library (unreleased, fork branch) — 2026-10-30
 
 Branch `feat/phase4a-library` in the fork, not in a published release. It adds the new Library tab, exercise detail, custom exercise form and exercise picker (in the `:screens` module, English and Brazilian Portuguese), the figure renderer and body map in `:designsystem`, and the exercise data in `:shared` (anatomy, pt-BR names, aliases, bilingual search index and the `createCustomExercise` action) for all 287 catalog exercises, with figures for a pilot of 20. versionCode 16 and versionName 1.4.5 are unchanged; no Room schema, DataStore key, updater contract or signing change. Full report, in Portuguese: [docs/superpowers/reports/2026-10-30-phase4a-verificacao.md](docs/superpowers/reports/2026-10-30-phase4a-verificacao.md).
