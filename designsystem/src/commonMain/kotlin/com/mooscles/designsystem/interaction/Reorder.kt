@@ -404,7 +404,8 @@ class ReorderState<K : Any> internal constructor(
      * logical position goes back under the finger. The swaps that follow, one per layout, each with its glide and its
      * haptic, bring the slot to where the item is drawn, in whichever direction that is (down the list in the second
      * case, even with the finger moving up): the drop is where the person sees the item. The dragged item itself does
-     * not move ([drawnTop] does not depend on the logical position).
+     * not move ([drawnTop] does not depend on the logical position). Until then nothing swaps ([checkSwap]), so the
+     * cascade only goes one way and no swap is undone.
      */
     private fun rejoin(item: LazyListItemInfo) {
         if (abs(fingerDelta - adriftAt) <= REJOIN_SLOPS * slop) return
@@ -422,7 +423,10 @@ class ReorderState<K : Any> internal constructor(
         followSlot(info, item)
         // After followSlot, so a shift of this very layout is taken out before the rejoin, not after it.
         if (adrift) rejoin(item)
-        if (swappedOn === info) return
+        // No swap while adrift: the logical position is then the slot's, not the drawn item's, and the rejoin would
+        // undo a swap made from it (with the 18 dp slop of iOS, lifting a middle item at the list's top swapped it up
+        // one place before the rejoin took it back down).
+        if (adrift || swappedOn === info) return
         val current = order
         val index = current.indexOf(key)
         if (index < 0) return

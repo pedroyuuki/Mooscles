@@ -620,8 +620,8 @@ class ReorderTest {
     /**
      * Review I2 (ruled correct): at the list's top, lifting a middle item collapses the ones above it, so its slot
      * moves up and no scroll can bring it back; the item stays drawn under the finger, below where its slot went.
-     * Once the finger has moved on two touch slops (here up), the slot goes to where the item is drawn, which is
-     * down the list, one swap per layout, with the dragged item never jumping. Up from there, it goes back up the
+     * Nothing swaps before; once the finger has moved on two touch slops (here up), the slot goes to where the item
+     * is drawn, which is down the list, one swap per layout, only down, with the dragged item never jumping. Up from there, it goes back up the
      * same way, and dropped above the first item it goes first.
      */
     @OptIn(ExperimentalTestApi::class)
@@ -638,6 +638,8 @@ class ReorderTest {
         assertTrue(h.collapsed)
         assertEquals(INITIAL, h.state.order, "the resize alone reorders nothing")
         val shownAtLift = h.shown.size
+        fun shownSinceLift() = h.shown.drop(shownAtLift)
+        fun swaps() = haptics.events.count { it == HapticEvent.StepperStep }
         fun topPx() = with(density) { onNodeWithTag("item-3").getBoundsInRoot().top.toPx() }
         fun move(px: Float) {
             val before = topPx()
@@ -646,15 +648,28 @@ class ReorderTest {
             val now = topPx()
             assertTrue(abs(now - before - px) < 1.5f, "the dragged item jumped: $before -> $now, step $px")
         }
+
+        /** item-3's index in each order shown, from [from] on: one place per order, toward [step] only (no swap undone). */
+        fun assertOneWay(orders: List<List<String>>, from: Int, step: Int) {
+            var index = from
+            for (order in orders) {
+                val next = order.indexOf("item-3")
+                assertEquals(index + step, next, "item-3 must move one place ${if (step > 0) "down" else "up"} per order shown: $orders")
+                index = next
+            }
+        }
         // Three slops up, in half slops: past two slops (the fifth move) the slot rejoins the item.
         repeat(6) { move(-slop / 2f) }
         val down = h.state.order.indexOf("item-3")
         assertTrue(down > 3, "the slot went down to where item-3 is drawn: ${h.state.order}")
+        val cascade = shownSinceLift()
+        // Down only, from index 3: with the finger moving up, nothing swapped up first to be undone.
+        assertOneWay(cascade, from = 3, step = 1)
+        assertEquals(cascade.size, swaps(), "one haptic per swap shown: $cascade")
         // Where it is drawn: its slot is within half a collapsed item (and the hysteresis) of it.
         val drawn = onNodeWithTag("item-3").getBoundsInRoot().top
         val slotTop = onNodeWithTag(h.state.order[down - 1]).getBoundsInRoot().bottom
         assertTrue(abs((drawn - slotTop).value) < 20f + with(density) { slop.toDp().value } / 2f, "drawn at $drawn, slot at $slotTop")
-        assertEquals(down - 3, haptics.events.count { it == HapticEvent.StepperStep }, "one step per place crossed")
         // Up in 2 dp moves until it is drawn 4 dp or less below the list's top: above the first item's middle, and not
         // yet clipped by the list (its bounds would stop following the finger).
         val climb = with(density) { 2.dp.toPx() }
@@ -662,11 +677,14 @@ class ReorderTest {
         while (topPx() > stop) move(-climb)
         assertEquals("item-3", h.state.order.first(), "${h.state.order}")
         assertEquals(emptyList(), h.drops, "nothing is written while dragging")
+        // Up only, one place per order shown, from where the cascade left it.
+        assertOneWay(shownSinceLift().drop(cascade.size), from = down, step = -1)
+        assertEquals(shownSinceLift().size, swaps(), "one haptic per swap shown: ${shownSinceLift()}")
         // Every order shown since the lift is one swap of two neighbors away from the one before: no jump of several places.
-        val orders = listOf(INITIAL) + h.shown.drop(shownAtLift)
+        val orders = listOf(INITIAL) + shownSinceLift()
         for ((a, b) in orders.zipWithNext()) {
             val changed = a.indices.filter { a[it] != b[it] }
-            assertTrue(changed.size == 2 && changed[1] == changed[0] + 1, "more than one swap in a layout: $a -> $b")
+            assertTrue(changed.size == 2 && changed[1] == changed[0] + 1, "more than one swap in a layout: $a -> $b (all: $orders)")
         }
         release()
         assertEquals(listOf(moved(3)), h.drops)
