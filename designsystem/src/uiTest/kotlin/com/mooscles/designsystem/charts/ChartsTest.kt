@@ -249,14 +249,15 @@ class ChartsTest {
         assertEquals(1, counter.line, "one line built on the first draw")
         println("CHARTS first draw of 300 points: ${timer.firstNanos / 1_000} us")
         val chart = onNodeWithTag(LineChartTag)
+        // Every touch lands inside the plot (past the value labels), on a different point.
         for (i in 0 until 10) {
-            chart.performTouchInput { click(Offset(width * (0.05f + 0.09f * i), centerY)) }
+            chart.performTouchInput { click(Offset(width * (0.3f + 0.07f * i), centerY)) }
             waitForIdle()
         }
         if (INJECTS_DRAG) {
             chart.performTouchInput { down(Offset(width * 0.97f, centerY)) }
             for (i in 0 until 10) {
-                chart.performTouchInput { moveTo(Offset(width * (0.9f - 0.08f * i), centerY)) }
+                chart.performTouchInput { moveTo(Offset(width * (0.9f - 0.06f * i), centerY)) }
                 waitForIdle()
             }
             chart.performTouchInput { up() }

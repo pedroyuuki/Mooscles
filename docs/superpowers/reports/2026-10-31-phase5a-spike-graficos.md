@@ -7,10 +7,11 @@
 
 ## Resumo
 
-- **Veredito: pendente.** O veredito é do controlador (decisão 2), depois do Push 1 (iOS) e da rodada de aparelho no Android.
+- **Veredito: Android aprovado; iOS pendente do Push 1.** O veredito final é do controlador (decisão 2).
 - **Host (JVM): aprovado.** `ChartScaleTest` (7), `ChartGeometryTest` (3), `SizesTimingElevationTest.chartTokens`, `ComponentColorsTest` (+2) e `IconsTest` (60 ícones) verdes; o `:designsystem:testAndroidHostTest` inteiro passa (117 testes, 0 falhas), com o `StringsParityTest`.
 - **Compilação:** `:designsystem:compileAndroidDeviceTest` e `:designsystem:compileTestKotlinIosSimulatorArm64` compilam. `tools/check-design-tokens.ps1` limpo, agora com `charts/` (152 arquivos).
-- **Android (emulador): não rodado nesta task.** O emulador indicado (`emulator-5558`) não existia, e o único conectado (`emulator-5556`) ficou `offline` durante toda a sessão. A trava abriu (o `adb shell` falhava, então ela via o aparelho "ocioso") e o Gradle parou em `DeviceException: Connected device with serial 'emulator-5558' not found!`. Pela regra da sessão, o implementador não liga, desliga nem reinicia emulador. O `ChartsTest` (11 testes) e o `GallerySmokeTest` ficam para quando houver aparelho.
+- **Android (emulador `Mooscles_Pixel8_API35`, Android 15): aprovado.** `ChartsTest` 11/11 e `GallerySmokeTest` 13/13. Na primeira tentativa o emulador estava `offline`; o controlador o reiniciou (`emulator-5558`) e endureceu a trava, que agora sai com 5 quando o `adb` não alcança o aparelho.
+- **Rodada de correção 1.** A primeira rodada no aparelho teve 10/11: `tapSelectsTheNearestPointAndDragMovesIt` parou em "0" no arraste, onde esperava "1". A causa estava no produto. O `chartSelection` só chamava `onSelect` quando o índice era diferente da seleção *composta*, e vários eventos de toque chegam antes da próxima composição: o arraste começou em 0 (reportado) e voltou para 1, que ainda era a seleção composta, então a volta foi descartada e a tela ficou em 0. Agora a comparação é com a última seleção conhecida (`SelectionTracker`: a composta, gravada a cada composição, ou a última reportada entre duas composições). Com o deduplicador exato, o `pathIsBuiltOnceWhileTheSelectionMoves` contou 19 mudanças, não 20: dois dos toques caíam na faixa dos rótulos do eixo, os dois no ponto 0 (antes passavam porque o código antigo reportava o mesmo índice duas vezes). O teste passou a tocar só dentro do gráfico.
 - **iOS (simulador): pendente do Push 1.** As capturas vão para `designsystem/build/ios-captures/charts-<tema>-<escala>.png`, no artefato `ios-flow-captures`.
 - **Sem biblioteca** (D3): só `foundation` e `ui` (`drawWithCache`, `drawWithContent`, `TextMeasurer`, `detectTapGestures`, `detectHorizontalDragGestures`). Nenhum `expect/actual` novo (continuam 3 no `:designsystem`); nenhuma dependência nova.
 
@@ -18,10 +19,10 @@
 
 | Critério | Android (emulador) | iOS (simulador) | Prova |
 |---|---|---|---|
-| (a) Capturas dos três nos dois temas a 1,0 e 2,0 sem texto cortado nem sobreposto | pendente (sem aparelho) | pendente do Push 1 | `capturesBothThemesAtOneAndTwo`: linha (com seleção e legenda), barras (com a semana vazia e seleção) e sparkline, claro e escuro, a 1,0 e a 2,01 (linear nas duas plataformas). Confere a altura de cada um e, quando `captureToImage` funciona, que a imagem tem a cor `chart.line`. No iOS grava o PNG; no Android grava em `/data/local/tmp/charts-<tema>-<escala>.png` (para `adb pull`). O texto dos eixos é desenhado no `Canvas`, então "não cortado" se prova olhando as capturas |
-| (b) Resumo no nó do gráfico; a tabela troca e volta pelo botão | pendente (sem aparelho) | pendente do Push 1 | `lineChartIsOneImageNodeWithTheSummary`, `barChartIsOneImageNodeWithTheSummary` (um nó `Role.Image` com o resumo, sem filhos, nenhum rótulo de eixo na árvore), `dataButtonSwapsChartAndTableAndBack`, `tableRowIsOneNodeAndSaysRecord`, `sparklineHasNoSemantics`. Os testes imprimem a árvore (`CHARTS semantics …`) no log |
-| (c) 300 pontos sem quadro lento; o `Path` não é refeito ao mover a seleção | contador: pendente (sem aparelho); `gfxinfo`: pendente (exige instalar o `assemblePerformance`, que o implementador não faz) | contador: pendente do Push 1 | `pathIsBuiltOnceWhileTheSelectionMoves`: 300 pontos, 10 toques e 10 movimentos de arraste, `LocalChartPathBuilds` conta `line` uma vez; trocar os dados conta mais uma (controle positivo). `resizingRebuildsThePathOnce`: largura nova reconstrói linha e barras uma vez cada; a seleção nas barras não reconstrói. O primeiro desenho dos 300 pontos é medido e impresso (`CHARTS first draw of 300 points: … us`), sem limite no teste (P19) |
-| (d) APK debug cresce até 60 KiB pelos três componentes | ver "Tamanho" | — | `stat -f%z` do `app-debug.apk` na base e nesta task, os dois empacotados do zero na mesma máquina |
+| (a) Capturas dos três nos dois temas a 1,0 e 2,0 sem texto cortado nem sobreposto | aprovado: `charts-{light,dark}-{1.0,2.0}.png` gravadas e conferidas, sem texto cortado nem sobreposto | pendente do Push 1 | `capturesBothThemesAtOneAndTwo`: linha (com seleção e legenda), barras (com a semana vazia e seleção) e sparkline, claro e escuro, a 1,0 e a 2,01 (linear nas duas plataformas). Confere a altura de cada um e, quando `captureToImage` funciona, que a imagem tem a cor `chart.line`. No iOS grava o PNG; no Android grava em `/data/local/tmp/charts-<tema>-<escala>.png` (para `adb pull`). O texto dos eixos é desenhado no `Canvas`, então "não cortado" se prova olhando as capturas |
+| (b) Resumo no nó do gráfico; a tabela troca e volta pelo botão | aprovado: os testes de semântica passam | pendente do Push 1 | `lineChartIsOneImageNodeWithTheSummary`, `barChartIsOneImageNodeWithTheSummary` (um nó `Role.Image` com o resumo, sem filhos, nenhum rótulo de eixo na árvore), `dataButtonSwapsChartAndTableAndBack`, `tableRowIsOneNodeAndSaysRecord`, `sparklineHasNoSemantics`. Os testes imprimem a árvore (`CHARTS semantics …`) no log |
+| (c) 300 pontos sem quadro lento; o `Path` não é refeito ao mover a seleção | aprovado: `pathIsBuiltOnceWhileTheSelectionMoves` e `resizingRebuildsThePathOnce` passam; primeiro desenho dos 300 pontos em 6,2 ms (6.151 µs, build debug). `gfxinfo` no `assemblePerformance`: não medido nesta task | contador: pendente do Push 1 | `pathIsBuiltOnceWhileTheSelectionMoves`: 300 pontos, 10 toques e 10 movimentos de arraste, `LocalChartPathBuilds` conta `line` uma vez; trocar os dados conta mais uma (controle positivo). `resizingRebuildsThePathOnce`: largura nova reconstrói linha e barras uma vez cada; a seleção nas barras não reconstrói. O primeiro desenho dos 300 pontos é medido e impresso (`CHARTS first draw of 300 points: … us`), sem limite no teste (P19) |
+| (d) APK debug cresce até 60 KiB pelos três componentes | aprovado: 58.084 bytes pelos componentes (ver "Tamanho") | — | `stat -f%z` do `app-debug.apk` na base e nesta task, os dois empacotados do zero na mesma máquina |
 
 ## Tamanho (d)
 
@@ -46,7 +47,7 @@ E o dex de cada parte compilado sozinho (`d8 --debug --min-api 26`, zip -9; cada
 | `charts/` (os três componentes, a tabela, o botão, a legenda, a escala e a geometria) | 134.804 | **58.084** |
 | `ChartsPage` + `ChartSamples` (galeria) + `LucideTable` + `LucideChartLine` | 44.352 | 20.528 |
 
-Pelos três componentes, o teto é de 58.084 bytes comprimidos, abaixo de 61.440. Num build limpo o arquivo cresce menos que a soma das entradas (o alinhamento e os cabeçalhos mudam pouco), então a parte dos componentes no arquivo fica por volta de 48 a 58 KB. O que leva o total a 66.188 é a página da galeria (cerca de 20 KB). Um empacotamento incremental por cima do anterior chegou a 24.730.607 (+261.399): o `assembleDebug` incremental deixa espaço livre dentro do zip, então só a medida feita do zero vale.
+**Decisão do controlador (2026-10-31):** o limite de 60 KiB do S1 conta os componentes de gráfico, 58.084 bytes, abaixo de 61.440. A página da galeria e os dois ícones são uma página de desenvolvedor e entram no orçamento da fase (D18), não no S1. Num build limpo o arquivo cresce menos que a soma das entradas (o alinhamento e os cabeçalhos mudam pouco), então a parte dos componentes no arquivo fica por volta de 48 a 58 KB. O que leva o total a 66.188 é a página da galeria (cerca de 20 KB). Um empacotamento incremental por cima do anterior chegou a 24.730.607 (+261.399): o `assembleDebug` incremental deixa espaço livre dentro do zip, então só a medida feita do zero vale.
 
 ## Como funciona
 
@@ -61,7 +62,6 @@ Pelos três componentes, o teto é de 58.084 bytes comprimidos, abaixo de 61.440
 
 ## O que não foi verificado
 
-- Nada de aparelho nesta task: `ChartsTest` e `GallerySmokeTest` no emulador, as capturas do Android, a árvore de semântica no log e o tempo do primeiro desenho (sem emulador online; ver Resumo).
 - O `gfxinfo` na rolagem da página "Gráficos" com o `assemblePerformance` e o controle da decisão 2 na Biblioteca: exigem instalar um APK no emulador, o que o implementador não faz.
 - iOS inteiro (Push 1).
 - Aparelho físico, TalkBack e VoiceOver de verdade.

@@ -175,17 +175,29 @@ internal fun DrawScope.drawAxes(axes: ChartAxes, xLabels: List<PlacedText>, look
 }
 
 /**
+ * The last selection the chart knows of: the one composed (set after each composition) or, between
+ * two compositions, the last one it reported. Several touch events can arrive before the next
+ * composition (a drag that crosses two points in one frame); comparing them with the composed
+ * selection would drop a pick that goes back to it. Not state.
+ */
+internal class SelectionTracker {
+    var last: Int? = null
+}
+
+/**
  * Tap or horizontal drag picks the point or bar nearest the finger (spec D3). Only the index is
  * reported, and only when it changes; nothing is announced (the table is the screen reader's way).
  */
 internal fun Modifier.chartSelection(
     plot: PlotPositions,
-    selected: State<Int?>,
+    tracker: SelectionTracker,
     onSelect: State<(Int?) -> Unit>,
 ): Modifier {
     fun pick(x: Float) {
         val index = ChartGeometry.nearest(plot.xs, x) ?: return
-        if (index != selected.value) onSelect.value(index)
+        if (index == tracker.last) return
+        tracker.last = index
+        onSelect.value(index)
     }
     return pointerInput(plot) { detectTapGestures(onTap = { pick(it.x) }) }
         .pointerInput(plot) {
@@ -232,13 +244,14 @@ internal fun ChartSurface(
     cache: Modifier,
     drawSelection: DrawScope.(index: Int) -> Unit,
 ) {
-    val selectedState = rememberUpdatedState(selected)
+    val tracker = remember { SelectionTracker() }
+    SideEffect { tracker.last = selected }
     val onSelectState = rememberUpdatedState(onSelect)
     val node = if (current) {
         Modifier.testTag(tag).clearAndSetSemantics {
             contentDescription = summary
             role = Role.Image
-        }.chartSelection(plot, selectedState, onSelectState)
+        }.chartSelection(plot, tracker, onSelectState)
     } else {
         Modifier.testTag(ChartFadingTag).clearAndSetSemantics {}
     }
