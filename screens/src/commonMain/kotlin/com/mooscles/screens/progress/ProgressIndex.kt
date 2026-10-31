@@ -68,6 +68,8 @@ class ProgressIndex private constructor(
     /** The records of `UiState.records`, in the order of [events], as their history events (see [build]). */
     val currentRecords: List<RecordEvent>,
     private val search: ExerciseSearchIndex,
+    /** The order of [events]: a record outside them (a current fallback) takes its place by sorting with this. */
+    val eventOrder: Comparator<RecordEvent>,
 ) {
     /** The sessions of [key], oldest first; empty for a series without one. */
     fun sessions(key: SeriesKey): List<SessionPoint> = series[key].orEmpty()
@@ -120,7 +122,7 @@ class ProgressIndex private constructor(
                 .filterNot(RecordUi::firstRecord).groupBy(::markOf)
             val series = Series(history, beaten)
             return ProgressIndex(series.points, series.conventions(), series.snapshots, events, currentRecords,
-                searchIndex(events, currentRecords))
+                searchIndex(events, currentRecords), eventOrder)
         }
 
         /** D18: the same exercise, convention, kind, assistance and workout, and the same load. */
