@@ -66,6 +66,13 @@ class ExerciseFiguresTest {
             "trap_bar_deadlift",
     )
 
+    /** The dumbbell lot (spec D4): every dumbbell entry of the catalog. */
+    @Test
+    fun dumbbellFamilyIsComplete() = familyIsComplete(
+        "dumbbell",
+        ExerciseCatalog.exercises.filter { it.equipment == Equipment.DUMBBELL }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
     /** F34: the margin token is a fraction of the box, so it is compared in box units. */
     @Test
     fun everyPoseStaysInsideTheBoxWithMargin() {
