@@ -424,9 +424,13 @@ class CustomExerciseFormPhotoTest {
         onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
         waitForIdle()
         assertBusy(true)
-        outcome.state.value = outcome.state.value.copy(
-            error = "raw", errorCode = UiError.SAVE_FAILED, errorSubject = mine.id, subjectFailures = mapOf(mine.id to 1),
-        )
+        // On the UI thread, like the host's own writes: from the test thread the write races a real layout pass
+        // and the next test frame fails with "performMeasureAndLayout called during measure layout".
+        runOnUiThread {
+            outcome.state.value = outcome.state.value.copy(
+                error = "raw", errorCode = UiError.SAVE_FAILED, errorSubject = mine.id, subjectFailures = mapOf(mine.id to 1),
+            )
+        }
         waitForIdle()
         // The form stays, free, with the draft and the saved photo untouched.
         onNodeWithTag(CustomExerciseFormTags.ROOT).assertIsDisplayed()
@@ -437,7 +441,7 @@ class CustomExerciseFormPhotoTest {
         // Saved again, and this time echoed: the draft is committed, then the host hears.
         onNodeWithTag(CustomExerciseFormTags.SAVE).performClick()
         waitForIdle()
-        outcome.state.value = outcome.state.value.copy(exercises = listOf(mine.edited("Supino articulado do Zé II")))
+        runOnUiThread { outcome.state.value = outcome.state.value.copy(exercises = listOf(mine.edited("Supino articulado do Zé II"))) }
         waitUntil(timeoutMillis = 5_000) { outcome.saved.isNotEmpty() }
         assertEquals(listOf("commit:${mine.id}:${mine.id}", "saved:${mine.id}"), photos.store.log.filter { it.startsWith("commit:") || it.startsWith("saved:") })
     }
