@@ -187,9 +187,9 @@ abstract class MoosclesViewModel(
             targetReps = set.reps, targetWeightKg = set.weightKg, inheritPr = set.inherited, warmup = set.warmup))
     }
     override fun copyRoutineSetToAll(entryId: String, sourceSetId: String) = act(entryId) { repo.copyRoutineSetToAll(sourceSetId) }
-    override fun restoreRoutineSetTargets(entryId: String, previous: List<RoutineSetUi>) = act(entryId) {
+    override fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>) = act(entryId) {
         // The sets keep their places: the position is not part of what the copy changed.
-        repo.restoreRoutineSetTargets(entryId, previous.map { set ->
+        repo.restoreRoutineSetTargets(entryId, exerciseId, previous.map { set ->
             RoutineSet(id = set.id, routineExerciseId = entryId, targetReps = set.reps, targetWeightKg = set.weightKg,
                 inheritPr = set.inherited, warmup = set.warmup)
         })

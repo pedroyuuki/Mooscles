@@ -479,11 +479,13 @@ class WorkoutRepository(private val db: WorkoutDatabase) {
     /**
      * Undoes [copyRoutineSetToAll]: each set of [previous] (by id) takes back its reps, load and mode; an inherited
      * one follows the current record, as [restoreRoutineSet] does. Refused with [DataError.RESTORE_UNAVAILABLE] when
-     * the entry is gone or a set is not one of its sets of the same kind any more (removed, moved or turned into a
-     * warm-up); the value rules are [updateRoutineSet]'s. Every rule is checked before the first write.
+     * the entry is gone, holds another exercise than [exerciseId] (replaced since the copy) or a set is not one of
+     * its sets of the same kind any more (removed, moved or turned into a warm-up); the value rules are
+     * [updateRoutineSet]'s. Every rule is checked before the first write.
      */
-    suspend fun restoreRoutineSetTargets(entryId: String, previous: List<RoutineSet>) = db.writeTransaction {
+    suspend fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSet>) = db.writeTransaction {
         val plan = dataRequireNotNull(dao.routineExercise(entryId), DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
+        dataRequire(plan.exerciseId == exerciseId, DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }
         val rows = dao.plannedSets(entryId).associateBy { it.id }
         previous.forEach { item ->
             dataRequire(rows[item.id]?.warmup == item.warmup, DataError.RESTORE_UNAVAILABLE) { RESTORE_UNAVAILABLE }

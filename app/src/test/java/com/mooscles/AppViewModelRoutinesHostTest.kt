@@ -234,7 +234,7 @@ class AppViewModelRoutinesHostTest {
         awaitUi(model) { entry(it, routineId).setTargets[1] == second.copy(reps = 8, weightKg = 60.0, inherited = false) }
         assertNull(model.contentUi.value.errorCode)
 
-        model.restoreRoutineSetTargets(plan.id, listOf(second))
+        model.restoreRoutineSetTargets(plan.id, plan.exercise.id, listOf(second))
         awaitUi(model) { entry(it, routineId).setTargets[1] == second }
         assertEquals(first.copy(reps = 8, weightKg = 60.0, inherited = false), entry(model.contentUi.value, routineId).setTargets[0])
         assertNull(model.contentUi.value.errorCode)
@@ -251,7 +251,7 @@ class AppViewModelRoutinesHostTest {
 
         model.clearError()
         awaitUi(model) { it.errorCode == null }
-        model.restoreRoutineSetTargets(plan.id, listOf(plan.setTargets[1].copy(id = "missing-set")))
+        model.restoreRoutineSetTargets(plan.id, plan.exercise.id, listOf(plan.setTargets[1].copy(id = "missing-set")))
         awaitUi(model) { it.subjectFailures[plan.id] == 2 }
         assertEquals(UiError.SET_NOT_RESTORED, model.contentUi.value.errorCode)
         assertEquals(plan.id, model.contentUi.value.errorSubject)

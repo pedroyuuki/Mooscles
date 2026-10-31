@@ -36,6 +36,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -193,8 +194,8 @@ class RoutineEditorSetsTest {
             }
         }
 
-        override fun restoreRoutineSetTargets(entryId: String, previous: List<RoutineSetUi>) {
-            recording.restoreRoutineSetTargets(entryId, previous)
+        override fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>) {
+            recording.restoreRoutineSetTargets(entryId, exerciseId, previous)
             val byId = previous.associateBy { it.id }
             editEntries { list -> list.map { e -> if (e.id != entryId) e else e.copy(setTargets = e.setTargets.map { byId[it.id] ?: it }) } }
         }
@@ -806,7 +807,7 @@ class RoutineEditorSetsTest {
         waitForIdle()
         // One action with every changed set as it stood: the inherited 10 x 60 and the manual 6 x 90.
         assertEquals(
-            listOf("restoreRoutineSetTargets:e5,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 6, 90.0, inherited = false)}"),
+            listOf("restoreRoutineSetTargets:e5,fly,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 6, 90.0, inherited = false)}"),
             fake.targetRestores(),
         )
         assertEquals("10", reps("e5b").editableText())
@@ -835,7 +836,7 @@ class RoutineEditorSetsTest {
         waitForIdle()
         // The undo puts back what the database held before the copy: the written 15, manual.
         assertEquals(
-            listOf("restoreRoutineSetTargets:e5,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 15, 90.0, inherited = false)}"),
+            listOf("restoreRoutineSetTargets:e5,fly,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 15, 90.0, inherited = false)}"),
             fake.targetRestores(),
         )
         assertEquals(1, fake.writes().size)
@@ -858,18 +859,94 @@ class RoutineEditorSetsTest {
     }
 
     @Test
-    fun undoCopyAfterTheExerciseIsReplacedSaysNotRestored() = runComposeUiTest {
+    fun copyUndoIsWithdrawnWhenTheExerciseIsReplaced() = runComposeUiTest {
         val fake = Fake(stateOf(e5))
         show(fake.state, fake)
         openMenu("e5a")
         pick(PlannedSetMenuTags.COPY_ALL)
         toastWith("Copiado para 2 séries").assertIsDisplayed()
-        // The entry keeps its id and its sets' ids but holds another exercise now.
+        // The entry keeps its id and its sets' ids but holds another exercise now: the offer goes, as a removal's does.
         fake.editEntries { list -> list.map { if (it.id == "e5") it.copy(exercise = row) else it } }
+        waitForIdle()
+        onAllNodesWithText("Desfazer").assertCountEquals(0)
+        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
+    }
+
+    @Test
+    fun copyUndoIsWithdrawnOnceACopiedSetIsEdited() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        // Editing a copied set: an undo now would wipe that edit out, so it is no longer offered.
+        reps("e5c").performTextReplacement("9")
+        waitForIdle()
+        assertEquals("updateRoutineSet:e5c,9,80.0", fake.writes().last())
+        onAllNodesWithText("Desfazer").assertCountEquals(0)
+        // The same for a copied set that follows the record again.
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        openMenu("e5b")
+        pick(PlannedSetMenuTags.FOLLOW)
+        onAllNodesWithText("Desfazer").assertCountEquals(0)
+        // Editing the source keeps the offer: the undo never touches it.
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        reps("e5a").performTextReplacement("7")
+        waitForIdle()
+        onNodeWithText("Desfazer").assertIsDisplayed()
+        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
+    }
+
+    @Test
+    fun aDoubleTapOnCopyCopiesOnceAndKeepsTheSnapshot() = runComposeUiTest {
+        val fake = Fake(stateOf(e5)).apply { echo = false }
+        show(fake.state, fake)
+        reps("e5c").performTextReplacement("15")
+        waitForIdle()
+        openMenu("e5a")
+        // Both taps land before the sheet leaves.
+        onNodeWithTag(PlannedSetMenuTags.COPY_ALL).performTouchInput {
+            click()
+            advanceEventTime(50)
+            click()
+        }
+        waitForIdle()
+        assertEquals(listOf("copyRoutineSetToAll:e5,e5a"), fake.copies())
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        // The snapshot is the first tap's, with the write in flight.
+        assertEquals(
+            listOf("restoreRoutineSetTargets:e5,fly,${RoutineSetUi("e5b", 10, 60.0, inherited = true)}|${RoutineSetUi("e5c", 15, 90.0, inherited = false)}"),
+            fake.targetRestores(),
+        )
+    }
+
+    @Test
+    fun undoCopyAfterASetIsAddedOrBecomesAWarmupSaysNotRestored() = runComposeUiTest {
+        val fake = Fake(stateOf(e5))
+        show(fake.state, fake)
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 2 séries").assertIsDisplayed()
+        // A set is added elsewhere while the toast is up.
+        fake.editEntries { list -> list.map { e -> e.copy(setTargets = e.setTargets + set("e5d", 8, 80.0, inherited = false)) } }
         waitForIdle()
         onNodeWithText("Desfazer").performClick()
         waitForIdle()
-        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
         toastWith("A série não pôde voltar.").assertIsDisplayed()
+        // A copied set becomes a warm-up elsewhere.
+        openMenu("e5a")
+        pick(PlannedSetMenuTags.COPY_ALL)
+        toastWith("Copiado para 3 séries").assertIsDisplayed()
+        fake.editSet("e5b") { it.copy(warmup = true, inherited = false) }
+        waitForIdle()
+        onNodeWithText("Desfazer").performClick()
+        waitForIdle()
+        toastWith("A série não pôde voltar.").assertIsDisplayed()
+        assertTrue(fake.targetRestores().isEmpty(), fake.calls.toString())
     }
 }

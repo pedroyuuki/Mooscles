@@ -530,7 +530,7 @@ class RoutineCommandsPersistenceTest {
         val previous = rows(entry).drop(1).filter { it.id != b.id }.map { it }
         repo.copyRoutineSetToAll(b.id)
 
-        repo.restoreRoutineSetTargets(entry, previous)
+        repo.restoreRoutineSetTargets(entry, exerciseId, previous)
 
         // C comes back manual at 6 × 70, D inherited at the record, in one write.
         assertEquals(listOf(a, b, c.copy(targetReps = 6, targetWeightKg = 70.0, inheritPr = false), d), rows(entry))
@@ -538,24 +538,41 @@ class RoutineCommandsPersistenceTest {
         // An inherited set comes back with today's record, as restoreRoutineSet does.
         repo.copyRoutineSetToAll(b.id)
         record(exerciseId, 100.0, 6)
-        repo.restoreRoutineSetTargets(entry, listOf(d))
+        repo.restoreRoutineSetTargets(entry, exerciseId, listOf(d))
         assertEquals(RoutineSet(d.id, entry, 3, 6, 100.0, inheritPr = true, warmup = false), rows(entry)[3])
     }
 
     @Test fun restoreRoutineSetTargetsRefusesAChangedEntry() = runBlocking {
         val (entry, original) = threeSets()
         val (_, b, c) = original
+        val exerciseId = repo.routineExercise(entry)!!.exerciseId
         repo.copyRoutineSetToAll(b.id)
-        // A set that is gone, one that became a warm-up, a set of another entry or an entry that is gone: nothing is written.
-        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, listOf(c, c.copy(id = "gone"))) }
+        // A set that is gone, one that became a warm-up, a set of another entry, a replaced exercise or an entry that is
+        // gone: nothing is written.
+        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, exerciseId, listOf(c, c.copy(id = "gone"))) }
         repo.setRoutineSetWarmup(c.id, true)
-        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, listOf(c)) }
+        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, exerciseId, listOf(c)) }
         repo.setRoutineSetWarmup(c.id, false)
         val other = repo.addRoutineExercise(repo.routineExercise(entry)!!.routineId, exercise())
-        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(other, listOf(c)) }
-        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSetTargets(entry, listOf(c.copy(targetReps = -1, inheritPr = false))) }
+        val otherExercise = repo.routineExercise(other)!!.exerciseId
+        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(other, otherExercise, listOf(c)) }
+        assertRefused(DataError.INVALID_VALUE) { repo.restoreRoutineSetTargets(entry, exerciseId, listOf(c.copy(targetReps = -1, inheritPr = false))) }
+        // The same entry and set ids, another exercise: the old values would land on the new movement.
+        repo.replaceRoutineExercise(entry, otherExercise)
+        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, exerciseId, listOf(c)) }
         repo.removeRoutineExercise(entry)
-        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, listOf(c)) }
+        assertRefused(DataError.RESTORE_UNAVAILABLE) { repo.restoreRoutineSetTargets(entry, exerciseId, listOf(c)) }
+    }
+
+    @Test fun copyToAllWithNoOtherWorkingSetWritesNoSet() = runBlocking {
+        val (entry, original) = threeSets()
+        repo.removeRoutineSet(original[2].id)
+        val before = rows(entry)
+
+        // A warm-up and one working set: nothing to copy to.
+        assertEquals(0, repo.copyRoutineSetToAll(original[1].id))
+
+        assertEquals(before, rows(entry))
     }
 
     @Test fun copyToAllRefusesAMissingSourceAndAWarmup() = runBlocking {

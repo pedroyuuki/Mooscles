@@ -64,7 +64,8 @@ class RecordingActions : MoosclesActions {
     override fun setRoutineSetWarmup(setId: String, warmup: Boolean) = record("setRoutineSetWarmup", setId, warmup)
     override fun restoreRoutineSet(entryId: String, position: Int, set: RoutineSetUi) = record("restoreRoutineSet", entryId, position, set)
     override fun copyRoutineSetToAll(entryId: String, sourceSetId: String) = record("copyRoutineSetToAll", entryId, sourceSetId)
-    override fun restoreRoutineSetTargets(entryId: String, previous: List<RoutineSetUi>) = record("restoreRoutineSetTargets", entryId, previous)
+    override fun restoreRoutineSetTargets(entryId: String, exerciseId: String, previous: List<RoutineSetUi>) =
+        record("restoreRoutineSetTargets", entryId, exerciseId, previous)
     override fun updateRoutineExerciseRest(entryId: String, seconds: Int) = record("updateRoutineExerciseRest", entryId, seconds)
     override fun createCustomExercise(id: String, name: String, muscle: String, equipment: String, convention: String) =
         record("createCustomExercise", id, name, muscle, equipment, convention)
