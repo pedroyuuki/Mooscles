@@ -101,11 +101,12 @@ fun ExerciseFigure(
     val illustration = MTheme.illustration
     val solved = remember(pose) {
         val joints = FigureKinematics.solve(pose).joints
-        joints to FigureKinematics.equipment(pose, joints)
+        Triple(joints, FigureKinematics.equipmentBehind(pose, joints), FigureKinematics.equipmentInFront(pose, joints))
     }
     val draw = remember(solved, highlights, palette, illustration) {
         Modifier.drawWithCache {
-            val operations = figureOperations(solved.first, solved.second, highlights, palette, illustration, size, pose.frontView)
+            val (joints, behind, inFront) = solved
+            val operations = figureOperations(joints, behind, highlights, palette, illustration, size, pose.frontView, inFront)
             onDrawBehind { for (operation in operations) operation.draw(this) }
         }
     }
@@ -332,6 +333,7 @@ internal fun figureOperations(
     illustration: MoosclesIllustration,
     size: Size,
     frontView: Boolean = false,
+    inFront: List<PropShape> = emptyList(),
 ): List<FigureOperation> {
     val side = min(size.width, size.height)
     val scale = side / BOX
@@ -399,18 +401,18 @@ internal fun figureOperations(
         if (lit && FigureSegment.FOREARM in highlights) highlight(elbow, hand, 0f, 1f, Side.ALL, limb = true)
     }
 
+    fun equipmentOperation(shape: PropShape): FigureOperation = when (shape) {
+        is PropShape.Line -> FigureOperation.Line(px(shape.start), px(shape.end), palette.equipment, thin)
+        is PropShape.Circle -> FigureOperation.Ring(px(shape.center), shape.radius * scale, palette.equipment, thin)
+        is PropShape.Disc -> FigureOperation.Disc(px(shape.center), shape.radius * scale, palette.equipment)
+        is PropShape.Box -> FigureOperation.Frame(
+            px(shape.rect.topLeft), Size(shape.rect.width * scale, shape.rect.height * scale), palette.equipment, thin,
+        )
+    }
+
     // The equipment first: a far leg resting on a bench, or a far arm holding a weight, is drawn
     // over it, so it reads as body and not as part of the machine.
-    for (shape in equipment) {
-        operations += when (shape) {
-            is PropShape.Line -> FigureOperation.Line(px(shape.start), px(shape.end), palette.equipment, thin)
-            is PropShape.Circle -> FigureOperation.Ring(px(shape.center), shape.radius * scale, palette.equipment, thin)
-            is PropShape.Disc -> FigureOperation.Disc(px(shape.center), shape.radius * scale, palette.equipment)
-            is PropShape.Box -> FigureOperation.Frame(
-                px(shape.rect.topLeft), Size(shape.rect.width * scale, shape.rect.height * scale), palette.equipment, thin,
-            )
-        }
-    }
+    for (shape in equipment) operations += equipmentOperation(shape)
 
     // The far side, behind the body. Seen from the front both sides face the viewer: the far leg
     // takes the body's color and its highlights, and the far arm is drawn like the near one, below.
@@ -438,6 +440,8 @@ internal fun figureOperations(
     leg(FigureJoint.HIP, FigureJoint.KNEE_NEAR, FigureJoint.ANKLE_NEAR, FigureJoint.TOE_NEAR, palette.body, lit = true)
     if (frontView) arm(FigureJoint.ELBOW_FAR, FigureJoint.HAND_FAR, palette.body, lit = true)
     arm(FigureJoint.ELBOW_NEAR, FigureJoint.HAND_NEAR, palette.body, lit = true)
+    // Last, what sits over the near arm: a kettlebell in that hand (FigureKinematics.inFrontOfTheArm).
+    for (shape in inFront) operations += equipmentOperation(shape)
     return operations
 }
 

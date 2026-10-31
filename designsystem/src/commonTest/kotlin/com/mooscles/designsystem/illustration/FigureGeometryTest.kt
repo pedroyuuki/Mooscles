@@ -111,6 +111,7 @@ class FigureGeometryTest {
             FigureProp.Bar(x = 10f, y = 3f, length = 30f),
             FigureProp.Box(x = 60f, y = 70f, width = 25f, height = 20f),
             FigureProp.Platform(FigureJoint.ANKLE_NEAR, length = 24f, angle = 90f),
+            FigureProp.Rail(x = 8f, top = 6f, bottom = 90f),
             FigureProp.Floor(y = 94f),
         )
         val pose = standing(props).copy(upperArmNear = 120f, forearmNear = 60f)
@@ -126,6 +127,7 @@ class FigureGeometryTest {
         assertInside(geometry.bounds, Offset(10f, 3f), "bar start")
         assertInside(geometry.bounds, Offset(40f, 3f), "bar end")
         assertInside(geometry.bounds, Offset(85f, 90f), "box corner")
+        assertInside(geometry.bounds, Offset(8f, 6f), "rail top")
         assertInside(geometry.bounds, hand - Offset(0f, FigureSkeleton.PLATE_RADIUS), "top of the plate")
         assertTrue(geometry.bounds.top < bare.top, "the bar above the figure widens the bounds")
         assertTrue(geometry.bounds.right > bare.right, "the cable anchor widens the bounds")
@@ -157,5 +159,20 @@ class FigureGeometryTest {
             // The weight is held at the hand: the hand is inside its outline.
             assertInside(after.first().bounds(), high.joints.getValue(FigureJoint.HAND_NEAR), "$prop at the hand")
         }
+    }
+
+    /**
+     * A Smith machine's rail is one vertical line at its x, from its top to its bottom, whatever the
+     * body does: the bar slides along it, so it does not follow a joint.
+     */
+    @Test
+    fun railIsAVerticalLineThatStaysPut() {
+        val rail = FigureProp.Rail(x = 44f, top = 8f, bottom = 88f)
+        val low = FigureKinematics.solve(standing(listOf(rail)))
+        val high = FigureKinematics.solve(standing(listOf(rail)).copy(upperArmNear = 0f, forearmNear = 0f))
+        val expected = listOf(PropShape.Line(Offset(44f, 8f), Offset(44f, 88f)))
+        assertEquals(expected, FigureKinematics.propShapes(rail, low.joints))
+        assertEquals(expected, FigureKinematics.propShapes(rail, high.joints))
+        assertEquals(8f, low.bounds.top, tolerance, "the rail's top bounds the standing figure")
     }
 }

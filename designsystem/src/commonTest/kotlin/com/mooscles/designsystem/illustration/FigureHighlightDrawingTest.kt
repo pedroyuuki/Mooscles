@@ -126,4 +126,41 @@ class FigureHighlightDrawingTest {
         val front = operations(standing.copy(frontView = true), emptySet())
         assertEquals(4, front.filterIsInstance<FigureOperation.Gap>().size, "both arms from the front")
     }
+
+    /**
+     * A kettlebell in the near hand is drawn over the arm, so the arm's gap cannot erase its bell
+     * when the forearm points up (rack, overhead); every other weight, and a kettlebell in the far
+     * hand seen from the side, stays behind the body.
+     */
+    @Test
+    fun aKettlebellInTheNearHandIsDrawnOverTheArm() {
+        fun drawn(pose: FigurePose): List<FigureOperation> {
+            val joints = FigureKinematics.solve(pose).joints
+            return figureOperations(
+                joints, FigureKinematics.equipmentBehind(pose, joints), emptySet(), palette, illustration, Size(100f, 100f),
+                pose.frontView, FigureKinematics.equipmentInFront(pose, joints),
+            )
+        }
+        val overhead = standing.copy(upperArmNear = 0f, forearmNear = 0f)
+        val near = drawn(overhead.copy(props = listOf(FigureProp.Kettlebell(FigureJoint.HAND_NEAR))))
+        val lastNearArm = near.indexOfLast { it is FigureOperation.Line && it.color == palette.body }
+        val bell = near.indexOfFirst { it is FigureOperation.Disc }
+        assertTrue(bell > lastNearArm, "the bell is drawn after the near arm")
+        assertEquals(near.size - 2, near.indexOfFirst { it is FigureOperation.Ring && it.color == palette.equipment }, "handle, then bell, last")
+
+        val far = drawn(overhead.copy(props = listOf(FigureProp.Kettlebell(FigureJoint.HAND_FAR))))
+        assertTrue(far.indexOfFirst { it is FigureOperation.Disc } < far.indexOfFirst { it is FigureOperation.Line && it.color == palette.far })
+        val fromTheFront = drawn(overhead.copy(frontView = true, props = listOf(FigureProp.Kettlebell(FigureJoint.HAND_FAR))))
+        assertEquals(fromTheFront.size - 1, fromTheFront.indexOfFirst { it is FigureOperation.Disc }, "from the front, either hand")
+
+        val dumbbell = drawn(overhead.copy(props = listOf(FigureProp.Dumbbell(FigureJoint.HAND_NEAR))))
+        assertEquals(0, dumbbell.indexOfFirst { it is FigureOperation.Ring && it.color == palette.equipment }, "a dumbbell stays first")
+        // Both layers together are the whole equipment, in order.
+        val pose = overhead.copy(props = listOf(FigureProp.Barbell(FigureJoint.HIP), FigureProp.Kettlebell(FigureJoint.HAND_NEAR)))
+        val joints = FigureKinematics.solve(pose).joints
+        assertEquals(
+            FigureKinematics.equipment(pose, joints),
+            FigureKinematics.equipmentBehind(pose, joints) + FigureKinematics.equipmentInFront(pose, joints),
+        )
+    }
 }

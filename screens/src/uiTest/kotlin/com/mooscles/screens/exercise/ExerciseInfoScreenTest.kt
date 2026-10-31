@@ -243,10 +243,11 @@ class ExerciseInfoScreenTest {
 
     @Test
     fun exerciseWithoutAFigureShowsTheEquipmentPlaceholder() {
-        // The figure batches keep drawing catalog exercises: take one that has none yet, and the custom one always.
-        val figureless = ExerciseCatalog.exercises.firstOrNull { ExerciseFigures.forExercise(it.id) == null }
-            ?.let { catalog(it.id.removePrefix("catalog_")) }
-        for (exercise in listOfNotNull(figureless, mine)) {
+        // Every catalog exercise has a figure but those left on the equipment icon on purpose: take one of
+        // them, and the custom one.
+        val figureless = ExerciseCatalog.exercises.first { it.id.removePrefix("catalog_") in ExerciseFigures.NO_FIGURE }
+        assertEquals(null, ExerciseFigures.forExercise(figureless.id), "${figureless.id} has no figure")
+        for (exercise in listOf(catalog(figureless.id.removePrefix("catalog_")), mine)) {
             runComposeUiTest {
                 show(exercise, state = mutableStateOf(stateOf().value.let { it.copy(exercises = it.exercises + exercise) }))
                 onNode(hasTestTag(ExerciseEquipmentIconTag) and hasAnyAncestor(hasTestTag(ExerciseInfoTags.MEDIA)), useUnmergedTree = true)

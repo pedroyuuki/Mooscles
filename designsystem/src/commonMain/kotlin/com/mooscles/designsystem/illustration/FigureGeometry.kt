@@ -32,12 +32,35 @@ object FigureKinematics {
      * Every piece of equipment of [pose] as shapes, in the order of its props. A floor runs under
      * everything else, so it is measured last, against the body and the other equipment.
      */
-    internal fun equipment(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> {
+    internal fun equipment(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> = layer(pose, joints) { true }
+
+    /** The equipment drawn behind the body: all of it but what [inFrontOfTheArm] keeps for the front. */
+    internal fun equipmentBehind(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> =
+        layer(pose, joints) { !inFrontOfTheArm(it, pose.frontView) }
+
+    /** The equipment drawn last, over the near arm (see [inFrontOfTheArm]). */
+    internal fun equipmentInFront(pose: FigurePose, joints: Map<FigureJoint, Offset>): List<PropShape> =
+        layer(pose, joints) { inFrontOfTheArm(it, pose.frontView) }
+
+    /**
+     * A kettlebell in a hand the viewer sees in front (the near hand; from the front, either hand):
+     * its bell rests on the outside of the forearm in the rack and overhead, toward the viewer, and
+     * the arm's gap would otherwise erase it whenever the forearm points up.
+     */
+    internal fun inFrontOfTheArm(prop: FigureProp, frontView: Boolean): Boolean =
+        prop is FigureProp.Kettlebell &&
+            (prop.at == FigureJoint.HAND_NEAR || (frontView && prop.at == FigureJoint.HAND_FAR))
+
+    private inline fun layer(pose: FigurePose, joints: Map<FigureJoint, Offset>, keep: (FigureProp) -> Boolean): List<PropShape> {
         val shapes = pose.props.map { propShapes(it, joints) }
         var rest = bodyBounds(joints)
         for (list in shapes) for (shape in list) rest = rest.including(shape.bounds())
         return pose.props.flatMapIndexed { index, prop ->
-            if (prop is FigureProp.Floor) floorShapes(prop, rest) else shapes[index]
+            when {
+                !keep(prop) -> emptyList()
+                prop is FigureProp.Floor -> floorShapes(prop, rest)
+                else -> shapes[index]
+            }
         }
     }
 
@@ -117,6 +140,7 @@ object FigureKinematics {
             val half = direction(prop.angle) * (prop.length / 2f)
             listOf(PropShape.Line(center - half, center + half))
         }
+        is FigureProp.Rail -> listOf(PropShape.Line(Offset(prop.x, prop.top), Offset(prop.x, prop.bottom)))
         is FigureProp.Floor -> emptyList()
     }
 

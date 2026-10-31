@@ -205,6 +205,11 @@ internal class PoseBuilder {
         props += Fixed(FigureProp.Box(x, y, width, height))
     }
 
+    /** A Smith machine's rail at [x], from [top] down to [bottom]; the bar held on it must sit at [x]. */
+    fun rail(x: Float, top: Float, bottom: Float) {
+        props += Fixed(FigureProp.Rail(x, top, bottom))
+    }
+
     fun platform(at: FigureJoint, length: Float, angle: Float) {
         props += Fixed(FigureProp.Platform(at, length, angle))
     }
