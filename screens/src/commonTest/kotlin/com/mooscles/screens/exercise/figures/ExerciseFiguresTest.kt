@@ -87,6 +87,15 @@ class ExerciseFiguresTest {
         ExerciseCatalog.exercises.filter { it.equipment == Equipment.BODYWEIGHT }.map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
     )
 
+    /** The machine lot (spec D4): every selectorized and plate-loaded entry of the catalog; the Smith machine is a lot of its own. */
+    @Test
+    fun machineFamilyIsComplete() = familyIsComplete(
+        "machine",
+        ExerciseCatalog.exercises
+            .filter { it.equipment == Equipment.SELECTORIZED_MACHINE || it.equipment == Equipment.PLATE_LOADED_MACHINE }
+            .map { it.id.removePrefix(ExerciseCatalog.ID_PREFIX) },
+    )
+
     /** The exclusion list cannot go stale: each id is in the catalog and has no figure in any family. */
     @Test
     fun noFigureIdsAreCatalogExercisesWithoutAFigure() {

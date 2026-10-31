@@ -23,8 +23,10 @@ internal object ExerciseFigures {
      * Catalog exercises left without a figure on purpose, which keep the equipment icon. The family
      * checks of the lots skip them, and so will the last lot's check of the whole catalog.
      * - `cable_pallof_press`: the side view cannot show an anti-rotation pull; the equipment icon is clearer.
+     * - `selectorized_torso_rotation`: the torso turns about its own axis, which neither the side nor
+     *   the front view shows; both frames would be the same seated figure.
      */
-    val NO_FIGURE: Set<String> = setOf("cable_pallof_press")
+    val NO_FIGURE: Set<String> = setOf("cable_pallof_press", "selectorized_torso_rotation")
 
     /** Each family's table, for the size checks: a family stays well below the JVM's method size limit. */
     val families: Map<String, Map<String, FigureFrames>> by lazy {
