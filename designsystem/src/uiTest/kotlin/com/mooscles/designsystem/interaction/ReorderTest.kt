@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -97,7 +96,7 @@ private class Harness {
     /** The menus' moves ([reorderMover]) of each composed item, as of the last composition. */
     val movers = mutableMapOf<String, (Int) -> Boolean>()
 
-    /** Each order the list was composed with, once per change: one swap per layout shows as one transposition each. */
+    /** Each order the list was laid out with, once per change: one swap per layout shows as one transposition each. */
     val shown = mutableListOf<List<String>>()
 
     fun heightFor(key: String): Dp = if (collapsed) 40.dp else heightOf(key)
@@ -124,10 +123,14 @@ private fun ReorderList(h: Harness, height: Dp = LIST_HEIGHT, width: Dp? = null)
         },
     )
     h.state = state
-    SideEffect { if (h.shown.lastOrNull() != state.order) h.shown += state.order }
     Box(Modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())) {
         LazyColumn(Modifier.fillMaxSize().testTag(LIST), state = list) {
-            items(state.order, key = { it }) { key ->
+            // The list runs this again, in its measure, for each new order it lays out with, sometimes more than once
+            // in a frame: recorded here, each order shown is one layout's (a composition of this function sees only
+            // the last of a frame).
+            val order = state.order
+            if (h.shown.lastOrNull() != order) h.shown += order
+            items(order, key = { it }) { key ->
                 Row(
                     Modifier
                         // Inset, so a lifted (scaled) item stays within the list's bounds.
