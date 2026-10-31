@@ -70,7 +70,15 @@ class UiFlowTest {
         val firstSetId = editorData.plannedSets(entryId).first().id
         val repsTag = "routine-set-$firstSetId-reps"
         val repsField = hasSetTextAction() and hasAnyAncestor(hasTestTag(repsTag))
-        compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(repsTag))
+        // The repository snapshot can be ahead of the editor's state by a frame, so wait for the row to be reachable.
+        compose.waitUntil(10_000) {
+            try {
+                compose.onNodeWithTag("routine-editor-list").performScrollToNode(hasTestTag(repsTag))
+                true
+            } catch (_: AssertionError) {
+                false
+            }
+        }
         compose.onNode(repsField, useUnmergedTree = true)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
         compose.onNode(repsField, useUnmergedTree = true).performClick()
