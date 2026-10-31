@@ -86,8 +86,8 @@ internal fun RoutineMenuSheet(
         Column(Modifier.testTag(TrainTags.MENU_LIST).verticalScroll(rememberScrollState())) {
         MenuItem(MIcons.Pencil, stringResource(Res.string.routines_edit), TrainTags.MENU_EDIT, onClick = onEdit)
         MenuItem(MIcons.Pencil, stringResource(Res.string.routines_rename), TrainTags.MENU_RENAME, onClick = onRename)
-        MenuItem(MIcons.Plus, stringResource(Res.string.routines_duplicate), TrainTags.MENU_DUPLICATE, enabled = duplicateEnabled, onClick = onDuplicate)
-        MenuItem(MIcons.ArrowLeftRight, stringResource(Res.string.routines_move_to_folder), TrainTags.MENU_MOVE, onClick = onMoveToFolder)
+        MenuItem(MIcons.Copy, stringResource(Res.string.routines_duplicate), TrainTags.MENU_DUPLICATE, enabled = duplicateEnabled, onClick = onDuplicate)
+        MenuItem(MIcons.FolderInput, stringResource(Res.string.routines_move_to_folder), TrainTags.MENU_MOVE, onClick = onMoveToFolder)
         MenuItem(
             MIcons.ArrowUp, stringResource(DesignRes.string.ds_reorder_up), TrainTags.MENU_UP,
             enabled = !first, onClick = { onMoveTo(index - 1) },
@@ -97,11 +97,11 @@ internal fun RoutineMenuSheet(
             enabled = !last, onClick = { onMoveTo(index + 1) },
         )
         MenuItem(
-            MIcons.ChevronUp, stringResource(DesignRes.string.ds_reorder_top), TrainTags.MENU_TOP,
+            MIcons.ArrowUpToLine, stringResource(DesignRes.string.ds_reorder_top), TrainTags.MENU_TOP,
             enabled = !first, onClick = { onMoveTo(0) },
         )
         MenuItem(
-            MIcons.ChevronDown, stringResource(DesignRes.string.ds_reorder_bottom), TrainTags.MENU_BOTTOM,
+            MIcons.ArrowDownToLine, stringResource(DesignRes.string.ds_reorder_bottom), TrainTags.MENU_BOTTOM,
             enabled = !last, onClick = { onMoveTo(count - 1) },
         )
         MenuItem(

@@ -30,6 +30,8 @@ LUCIDE_LIST = [
  ("Settings","settings"),("SearchX","search-x"),
  # Phase 4B: the drag handle of reordering.
  ("GripVertical","grip-vertical"),
+ # Phase 4B (Task 19): the routine menus.
+ ("Copy","copy"),("FolderInput","folder-input"),("ArrowUpToLine","arrow-up-to-line"),("ArrowDownToLine","arrow-down-to-line"),
 ]
 
 # Own equipment icons: SVG fragments on the same 24 grid, stroke 2, round caps and joins.

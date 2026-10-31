@@ -800,10 +800,10 @@ private fun EditorMenuSheet(
         Column(Modifier.testTag(RoutineEditorTags.MENU_LIST).verticalScroll(rememberScrollState())) {
             MenuItem(MIcons.Pencil, stringResource(Res.string.routines_rename), RoutineEditorTags.MENU_RENAME, onClick = onRename)
             MenuItem(
-                MIcons.Plus, stringResource(Res.string.routines_duplicate), RoutineEditorTags.MENU_DUPLICATE,
+                MIcons.Copy, stringResource(Res.string.routines_duplicate), RoutineEditorTags.MENU_DUPLICATE,
                 enabled = duplicateEnabled, onClick = onDuplicate,
             )
-            MenuItem(MIcons.ArrowLeftRight, stringResource(Res.string.routines_move_to_folder), RoutineEditorTags.MENU_MOVE, onClick = onMoveToFolder)
+            MenuItem(MIcons.FolderInput, stringResource(Res.string.routines_move_to_folder), RoutineEditorTags.MENU_MOVE, onClick = onMoveToFolder)
             MenuItem(
                 MIcons.Trash2, stringResource(Res.string.editor_delete), RoutineEditorTags.MENU_DELETE,
                 destructive = true, onClick = onDelete,
@@ -845,11 +845,11 @@ private fun ExerciseMenuSheet(
                 enabled = !last, onClick = { onMoveTo(index + 1) },
             )
             MenuItem(
-                MIcons.ChevronUp, stringResource(DesignRes.string.ds_reorder_top), RoutineEditorTags.EXERCISE_TOP,
+                MIcons.ArrowUpToLine, stringResource(DesignRes.string.ds_reorder_top), RoutineEditorTags.EXERCISE_TOP,
                 enabled = !first, onClick = { onMoveTo(0) },
             )
             MenuItem(
-                MIcons.ChevronDown, stringResource(DesignRes.string.ds_reorder_bottom), RoutineEditorTags.EXERCISE_BOTTOM,
+                MIcons.ArrowDownToLine, stringResource(DesignRes.string.ds_reorder_bottom), RoutineEditorTags.EXERCISE_BOTTOM,
                 enabled = !last, onClick = { onMoveTo(count - 1) },
             )
             MenuItem(

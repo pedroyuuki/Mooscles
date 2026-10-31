@@ -51,6 +51,10 @@ object MIcons {
     val Settings: ImageVector get() = LucideSettings
     val SearchX: ImageVector get() = LucideSearchX
     val GripVertical: ImageVector get() = LucideGripVertical
+    val Copy: ImageVector get() = LucideCopy
+    val FolderInput: ImageVector get() = LucideFolderInput
+    val ArrowUpToLine: ImageVector get() = LucideArrowUpToLine
+    val ArrowDownToLine: ImageVector get() = LucideArrowDownToLine
 
     val Plate: ImageVector get() = OwnPlate
     val PlateRecord: ImageVector get() = OwnPlateRecord
@@ -111,6 +115,10 @@ object MIcons {
             "Settings" to Settings,
             "SearchX" to SearchX,
             "GripVertical" to GripVertical,
+            "Copy" to Copy,
+            "FolderInput" to FolderInput,
+            "ArrowUpToLine" to ArrowUpToLine,
+            "ArrowDownToLine" to ArrowDownToLine,
             "Plate" to Plate,
             "PlateRecord" to PlateRecord,
             "Dumbbell" to Dumbbell,

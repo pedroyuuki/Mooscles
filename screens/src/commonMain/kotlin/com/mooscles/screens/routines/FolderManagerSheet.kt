@@ -188,11 +188,11 @@ internal fun FolderManagerSheet(state: UiState, actions: MoosclesActions, onDism
                         menuFor = null
                         moveTo(index + 1)
                     }
-                    MenuItem(MIcons.ChevronUp, stringResource(DesignRes.string.ds_reorder_top), FolderTags.MENU_TOP, enabled = !first) {
+                    MenuItem(MIcons.ArrowUpToLine, stringResource(DesignRes.string.ds_reorder_top), FolderTags.MENU_TOP, enabled = !first) {
                         menuFor = null
                         moveTo(0)
                     }
-                    MenuItem(MIcons.ChevronDown, stringResource(DesignRes.string.ds_reorder_bottom), FolderTags.MENU_BOTTOM, enabled = !last) {
+                    MenuItem(MIcons.ArrowDownToLine, stringResource(DesignRes.string.ds_reorder_bottom), FolderTags.MENU_BOTTOM, enabled = !last) {
                         menuFor = null
                         moveTo(order.size - 1)
                     }
